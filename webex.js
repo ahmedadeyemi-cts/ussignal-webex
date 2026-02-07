@@ -1,52 +1,44 @@
-/**
- * webex.js
- * Handles Webex API authentication and data retrieval
- */
+import { getUserContext } from "./auth";
+import { listWebexOrgs } from "./webex";
+import { json } from "./responses";
 
-const WEBEX_BASE = "https://webexapis.com/v1";
+export default {
+  async fetch(request, env) {
+    try {
+      const url = new URL(request.url);
+      const path = url.pathname;
 
-/**
- * Obtain a Webex access token using Client Credentials
- */
-export async function getWebexToken(env) {
-  const res = await fetch(`${WEBEX_BASE}/access_token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: env.CLIENT_ID,
-      client_secret: env.CLIENT_SECRET
-    })
-  });
+      const jwt = request.headers.get("cf-access-jwt-assertion");
+      if (!jwt) return json({ error: "Unauthorized" }, 401);
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Webex token error: ${text}`);
-  }
+      const user = await getUserContext(jwt);
 
-  const json = await res.json();
-  return json.access_token;
-}
+      if (path === "/api/me") {
+        return json(user);
+      }
 
-/**
- * List all Webex organizations visible to this integration
- */
-export async function listWebexOrgs(env) {
-  const token = await getWebexToken(env);
+      if (path === "/api/org") {
+        if (user.role === "admin") {
+          const orgs = await listWebexOrgs(env);
+          return json({
+            email: user.email,
+            role: user.role,
+            orgs
+          });
+        }
 
-  const res = await fetch(`${WEBEX_BASE}/organizations`, {
-    headers: {
-      Authorization: `Bearer ${token}`
+        return json({
+          email: user.email,
+          role: user.role,
+          org: null
+        });
+      }
+
+      return json({ error: "Not Found" }, 404);
+
+    } catch (err) {
+      console.error(err);
+      return json({ error: err.message }, 500);
     }
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Webex org fetch failed: ${text}`);
   }
-
-  const json = await res.json();
-  return json.items || [];
-}
+};
