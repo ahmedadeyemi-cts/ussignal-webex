@@ -1,8 +1,7 @@
 {
   "name": "ussignal-webex",
-  "compatibility_date": "2025-02-07",
-
   "main": "index.js",
+  "compatibility_date": "2025-02-07",
 
   "routes": [
     {
@@ -13,13 +12,11 @@
 
   "kv_namespaces": [
     { "binding": "ORG_MAP_KV", "id": "YOUR_ID" },
-    { "binding": "USER_SESSION_KV", "id": "YOUR_ID" },
-    { "binding": "WEBEX", "id": "YOUR_ID" }
+    { "binding": "USER_SESSION_KV", "id": "YOUR_ID" }
   ],
 
   "vars": {
-    "CLIENT_ID": "set-in-dashboard",
-    "CLIENT_SECRET": "set-in-dashboard",
+    "ACCESS_TOKEN": "set-in-dashboard",
     "REFRESH_TOKEN": "set-in-dashboard"
   }
 }
