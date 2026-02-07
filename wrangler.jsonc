@@ -1,11 +1,25 @@
 {
   "name": "ussignal-webex",
-  "main": "index.js",
   "compatibility_date": "2025-02-07",
+
+  "main": "index.js",
+
   "routes": [
     {
       "pattern": "ussignal-webex.onenecklab.com/*",
       "zone_name": "onenecklab.com"
     }
-  ]
+  ],
+
+  "kv_namespaces": [
+    { "binding": "ORG_MAP_KV", "id": "YOUR_ID" },
+    { "binding": "USER_SESSION_KV", "id": "YOUR_ID" },
+    { "binding": "WEBEX", "id": "YOUR_ID" }
+  ],
+
+  "vars": {
+    "CLIENT_ID": "set-in-dashboard",
+    "CLIENT_SECRET": "set-in-dashboard",
+    "REFRESH_TOKEN": "set-in-dashboard"
+  }
 }
