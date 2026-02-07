@@ -1,60 +1,55 @@
+// index.js
 import { getUserContext } from "./auth";
-import { listWebexOrgs } from "./webex";
+import { resolveOrgForUser } from "./org-resolver";
+import { json } from "./responses";
+import { listWebexOrgs, webexFetchJson } from "./webex";
 
-/**
- * JSON helper
- */
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data, null, 2), {
-    status,
-    headers: { "Content-Type": "application/json" }
-  });
-}
+console.log("US Signal Webex Worker deployed");
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
       const url = new URL(request.url);
       const path = url.pathname;
 
-      // Enforce Cloudflare Access
-      const jwt = request.headers.get("cf-access-jwt-assertion");
-      if (!jwt) {
+      // Enforce Cloudflare Access (your existing pattern)
+      const accessJwt = request.headers.get("cf-access-jwt-assertion");
+      if (!accessJwt) {
         return json({ error: "Unauthorized" }, 401);
       }
 
-      const user = await getUserContext(jwt);
+      const user = await getUserContext(accessJwt);
 
-      // ---- ROUTES ----
-
+      // Health / identity
       if (path === "/api/me") {
-        return json(user);
+        return json({ email: user.email, role: user.role }, 200);
       }
 
+      // Resolve org for user (will be null until you populate ORG mapping logic)
       if (path === "/api/org") {
-        // Admin sees all orgs
-        if (user.role === "admin") {
-          const orgs = await listWebexOrgs(env);
-          return json({
-            email: user.email,
-            role: user.role,
-            orgs
-          });
-        }
+        const org = await resolveOrgForUser(env, user);
+        return json({ email: user.email, role: user.role, org: org || null }, 200);
+      }
 
-        // Customer logic later
-        return json({
-          email: user.email,
-          role: user.role,
-          org: null
-        });
+      // Debug: raw orgs from Webex
+      if (path === "/api/debug/orgs") {
+        const orgs = await listWebexOrgs(env);
+        return json({ ok: true, orgs }, 200);
+      }
+
+      // Example: passthrough test (if you want it)
+      if (path === "/api/debug/me-webex") {
+        const me = await webexFetchJson(env, "/people/me");
+        return json({ ok: true, me }, 200);
       }
 
       return json({ error: "Not Found" }, 404);
-
-    } catch (err) {
+    } catch (e) {
       return json(
-        { error: err.message || "Internal error" },
+        {
+          ok: false,
+          error: e?.message || String(e)
+        },
         500
       );
     }
