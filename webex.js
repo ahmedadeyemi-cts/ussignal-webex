@@ -1,8 +1,5 @@
 const WEBEX_API = "https://webexapis.com/v1";
 
-/**
- * Internal helper to call Webex APIs
- */
 async function webexFetch(env, path) {
   const res = await fetch(`${WEBEX_API}${path}`, {
     headers: {
@@ -19,9 +16,6 @@ async function webexFetch(env, path) {
   return res.json();
 }
 
-/**
- * List all orgs visible to the partner admin
- */
 export async function listWebexOrgs(env) {
   const data = await webexFetch(env, "/organizations");
   return data.items || [];
