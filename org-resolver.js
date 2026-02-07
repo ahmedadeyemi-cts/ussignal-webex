@@ -1,46 +1,16 @@
-import { normalizeOrgName } from "./utils";
-import { getWebexOrgs } from "./webex";
-
 export async function resolveOrgForUser(user, env) {
-  // Admin sees all orgs
+  // Admins do not belong to a customer org
   if (user.role === "admin") {
-    return { id: "*", name: "ALL_CUSTOMERS" };
+    return null;
   }
 
-  // Check cached mapping
-  const cached = await env.ORG_MAP_KV.get(user.email, { type: "json" });
-  if (cached) return cached;
+  const domain = user.email.split("@")[1];
 
-  const orgs = await getWebexOrgs(env);
+  const record = await env.ORG_MAP_KV.get(domain, { type: "json" });
 
-  const normalizedUser = normalizeOrgName(
-    user.email.split("@")[0]
-  );
-
-  let bestMatch = null;
-  let bestScore = 0;
-
-  for (const org of orgs) {
-    const normOrg = normalizeOrgName(org.displayName);
-
-    if (normOrg.length >= 5 && normOrg.includes(normalizedUser)) {
-      const score = normalizedUser.length / normOrg.length;
-      if (score > bestScore) {
-        bestScore = score;
-        bestMatch = org;
-      }
-    }
+  if (!record) {
+    throw new Error(`No org mapping found for domain: ${domain}`);
   }
 
-  if (!bestMatch) {
-    throw new Error("Unable to resolve organization for user");
-  }
-
-  const result = {
-    id: bestMatch.id,
-    name: bestMatch.displayName
-  };
-
-  await env.ORG_MAP_KV.put(user.email, JSON.stringify(result));
-  return result;
+  return record;
 }
