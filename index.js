@@ -1,6 +1,7 @@
 import { requireAuth, getUserContext } from "./auth";
 import { resolveOrgForUser } from "./org-resolver";
 import { json } from "./responses";
+console.log("US Signal Webex Worker deployed");
 
 export default {
   async fetch(request, env, ctx) {
