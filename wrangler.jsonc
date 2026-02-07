@@ -1,15 +1,12 @@
 {
   "name": "ussignal-webex",
-  "compatibility_date": "2025-02-07",
   "main": "index.js",
+  "compatibility_date": "2025-02-07",
+
   "routes": [
     {
       "pattern": "ussignal-webex.onenecklab.com/*",
       "zone_name": "onenecklab.com"
     }
-  ],
-  "vars": {
-    "ACCESS_TOKEN": "set-in-dashboard",
-    "REFRESH_TOKEN": "set-in-dashboard"
-  }
+  ]
 }
