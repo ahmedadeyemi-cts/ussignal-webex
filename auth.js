@@ -1,3 +1,11 @@
+export function requireAuth(request) {
+  const jwt = request.headers.get("cf-access-jwt-assertion");
+  if (!jwt) {
+    throw new Error("Unauthorized");
+  }
+  return jwt;
+}
+
 export async function getUserContext(jwt) {
   const payload = JSON.parse(
     atob(jwt.split(".")[1])
