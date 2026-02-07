@@ -1,48 +1,40 @@
-/**
- * index.js
- * Main Cloudflare Worker entry point
- */
-
 import { getUserContext } from "./auth";
 import { listWebexOrgs } from "./webex";
-import { json } from "./responses";
 
-console.log("US Signal Webex Worker deployed");
+/**
+ * JSON helper
+ */
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: { "Content-Type": "application/json" }
+  });
+}
 
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     try {
       const url = new URL(request.url);
       const path = url.pathname;
 
-      // --------------------------------------------------
       // Enforce Cloudflare Access
-      // --------------------------------------------------
-      const accessJwt = request.headers.get("cf-access-jwt-assertion");
-      if (!accessJwt) {
+      const jwt = request.headers.get("cf-access-jwt-assertion");
+      if (!jwt) {
         return json({ error: "Unauthorized" }, 401);
       }
 
-      const user = await getUserContext(accessJwt);
+      const user = await getUserContext(jwt);
 
-      // --------------------------------------------------
-      // Health / Identity
-      // --------------------------------------------------
+      // ---- ROUTES ----
+
       if (path === "/api/me") {
-        return json({
-          email: user.email,
-          role: user.role
-        });
+        return json(user);
       }
 
-      // --------------------------------------------------
-      // Organization Resolution
-      // --------------------------------------------------
       if (path === "/api/org") {
-        // US Signal admins see all orgs
+        // Admin sees all orgs
         if (user.role === "admin") {
           const orgs = await listWebexOrgs(env);
-
           return json({
             email: user.email,
             role: user.role,
@@ -50,7 +42,7 @@ export default {
           });
         }
 
-        // Customers resolved later (KV + fuzzy match)
+        // Customer logic later
         return json({
           email: user.email,
           role: user.role,
@@ -58,15 +50,11 @@ export default {
         });
       }
 
-      // --------------------------------------------------
-      // Default
-      // --------------------------------------------------
       return json({ error: "Not Found" }, 404);
 
     } catch (err) {
-      console.error("Worker error:", err);
       return json(
-        { error: err.message || "Internal Server Error" },
+        { error: err.message || "Internal error" },
         500
       );
     }
