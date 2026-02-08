@@ -1,21 +1,24 @@
-export function requireAuth(request) {
-  const jwt = request.headers.get("cf-access-jwt-assertion");
-  if (!jwt) {
-    throw new Error("Unauthorized");
-  }
-  return jwt;
+import { err } from "./responses.js";
+
+export function getAccessEmail(request) {
+  // Cloudflare Access header we saw working in your screenshot:
+  const e =
+    request.headers.get("cf-access-authenticated-user-email") ||
+    request.headers.get("cf-access-user-email") ||
+    "";
+  const email = String(e).trim().toLowerCase();
+  return email || null;
 }
 
-export async function getUserContext(jwt) {
-  const payload = JSON.parse(
-    atob(jwt.split(".")[1])
-  );
+export function requireEmail(request) {
+  const email = getAccessEmail(request);
+  if (!email) {
+    return { ok: false, response: err(401, "not_authenticated", "Missing Cloudflare Access email header") };
+  }
+  return { ok: true, email };
+}
 
-  const email = payload.email?.toLowerCase();
-  if (!email) throw new Error("Email missing from Access token");
-
-  return {
-    email,
-    role: email.endsWith("@ussignal.com") ? "admin" : "customer"
-  };
+export function isAdminEmail(email, env) {
+  const adminDomain = String(env.ADMIN_DOMAIN || "ussignal.com").toLowerCase();
+  return email.endsWith("@" + adminDomain);
 }
