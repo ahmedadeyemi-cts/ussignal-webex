@@ -1,6 +1,5 @@
-import { getUserContext } from "./auth";
-import { resolveOrgForUser } from "./org-resolver";
 import { json } from "./responses";
+import { getUserContext } from "./auth";
 
 export default {
   async fetch(request, env, ctx) {
@@ -9,7 +8,7 @@ export default {
       const path = url.pathname;
 
       /* ===============================
-         Silence favicon noise
+         Silence favicon
       =============================== */
       if (path === "/favicon.ico") {
         return new Response(null, { status: 204 });
@@ -31,84 +30,53 @@ export default {
       if (path === "/api/me") {
         return json({
           email: user.email,
-          role: user.role
+          role: user.role,
         });
       }
 
       /* ===============================
-         ADMIN: seed PINs (TEST)
-         GET /api/admin/seed-pins
+         /api/admin/seed-pins
+         🔑 THIS IS THE ROUTE YOU KEEP CALLING
       =============================== */
       if (path === "/api/admin/seed-pins") {
         if (user.role !== "admin") {
           return json({ error: "admin_only" }, 403);
         }
 
-        // 🔑 write test PIN
+        // HARD-CODED SEED FOR TESTING
         await env.ORG_MAP_KV.put(
-          "pin:12345",
+          "pin:39571",
           JSON.stringify({
-            orgId: "demo-org",
-            orgName: "Demo Customer"
+            orgId: "city-of-norwalk-iowa",
+            orgName: "City of Norwalk, Iowa",
           })
         );
 
-        return json({
-          status: "ok",
-          seeded: {
-            pin: "12345",
-            orgName: "Demo Customer"
-          }
+        const verify = await env.ORG_MAP_KV.get("pin:39571", {
+          type: "json",
         });
-      }
-
-      /* ===============================
-         PIN VERIFY
-         POST /api/pin/verify
-         body: { pin: "12345" }
-      =============================== */
-      if (path === "/api/pin/verify" && request.method === "POST") {
-        const body = await request.json().catch(() => ({}));
-        const pin = String(body.pin || "").trim();
-
-        if (!/^\d{5}$/.test(pin)) {
-          return json({ error: "invalid_pin_format" }, 400);
-        }
-
-        const record = await env.ORG_MAP_KV.get(`pin:${pin}`, {
-          type: "json"
-        });
-
-        if (!record) {
-          return json({ error: "invalid_pin" }, 403);
-        }
 
         return json({
           status: "ok",
-          orgId: record.orgId,
-          orgName: record.orgName
+          wrote: true,
+          verify,
         });
       }
 
       /* ===============================
-         CUSTOMER SUMMARY
+         Fallthrough
       =============================== */
-      if (path === "/api/customer/summary") {
-        const org = await resolveOrgForUser(user, env);
-        return json({
-          orgName: org.name,
-          orgId: org.id
-        });
-      }
-
-      /* ===============================
-         FALLTHROUGH
-      =============================== */
-      return json({ error: "Not Found" }, 404);
+      return json({ error: "Not Found", path }, 404);
 
     } catch (err) {
-      console.error("Worker error:", err);
-      return json({ error: err.message }, 500);
+      console.error("🔥 Worker error", err);
+      return json(
+        {
+          error: "internal_error",
+          message: err.message,
+        },
+        500
+      );
     }
-  }
+  },
 };
