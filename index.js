@@ -1,57 +1,112 @@
-// index.js
-import { getUserContext } from "./auth";
-import { resolveOrgForUser } from "./org-resolver";
-import { json } from "./responses";
-import { listWebexOrgs, webexFetchJson } from "./webex";
-
-console.log("US Signal Webex Worker deployed");
-
 export default {
   async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+
+    // ---- Common headers
+    const jsonHeaders = {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+    };
+
     try {
-      const url = new URL(request.url);
-      const path = url.pathname;
-
-      // Enforce Cloudflare Access (your existing pattern)
-      const accessJwt = request.headers.get("cf-access-jwt-assertion");
-      if (!accessJwt) {
-        return json({ error: "Unauthorized" }, 401);
+      // ============================
+      // Root sanity check
+      // ============================
+      if (url.pathname === "/") {
+        return new Response(
+          JSON.stringify({
+            status: "ok",
+            service: "ussignal-webex",
+            time: new Date().toISOString(),
+          }),
+          { headers: jsonHeaders }
+        );
       }
 
-      const user = await getUserContext(accessJwt);
+      // ============================
+      // /api/me — token sanity check
+      // ============================
+      if (url.pathname === "/api/me") {
+        if (!env.ACCESS_TOKEN) {
+          throw new Error("ACCESS_TOKEN missing");
+        }
 
-      // Health / identity
-      if (path === "/api/me") {
-        return json({ email: user.email, role: user.role }, 200);
+        const res = await fetch("https://webexapis.com/v1/people/me", {
+          headers: {
+            Authorization: `Bearer ${env.ACCESS_TOKEN}`,
+          },
+        });
+
+        const text = await res.text();
+
+        if (!res.ok) {
+          throw new Error(`Webex /people/me failed (${res.status}): ${text}`);
+        }
+
+        return new Response(text, {
+          headers: jsonHeaders,
+          status: 200,
+        });
       }
 
-      // Resolve org for user (will be null until you populate ORG mapping logic)
-      if (path === "/api/org") {
-        const org = await resolveOrgForUser(env, user);
-        return json({ email: user.email, role: user.role, org: org || null }, 200);
+      // ============================
+      // /api/org — list orgs
+      // ============================
+      if (url.pathname === "/api/org") {
+        if (!env.ACCESS_TOKEN) {
+          throw new Error("ACCESS_TOKEN missing");
+        }
+
+        const res = await fetch("https://webexapis.com/v1/organizations", {
+          headers: {
+            Authorization: `Bearer ${env.ACCESS_TOKEN}`,
+          },
+        });
+
+        const text = await res.text();
+
+        if (!res.ok) {
+          throw new Error(
+            `Webex /organizations failed (${res.status}): ${text}`
+          );
+        }
+
+        return new Response(text, {
+          headers: jsonHeaders,
+          status: 200,
+        });
       }
 
-      // Debug: raw orgs from Webex
-      if (path === "/api/debug/orgs") {
-        const orgs = await listWebexOrgs(env);
-        return json({ ok: true, orgs }, 200);
+      // ============================
+      // Favicon (silence browser)
+      // ============================
+      if (url.pathname === "/favicon.ico") {
+        return new Response(null, { status: 204 });
       }
 
-      // Example: passthrough test (if you want it)
-      if (path === "/api/debug/me-webex") {
-        const me = await webexFetchJson(env, "/people/me");
-        return json({ ok: true, me }, 200);
-      }
+      // ============================
+      // Not found
+      // ============================
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+          path: url.pathname,
+        }),
+        { status: 404, headers: jsonHeaders }
+      );
+    } catch (err) {
+      // ============================
+      // HARD FAIL SAFETY NET
+      // ============================
+      console.error("🔥 Worker error:", err);
 
-      return json({ error: "Not Found" }, 404);
-    } catch (e) {
-      return json(
-        {
-          ok: false,
-          error: e?.message || String(e)
-        },
-        500
+      return new Response(
+        JSON.stringify({
+          error: "internal_error",
+          message: err?.message || String(err),
+        }),
+        { status: 500, headers: jsonHeaders }
       );
     }
-  }
+  },
 };
