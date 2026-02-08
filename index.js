@@ -1,8 +1,9 @@
+import { getWebexMe, listWebexOrgs } from "./webex";
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // ---- Common headers
     const jsonHeaders = {
       "content-type": "application/json",
       "cache-control": "no-store",
@@ -24,54 +25,24 @@ export default {
       }
 
       // ============================
-      // /api/me — token sanity check
+      // /api/me — Webex user (KV-backed token)
       // ============================
       if (url.pathname === "/api/me") {
-        if (!env.ACCESS_TOKEN) {
-          throw new Error("ACCESS_TOKEN missing");
-        }
+        const me = await getWebexMe(env);
 
-        const res = await fetch("https://webexapis.com/v1/people/me", {
-          headers: {
-            Authorization: `Bearer ${env.ACCESS_TOKEN}`,
-          },
-        });
-
-        const text = await res.text();
-
-        if (!res.ok) {
-          throw new Error(`Webex /people/me failed (${res.status}): ${text}`);
-        }
-
-        return new Response(text, {
+        return new Response(JSON.stringify(me), {
           headers: jsonHeaders,
           status: 200,
         });
       }
 
       // ============================
-      // /api/org — list orgs
+      // /api/org — list orgs (KV-backed token)
       // ============================
       if (url.pathname === "/api/org") {
-        if (!env.ACCESS_TOKEN) {
-          throw new Error("ACCESS_TOKEN missing");
-        }
+        const orgs = await listWebexOrgs(env);
 
-        const res = await fetch("https://webexapis.com/v1/organizations", {
-          headers: {
-            Authorization: `Bearer ${env.ACCESS_TOKEN}`,
-          },
-        });
-
-        const text = await res.text();
-
-        if (!res.ok) {
-          throw new Error(
-            `Webex /organizations failed (${res.status}): ${text}`
-          );
-        }
-
-        return new Response(text, {
+        return new Response(JSON.stringify(orgs), {
           headers: jsonHeaders,
           status: 200,
         });
