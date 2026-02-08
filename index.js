@@ -492,27 +492,72 @@ export default {
    Admin-only: fetch JSON and seed ORG_MAP_KV
 ----------------------------- */
 if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
-  // Bootstrap-only endpoint
-  // Do NOT depend on Webex
-
   const email =
     request.headers.get("cf-access-authenticated-user-email") ||
     request.headers.get("cf-access-user-email");
 
   if (!email || !email.endsWith("@ussignal.com")) {
-    return json({ error: "admin_only" }, 403);
+    return json(
+      {
+        error: "admin_only",
+        detail: "Missing or non-ussignal email header from Cloudflare Access",
+        email_seen: email || null,
+      },
+      403
+    );
   }
 
   const seedUrl =
     env.PIN_SEED_URL ||
     "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/org-pin-map.json";
 
-  const res = await fetch(seedUrl, { headers: { "cache-control": "no-store" } });
-  if (!res.ok) {
-    return json({ error: "seed_fetch_failed", status: res.status }, 500);
+  let res;
+  try {
+    res = await fetch(seedUrl, {
+      headers: {
+        "cache-control": "no-store",
+        // helps avoid some edge cases where GitHub varies response
+        "accept": "application/json,text/plain,*/*",
+        "user-agent": "ussignal-webex-seeder",
+      },
+    });
+  } catch (e) {
+    return json({ error: "seed_fetch_exception", message: String(e), seedUrl }, 500);
   }
 
-  const raw = await res.json();
+  const bodyText = await res.text();
+  if (!res.ok) {
+    return json(
+      {
+        error: "seed_fetch_failed",
+        seedUrl,
+        status: res.status,
+        statusText: res.statusText,
+        bodyPreview: bodyText.slice(0, 600),
+      },
+      500
+    );
+  }
+
+  let raw;
+  try {
+    raw = bodyText ? JSON.parse(bodyText) : null;
+  } catch (e) {
+    return json(
+      {
+        error: "seed_json_parse_failed",
+        seedUrl,
+        message: String(e),
+        bodyPreview: bodyText.slice(0, 800),
+      },
+      500
+    );
+  }
+
+  if (!raw || typeof raw !== "object") {
+    return json({ error: "seed_invalid_json_root", seedUrl, rootType: typeof raw }, 500);
+  }
+
   let written = 0;
   let skipped = 0;
 
@@ -522,7 +567,7 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
       continue;
     }
 
-    const pin = key.replace("PIN_", "");
+    const pin = key.replace("PIN_", "").trim();
     if (!/^\d{5}$/.test(pin) || !value?.orgName) {
       skipped++;
       continue;
@@ -530,7 +575,7 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
 
     const orgId =
       value.orgId ||
-      value.orgName.toLowerCase().replace(/[^a-z0-9]/g, "");
+      String(value.orgName).toLowerCase().replace(/[^a-z0-9]/g, "");
 
     await Promise.all([
       env.ORG_MAP_KV.put(`pin:${pin}`, JSON.stringify({ orgId, orgName: value.orgName })),
@@ -540,14 +585,7 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
     written++;
   }
 
-  return json({ status: "ok", pinsLoaded: written, skipped });
-}
-if (url.pathname === "/api/debug/access" && request.method === "GET") {
-  return json({
-    email1: request.headers.get("cf-access-authenticated-user-email"),
-    email2: request.headers.get("cf-access-user-email"),
-    jwt: !!request.headers.get("cf-access-jwt-assertion"),
-  });
+  return json({ status: "ok", pinsLoaded: written, skipped, seedUrl, ranAs: email });
 }
 
 
@@ -565,6 +603,21 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
       if (url.pathname === "/favicon.ico") {
         return new Response(null, { status: 204 });
       }
+// Debug Access headers (plain text so Firefox can't "pretty viewer" hide it)
+if (url.pathname === "/api/debug/access" && request.method === "GET") {
+  const out = {
+    "cf-access-authenticated-user-email": request.headers.get("cf-access-authenticated-user-email"),
+    "cf-access-user-email": request.headers.get("cf-access-user-email"),
+    "cf-access-jwt-assertion-present": !!request.headers.get("cf-access-jwt-assertion"),
+    "cf-ray": request.headers.get("cf-ray"),
+    "host": request.headers.get("host"),
+  };
+
+  return new Response(JSON.stringify(out, null, 2), {
+    status: 200,
+    headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+  });
+}
 
       /* -----------------------------
          /api/me
