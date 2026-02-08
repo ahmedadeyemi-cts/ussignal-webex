@@ -492,16 +492,16 @@ export default {
    Admin-only: fetch JSON and seed ORG_MAP_KV
 ----------------------------- */
 if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
-  // 🚨 DO NOT TOUCH WEBEX HERE
-  // This route must work even if Webex is down
+  // Bootstrap-only endpoint
+  // Do NOT depend on Webex
 
-  const token = await getAccessToken();
-const user = await getCurrentUser(token);
+  const email =
+    request.headers.get("cf-access-authenticated-user-email") ||
+    request.headers.get("cf-access-user-email");
 
-if (!user.isAdmin) {
-  return json({ error: "admin_only" }, 403);
-}
-
+  if (!email || !email.endsWith("@ussignal.com")) {
+    return json({ error: "admin_only" }, 403);
+  }
 
   const seedUrl =
     env.PIN_SEED_URL ||
@@ -522,7 +522,7 @@ if (!user.isAdmin) {
       continue;
     }
 
-    const pin = key.replace("PIN_", "").trim();
+    const pin = key.replace("PIN_", "");
     if (!/^\d{5}$/.test(pin) || !value?.orgName) {
       skipped++;
       continue;
@@ -533,25 +533,16 @@ if (!user.isAdmin) {
       value.orgName.toLowerCase().replace(/[^a-z0-9]/g, "");
 
     await Promise.all([
-      env.ORG_MAP_KV.put(
-        `pin:${pin}`,
-        JSON.stringify({ orgId, orgName: value.orgName })
-      ),
-      env.ORG_MAP_KV.put(
-        `org:${orgId}`,
-        JSON.stringify({ pin, orgName: value.orgName })
-      ),
+      env.ORG_MAP_KV.put(`pin:${pin}`, JSON.stringify({ orgId, orgName: value.orgName })),
+      env.ORG_MAP_KV.put(`org:${orgId}`, JSON.stringify({ pin, orgName: value.orgName })),
     ]);
 
     written++;
   }
 
-  return json({
-    status: "ok",
-    pinsLoaded: written,
-    skipped,
-  });
+  return json({ status: "ok", pinsLoaded: written, skipped });
 }
+
 
       // Root UI (includes modal logic)
       if (url.pathname === "/" && request.method === "GET") {
