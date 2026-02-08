@@ -670,18 +670,34 @@ for (const [key, value] of Object.entries(raw)) {
     continue;
   }
 
-  if (!value?.orgName || !value?.role) {
+  if (!value?.orgName) {
     skipped++;
     continue;
   }
 
-  await env.ORG_MAP_KV.put(
-    `pin:${pin}`,
-    JSON.stringify({
-      role: value.role,
-      orgName: value.orgName
-    })
-  );
+  // 🔑 orgId strategy:
+  // Use normalized orgName as stable ID if no explicit orgId exists
+  const orgId =
+    value.orgId ||
+    value.orgName.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  // ✅ WRITE FORWARD + REVERSE MAPPINGS
+  await Promise.all([
+    env.ORG_MAP_KV.put(
+      `pin:${pin}`,
+      JSON.stringify({
+        orgId,
+        orgName: value.orgName,
+      })
+    ),
+    env.ORG_MAP_KV.put(
+      `org:${orgId}`,
+      JSON.stringify({
+        pin,
+        orgName: value.orgName,
+      })
+    ),
+  ]);
 
   written++;
 }
