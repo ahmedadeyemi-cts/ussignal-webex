@@ -487,6 +487,72 @@ export default {
     ===================================================== */
 
     try {
+      /* -----------------------------
+   /api/admin/seed-pins (GET)
+   Admin-only: fetch JSON and seed ORG_MAP_KV
+----------------------------- */
+if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
+  // 🚨 DO NOT TOUCH WEBEX HERE
+  // This route must work even if Webex is down
+
+  const accessEmail =
+    request.headers.get("cf-access-authenticated-user-email") ||
+    request.headers.get("cf-access-user-email");
+
+  if (!accessEmail || !accessEmail.endsWith("@ussignal.com")) {
+    return json({ error: "admin_only" }, 403);
+  }
+
+  const seedUrl =
+    env.PIN_SEED_URL ||
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/org-pin-map.json";
+
+  const res = await fetch(seedUrl, { headers: { "cache-control": "no-store" } });
+  if (!res.ok) {
+    return json({ error: "seed_fetch_failed", status: res.status }, 500);
+  }
+
+  const raw = await res.json();
+  let written = 0;
+  let skipped = 0;
+
+  for (const [key, value] of Object.entries(raw)) {
+    if (!key.startsWith("PIN_")) {
+      skipped++;
+      continue;
+    }
+
+    const pin = key.replace("PIN_", "").trim();
+    if (!/^\d{5}$/.test(pin) || !value?.orgName) {
+      skipped++;
+      continue;
+    }
+
+    const orgId =
+      value.orgId ||
+      value.orgName.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    await Promise.all([
+      env.ORG_MAP_KV.put(
+        `pin:${pin}`,
+        JSON.stringify({ orgId, orgName: value.orgName })
+      ),
+      env.ORG_MAP_KV.put(
+        `org:${orgId}`,
+        JSON.stringify({ pin, orgName: value.orgName })
+      ),
+    ]);
+
+    written++;
+  }
+
+  return json({
+    status: "ok",
+    pinsLoaded: written,
+    skipped,
+  });
+}
+
       // Root UI (includes modal logic)
       if (url.pathname === "/" && request.method === "GET") {
         return text(renderHomeHTML(), 200, { "content-type": "text/html; charset=utf-8" });
@@ -631,82 +697,6 @@ export default {
         const filtered = orgData.items.filter((o) => o.id === session.orgId);
         return json(filtered);
       }
-
-      /* -----------------------------
-         /api/admin/seed-pins (GET)
-         Admin-only: fetch JSON and seed ORG_MAP_KV
-         Supports 2 JSON formats:
-           A) { "12345": { orgId, orgName } , ... }   // pin->org
-           B) { "<orgId>": { pin, orgName }, ... }    // org->pin
-      ----------------------------- */
-      if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
-        const token = await getAccessToken();
-        const user = await getCurrentUser(token);
-
-        if (!user.isAdmin) return json({ error: "admin_only" }, 403);
-
-        const seedUrl =
-          env.PIN_SEED_URL ||
-          "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/org-pin-map.json";
-
-        const res = await fetch(seedUrl, { headers: { "cache-control": "no-store" } });
-        if (!res.ok) throw new Error(`Failed to fetch org-pin-map.json (${res.status})`);
-
-       const raw = await res.json();
-let written = 0;
-let skipped = 0;
-
-for (const [key, value] of Object.entries(raw)) {
-  // Expect keys like "PIN_39571"
-  if (!key.startsWith("PIN_")) {
-    skipped++;
-    continue;
-  }
-
-  const pin = key.replace("PIN_", "").trim();
-
-  if (!/^\d{5}$/.test(pin)) {
-    skipped++;
-    continue;
-  }
-
-  if (!value?.orgName) {
-    skipped++;
-    continue;
-  }
-
-  // 🔑 orgId strategy:
-  // Use normalized orgName as stable ID if no explicit orgId exists
-  const orgId =
-    value.orgId ||
-    value.orgName.toLowerCase().replace(/[^a-z0-9]/g, "");
-
-  // ✅ WRITE FORWARD + REVERSE MAPPINGS
-  await Promise.all([
-    env.ORG_MAP_KV.put(
-      `pin:${pin}`,
-      JSON.stringify({
-        orgId,
-        orgName: value.orgName,
-      })
-    ),
-    env.ORG_MAP_KV.put(
-      `org:${orgId}`,
-      JSON.stringify({
-        pin,
-        orgName: value.orgName,
-      })
-    ),
-  ]);
-
-  written++;
-}
-
-return json({
-  status: "ok",
-  pinsLoaded: written,
-  skipped
-});
 
       /* -----------------------------
          /api/admin/pin/rotate (POST)
