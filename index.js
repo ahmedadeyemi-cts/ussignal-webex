@@ -487,7 +487,13 @@ export default {
     ===================================================== */
 
     try {
-      // 🔒 Kill switch — disable seeding unless explicitly enabled
+
+      /* -----------------------------
+   /api/admin/seed-pins (GET)
+   Admin-only: fetch JSON and seed ORG_MAP_KV
+----------------------------- */
+if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
+   // 🔒 Kill switch — disable seeding unless explicitly enabled
 if (env.SEED_DISABLED === "true") {
   return json(
     {
@@ -497,11 +503,6 @@ if (env.SEED_DISABLED === "true") {
     410
   );
 }
-      /* -----------------------------
-   /api/admin/seed-pins (GET)
-   Admin-only: fetch JSON and seed ORG_MAP_KV
------------------------------ */
-if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
   const email =
     request.headers.get("cf-access-authenticated-user-email") ||
     request.headers.get("cf-access-user-email");
