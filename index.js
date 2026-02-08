@@ -652,44 +652,45 @@ export default {
         const res = await fetch(seedUrl, { headers: { "cache-control": "no-store" } });
         if (!res.ok) throw new Error(`Failed to fetch org-pin-map.json (${res.status})`);
 
-        const raw = await res.json();
+       const raw = await res.json();
+let written = 0;
+let skipped = 0;
 
-        let written = 0;
-        let skipped = 0;
+for (const [key, value] of Object.entries(raw)) {
+  // Expect keys like "PIN_39571"
+  if (!key.startsWith("PIN_")) {
+    skipped++;
+    continue;
+  }
 
-        // Detect format A vs B
-        const entries = Object.entries(raw);
+  const pin = key.replace("PIN_", "").trim();
 
-        // If key looks like 5 digits => format A (pin->org)
-        const looksLikeFormatA = entries.length && /^\d{5}$/.test(entries[0][0]);
+  if (!/^\d{5}$/.test(pin)) {
+    skipped++;
+    continue;
+  }
 
-        for (const [k, v] of entries) {
-          if (looksLikeFormatA) {
-            const pin = String(k).trim();
-            const orgId = v?.orgId;
-            const orgName = v?.orgName;
-            if (!isFiveDigitPin(pin) || !orgId || !orgName) {
-              skipped++;
-              continue;
-            }
-            await putPinMapping(pin, orgId, orgName);
-            written++;
-          } else {
-            // format B (orgId-> {pin, orgName})
-            const orgId = k;
-            const pin = v?.pin;
-            const orgName = v?.orgName;
-            if (!orgId || !isFiveDigitPin(String(pin || "")) || !orgName) {
-              skipped++;
-              continue;
-            }
-            await putPinMapping(String(pin).trim(), orgId, orgName);
-            written++;
-          }
-        }
+  if (!value?.orgName || !value?.role) {
+    skipped++;
+    continue;
+  }
 
-        return json({ status: "ok", pinsLoaded: written, skipped });
-      }
+  await env.ORG_MAP_KV.put(
+    `pin:${pin}`,
+    JSON.stringify({
+      role: value.role,
+      orgName: value.orgName
+    })
+  );
+
+  written++;
+}
+
+return json({
+  status: "ok",
+  pinsLoaded: written,
+  skipped
+});
 
       /* -----------------------------
          /api/admin/pin/rotate (POST)
