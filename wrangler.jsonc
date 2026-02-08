@@ -8,5 +8,18 @@
       "pattern": "ussignal-webex.onenecklab.com/*",
       "zone_name": "onenecklab.com"
     }
-  ]
+  ],
+
+  "kv_namespaces": [
+    {
+      "binding": "WEBEX",
+      "id": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8zOTUzNzQ3ZS05NWQyLTQ1MTMtYmVjNy00ZDM4MzIxMzlkYjc"
+    }
+  ],
+
+  "vars": {
+    "CLIENT_ID": "set-in-dashboard",
+    "CLIENT_SECRET": "set-in-dashboard",
+    "REFRESH_TOKEN": "set-in-dashboard"
+  }
 }
