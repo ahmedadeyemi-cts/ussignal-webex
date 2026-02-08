@@ -7,9 +7,10 @@ export default {
       "cache-control": "no-store",
     };
 
-    // -----------------------------
-    // Helpers: org matching + RBAC
-    // -----------------------------
+    /* =====================================================
+       Helpers
+    ===================================================== */
+
     function normalize(str) {
       return str.toLowerCase().replace(/[^a-z0-9]/g, "");
     }
@@ -19,11 +20,29 @@ export default {
       return normalize(orgName).includes(normalize(input));
     }
 
+    async function resolvePinContext(pin) {
+      if (!pin || !/^\d{5}$/.test(pin)) {
+        throw new Error("Invalid PIN format");
+      }
+
+      const record = await env.ORG_MAP_KV.get(pin, { type: "json" });
+      if (!record) {
+        throw new Error("Invalid or expired PIN");
+      }
+
+      return {
+        pin,
+        orgId: record.orgId,
+        orgName: record.orgName,
+        role: record.role || "customer",
+      };
+    }
+
     async function resolveUserContext(me, orgs) {
       const email = me.emails?.[0]?.toLowerCase();
       if (!email) throw new Error("User email not found");
 
-      // Admin
+      // Admin users
       if (email.endsWith("@ussignal.com")) {
         return {
           email,
@@ -31,7 +50,7 @@ export default {
         };
       }
 
-      // Customer — cached?
+      // Customer — attempt cached org resolution
       const cached = await env.ORG_MAP_KV.get(email, { type: "json" });
       if (cached) return cached;
 
@@ -42,7 +61,7 @@ export default {
       );
 
       if (!match) {
-        throw new Error("Unable to match customer to organization");
+        throw new Error("Unable to auto-match customer to organization");
       }
 
       const context = {
@@ -53,13 +72,60 @@ export default {
       };
 
       await env.ORG_MAP_KV.put(email, JSON.stringify(context));
-
       return context;
     }
 
+    async function getAccessToken() {
+      const cached = await env.WEBEX.get("access_token", { type: "json" });
+
+      if (cached && cached.token && cached.expires_at > Date.now()) {
+        return cached.token;
+      }
+
+      const body = new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: env.CLIENT_ID,
+        client_secret: env.CLIENT_SECRET,
+        refresh_token: env.REFRESH_TOKEN,
+      });
+
+      const res = await fetch(
+        "https://idbroker.webex.com/idb/oauth2/v1/access_token",
+        {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body,
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          `Webex token refresh failed (${res.status}): ${JSON.stringify(data)}`
+        );
+      }
+
+      const expiresAt = Date.now() + data.expires_in * 1000 - 60000;
+
+      await env.WEBEX.put(
+        "access_token",
+        JSON.stringify({
+          token: data.access_token,
+          expires_at: expiresAt,
+        })
+      );
+
+      return data.access_token;
+    }
+
+    /* =====================================================
+       Routes
+    ===================================================== */
+
     try {
       // -----------------------------
-      // Root sanity
+      // Root
       // -----------------------------
       if (url.pathname === "/") {
         return new Response(
@@ -73,54 +139,7 @@ export default {
       }
 
       // -----------------------------
-      // Get valid Webex access token
-      // -----------------------------
-      async function getAccessToken() {
-        const cached = await env.WEBEX.get("access_token", { type: "json" });
-
-        if (cached && cached.token && cached.expires_at > Date.now()) {
-          return cached.token;
-        }
-
-        const body = new URLSearchParams({
-          grant_type: "refresh_token",
-          client_id: env.CLIENT_ID,
-          client_secret: env.CLIENT_SECRET,
-          refresh_token: env.REFRESH_TOKEN,
-        });
-
-        const res = await fetch(
-          "https://idbroker.webex.com/idb/oauth2/v1/access_token",
-          {
-            method: "POST",
-            headers: { "content-type": "application/x-www-form-urlencoded" },
-            body,
-          }
-        );
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(
-            `Webex token refresh failed (${res.status}): ${JSON.stringify(data)}`
-          );
-        }
-
-        const expiresAt = Date.now() + data.expires_in * 1000 - 60000;
-
-        await env.WEBEX.put(
-          "access_token",
-          JSON.stringify({
-            token: data.access_token,
-            expires_at: expiresAt,
-          })
-        );
-
-        return data.access_token;
-      }
-
-      // -----------------------------
-      // /api/me  → role + org context
+      // /api/me
       // -----------------------------
       if (url.pathname === "/api/me") {
         const token = await getAccessToken();
@@ -161,7 +180,51 @@ export default {
       }
 
       // -----------------------------
-      // /api/org  → RBAC enforced
+      // /api/pin  (PIN → Org binding)
+      // -----------------------------
+      if (url.pathname === "/api/pin" && request.method === "POST") {
+        const { pin } = await request.json();
+
+        const token = await getAccessToken();
+
+        const meRes = await fetch("https://webexapis.com/v1/people/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const me = await meRes.json();
+        if (!meRes.ok) {
+          throw new Error("Unable to resolve user identity");
+        }
+
+        const email = me.emails?.[0]?.toLowerCase();
+        if (!email) {
+          throw new Error("User email missing");
+        }
+
+        const pinContext = await resolvePinContext(pin);
+
+        const session = {
+          email,
+          pin: pinContext.pin,
+          role: pinContext.role,
+          orgId: pinContext.orgId,
+          orgName: pinContext.orgName,
+          authenticatedAt: Date.now(),
+        };
+
+        await env.USER_SESSION_KV.put(
+          email,
+          JSON.stringify(session),
+          { expirationTtl: 3600 }
+        );
+
+        return new Response(JSON.stringify(session), {
+          headers: jsonHeaders,
+        });
+      }
+
+      // -----------------------------
+      // /api/org  (RBAC + PIN enforced)
       // -----------------------------
       if (url.pathname === "/api/org") {
         const token = await getAccessToken();
@@ -169,26 +232,33 @@ export default {
         const meRes = await fetch("https://webexapis.com/v1/people/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
+
         const me = await meRes.json();
+        const email = me.emails?.[0]?.toLowerCase();
+        if (!email) throw new Error("User email missing");
+
+        const session = await env.USER_SESSION_KV.get(email, { type: "json" });
+        if (!session) {
+          throw new Error("PIN verification required");
+        }
 
         const orgRes = await fetch(
           "https://webexapis.com/v1/organizations",
           { headers: { Authorization: `Bearer ${token}` } }
         );
+
         const orgData = await orgRes.json();
 
-        const context = await resolveUserContext(me, orgData.items);
-
         // Admin → all orgs
-        if (context.role === "admin") {
+        if (session.role === "admin") {
           return new Response(JSON.stringify(orgData.items), {
             headers: jsonHeaders,
           });
         }
 
-        // Customer → only their org
+        // Customer → PIN-bound org only
         const filtered = orgData.items.filter(
-          (o) => o.id === context.orgId
+          (o) => o.id === session.orgId
         );
 
         return new Response(JSON.stringify(filtered), {
