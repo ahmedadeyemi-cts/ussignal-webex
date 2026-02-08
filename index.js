@@ -495,13 +495,13 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
   // 🚨 DO NOT TOUCH WEBEX HERE
   // This route must work even if Webex is down
 
-  const accessEmail =
-    request.headers.get("cf-access-authenticated-user-email") ||
-    request.headers.get("cf-access-user-email");
+  const token = await getAccessToken();
+const user = await getCurrentUser(token);
 
-  if (!accessEmail || !accessEmail.endsWith("@ussignal.com")) {
-    return json({ error: "admin_only" }, 403);
-  }
+if (!user.isAdmin) {
+  return json({ error: "admin_only" }, 403);
+}
+
 
   const seedUrl =
     env.PIN_SEED_URL ||
