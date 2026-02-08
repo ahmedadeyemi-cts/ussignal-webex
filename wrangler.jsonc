@@ -15,11 +15,4 @@
       "binding": "WEBEX",
       "id": "2da71736311d433b9c2b05a7ba080eb3"
     }
-  ],
-
-  "vars": {
-    "CLIENT_ID": "set-in-dashboard",
-    "CLIENT_SECRET": "set-in-dashboard",
-    "REFRESH_TOKEN": "set-in-dashboard"
-  }
 }
