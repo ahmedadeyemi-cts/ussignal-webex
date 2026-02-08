@@ -487,6 +487,16 @@ export default {
     ===================================================== */
 
     try {
+      // 🔒 Kill switch — disable seeding unless explicitly enabled
+if (env.SEED_DISABLED === "true") {
+  return json(
+    {
+      error: "seed_disabled",
+      message: "Seed endpoint is disabled by configuration"
+    },
+    410
+  );
+}
       /* -----------------------------
    /api/admin/seed-pins (GET)
    Admin-only: fetch JSON and seed ORG_MAP_KV
