@@ -2,140 +2,49 @@ import { getUserContext } from "./auth";
 import { resolveOrgForUser } from "./org-resolver";
 import { json } from "./responses";
 
-/**
- * REQUIRED KV BINDINGS
- * - ORG_MAP_KV
- * - USER_SESSION_KV
- */
-
 export default {
   async fetch(request, env, ctx) {
     try {
       const url = new URL(request.url);
       const path = url.pathname;
 
-      /* =====================================================
-         Cloudflare Access Enforcement
-      ===================================================== */
+      /* ===============================
+         Silence favicon noise
+      =============================== */
+      if (path === "/favicon.ico") {
+        return new Response(null, { status: 204 });
+      }
+
+      /* ===============================
+         Enforce Cloudflare Access
+      =============================== */
       const accessJwt = request.headers.get("cf-access-jwt-assertion");
       if (!accessJwt) {
-        return json({ error: "unauthorized" }, 401);
+        return json({ error: "Unauthorized" }, 401);
       }
 
       const user = await getUserContext(accessJwt);
-      const email = user.email.toLowerCase();
-      const isAdmin = user.role === "admin";
 
-      /* =====================================================
-         Helpers
-      ===================================================== */
-      const SESSION_TTL = 60 * 60; // 1 hour
-
-      const sessKey = `sess:${email}`;
-      const pinKey = (pin) => `pin:${pin}`;
-
-      const getSession = async () =>
-        env.USER_SESSION_KV.get(sessKey, { type: "json" });
-
-      const setSession = async (session) =>
-        env.USER_SESSION_KV.put(sessKey, JSON.stringify(session), {
-          expirationTtl: SESSION_TTL
-        });
-
-      const clearSession = async () =>
-        env.USER_SESSION_KV.delete(sessKey);
-
-      /* =====================================================
+      /* ===============================
          /api/me
-      ===================================================== */
+      =============================== */
       if (path === "/api/me") {
-        const session = await getSession();
-
         return json({
-          email,
-          role: user.role,
-          orgId: session?.orgId || null,
-          orgName: session?.orgName || null
+          email: user.email,
+          role: user.role
         });
       }
 
-      /* =====================================================
-         /api/pin/verify
-         POST { pin: "12345" }
-      ===================================================== */
-      if (path === "/api/pin/verify" && request.method === "POST") {
-        const body = await request.json().catch(() => ({}));
-        const pin = String(body.pin || "").trim();
-
-        if (!/^\d{5}$/.test(pin)) {
-          return json({ error: "invalid_pin_format" }, 400);
-        }
-
-        const mapping = await env.ORG_MAP_KV.get(pinKey(pin), {
-          type: "json"
-        });
-
-        if (!mapping) {
-          return json({ error: "invalid_pin" }, 403);
-        }
-
-        await setSession({
-          email,
-          orgId: mapping.orgId,
-          orgName: mapping.orgName,
-          issuedAt: Date.now()
-        });
-
-        return json({
-          status: "ok",
-          orgId: mapping.orgId,
-          orgName: mapping.orgName
-        });
-      }
-
-      /* =====================================================
-         /api/pin/logout
-      ===================================================== */
-      if (path === "/api/pin/logout" && request.method === "POST") {
-        await clearSession();
-        return json({ status: "ok" });
-      }
-
-      /* =====================================================
-         /api/customer/summary
-         - Admin: resolved normally
-         - Customer: requires PIN
-      ===================================================== */
-      if (path === "/api/customer/summary") {
-        const session = await getSession();
-
-        if (!isAdmin && !session) {
-          return json({ error: "pin_required" }, 401);
-        }
-
-        if (isAdmin) {
-          const org = await resolveOrgForUser(user, env);
-          return json({
-            orgName: org.name,
-            orgId: org.id
-          });
-        }
-
-        return json({
-          orgName: session.orgName,
-          orgId: session.orgId
-        });
-      }
-
-      /* =====================================================
-         /api/admin/seed-pins
-         TEMP: seeds a demo PIN
-      ===================================================== */
+      /* ===============================
+         ADMIN: seed PINs (TEST)
+         GET /api/admin/seed-pins
+      =============================== */
       if (path === "/api/admin/seed-pins") {
-        if (!isAdmin) {
+        if (user.role !== "admin") {
           return json({ error: "admin_only" }, 403);
         }
 
+        // 🔑 write test PIN
         await env.ORG_MAP_KV.put(
           "pin:12345",
           JSON.stringify({
@@ -153,31 +62,49 @@ export default {
         });
       }
 
-      /* =====================================================
-         /api/debug/pin-test
-         Verifies KV read/write
-      ===================================================== */
-      if (path === "/api/debug/pin-test") {
-        await env.ORG_MAP_KV.put(
-          "pin:99999",
-          JSON.stringify({
-            orgId: "kv-test",
-            orgName: "KV Working"
-          })
-        );
+      /* ===============================
+         PIN VERIFY
+         POST /api/pin/verify
+         body: { pin: "12345" }
+      =============================== */
+      if (path === "/api/pin/verify" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const pin = String(body.pin || "").trim();
 
-        const readBack = await env.ORG_MAP_KV.get("pin:99999", {
+        if (!/^\d{5}$/.test(pin)) {
+          return json({ error: "invalid_pin_format" }, 400);
+        }
+
+        const record = await env.ORG_MAP_KV.get(`pin:${pin}`, {
           type: "json"
         });
 
+        if (!record) {
+          return json({ error: "invalid_pin" }, 403);
+        }
+
         return json({
-          wrote: "pin:99999",
-          readBack,
-          kvBound: !!env.ORG_MAP_KV
+          status: "ok",
+          orgId: record.orgId,
+          orgName: record.orgName
         });
       }
 
-      return json({ error: "not_found" }, 404);
+      /* ===============================
+         CUSTOMER SUMMARY
+      =============================== */
+      if (path === "/api/customer/summary") {
+        const org = await resolveOrgForUser(user, env);
+        return json({
+          orgName: org.name,
+          orgId: org.id
+        });
+      }
+
+      /* ===============================
+         FALLTHROUGH
+      =============================== */
+      return json({ error: "Not Found" }, 404);
 
     } catch (err) {
       console.error("Worker error:", err);
