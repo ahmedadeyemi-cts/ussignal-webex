@@ -18,6 +18,10 @@
 {
       "binding": "ORG_MAP_KV",
       "id": "4a47f356008647728d0c30e5d59d4adf"
-        }
+        },
+{
+      "binding": "USER_SESSION_KV",
+      "id": "bf8036e6723141c7b78b61741f9eee6d"
+    }
   ]
 }
