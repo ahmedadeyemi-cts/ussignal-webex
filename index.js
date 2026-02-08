@@ -11,69 +11,16 @@ export default {
        Helpers
     ===================================================== */
 
-    function normalize(str) {
-      return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+    function json(data, status = 200) {
+      return new Response(JSON.stringify(data), {
+        status,
+        headers: jsonHeaders,
+      });
     }
 
-    function matchesOrg(input, orgName) {
-      if (!input || input.length < 5) return false;
-      return normalize(orgName).includes(normalize(input));
-    }
-
-    async function resolvePinContext(pin) {
-      if (!pin || !/^\d{5}$/.test(pin)) {
-        throw new Error("Invalid PIN format");
-      }
-
-      const record = await env.ORG_MAP_KV.get(pin, { type: "json" });
-      if (!record) {
-        throw new Error("Invalid or expired PIN");
-      }
-
-      return {
-        pin,
-        orgId: record.orgId,
-        orgName: record.orgName,
-        role: record.role || "customer",
-      };
-    }
-
-    async function resolveUserContext(me, orgs) {
-      const email = me.emails?.[0]?.toLowerCase();
-      if (!email) throw new Error("User email not found");
-
-      // Admin users
-      if (email.endsWith("@ussignal.com")) {
-        return {
-          email,
-          role: "admin",
-        };
-      }
-
-      // Customer — attempt cached org resolution
-      const cached = await env.ORG_MAP_KV.get(email, { type: "json" });
-      if (cached) return cached;
-
-      const hint = email.split("@")[0];
-
-      const match = orgs.find((o) =>
-        matchesOrg(hint, o.displayName || o.name)
-      );
-
-      if (!match) {
-        throw new Error("Unable to auto-match customer to organization");
-      }
-
-      const context = {
-        email,
-        role: "customer",
-        orgId: match.id,
-        orgName: match.displayName || match.name,
-      };
-
-      await env.ORG_MAP_KV.put(email, JSON.stringify(context));
-      return context;
-    }
+    /* =====================================================
+       Webex Token Handling (refresh + KV cache)
+    ===================================================== */
 
     async function getAccessToken() {
       const cached = await env.WEBEX.get("access_token", { type: "json" });
@@ -120,172 +67,183 @@ export default {
     }
 
     /* =====================================================
+       Identity helpers
+    ===================================================== */
+
+    async function getCurrentUser(token) {
+      const res = await fetch("https://webexapis.com/v1/people/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const me = await res.json();
+      if (!res.ok) {
+        throw new Error(`/people/me failed: ${JSON.stringify(me)}`);
+      }
+
+      const email = me.emails?.[0]?.toLowerCase();
+      if (!email) throw new Error("User email not found");
+
+      return {
+        email,
+        isAdmin: email.endsWith("@ussignal.com"),
+      };
+    }
+
+    /* =====================================================
        Routes
     ===================================================== */
 
     try {
-      // -----------------------------
-      // Root
-      // -----------------------------
+      /* -----------------------------
+         Root sanity
+      ----------------------------- */
       if (url.pathname === "/") {
-        return new Response(
-          JSON.stringify({
-            status: "ok",
-            service: "ussignal-webex",
-            time: new Date().toISOString(),
-          }),
-          { headers: jsonHeaders }
-        );
+        return json({
+          status: "ok",
+          service: "ussignal-webex",
+          time: new Date().toISOString(),
+        });
       }
 
-      // -----------------------------
-      // /api/me
-      // -----------------------------
+      /* -----------------------------
+         /api/me
+      ----------------------------- */
       if (url.pathname === "/api/me") {
         const token = await getAccessToken();
+        const user = await getCurrentUser(token);
 
-        const meRes = await fetch("https://webexapis.com/v1/people/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const me = await meRes.json();
-        if (!meRes.ok) {
-          throw new Error(`/people/me failed: ${JSON.stringify(me)}`);
-        }
-
-        const orgRes = await fetch(
-          "https://webexapis.com/v1/organizations",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        const orgData = await orgRes.json();
-        if (!orgRes.ok) {
-          throw new Error(`/organizations failed: ${JSON.stringify(orgData)}`);
-        }
-
-        const context = await resolveUserContext(me, orgData.items);
-
-        await env.USER_SESSION_KV.put(
-          context.email,
-          JSON.stringify({
-            ...context,
-            lastSeen: Date.now(),
-          }),
-          { expirationTtl: 3600 }
-        );
-
-        return new Response(JSON.stringify(context), {
-          headers: jsonHeaders,
+        return json({
+          email: user.email,
+          role: user.isAdmin ? "admin" : "customer",
         });
       }
 
-      // -----------------------------
-      // /api/pin  (PIN → Org binding)
-      // -----------------------------
+      /* -----------------------------
+         /api/pin  (POST)
+         Body: { "pin": "12345" }
+      ----------------------------- */
       if (url.pathname === "/api/pin" && request.method === "POST") {
-        const { pin } = await request.json();
-
         const token = await getAccessToken();
+        const user = await getCurrentUser(token);
 
-        const meRes = await fetch("https://webexapis.com/v1/people/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const body = await request.json();
+        const pin = String(body.pin || "").trim();
 
-        const me = await meRes.json();
-        if (!meRes.ok) {
-          throw new Error("Unable to resolve user identity");
+        if (!/^\d{5}$/.test(pin)) {
+          return json({ error: "invalid_pin_format" }, 400);
         }
 
-        const email = me.emails?.[0]?.toLowerCase();
-        if (!email) {
-          throw new Error("User email missing");
+        const pinData = await env.ORG_MAP_KV.get(pin, { type: "json" });
+        if (!pinData) {
+          return json({ error: "invalid_pin" }, 403);
         }
-
-        const pinContext = await resolvePinContext(pin);
 
         const session = {
-          email,
-          pin: pinContext.pin,
-          role: pinContext.role,
-          orgId: pinContext.orgId,
-          orgName: pinContext.orgName,
-          authenticatedAt: Date.now(),
+          email: user.email,
+          role: pinData.role || "customer",
+          orgId: pinData.orgId,
+          orgName: pinData.orgName,
+          issuedAt: Date.now(),
         };
 
         await env.USER_SESSION_KV.put(
-          email,
+          user.email,
           JSON.stringify(session),
           { expirationTtl: 3600 }
         );
 
-        return new Response(JSON.stringify(session), {
-          headers: jsonHeaders,
-        });
+        return json({ status: "ok", org: pinData.orgName });
       }
 
-      // -----------------------------
-      // /api/org  (RBAC + PIN enforced)
-      // -----------------------------
+      /* -----------------------------
+         /api/org
+      ----------------------------- */
       if (url.pathname === "/api/org") {
         const token = await getAccessToken();
+        const user = await getCurrentUser(token);
 
-        const meRes = await fetch("https://webexapis.com/v1/people/me", {
-          headers: { Authorization: `Bearer ${token}` },
+        const session = await env.USER_SESSION_KV.get(user.email, {
+          type: "json",
         });
 
-        const me = await meRes.json();
-        const email = me.emails?.[0]?.toLowerCase();
-        if (!email) throw new Error("User email missing");
-
-        const session = await env.USER_SESSION_KV.get(email, { type: "json" });
-        if (!session) {
-          throw new Error("PIN verification required");
+        if (!session && !user.isAdmin) {
+          return json({ error: "pin_required" }, 401);
         }
 
         const orgRes = await fetch(
           "https://webexapis.com/v1/organizations",
           { headers: { Authorization: `Bearer ${token}` } }
         );
-
         const orgData = await orgRes.json();
 
-        // Admin → all orgs
-        if (session.role === "admin") {
-          return new Response(JSON.stringify(orgData.items), {
-            headers: jsonHeaders,
-          });
+        if (!orgRes.ok) {
+          throw new Error(`/organizations failed`);
         }
 
-        // Customer → PIN-bound org only
+        if (user.isAdmin) {
+          return json(orgData.items);
+        }
+
         const filtered = orgData.items.filter(
           (o) => o.id === session.orgId
         );
 
-        return new Response(JSON.stringify(filtered), {
-          headers: jsonHeaders,
+        return json(filtered);
+      }
+
+      /* -----------------------------
+         /api/admin/seed-pins
+         Admin-only, one-time seeding
+      ----------------------------- */
+      if (url.pathname === "/api/admin/seed-pins") {
+        const token = await getAccessToken();
+        const user = await getCurrentUser(token);
+
+        if (!user.isAdmin) {
+          return json({ error: "admin_only" }, 403);
+        }
+
+        const res = await fetch(
+          "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/org-pin-map.json"
+        );
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch org-pin-map.json");
+        }
+
+        const pinMap = await res.json();
+        let written = 0;
+
+        for (const pin of Object.keys(pinMap)) {
+          await env.ORG_MAP_KV.put(
+            pin,
+            JSON.stringify(pinMap[pin])
+          );
+          written++;
+        }
+
+        return json({
+          status: "ok",
+          pinsLoaded: written,
         });
       }
 
-      // -----------------------------
-      // Favicon
-      // -----------------------------
+      /* -----------------------------
+         Favicon
+      ----------------------------- */
       if (url.pathname === "/favicon.ico") {
         return new Response(null, { status: 204 });
       }
 
-      return new Response(
-        JSON.stringify({ error: "not_found", path: url.pathname }),
-        { status: 404, headers: jsonHeaders }
+      return json(
+        { error: "not_found", path: url.pathname },
+        404
       );
     } catch (err) {
       console.error("🔥 Worker error:", err);
-
-      return new Response(
-        JSON.stringify({
-          error: "internal_error",
-          message: err.message,
-        }),
-        { status: 500, headers: jsonHeaders }
+      return json(
+        { error: "internal_error", message: err.message },
+        500
       );
     }
   },
