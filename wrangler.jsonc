@@ -23,5 +23,11 @@
       "binding": "USER_SESSION_KV",
       "id": "bf8036e6723141c7b78b61741f9eee6d"
     }
-  ]
+  ],
+{
+  "vars": {
+    "SEED_DISABLED": "true"
+  }
+}
+]
 }
