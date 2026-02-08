@@ -773,6 +773,34 @@ return json({
         }
         return json(out);
       }
+      /* -----------------------------
+         🔎 DEBUG: seed + read a PIN
+         GET /api/debug/pin-test
+         TEMPORARY — remove after testing
+      ----------------------------- */
+      if (url.pathname === "/api/debug/pin-test") {
+        const testPin = "12345";
+
+        // Write to KV
+        await env.ORG_MAP_KV.put(
+          `pin:${testPin}`,
+          JSON.stringify({
+            orgId: "demo-org",
+            orgName: "Demo Customer",
+          })
+        );
+
+        // Read back from KV
+        const readBack = await env.ORG_MAP_KV.get(`pin:${testPin}`, {
+          type: "json",
+        });
+
+        return json({
+          wroteKey: `pin:${testPin}`,
+          readBack,
+          kvBound: !!env.ORG_MAP_KV,
+        });
+      }
 
       return json({ error: "not_found", path: url.pathname }, 404);
     } catch (err) {
