@@ -24,10 +24,10 @@
       "id": "bf8036e6723141c7b78b61741f9eee6d"
     }
   ],
+
+  "vars": [ 
 {
-  "vars": {
     "SEED_DISABLED": "true"
   }
-}
 ]
 }
