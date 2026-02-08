@@ -7,6 +7,56 @@ export default {
       "cache-control": "no-store",
     };
 
+    // -----------------------------
+    // Helpers: org matching + RBAC
+    // -----------------------------
+    function normalize(str) {
+      return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+
+    function matchesOrg(input, orgName) {
+      if (!input || input.length < 5) return false;
+      return normalize(orgName).includes(normalize(input));
+    }
+
+    async function resolveUserContext(me, orgs) {
+      const email = me.emails?.[0]?.toLowerCase();
+      if (!email) throw new Error("User email not found");
+
+      // Admin
+      if (email.endsWith("@ussignal.com")) {
+        return {
+          email,
+          role: "admin",
+        };
+      }
+
+      // Customer — cached?
+      const cached = await env.ORG_MAP_KV.get(email, { type: "json" });
+      if (cached) return cached;
+
+      const hint = email.split("@")[0];
+
+      const match = orgs.find((o) =>
+        matchesOrg(hint, o.displayName || o.name)
+      );
+
+      if (!match) {
+        throw new Error("Unable to match customer to organization");
+      }
+
+      const context = {
+        email,
+        role: "customer",
+        orgId: match.id,
+        orgName: match.displayName || match.name,
+      };
+
+      await env.ORG_MAP_KV.put(email, JSON.stringify(context));
+
+      return context;
+    }
+
     try {
       // -----------------------------
       // Root sanity
@@ -32,7 +82,6 @@ export default {
           return cached.token;
         }
 
-        // Refresh token flow
         const body = new URLSearchParams({
           grant_type: "refresh_token",
           client_id: env.CLIENT_ID,
@@ -71,41 +120,80 @@ export default {
       }
 
       // -----------------------------
-      // /api/me
+      // /api/me  → role + org context
       // -----------------------------
       if (url.pathname === "/api/me") {
         const token = await getAccessToken();
 
-        const res = await fetch("https://webexapis.com/v1/people/me", {
+        const meRes = await fetch("https://webexapis.com/v1/people/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const text = await res.text();
-
-        if (!res.ok) {
-          throw new Error(`/people/me failed (${res.status}): ${text}`);
+        const me = await meRes.json();
+        if (!meRes.ok) {
+          throw new Error(`/people/me failed: ${JSON.stringify(me)}`);
         }
 
-        return new Response(text, { headers: jsonHeaders });
+        const orgRes = await fetch(
+          "https://webexapis.com/v1/organizations",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        const orgData = await orgRes.json();
+        if (!orgRes.ok) {
+          throw new Error(`/organizations failed: ${JSON.stringify(orgData)}`);
+        }
+
+        const context = await resolveUserContext(me, orgData.items);
+
+        await env.USER_SESSION_KV.put(
+          context.email,
+          JSON.stringify({
+            ...context,
+            lastSeen: Date.now(),
+          }),
+          { expirationTtl: 3600 }
+        );
+
+        return new Response(JSON.stringify(context), {
+          headers: jsonHeaders,
+        });
       }
 
       // -----------------------------
-      // /api/org
+      // /api/org  → RBAC enforced
       // -----------------------------
       if (url.pathname === "/api/org") {
         const token = await getAccessToken();
 
-        const res = await fetch("https://webexapis.com/v1/organizations", {
+        const meRes = await fetch("https://webexapis.com/v1/people/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
+        const me = await meRes.json();
 
-        const text = await res.text();
+        const orgRes = await fetch(
+          "https://webexapis.com/v1/organizations",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const orgData = await orgRes.json();
 
-        if (!res.ok) {
-          throw new Error(`/organizations failed (${res.status}): ${text}`);
+        const context = await resolveUserContext(me, orgData.items);
+
+        // Admin → all orgs
+        if (context.role === "admin") {
+          return new Response(JSON.stringify(orgData.items), {
+            headers: jsonHeaders,
+          });
         }
 
-        return new Response(text, { headers: jsonHeaders });
+        // Customer → only their org
+        const filtered = orgData.items.filter(
+          (o) => o.id === context.orgId
+        );
+
+        return new Response(JSON.stringify(filtered), {
+          headers: jsonHeaders,
+        });
       }
 
       // -----------------------------
