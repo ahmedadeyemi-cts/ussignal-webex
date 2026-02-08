@@ -14,6 +14,10 @@
     {
       "binding": "WEBEX",
       "id": "2da71736311d433b9c2b05a7ba080eb3"
+        },
+{
+      "binding": "ORG_MAP_KV",
+      "id": "4a47f356008647728d0c30e5d59d4adf"
         }
   ]
 }
