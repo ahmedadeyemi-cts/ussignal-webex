@@ -542,6 +542,13 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
 
   return json({ status: "ok", pinsLoaded: written, skipped });
 }
+if (url.pathname === "/api/debug/access" && request.method === "GET") {
+  return json({
+    email1: request.headers.get("cf-access-authenticated-user-email"),
+    email2: request.headers.get("cf-access-user-email"),
+    jwt: !!request.headers.get("cf-access-jwt-assertion"),
+  });
+}
 
 
       // Root UI (includes modal logic)
