@@ -509,6 +509,864 @@ async function putEmailMapping(email, orgId, orgName) {
 </body>
 </html>`;
     }
+/* =====================================================
+   UI Shell: App Pages (Light/Dark, Role Nav, PIN modal)
+===================================================== */
+
+// Optional: set env var US_SIGNAL_LOGO_URL to your hosted logo (recommended)
+const US_SIGNAL_LOGO_URL =
+  env.US_SIGNAL_LOGO_URL ||
+  "https://upload.wikimedia.org/wikipedia/commons/3/3f/Placeholder_view_vector.svg"; // replace ASAP
+
+function renderAppHTML({ pageId = "dashboard", title = "US Signal Webex Portal" }) {
+  const pageTitles = {
+    dashboard: "Dashboard",
+    licensing: "Licensing",
+    maintenance: "Maintenance",
+    support: "Support and Escalation",
+    implementation: "Implementation and Migration",
+    pstn: "PSTN Strategy",
+    admin_dashboard: "Admin: Customer Overview",
+    admin_licensing: "Admin: Licensing and Reports",
+    admin_maintenance: "Admin: Maintenance and Scheduling",
+    admin_support_model: "Admin: Support Model",
+    admin_tenant_resolution: "Admin: Tenant Resolution Visualizer",
+  };
+
+  const activeTitle = pageTitles[pageId] || title;
+
+  // Main content shells (simple, clean, professional)
+  const shells = {
+    dashboard: `
+      <section class="card">
+        <div class="h2">Customer Dashboard</div>
+        <div class="muted">Tenant-scoped view. You will only see your organization once resolved.</div>
+        <div class="grid3" style="margin-top:14px">
+          <div class="stat"><div class="k">Organization</div><div class="v" id="orgName">Loading…</div></div>
+          <div class="stat"><div class="k">Org ID</div><div class="v mono" id="orgId">Loading…</div></div>
+          <div class="stat"><div class="k">Resolution</div><div class="v" id="resolution">Loading…</div></div>
+        </div>
+      </section>
+
+      <section class="grid2" style="margin-top:14px">
+        <div class="card">
+          <div class="h3">Webex Calling Status</div>
+          <div class="muted">Pulled from Webex status API.</div>
+          <pre id="statusOut" class="pre">Loading…</pre>
+        </div>
+        <div class="card">
+          <div class="h3">Organizations (API Result)</div>
+          <div class="muted">Admins see all. Customers see only their tenant.</div>
+          <pre id="orgOut" class="pre">Loading…</pre>
+        </div>
+      </section>
+    `,
+
+    licensing: `
+      <section class="card">
+        <div class="h2">Licensing</div>
+        <div class="muted">This is an HTML shell. Next phase will wire license counts and deficit reporting.</div>
+
+        <div class="grid2" style="margin-top:14px">
+          <div class="card inner">
+            <div class="h3">Customer Actions</div>
+            <div class="muted">Customer must manually enter their email to receive reports.</div>
+
+            <div class="row">
+              <input id="custEmail" placeholder="your.email@company.com" />
+              <button id="btnEmailLicenseMe">Email License Report</button>
+            </div>
+
+            <div class="row" style="margin-top:10px">
+              <button class="secondary" id="btnDownloadLicenseCsv">Download CSV</button>
+            </div>
+
+            <div id="licenseMsg" class="muted" style="margin-top:10px"></div>
+          </div>
+
+          <div class="card inner">
+            <div class="h3">License Snapshot</div>
+            <div class="muted">Placeholder until license APIs are wired.</div>
+            <pre class="pre">{ "total": "TBD", "used": "TBD", "available": "TBD" }</pre>
+          </div>
+        </div>
+      </section>
+    `,
+
+    maintenance: `
+      <section class="card">
+        <div class="h2">Maintenance and Status</div>
+        <div class="muted">Upcoming scheduled maintenances from status.webex.com API.</div>
+
+        <div class="row" style="margin-top:14px">
+          <button id="btnReloadMaint">Reload</button>
+          <button class="secondary" id="btnEmailMaintMe">Email Schedule to Me</button>
+          <input id="maintEmail" placeholder="your.email@company.com" />
+        </div>
+
+        <pre id="maintOut" class="pre" style="margin-top:12px">Loading…</pre>
+        <div id="maintMsg" class="muted" style="margin-top:10px"></div>
+      </section>
+    `,
+
+    support: `
+      <section class="card">
+        <div class="h2">Support and Escalation</div>
+        <div class="muted">Customer-facing guidance.</div>
+
+        <div class="grid2" style="margin-top:14px">
+          <div class="card inner">
+            <div class="h3">Business Hours Support</div>
+            <div class="line"><b>Email:</b> <span class="mono">DLD-customercare@ussignal.com</span></div>
+            <div class="line"><b>Phone:</b> <span class="mono">515-334-5755</span></div>
+            <div class="muted" style="margin-top:10px">Use this during normal business hours for incidents, questions, and service requests.</div>
+          </div>
+
+          <div class="card inner">
+            <div class="h3">After Hours Support</div>
+            <div class="line"><b>PIN Required:</b> Yes</div>
+            <div class="line"><b>OneAssist:</b> <span class="mono">844-462-3828</span></div>
+            <div class="muted" style="margin-top:10px">After hours support is available through OneAssist. Keep your PIN available for verification.</div>
+          </div>
+        </div>
+      </section>
+    `,
+
+    implementation: `
+      <section class="card">
+        <div class="h2">Implementation and Migration</div>
+        <div class="muted">End-to-end journey from presales through cutover and optimization.</div>
+
+        <div class="card inner" style="margin-top:14px">
+          <div class="h3">Phases</div>
+          <ol class="list">
+            <li><b>Presales</b>: demo, requirements discovery, success criteria, initial solution design</li>
+            <li><b>PSTN Selection</b>: Local Gateway, Cisco PSTN, Cloud PSTN (IntelePeer, CallTower)</li>
+            <li><b>Discovery</b>: dial plan, sites, users, devices, network readiness, firewall rules, QoS</li>
+            <li><b>Porting</b>: LOA, CSR, port dates, test numbers, rollback planning</li>
+            <li><b>Configuration</b>: locations, trunks, routing, E911, voicemail, auto attendants, hunt groups</li>
+            <li><b>Migration</b>: pilot, phased cutover, validation testing, training, go-live support</li>
+            <li><b>Operations</b>: proactive monitoring, incident response, change management, reporting</li>
+          </ol>
+        </div>
+
+        <div class="card inner" style="margin-top:14px">
+          <div class="h3">Webex Calling Features Customers Commonly Use</div>
+          <div class="chips">
+            <span class="chip">Auto Attendant</span>
+            <span class="chip">Hunt Groups</span>
+            <span class="chip">Call Queues</span>
+            <span class="chip">Voicemail</span>
+            <span class="chip">E911</span>
+            <span class="chip">Call Recording</span>
+            <span class="chip">DECT / ATA</span>
+            <span class="chip">Device Templates</span>
+            <span class="chip">Analytics</span>
+          </div>
+        </div>
+      </section>
+    `,
+
+    pstn: `
+      <section class="card">
+        <div class="h2">PSTN Implementation Strategy</div>
+        <div class="muted">Partner may leverage one or more PSTN capabilities.</div>
+
+        <div class="grid2" style="margin-top:14px">
+          <div class="card inner">
+            <div class="h3">PSTN Options</div>
+            <ul class="list">
+              <li>Cisco CCP Provider</li>
+              <li>Partner PSTN capabilities via Local Gateway</li>
+              <li>Cisco Calling Plans (PSTN)</li>
+              <li>Cloud PSTN Providers (IntelePeer, CallTower)</li>
+            </ul>
+          </div>
+
+          <div class="card inner">
+            <div class="h3">Operational Integration</div>
+            <ul class="list">
+              <li>Provisioning workflows and validation</li>
+              <li>Incident prevention, detection, and response aligned to SLA</li>
+              <li>Escalation paths and TAC coordination</li>
+              <li>Change management for routing, carrier maintenance, and cutovers</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card inner" style="margin-top:14px">
+          <div class="h3">Documentation Requirements</div>
+          <ul class="list">
+            <li>Incident prevention, detection, and response processes consistent with the Provider SLA</li>
+            <li>Provisioning processes and support specific to the PSTN capabilities</li>
+          </ul>
+        </div>
+      </section>
+    `,
+
+    admin_dashboard: `
+      <section class="card">
+        <div class="h2">Admin Customer Overview</div>
+        <div class="muted">Admins see all customers. Search is a shell, next phase wires matching logic.</div>
+
+        <div class="row" style="margin-top:14px">
+          <input id="adminSearch" placeholder="Search by org name (partial), city, or keyword…" />
+          <button id="btnAdminReload">Reload</button>
+        </div>
+
+        <pre id="adminOrgOut" class="pre" style="margin-top:12px">Loading…</pre>
+      </section>
+    `,
+
+    admin_licensing: `
+      <section class="card">
+        <div class="h2">Admin Licensing and Reports</div>
+        <div class="muted">Shell for license deficit report and email distribution.</div>
+
+        <div class="grid2" style="margin-top:14px">
+          <div class="card inner">
+            <div class="h3">Send to ADMIN_EMAILS</div>
+            <div class="muted">Worker env var: <span class="mono">ADMIN_EMAILS</span> contains 3 to 10 emails.</div>
+            <div class="row" style="margin-top:10px">
+              <button id="btnAdminSendLicenses">Email Deficit Report to ADMIN_EMAILS</button>
+            </div>
+            <div id="adminLicMsg" class="muted" style="margin-top:10px"></div>
+          </div>
+
+          <div class="card inner">
+            <div class="h3">Generate / Export</div>
+            <div class="row">
+              <button class="secondary" id="btnAdminDownloadLicenses">Download Deficit CSV</button>
+            </div>
+            <div class="muted" style="margin-top:10px">Report generation API will be wired next.</div>
+          </div>
+        </div>
+      </section>
+    `,
+
+    admin_maintenance: `
+      <section class="card">
+        <div class="h2">Admin Maintenance and Scheduling</div>
+        <div class="muted">Shell for upcoming maintenances and sending schedules to ADMIN_EMAILS.</div>
+
+        <div class="row" style="margin-top:14px">
+          <button id="btnAdminReloadMaint">Reload</button>
+          <button id="btnAdminEmailMaint">Email Schedule to ADMIN_EMAILS</button>
+        </div>
+
+        <pre id="adminMaintOut" class="pre" style="margin-top:12px">Loading…</pre>
+        <div id="adminMaintMsg" class="muted" style="margin-top:10px"></div>
+      </section>
+    `,
+
+    admin_support_model: `
+      <section class="card">
+        <div class="h2">Admin Support Model</div>
+        <div class="muted">Internal-only explanation of support coverage, escalation, and responsibilities.</div>
+
+        <div class="card inner" style="margin-top:14px">
+          <div class="h3">Support Coverage</div>
+          <ul class="list">
+            <li>Business Hours: US Signal support intake via phone and email</li>
+            <li>After Hours: OneAssist intake with PIN requirement</li>
+            <li>Escalation: engineering triage, Cisco TAC engagement, and customer communications</li>
+          </ul>
+        </div>
+
+        <div class="card inner" style="margin-top:14px">
+          <div class="h3">Operational Expectations</div>
+          <ul class="list">
+            <li>Incident prevention, detection, response processes aligned to SLA</li>
+            <li>Proactive monitoring of calling service health and status trends</li>
+            <li>Change control for routing, carrier events, and Webex maintenance impacts</li>
+          </ul>
+        </div>
+      </section>
+    `,
+
+    admin_tenant_resolution: `
+      <section class="card">
+        <div class="h2">Tenant Resolution Visualizer</div>
+        <div class="muted">Admin-only. Shows exactly how tenant resolution occurs.</div>
+
+        <div class="card inner" style="margin-top:14px">
+          <div class="row">
+            <input id="trEmail" placeholder="email@example.com" />
+            <input id="trPin" placeholder="12345" />
+            <input id="trOrgId" placeholder="orgId" />
+            <button id="btnResolve">Resolve</button>
+          </div>
+          <pre id="trOut" class="pre" style="margin-top:12px">—</pre>
+        </div>
+      </section>
+    `,
+  };
+
+  const content = shells[pageId] || `<section class="card"><div class="h2">${activeTitle}</div></section>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>${activeTitle}</title>
+
+  <style>
+    :root{
+      --bg: #0b1220;
+      --panel: rgba(255,255,255,.04);
+      --panel2: rgba(255,255,255,.06);
+      --border: rgba(255,255,255,.10);
+      --text: #e5e7eb;
+      --muted: rgba(229,231,235,.75);
+      --primary: #2563eb;
+      --danger: #fca5a5;
+      --ok: #86efac;
+      --shadow: 0 10px 30px rgba(0,0,0,.25);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+
+    /* Light mode defaults via prefers-color-scheme, with manual override */
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg: #f6f7fb;
+        --panel: #ffffff;
+        --panel2: #f3f4f6;
+        --border: rgba(15,23,42,.12);
+        --text: #0f172a;
+        --muted: rgba(15,23,42,.70);
+        --shadow: 0 10px 30px rgba(2,6,23,.10);
+      }
+    }
+
+    [data-theme="dark"]{
+      --bg: #0b1220;
+      --panel: rgba(255,255,255,.04);
+      --panel2: rgba(255,255,255,.06);
+      --border: rgba(255,255,255,.10);
+      --text: #e5e7eb;
+      --muted: rgba(229,231,235,.75);
+      --shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
+    [data-theme="light"]{
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --panel2: #f3f4f6;
+      --border: rgba(15,23,42,.12);
+      --text: #0f172a;
+      --muted: rgba(15,23,42,.70);
+      --shadow: 0 10px 30px rgba(2,6,23,.10);
+    }
+
+    html, body { height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .wrap{
+      display:grid;
+      grid-template-columns: 280px 1fr;
+      min-height:100vh;
+    }
+
+    .side{
+      border-right: 1px solid var(--border);
+      padding:18px;
+      position:sticky;
+      top:0;
+      height:100vh;
+      box-sizing:border-box;
+      background: linear-gradient(180deg, var(--panel), transparent);
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .brand img{ height:28px; width:auto; border-radius:6px; }
+    .brand .b1{ font-weight:900; letter-spacing:.2px; }
+    .brand .b2{ font-size:12px; color: var(--muted); margin-top:2px; }
+
+    .nav{
+      margin-top:16px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .nav a{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:10px 12px;
+      text-decoration:none;
+      color: var(--text);
+      border-radius: 12px;
+      border:1px solid transparent;
+    }
+    .nav a:hover{
+      background: var(--panel);
+      border-color: var(--border);
+    }
+    .nav a.active{
+      background: rgba(37,99,235,.14);
+      border-color: rgba(37,99,235,.35);
+    }
+    .tag{
+      font-size:12px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .main{
+      padding:18px 22px 60px 22px;
+      box-sizing:border-box;
+    }
+
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:16px;
+    }
+
+    .badges{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .badge{
+      font-size:12px;
+      padding:6px 10px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      background: var(--panel);
+      color: var(--muted);
+    }
+
+    .card{
+      background: var(--panel);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      padding:16px;
+      box-shadow: var(--shadow);
+    }
+    .card.inner{ box-shadow:none; background: var(--panel2); }
+
+    .h2{ font-weight:900; font-size:18px; }
+    .h3{ font-weight:800; font-size:14px; margin-bottom:8px; }
+    .muted{ color: var(--muted); font-size:13px; }
+
+    .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+    .grid3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:14px; }
+    @media (max-width: 980px){
+      .wrap{ grid-template-columns: 1fr; }
+      .side{ position:relative; height:auto; }
+      .grid2, .grid3{ grid-template-columns: 1fr; }
+    }
+
+    .stat{ background: var(--panel2); border:1px solid var(--border); border-radius:14px; padding:12px; }
+    .stat .k{ font-size:12px; color: var(--muted); }
+    .stat .v{ margin-top:6px; font-weight:800; }
+    .mono{ font-family: var(--mono); }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    input{
+      flex:1;
+      min-width: 240px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: var(--panel2);
+      color: var(--text);
+      outline:none;
+    }
+    button{
+      padding:10px 12px;
+      border-radius:12px;
+      border:0;
+      background: var(--primary);
+      color:white;
+      font-weight:800;
+      cursor:pointer;
+    }
+    button.secondary{
+      background: transparent;
+      border:1px solid var(--border);
+      color: var(--text);
+    }
+    button:disabled{ opacity:.6; cursor:not-allowed; }
+
+    .pre{
+      white-space: pre-wrap;
+      font-family: var(--mono);
+      background: rgba(0,0,0,.20);
+      border:1px solid var(--border);
+      border-radius: 12px;
+      padding:12px;
+      overflow:auto;
+      margin-top:10px;
+    }
+    @media (prefers-color-scheme: light){
+      .pre{ background: rgba(15,23,42,.04); }
+    }
+
+    .list{ margin: 10px 0 0 18px; color: var(--text); }
+    .list li{ margin: 8px 0; color: var(--text); }
+    .line{ margin-top: 8px; }
+
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .chip{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background: var(--panel2);
+    }
+
+    /* PIN modal */
+    .modalBackdrop{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.55);
+      display:none; align-items:center; justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+    .modal{
+      width:min(520px,100%);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .modal .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:12px; }
+    .error{ color: var(--danger); }
+    .ok{ color: var(--ok); }
+
+    /* Floating AI shell button */
+    .aiBtn{
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      border-radius: 999px;
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+      z-index:40;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap" id="appRoot">
+    <aside class="side">
+      <div class="brand">
+        <img src="${US_SIGNAL_LOGO_URL}" alt="US Signal" />
+        <div>
+          <div class="b1">US Signal</div>
+          <div class="b2">Webex Calling Portal</div>
+        </div>
+      </div>
+
+      <div class="nav" id="nav">
+        <a href="/" data-id="dashboard"><span>Dashboard</span><span class="tag">Customer</span></a>
+        <a href="/licensing" data-id="licensing"><span>Licensing</span><span class="tag">Customer</span></a>
+        <a href="/maintenance" data-id="maintenance"><span>Maintenance</span><span class="tag">Customer</span></a>
+        <a href="/support" data-id="support"><span>Support</span><span class="tag">Customer</span></a>
+        <a href="/implementation" data-id="implementation"><span>Implementation</span><span class="tag">Customer</span></a>
+        <a href="/pstn" data-id="pstn"><span>PSTN Strategy</span><span class="tag">Customer</span></a>
+
+        <div style="height:8px"></div>
+
+        <a href="/admin/dashboard" data-id="admin_dashboard" class="adminOnly"><span>Admin Overview</span><span class="tag">Admin</span></a>
+        <a href="/admin/licensing" data-id="admin_licensing" class="adminOnly"><span>Admin Licensing</span><span class="tag">Admin</span></a>
+        <a href="/admin/maintenance" data-id="admin_maintenance" class="adminOnly"><span>Admin Maintenance</span><span class="tag">Admin</span></a>
+        <a href="/admin/support-model" data-id="admin_support_model" class="adminOnly"><span>Support Model</span><span class="tag">Admin</span></a>
+        <a href="/admin/tenant-resolution" data-id="admin_tenant_resolution" class="adminOnly"><span>Tenant Resolution</span><span class="tag">Admin</span></a>
+
+        <div style="height:10px"></div>
+
+        <div class="row">
+          <button class="secondary" id="btnTheme" type="button">Toggle Theme</button>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button class="secondary" id="btnLogout" type="button">Logout</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <div class="h2">${activeTitle}</div>
+          <div class="muted" id="subline">Loading identity…</div>
+        </div>
+        <div class="badges">
+          <div class="badge" id="badgeUser">User: —</div>
+          <div class="badge" id="badgeRole">Role: —</div>
+          <div class="badge" id="badgeTenant">Tenant: —</div>
+        </div>
+      </div>
+
+      ${content}
+    </main>
+  </div>
+
+  <!-- PIN Modal -->
+  <div class="modalBackdrop" id="backdrop">
+    <div class="modal">
+      <div class="h2">Enter your 5-digit PIN</div>
+      <div class="muted" style="margin-top:6px">This portal uses a PIN session when email allowlist does not resolve your tenant.</div>
+      <div class="row" style="margin-top:12px">
+        <input id="pin" inputmode="numeric" maxlength="5" placeholder="12345" />
+      </div>
+      <div id="pinMsg" class="muted" style="margin-top:10px"></div>
+      <div class="actions">
+        <button class="secondary" id="btnCancel" type="button">Cancel</button>
+        <button id="btnVerify" type="button">Verify</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI shell button -->
+  <button class="aiBtn" id="aiBtn" type="button">Ask US Signal (AI)</button>
+
+<script>
+  const PAGE_ID = ${JSON.stringify(pageId)};
+
+  const $ = (id)=>document.getElementById(id);
+
+  function setActiveNav() {
+    const links = document.querySelectorAll(".nav a[data-id]");
+    links.forEach(a => {
+      if (a.getAttribute("data-id") === PAGE_ID) a.classList.add("active");
+      else a.classList.remove("active");
+    });
+  }
+
+  function setTheme(next){
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+  }
+
+  function initTheme(){
+    const saved = localStorage.getItem("theme");
+    if(saved === "light" || saved === "dark") setTheme(saved);
+  }
+
+  function showPinModal(show){
+    $("backdrop").style.display = show ? "flex" : "none";
+    if(show) $("pin").focus();
+  }
+
+  async function api(path, opts){
+    const res = await fetch(path, {
+      ...opts,
+      headers: {
+        "content-type":"application/json",
+        ...(opts && opts.headers || {})
+      }
+    });
+    const txt = await res.text();
+    let data = null;
+    try { data = txt ? JSON.parse(txt) : null; } catch(e){ data = { raw: txt }; }
+    return { ok: res.ok, status: res.status, data };
+  }
+
+  async function loadMe(){
+    const r = await api("/api/me");
+    if(!r.ok){
+      $("subline").textContent = "Not authenticated via Zero Trust.";
+      return { ok:false };
+    }
+
+    $("badgeUser").textContent = "User: " + (r.data.email || "—");
+    $("badgeRole").textContent = "Role: " + (r.data.role || "—");
+    $("badgeTenant").textContent = "Tenant: " + (r.data.orgName || "—");
+    $("subline").textContent =
+      "Resolution: " + (r.data.resolution || "none") +
+      " | Session TTL: " + (r.data.sessionExpiresInSeconds || 0) + "s";
+
+    // Hide admin links for non-admin
+    const isAdmin = r.data.role === "admin";
+    document.querySelectorAll(".adminOnly").forEach(el => {
+      el.style.display = isAdmin ? "flex" : "none";
+    });
+
+    return { ok:true, me:r.data };
+  }
+
+  async function loadOrgs(){
+    const r = await api("/api/org");
+    if(r.ok){
+      const out = $("orgOut") || $("adminOrgOut");
+      if(out) out.textContent = JSON.stringify(r.data, null, 2);
+      return { ok:true, data:r.data };
+    }
+
+    // Tenant not resolved: show PIN modal
+    if(r.status === 401){
+      showPinModal(true);
+      const out = $("orgOut") || $("adminOrgOut");
+      if(out) out.textContent = JSON.stringify(r.data, null, 2);
+      return { ok:false, needsPin:true };
+    }
+
+    const out = $("orgOut") || $("adminOrgOut");
+    if(out) out.textContent = JSON.stringify(r.data, null, 2);
+    return { ok:false };
+  }
+
+  async function loadStatus(){
+    const out = $("statusOut");
+    if(!out) return;
+    try{
+      const res = await fetch("https://status.webex.com/api/v2/status.json", { cache:"no-store" });
+      const data = await res.json();
+      out.textContent = JSON.stringify(data, null, 2);
+    }catch(e){
+      out.textContent = JSON.stringify({ error: String(e) }, null, 2);
+    }
+  }
+
+  async function loadMaintenance(targetId){
+    const out = $(targetId);
+    if(!out) return;
+    try{
+      const res = await fetch("https://status.webex.com/api/v2/scheduled-maintenances/upcoming.json", { cache:"no-store" });
+      const data = await res.json();
+      out.textContent = JSON.stringify(data, null, 2);
+    }catch(e){
+      out.textContent = JSON.stringify({ error: String(e) }, null, 2);
+    }
+  }
+
+  // Page-specific wiring (still shell)
+  function wireShellButtons(){
+    if($("btnEmailLicenseMe")){
+      $("btnEmailLicenseMe").onclick = ()=>{
+        const email = ($("custEmail").value || "").trim();
+        $("licenseMsg").textContent = email ? ("Queued shell action for: " + email + " (Brevo wiring next).") : "Enter an email address first.";
+      };
+    }
+    if($("btnDownloadLicenseCsv")){
+      $("btnDownloadLicenseCsv").onclick = ()=>{
+        $("licenseMsg").textContent = "CSV export shell. Wiring next.";
+      };
+    }
+    if($("btnReloadMaint")){
+      $("btnReloadMaint").onclick = async ()=>{ await loadMaintenance("maintOut"); };
+    }
+    if($("btnEmailMaintMe")){
+      $("btnEmailMaintMe").onclick = ()=>{
+        const email = ($("maintEmail").value || "").trim();
+        $("maintMsg").textContent = email ? ("Queued schedule email shell for: " + email + " (Brevo wiring next).") : "Enter an email address first.";
+      };
+    }
+    if($("btnAdminReloadMaint")){
+      $("btnAdminReloadMaint").onclick = async ()=>{ await loadMaintenance("adminMaintOut"); };
+    }
+    if($("btnAdminEmailMaint")){
+      $("btnAdminEmailMaint").onclick = ()=>{
+        $("adminMaintMsg").textContent = "Queued shell action to email ADMIN_EMAILS (Brevo wiring next).";
+      };
+    }
+    if($("btnAdminSendLicenses")){
+      $("btnAdminSendLicenses").onclick = ()=>{
+        $("adminLicMsg").textContent = "Queued shell action to email ADMIN_EMAILS (Brevo wiring next).";
+      };
+    }
+    if($("btnAdminDownloadLicenses")){
+      $("btnAdminDownloadLicenses").onclick = ()=>{
+        $("adminLicMsg").textContent = "CSV export shell. Wiring next.";
+      };
+    }
+    if($("btnResolve")){
+      $("btnResolve").onclick = async ()=>{
+        const body = {
+          email: ($("trEmail").value || "").trim(),
+          pin: ($("trPin").value || "").trim(),
+          orgId: ($("trOrgId").value || "").trim(),
+        };
+        const r = await api("/api/admin/resolve", { method:"POST", body: JSON.stringify(body) });
+        $("trOut").textContent = JSON.stringify(r.data, null, 2);
+      };
+    }
+
+    $("aiBtn").onclick = ()=>{
+      alert("AI assistant shell. Next phase will wire this to a knowledge base of your portal content.");
+    };
+  }
+
+  // PIN modal actions
+  $("btnCancel").onclick = ()=> showPinModal(false);
+
+  $("btnVerify").onclick = async ()=>{
+    const pin = ($("pin").value || "").trim();
+    $("pinMsg").textContent = "Verifying…";
+    const r = await api("/api/pin/verify", { method:"POST", body: JSON.stringify({ pin }) });
+    if(r.ok){
+      $("pinMsg").textContent = "PIN verified. Reloading…";
+      showPinModal(false);
+      $("pin").value = "";
+      await boot();
+    } else {
+      $("pinMsg").textContent = (r.data && (r.data.message || r.data.error)) ? (r.data.message || r.data.error) : "PIN failed";
+      $("pinMsg").className = "error";
+    }
+  };
+
+  // Top controls
+  $("btnTheme").onclick = ()=>{
+    const cur = localStorage.getItem("theme");
+    setTheme(cur === "dark" ? "light" : "dark");
+  };
+
+  $("btnLogout").onclick = async ()=>{
+    await api("/api/pin/logout", { method:"POST", body: JSON.stringify({}) });
+    location.href = "/";
+  };
+
+  async function boot(){
+    initTheme();
+    setActiveNav();
+    const me = await loadMe();
+
+    // Fill dashboard stat placeholders if present
+    if(me.ok){
+      if($("orgName")) $("orgName").textContent = me.me.orgName || "—";
+      if($("orgId")) $("orgId").textContent = me.me.orgId || "—";
+      if($("resolution")) $("resolution").textContent = me.me.resolution || "—";
+    }
+
+    await loadOrgs();
+    await loadStatus();
+
+    // Maintenance shells
+    if($("maintOut")) await loadMaintenance("maintOut");
+    if($("adminMaintOut")) await loadMaintenance("adminMaintOut");
+
+    wireShellButtons();
+  }
+
+  boot();
+</script>
+
+</body>
+</html>`;
+}
 
     /* =====================================================
        Routes
@@ -716,6 +1574,66 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
     status: 200,
     headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
   });
+}
+/* =====================================================
+   UI PAGE ROUTES (HTML SHELLS)
+   Place this block after your debug/favicon routes and before /api/me
+===================================================== */
+
+async function requireAdminOr403() {
+  const token = await getAccessToken();
+  const user = await getCurrentUser(token);
+  if (!user.isAdmin) return { ok: false, res: json({ error: "admin_only" }, 403) };
+  return { ok: true, user, token };
+}
+
+// Customer pages
+if (request.method === "GET") {
+  if (url.pathname === "/") {
+    return text(renderAppHTML({ pageId: "dashboard" }), 200, { "content-type": "text/html; charset=utf-8" });
+  }
+  if (url.pathname === "/licensing") {
+    return text(renderAppHTML({ pageId: "licensing" }), 200, { "content-type": "text/html; charset=utf-8" });
+  }
+  if (url.pathname === "/maintenance") {
+    return text(renderAppHTML({ pageId: "maintenance" }), 200, { "content-type": "text/html; charset=utf-8" });
+  }
+  if (url.pathname === "/support") {
+    return text(renderAppHTML({ pageId: "support" }), 200, { "content-type": "text/html; charset=utf-8" });
+  }
+  if (url.pathname === "/implementation") {
+    return text(renderAppHTML({ pageId: "implementation" }), 200, { "content-type": "text/html; charset=utf-8" });
+  }
+  if (url.pathname === "/pstn") {
+    return text(renderAppHTML({ pageId: "pstn" }), 200, { "content-type": "text/html; charset=utf-8" });
+  }
+
+  // Admin pages
+  if (url.pathname === "/admin/dashboard") {
+    const gate = await requireAdminOr403();
+    if (!gate.ok) return gate.res;
+    return text(renderAppHTML({ pageId: "admin_dashboard" }), 200, { "content-type": "text/html; charset=utf-8" });
+  }
+  if (url.pathname === "/admin/licensing") {
+    const gate = await requireAdminOr403();
+    if (!gate.ok) return gate.res;
+    return text(renderAppHTML({ pageId: "admin_licensing" }), 200, { "content-type": "text/html; charset=utf-8" });
+  }
+  if (url.pathname === "/admin/maintenance") {
+    const gate = await requireAdminOr403();
+    if (!gate.ok) return gate.res;
+    return text(renderAppHTML({ pageId: "admin_maintenance" }), 200, { "content-type": "text/html; charset=utf-8" });
+  }
+  if (url.pathname === "/admin/support-model") {
+    const gate = await requireAdminOr403();
+    if (!gate.ok) return gate.res;
+    return text(renderAppHTML({ pageId: "admin_support_model" }), 200, { "content-type": "text/html; charset=utf-8" });
+  }
+  if (url.pathname === "/admin/tenant-resolution") {
+    const gate = await requireAdminOr403();
+    if (!gate.ok) return gate.res;
+    return text(renderAppHTML({ pageId: "admin_tenant_resolution" }), 200, { "content-type": "text/html; charset=utf-8" });
+  }
 }
 
       /* -----------------------------
