@@ -359,157 +359,13 @@ async function putEmailMapping(email, orgId, orgName) {
   );
 }
 
-    /* =====================================================
-       UI: minimal modal app
-    ===================================================== */
-
-    function renderHomeHTML() {
-      return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>US Signal Webex Demo</title>
-  <style>
-    :root{font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;}
-    body{margin:0;background:#0b1220;color:#e5e7eb}
-    header{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:12px}
-    .badge{font-size:12px;padding:4px 8px;border:1px solid rgba(255,255,255,.15);border-radius:999px;opacity:.9}
-    main{padding:20px;max-width:1100px;margin:0 auto}
-    .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px}
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    .grow{flex:1}
-    button{background:#2563eb;border:0;color:white;border-radius:10px;padding:10px 12px;font-weight:600;cursor:pointer}
-    button.secondary{background:rgba(255,255,255,.08)}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#e5e7eb;padding:10px 12px;font-size:16px;outline:none;width:100%}
-    pre{white-space:pre-wrap;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);padding:12px;border-radius:12px;overflow:auto}
-    .muted{opacity:.8}
-    /* Modal */
-    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:18px}
-    .modal{width:min(520px,100%);background:#0b1220;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:18px}
-    .modal h2{margin:0 0 6px 0;font-size:18px}
-    .modal p{margin:0 0 12px 0;opacity:.85}
-    .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
-    .error{color:#fca5a5}
-    .ok{color:#86efac}
-  </style>
-</head>
-<body>
-  <header>
-    <div style="font-weight:800">US Signal Webex Demo</div>
-    <div class="badge" id="who">Loading…</div>
-    <div class="badge" id="tenant">Tenant: —</div>
-  </header>
-
-  <main>
-    <div class="row">
-      <div class="card grow">
-        <div class="row" style="align-items:center;justify-content:space-between">
-          <div>
-            <div style="font-weight:800">Organizations</div>
-            <div class="muted" style="font-size:13px">Customers see only their tenant after PIN verify.</div>
-          </div>
-          <div class="row">
-            <button class="secondary" id="btnLogout">Logout</button>
-            <button id="btnReload">Reload</button>
-          </div>
-        </div>
-        <div style="margin-top:12px">
-          <pre id="out">Loading…</pre>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <div class="modalBackdrop" id="backdrop">
-    <div class="modal">
-      <h2>Enter your 5-digit PIN</h2>
-      <p>This demo uses a PIN to select your tenant.</p>
-      <div class="row">
-        <input id="pin" inputmode="numeric" maxlength="5" placeholder="•••••" />
-      </div>
-      <div id="msg" class="muted" style="margin-top:10px"></div>
-      <div class="actions">
-        <button class="secondary" id="btnCancel">Cancel</button>
-        <button id="btnVerify">Verify</button>
-      </div>
-    </div>
-  </div>
-
-<script>
-  const $ = (id)=>document.getElementById(id);
-
-  function showModal(show){
-    $("backdrop").style.display = show ? "flex" : "none";
-    if(show){ $("pin").focus(); }
+  async function renderHomeHTML() {
+  const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/app.html");
+  if (!res.ok) {
+    throw new Error("Failed to load UI HTML");
   }
-
-  async function api(path, opts){
-    const res = await fetch(path, { ...opts, headers: { "content-type":"application/json", ...(opts && opts.headers || {}) } });
-    const txt = await res.text();
-    let data = null;
-    try { data = txt ? JSON.parse(txt) : null; } catch(e){ data = { raw: txt }; }
-    return { ok: res.ok, status: res.status, data };
-  }
-
-  async function loadMe(){
-    const r = await api("/api/me");
-    if(r.ok){
-      $("who").textContent = r.data.email + " (" + r.data.role + ")";
-      if(r.data.orgName) $("tenant").textContent = "Tenant: " + r.data.orgName;
-    } else {
-      $("who").textContent = "Not authenticated";
-    }
-  }
-
-  async function loadOrgs(){
-    const r = await api("/api/org");
-    if(r.ok){
-      $("out").textContent = JSON.stringify(r.data, null, 2);
-      return true;
-    }
-    if(r.status === 401 && r.data && (r.data.error === "pin_required" || r.data.error === "pin_required_or_expired")){
-      showModal(true);
-      $("msg").textContent = "PIN required.";
-      return false;
-    }
-    $("out").textContent = JSON.stringify(r.data, null, 2);
-    return false;
-  }
-
-  $("btnReload").onclick = async ()=>{ await loadMe(); await loadOrgs(); };
-  $("btnLogout").onclick = async ()=>{ await api("/api/pin/logout", { method:"POST", body: JSON.stringify({}) }); await loadMe(); await loadOrgs(); };
-
-  $("btnCancel").onclick = ()=> showModal(false);
-
-  $("btnVerify").onclick = async ()=>{
-    const pin = $("pin").value.trim();
-    $("msg").textContent = "Verifying…";
-    const r = await api("/api/pin/verify", { method:"POST", body: JSON.stringify({ pin }) });
-    if(r.ok){
-      $("msg").textContent = "✅ PIN verified. Loading orgs…";
-      $("msg").className = "ok";
-      showModal(false);
-      await loadMe();
-      await loadOrgs();
-      $("pin").value = "";
-      $("msg").className = "muted";
-    } else {
-      $("msg").textContent = (r.data && (r.data.message || r.data.error)) ? (r.data.message || r.data.error) : "PIN failed";
-      $("msg").className = "error";
-    }
-  };
-
-  (async ()=>{
-    await loadMe();
-    await loadOrgs();
-  })();
-</script>
-</body>
-</html>`;
-    }
-
+  return await res.text();
+}
 
     /* =====================================================
        Routes
@@ -629,9 +485,12 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
 
 
       // Root UI (includes modal logic)
-      if (url.pathname === "/" && request.method === "GET") {
-        return text(renderHomeHTML(), 200, { "content-type": "text/html; charset=utf-8" });
-      }
+     if (url.pathname === "/" && request.method === "GET") {
+  return text(await renderHomeHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
       /* -----------------------------
    Admin UI: Tenant Resolution Visualizer
 ----------------------------- */
