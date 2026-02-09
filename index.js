@@ -631,6 +631,67 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
       if (url.pathname === "/" && request.method === "GET") {
         return text(renderHomeHTML(), 200, { "content-type": "text/html; charset=utf-8" });
       }
+      /* -----------------------------
+   Admin UI: Tenant Resolution Visualizer
+----------------------------- */
+if (url.pathname === "/admin/tenant-resolution" && request.method === "GET") {
+  return text(`<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Tenant Resolution Inspector</title>
+<style>
+  body { font-family: system-ui; background:#0b1220; color:#e5e7eb; padding:20px }
+  input, button { padding:10px; border-radius:8px; border:1px solid #333; background:#111827; color:#e5e7eb }
+  button { background:#2563eb; font-weight:600; cursor:pointer }
+  .row { display:flex; gap:10px; margin-bottom:10px }
+  pre { background:#020617; padding:12px; border-radius:10px; border:1px solid #1f2937 }
+  .card { border:1px solid #1f2937; border-radius:12px; padding:14px; margin-top:12px }
+</style>
+</head>
+<body>
+
+<h1>🧭 Tenant Resolution Visualizer</h1>
+<p>Admin-only. Shows exactly how tenant resolution occurs.</p>
+
+<div class="card">
+  <div class="row">
+    <input id="email" placeholder="email@example.com" />
+    <input id="pin" placeholder="12345" />
+    <input id="orgId" placeholder="orgId" />
+    <button onclick="resolve()">Resolve</button>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Result</h3>
+  <pre id="out">—</pre>
+</div>
+
+<script>
+async function resolve() {
+  const body = {
+    email: document.getElementById("email").value,
+    pin: document.getElementById("pin").value,
+    orgId: document.getElementById("orgId").value
+  };
+
+  const res = await fetch("/api/admin/resolve", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+  document.getElementById("out").textContent =
+    JSON.stringify(data, null, 2);
+}
+</script>
+
+</body>
+</html>`, 200, { "content-type": "text/html; charset=utf-8" });
+}
+
 
       // Root sanity JSON
       if (url.pathname === "/health") {
@@ -938,6 +999,55 @@ if (url.pathname.startsWith("/api/admin/inspect/org/") && request.method === "GE
     found: !!record,
     record: record || null,
   });
+}
+/* =====================================================
+   🧭 ADMIN: TENANT RESOLUTION INSPECTOR
+   ===================================================== */
+
+if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
+  const token = await getAccessToken();
+  const user = await getCurrentUser(token);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const body = await request.json().catch(() => ({}));
+  const email = body.email?.toLowerCase()?.trim() || null;
+  const pin = body.pin?.trim() || null;
+  const orgId = body.orgId?.trim() || null;
+
+  const result = {
+    input: { email, pin, orgId },
+    kv: {},
+    resolution: null,
+  };
+
+  if (email) {
+    result.kv.email = await env.ORG_MAP_KV.get(`email:${email}`, { type: "json" });
+  }
+
+  if (pin && /^\d{5}$/.test(pin)) {
+    result.kv.pin = await env.ORG_MAP_KV.get(`pin:${pin}`, { type: "json" });
+  }
+
+  if (orgId) {
+    result.kv.org = await env.ORG_MAP_KV.get(`org:${orgId}`, { type: "json" });
+  }
+
+  // Resolution precedence (matches runtime logic)
+  if (result.kv.email) {
+    result.resolution = {
+      method: "email",
+      orgId: result.kv.email.orgId,
+      orgName: result.kv.email.orgName,
+    };
+  } else if (result.kv.pin) {
+    result.resolution = {
+      method: "pin",
+      orgId: result.kv.pin.orgId,
+      orgName: result.kv.pin.orgName,
+    };
+  }
+
+  return json(result);
 }
 
       /* -----------------------------
