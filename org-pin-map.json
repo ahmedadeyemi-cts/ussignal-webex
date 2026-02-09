@@ -4,7 +4,7 @@
     "role": "admin",
     "orgName": "US Signal",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi85ZWQ1YmE5Zi03ZDE4LTRkYTQtODczZi04MWIwYjhkMTUwZjg",
-    "emails": "it@ussignal.com"
+    "emails": ["it@ussignal.com"]
   },
 
   "PIN_58291": {
@@ -12,7 +12,7 @@
     "role": "customer",
     "orgName": "1234",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9mNTI2NzJlNy1hYjhiLTQzZDgtOTUwMS0yNGIwMzVmOTFlNjA",
-    "emails": "it@1234.com"
+    "emails": ["it@1234.com"]
   },
 
   "PIN_93647": {
@@ -20,7 +20,7 @@
     "role": "customer",
     "orgName": "ANDERSON ERICKSON DAIRY COMPANY",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8xN2EzMGM4OS0yMzExLTQ2NGItOWFhMi01ZGU3OGI5YWVjOWM",
-    "emails": "it@andersonericksondairycompany.com"
+    "emails": ["it@andersonericksondairycompany.com"]
   },
 
   "PIN_41865": {
@@ -28,7 +28,7 @@
     "role": "customer",
     "orgName": "Anderson Erickson Diary",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8xYzc5MDJkOS1iNzlkLTRmMjAtYmFiZi01MzQ3ZmQzMDA4M2M",
-    "emails": "it@andersonericksondiary.com"
+    "emails": ["it@andersonericksondiary.com"]
   },
 
   "PIN_67094": {
@@ -36,7 +36,7 @@
     "role": "customer",
     "orgName": "Bank Iowa Corporation",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9lOWNlM2YzNi0wOGU0LTQzNDktYTJlNC05MjA1MjBhNTBlNWE",
-    "emails": "it@bankiowacorporation.com"
+    "emails": ["it@bankiowacorporation.com"]
   },
 
   "PIN_85316": {
@@ -44,7 +44,7 @@
     "role": "customer",
     "orgName": "BATTELLE DBA BATTELLE ECOLOGY",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9kMzAzYjdlMi0zNTRiLTRhZmItOGZjMi0wMGRiZjVjZjVkNjI",
-    "emails": "it@battelledbabattelleecology.com"
+    "emails": ["it@battelledbabattelleecology.com"]
   },
 
   "PIN_29487": {
@@ -52,7 +52,7 @@
     "role": "customer",
     "orgName": "Bettendorf Community School District",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8yMGVhYjc3Zi1kYzBkLTRjYzEtYTYxOC1hODIxMmI5YTY5MDU",
-    "emails": "it@bettendorfcommunityschooldistrict.com"
+    "emails": ["it@bettendorfcommunityschooldistrict.com"]
   },
 
   "PIN_76153": {
@@ -60,7 +60,7 @@
   "role": "customer",
   "orgName": "Broadlawns Medical Center",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9mMTQ4ZjY2Zi0wMmI1LTRiNjQtOTY3NS0zMjRkY2E5YzI2N2Q",
-  "emails": "it@broadlawnsmedicalcenter.com"
+  "emails": ["it@broadlawnsmedicalcenter.com"]
 },
 
   "PIN_50842": {
@@ -68,7 +68,7 @@
     "role": "customer",
     "orgName": "bsb design",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi85NzEwMTRkMC05ZDM4LTRlODgtOTYyMS1iOTMxMzIxOGI1ZGI",
-    "emails": "it@bsbdesign.com"
+    "emails": ["it@bsbdesign.com"]
   },
 
   "PIN_93518": {
@@ -76,7 +76,7 @@
     "role": "customer",
     "orgName": "BSB Designs, Inc.",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9hNjFjY2VkMi1iY2U0LTQ5MWMtYmIxNC0wODBiNjRkYzVhZjQ",
-    "emails": "it@bsbdesignsinc.com"
+    "emails": ["it@bsbdesignsinc.com"]
   },
 
   "PIN_64729": {
@@ -84,7 +84,7 @@
     "role": "customer",
     "orgName": "BUCHANAN COUNTY HEALTH - BCHC",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi80M2NkZjM1Ny04Nzg1LTRlYzItYWIwMi0yYzM1ZjcxNzY3MzI",
-    "emails": "it@buchanancountyhealthbchc.com"
+    "emails": ["it@buchanancountyhealthbchc.com"]
   },
 
   "PIN_28463": {
@@ -92,7 +92,7 @@
     "role": "customer",
     "orgName": "BVS Performance Systems",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8yMGVhYjc3Zi1kYzBkLTRjYzEtYTYxOC1hODIxMmI5YTY5MDU",
-    "emails": "it@bvsperformancesystems.com"
+    "emails": ["it@bvsperformancesystems.com"]
   },
 
   "PIN_39571": {
@@ -100,7 +100,7 @@
     "role": "customer",
     "orgName": "City of Norwalk, Iowa",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8zOTUzNzQ3ZS05NWQyLTQ1MTMtYmVjNy00ZDM4MzIxMzlkYjc",
-    "emails": "it@cityofnorwalkiowa.com"
+    "emails": ["it@cityofnorwalkiowa.com"]
   },
 
   "PIN_74826": {
@@ -108,7 +108,7 @@
     "role": "customer",
     "orgName": "City of Sioux Falls",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi80YmI5MzY1My0yNThiLTRiYjItYTZkZS1kZjBjNzkzOThhYzc",
-    "emails": "it@cityofsiouxfalls.com"
+    "emails": ["it@cityofsiouxfalls.com"]
   },
 
   "PIN_51984": {
@@ -116,7 +116,7 @@
     "role": "customer",
     "orgName": "CITY OF THORNTON",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9lMmU1MDg4Yy1iOTFiLTQxNTQtOGUzNy03ODk1NWE2MWZjMzM",
-    "emails": "it@cityofthornton.com"
+    "emails": ["it@cityofthornton.com"]
   },
 
   "PIN_68493": {
@@ -124,7 +124,7 @@
     "role": "customer",
     "orgName": "CITY OF URBANDALE",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9mMTM2NzgyNy03M2EwLTRjODUtYTNiNS00NGI3ZTE3ZjNmM2Q",
-    "emails": "it@cityofurbandale.com"
+    "emails": ["it@cityofurbandale.com"]
   },
 
   "PIN_93275": {
@@ -132,7 +132,7 @@
     "role": "customer",
     "orgName": "CITY OF WEST DES MOINES",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9lMWZkZDdlZC0xZDZjLTRjZmItOTg0Ny1kNDExYTExNzlkNDY",
-    "emails": "it@cityofwestdesmoines.com"
+    "emails": ["it@cityofwestdesmoines.com"]
   },
 
   "PIN_24759": {
@@ -140,7 +140,7 @@
     "role": "customer",
     "orgName": "COUNTY OF WILLIAMS",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8zNmUyZThlYS1jMWNiLTQ3ZTctYWQ0Ni0zMmY1MDAzZGMzZDA",
-    "emails": "it@countyofwilliams.com"
+    "emails": ["it@countyofwilliams.com"]
   },
 
   "PIN_85931": {
@@ -148,7 +148,7 @@
     "role": "customer",
     "orgName": "Delta Dental",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi82OTA4ZTlmYy1lNWNjLTQyNzgtYjM2Mi1jZmNjM2M0NzY5MmQ",
-    "emails": "it@deltadental.com"
+    "emails": ["it@deltadental.com"]
   },
 
   "PIN_49386": {
@@ -156,7 +156,7 @@
     "role": "customer",
     "orgName": "DemKota Ranch Beef",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi81N2Y0ODA1Yi05MzliLTRjMDEtODQwYS0yMDlmMjQ3ZGZmYWQ",
-    "emails": "it@demkotaranchbeef.com"
+    "emails": ["it@demkotaranchbeef.com"]
   },
 
   "PIN_71694": {
@@ -164,7 +164,7 @@
     "role": "customer",
     "orgName": "Denver Regional Council of Governments",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9jN2RkZWE5NS1hYTE1LTQ4NGUtYmI1Yi01ODk3ODA4NWNkZjg",
-    "emails": "it@denverregionalcouncilofgovernments.com"
+    "emails": ["it@denverregionalcouncilofgovernments.com"]
   },
 
   "PIN_38527": {
@@ -172,7 +172,7 @@
     "role": "customer",
     "orgName": "Dunwoody College of Technology",
     "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8wNzI2YjliNy0xYzhmLTRmNTItYjYzNS1mODFlYmJhYjBjNDU",
-    "emails": "it@dunwoodycollegeoftechnology.com"
+    "emails": ["it@dunwoodycollegeoftechnology.com"]
   },
   
 "PIN_96482": {
@@ -180,7 +180,7 @@
   "role": "customer",
   "orgName": "eip-0001032736",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8yZmJjNTBjZS1mM2UzLTQ2YTItOGU1Ni0zNzE0NWNkODA4NmQ",
-  "emails": "it@eip0001032736.com"
+  "emails": ["it@eip0001032736.com"]
 },
 
 "PIN_52748": {
@@ -188,7 +188,7 @@
   "role": "customer",
   "orgName": "EXCHANGE BANK",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9lZTFmYjNlNS00ZGY5LTQwODAtYTZhMy1kY2VhMGZmNWRjZTY",
-  "emails": "it@exchangebank.com"
+  "emails": ["it@exchangebank.com"]
 },
 
 "PIN_83169": {
@@ -196,7 +196,7 @@
   "role": "customer",
   "orgName": "FirstBank of Nebraska",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9lMTFiYTJkMS1mMjU0LTRlOTAtYTIwNi1mMTZjMTU4MjIyZjI",
-  "emails": "it@firstbankofnebraska.com"
+  "emails": ["it@firstbankofnebraska.com"]
 },
 
 "PIN_69284": {
@@ -204,7 +204,7 @@
   "role": "customer",
   "orgName": "genesishealth.webex.com - linked",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi85ZmY0ZGUxNS1jOTZkLTQ4MTItYjMwNS1lMzg5N2UzZjNlNDU",
-  "emails": "it@genesishealthwebexcomlinked.com"
+  "emails": ["it@genesishealthwebexcomlinked.com"]
 },
 
 "PIN_45971": {
@@ -212,7 +212,7 @@
   "role": "customer",
   "orgName": "Gila Crossing Community School",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9iMzQ3YmQxYi01NzExLTRhOWItODhmMC1jOTgxMWIzZDQyNDQ",
-  "emails": "it@gilacrossingcommunityschool.com"
+  "emails": ["it@gilacrossingcommunityschool.com"]
 },
 
 "PIN_78432": {
@@ -220,7 +220,7 @@
   "role": "customer",
   "orgName": "Gila River Gaming Enterprises",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9jNjdhZWVjYy0zZjY1LTRlZGQtYjhlNi0xMWZhYjkyNGM4Yzk",
-  "emails": "it@gilarivergamingenterprises.com"
+  "emails": ["it@gilarivergamingenterprises.com"]
 },
 
 "PIN_31598": {
@@ -228,7 +228,7 @@
   "role": "customer",
   "orgName": "Global Benefits Group",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi84YjM0ODZlOS02M2U1LTQ3ZDAtOWZlNS1mOWY1N2IyZWVhYzg",
-  "emails": "it@globalbenefitsgroup.com"
+  "emails": ["it@globalbenefitsgroup.com"]
 },
 
 "PIN_94816": {
@@ -236,7 +236,7 @@
   "role": "customer",
   "orgName": "GLOBAL BENEFITS GROUP",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8wYmFlOWExMy1iODE1LTRkYzUtYTE0My1mMTIzOGUzZDhhM2I",
-  "emails": "it@globalbenefitsgroup.com"
+  "emails": ["it@globalbenefitsgroup.com"]
 },
 
 "PIN_67359": {
@@ -244,7 +244,7 @@
   "role": "customer",
   "orgName": "GOLD-EAGLE COOPERATIVE",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9iZDc1ODk5Yy05NWZkLTRlNzItODk0MS0yYzU4ZmRiMGYzOWM",
-  "emails": "it@goldeaglecooperative.com"
+  "emails": ["it@goldeaglecooperative.com"]
 },
 
 "PIN_58142": {
@@ -252,7 +252,7 @@
   "role": "customer",
   "orgName": "GREAT RIVER HEALTH SYSTEMS INC",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi84ZmI4ZDhjOC0xYjg1LTRiNzQtYWVkOS00Y2Y4NzU1MTgyNzM",
-  "emails": "it@greatriverhealthsystemsinc.com"
+  "emails": ["it@greatriverhealthsystemsinc.com"]
 },
 
 "PIN_82674": {
@@ -260,7 +260,7 @@
   "role": "customer",
   "orgName": "GRUNDY COUNTY MEMORIAL HOSPITAL",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi80OGY1ZDY1Yi1lMzFlLTQ2ODgtYmQzMS0wMTA2ZmM1N2E4OWY",
-  "emails": "it@grundycountymemorialhospital.com"
+  "emails": ["it@grundycountymemorialhospital.com"]
 },
 
 "PIN_39486": {
@@ -268,7 +268,7 @@
   "role": "customer",
   "orgName": "HILLS BANK AND TRUST COMPANY",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi80MGE2Y2NhNS1hNjI4LTQzODYtYTFkOS1lOGI2YzAwYjU4NGQ",
-  "emails": "it@hillsbankandtrustcompany.com"
+  "emails": ["it@hillsbankandtrustcompany.com"]
 },
   
 "PIN_91753": {
@@ -276,7 +276,7 @@
   "role": "customer",
   "orgName": "HYUNDAI AUTO EVER AMERICA",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8yMzUxMzBkYS02OTZhLTRiNjQtYjYyYS03ZTkxYWIxZGE1NTU",
-  "emails": "it@hyundaiautoeveramerica.com"
+  "emails": ["it@hyundaiautoeveramerica.com"]
 },
 
 "PIN_54892": {
@@ -284,7 +284,7 @@
   "role": "customer",
   "orgName": "Hyundai Capital America",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9iNzRiZTRlMi0zNDg1LTRjZDItYTY1Ny03NTkxODk5ZjAzOTI",
-  "emails": "it@hyundaicapitalamerica.com"
+  "emails": ["it@hyundaicapitalamerica.com"]
 },
 
 "PIN_76295": {
@@ -292,7 +292,7 @@
   "role": "customer",
   "orgName": "Hyundai - HATCI",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9jZDhjMWJjNy04ZjFjLTQ1MmUtOTg4OS1iN2E4ODdlZTMxNTU",
-  "emails": "it@hyundaihatci.com"
+  "emails": ["it@hyundaihatci.com"]
 },
 
 "PIN_43681": {
@@ -300,7 +300,7 @@
   "role": "customer",
   "orgName": "Hyundai Motor North America",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9hZTExMmI4OS1iNzUxLTQ3MzAtYjExNy1hMGMxZjBhMzU0ZTE",
-  "emails": "it@hyundaimotornorthamerica.com"
+  "emails": ["it@hyundaimotornorthamerica.com"]
 },
 
 "PIN_89537": {
@@ -308,7 +308,7 @@
   "role": "customer",
   "orgName": "IMMANUEL COMMUNITIES",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9lOWU2MjE1OS05NThjLTQyNWUtYmQwYy1hODUwYmJlN2QxNWU",
-  "emails": "it@immanuelcommunities.com"
+  "emails": ["it@immanuelcommunities.com"]
 },
 
 "PIN_27486": {
@@ -316,7 +316,7 @@
   "role": "customer",
   "orgName": "INDIANOLA COMMUNITY SCHOOL DISTRICT",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8xNTc4MTQwMi01NzU5LTRhNTItODBhMi1lYTNlYTE1MTgxYzE",
-  "emails": "it@indianolacommunityschooldistrict.com"
+  "emails": ["it@indianolacommunityschooldistrict.com"]
 },
 
 "PIN_68395": {
@@ -324,7 +324,7 @@
   "role": "customer",
   "orgName": "IOWA LAKES COMMUNITY COLLEGE",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9iYzVmNmVmYi0wNTE5LTRhMTAtOGEyMi1mZWI4MmI0YzU5MmI",
-  "emails": "it@iowalakescommunitycollege.com"
+  "emails": ["it@iowalakescommunitycollege.com"]
 },
 
 "PIN_52961": {
@@ -332,7 +332,7 @@
   "role": "customer",
   "orgName": "Iowa Legislative Services Agency",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8yYTE0ZDljYi1kYjM4LTQxMzQtYTZhMi1jZWYyYzk0NjVhZmY",
-  "emails": "it@iowalegislativeservicesagency.com"
+  "emails": ["it@iowalegislativeservicesagency.com"]
 },
 
 "PIN_84732": {
@@ -340,7 +340,7 @@
   "role": "customer",
   "orgName": "Iowa Specialty Hospital",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9iZjM1ODE1Yi1lYTk0LTQ0MzMtOWIyOC1mZGZjNWM4ZGIzYWE",
-  "emails": "it@iowaspecialtyhospital.com"
+  "emails": ["it@iowaspecialtyhospital.com"]
 },
 
 "PIN_69158": {
@@ -348,7 +348,7 @@
   "role": "customer",
   "orgName": "Iowa Workforce Development",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9jZDJjMWY2Zi00MmE1LTQ0ZWUtYWViNC1lMjJkODlhN2ZlYTM",
-  "emails": "it@iowaworkforcedevelopment.com"
+  "emails": ["it@iowaworkforcedevelopment.com"]
 },
 
 "PIN_35894": {
@@ -356,7 +356,7 @@
   "role": "customer",
   "orgName": "IOWA WORKFORCE DEVELOPMENT CAFETERIA",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi84ODhmYWJlZS0zZTc0LTRhNzktOWNlZi1lYWI0MTAwOWVjZDU",
-  "emails": "it@iowaworkforcedevelopmentcafeteria.com"
+  "emails": ["it@iowaworkforcedevelopmentcafeteria.com"]
 },
 
 "PIN_92647": {
@@ -364,7 +364,7 @@
   "role": "customer",
   "orgName": "JBS USA LLC",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi84ZDhmYzkyMC02OTg1LTQ1Y2UtOGYzZi03OGUxNGRkM2Y0NmI",
-  "emails": "it@jbsusallc.com"
+  "emails": ["it@jbsusallc.com"]
 },
   
 "PIN_48391": {
@@ -372,7 +372,7 @@
   "role": "customer",
   "orgName": "KATHERINE SHAW BETHEA HOSPITAL",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8zNmQ1ZDEwYy0yZDgyLTRmZTItOTVmYS0zN2I2NTdhYmYwOGI",
-  "emails": "it@katherineshawbetheahospital.com"
+  "emails": ["it@katherineshawbetheahospital.com"]
 },
 
 "PIN_75928": {
@@ -380,7 +380,7 @@
   "role": "customer",
   "orgName": "klinger.webex.com - linked",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8yMzQzMzNjOC1mYjNlLTQxMGQtYTBmNS1mNzZhZWM1YzYyNzY",
-  "emails": "it@klingerwebexcomlinked.com"
+  "emails": ["it@klingerwebexcomlinked.com"]
 },
 
 "PIN_31485": {
@@ -388,7 +388,7 @@
   "role": "customer",
   "orgName": "LAKE AREA TECHNICAL INSTITUTE",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9lZDE2N2M1Yy1hMzU2LTQ0ZjAtOWM5Yy0wYzk2NjNmNWE1NzA",
-  "emails": "it@lakeareatechnicalinstitute.com"
+  "emails": ["it@lakeareatechnicalinstitute.com"]
 },
 
 "PIN_86592": {
@@ -396,7 +396,7 @@
   "role": "customer",
   "orgName": "LIFESERVE BLOOD CENTER",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9jY2MyYTQ2Mi1kMjljLTQ2YTEtYmY1Ni04ZTVmOTBiMjA4Nzc",
-  "emails": "it@lifeservebloodcenter.com"
+  "emails": ["it@lifeservebloodcenter.com"]
 },
 
 "PIN_49726": {
@@ -404,7 +404,7 @@
   "role": "customer",
   "orgName": "LifeSpace Communities, INC",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9iOGEwNzRiNi02OWYxLTQ1ZjktYThjMS02MmNlZWQzOWMyOTU",
-  "emails": "it@lifespacecommunitiesinc.com"
+  "emails": ["it@lifespacecommunitiesinc.com"]
 },
 
 "PIN_92845": {
@@ -412,7 +412,7 @@
   "role": "customer",
   "orgName": "LINCOLN ELECTRIC SYSTEM",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi81NDFmNTU4OS04Zjk0LTQxNzgtYmE2YS02MjJlZDk1MDg0ZTQ",
-  "emails": "it@lincolnelectricsystem.com"
+  "emails": ["it@lincolnelectricsystem.com"]
 },
 
 "PIN_67138": {
@@ -420,7 +420,7 @@
   "role": "customer",
   "orgName": "LINCOLN PUBLIC SCHOOLS",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8zNDM2YTI1Yi05MzJmLTQyMWUtOGRlNS00ZjAzZmJmMmY5NGY",
-  "emails": "it@lincolnpublicschools.com"
+  "emails": ["it@lincolnpublicschools.com"]
 },
 
 "PIN_35497": {
@@ -428,7 +428,7 @@
   "role": "customer",
   "orgName": "Lutheran Life Communities",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi80ZmE3YmY5YS02YjlmLTRlNDEtYWQ1YS1jMjFiNGRiZTY5YWQ",
-  "emails": "it@lutheranlifecommunities.com"
+  "emails": ["it@lutheranlifecommunities.com"]
 },
 
 "PIN_89426": {
@@ -436,7 +436,7 @@
   "role": "customer",
   "orgName": "MADONNA REHABILITATION HOSPITAL",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi82MmU4YTRjMC1jYjA2LTQ2ZTUtODEwNS1mYzNiNzc0ZmE3YjU",
-  "emails": "it@madonnarehabilitationhospital.com"
+  "emails": ["it@madonnarehabilitationhospital.com"]
 },
 
 "PIN_53817": {
@@ -444,7 +444,7 @@
   "role": "customer",
   "orgName": "MARY GREELEY MEDICAL CENTER",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9kNmVlNTFmYi1jMGU5LTRjMjktODEyYi01NGYxMzdlNWU5MjY",
-  "emails": "it@marygreeleymedicalcenter.com"
+  "emails": ["it@marygreeleymedicalcenter.com"]
 },
 
 "PIN_76218": {
@@ -452,7 +452,7 @@
   "role": "customer",
   "orgName": "Mary Greeley Medical Center2",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8xYWE1YzA5ZC1jNThmLTQyMDgtOWMxYi1mNzI3NTJlZDU3MzY",
-  "emails": "it@marygreeleymedicalcenter2.com"
+  "emails": ["it@marygreeleymedicalcenter2.com"]
 },
   
 "PIN_41986": {
@@ -460,7 +460,7 @@
   "role": "customer",
   "orgName": "Mason City Clinic, P.C.",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8zM2IyMmJmZC00NTUzLTRkZmItYjcxNi0zZDc2MDE2MTJlMGM",
-  "emails": "it@masoncityclinicpc.com"
+  "emails": ["it@masoncityclinicpc.com"]
 },
 
 "PIN_98524": {
@@ -468,7 +468,7 @@
   "role": "customer",
   "orgName": "MATRIXCARE INC",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi80ZjBlNDFmMS03NzVmLTQ3MGYtOWZkMC1mNjAxYWNlYzFmNTc",
-  "emails": "it@matrixcareinc.com"
+  "emails": ["it@matrixcareinc.com"]
 },
 
 "PIN_63179": {
@@ -476,7 +476,7 @@
   "role": "customer",
   "orgName": "MERCY HOSPITAL CEDAR RAPIDS IOWA",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9mZWE0YmM4Ni1lMTZhLTRkNDEtOTVjYi0wMTEwMGYzMWJlZjQ",
-  "emails": "it@mercyhospitalcedarrapidsiowa.com"
+  "emails": ["it@mercyhospitalcedarrapidsiowa.com"]
 },
 
 "PIN_27495": {
@@ -484,7 +484,7 @@
   "role": "customer",
   "orgName": "Midwest Family Mutual Insurance Co ",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9lOTQ1YTk2Ni0yMjA5LTQ0N2YtYWU3NS02YWMwN2UwNWM1NDk",
-  "emails": "it@midwestfamilymutualinsuranceco.com"
+  "emails": ["it@midwestfamilymutualinsuranceco.com"]
 },
 
 "PIN_85942": {
@@ -492,7 +492,7 @@
   "role": "customer",
   "orgName": "Nathan Powell",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9jODg3MDJjOC01OTNmLTRiYzItYjY3My0yYzRlZWZjYzA2OTc",
-  "emails": "it@nathanpowell.com"
+  "emails": ["it@nathanpowell.com"]
 },
 
 "PIN_74618": {
@@ -500,7 +500,7 @@
   "role": "customer",
   "orgName": "NATIONAL INDEMNITY COMPANY",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi85ZjdkZTIxZC1kZmE2LTQ1Y2ItOTcyOC02MzEzYjUwNzVjY2Q",
-  "emails": "it@nationalindemnitycompany.com"
+  "emails": ["it@nationalindemnitycompany.com"]
 },
 
 "PIN_53896": {
@@ -508,7 +508,7 @@
   "role": "customer",
   "orgName": "NEBRASKA PUBLIC POWER DISTRICT",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9mZTU4ZGRiMy1lMzQwLTQ0YmQtYTE1NS02OWY4NDVlZTE3YjU",
-  "emails": "it@nebraskapublicpowerdistrict.com"
+  "emails": ["it@nebraskapublicpowerdistrict.com"]
 },
 
 "PIN_92754": {
@@ -516,7 +516,7 @@
   "role": "customer",
   "orgName": "Northern State University",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi81NDQ2Nzg5Mi05YjI2LTRjMmMtYjk1YS0zM2JlNzBjYmE1OWE",
-  "emails": "it@northernstateuniversity.com"
+  "emails": ["it@northernstateuniversity.com"]
 },
 
 "PIN_68417": {
@@ -524,7 +524,7 @@
   "role": "customer",
   "orgName": "Northwest Michigan Health Services",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi82YzQ5MTFmNi1iZmFkLTQ4NjAtOTFhOS02MDY5OTUyZTRmMzU",
-  "emails": "it@northwestmichiganhealthservices.com"
+  "emails": ["it@northwestmichiganhealthservices.com"]
 },
   
 "PIN_39582": {
@@ -532,7 +532,7 @@
   "role": "customer",
   "orgName": "OfferPad",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8wOGU0NjM5NC1hMzY2LTQ1ODUtOWVjYi00M2QzOTUyY2YxMzU",
-  "emails": "it@offerpad.com"
+  "emails": ["it@offerpad.com"]
 },
 
 "PIN_81249": {
@@ -540,23 +540,23 @@
   "role": "customer",
   "orgName": "ONENECK IT SOLUTIONS - Gold",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8wYjIwYzUxYS1iNDE5LTQ1NmYtYmNhOS03MmEzZDA2NzcxNDc",
-  "emails": "it@oneneckitsolutionsgold.com"
+  "emails": ["it@oneneckitsolutionsgold.com"]
 },
 
 "PIN_57493": {
   "pin": "57493",
   "role": "customer",
-  "orgName": "Organization for emcinsurance.webex.com",
+  "orgName": "Organization for emcinsurance.webex.com"],
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi83ZWEwNWYyYy0wMDg3LTQ1MGMtOTk0MS1jYzZiNDVlMTZhYWU",
-  "emails": "it@organizationforemcinsurancewebexcom.com"
+  "emails": ["it@organizationforemcinsurancewebexcom.com"]
 },
 
 "PIN_96371": {
   "pin": "96371",
   "role": "customer",
-  "orgName": "Organization for kuder.webex.com",
+  "orgName": "Organization for kuder.webex.com"],
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9jMTlkNjM3ZS1lZmY4LTQxNDgtYWRjZS0wMmI2ZmIwZmEzYzA",
-  "emails": "it@organizationforkuderwebexcom.com"
+  "emails": ["it@organizationforkuderwebexcom.com"]
 },
 
 "PIN_41892": {
@@ -564,7 +564,7 @@
   "role": "customer",
   "orgName": "ORTONVILLE AREA HEALTH SERVICES",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8xNjVkN2ZiYy1iODY4LTRlMWQtOTZhZS04YzA5ZjUxMWUwYjQ",
-  "emails": "it@ortonvilleareahealthservices.com"
+  "emails": ["it@ortonvilleareahealthservices.com"]
 },
 
 "PIN_75963": {
@@ -572,7 +572,7 @@
   "role": "customer",
   "orgName": "Park Dental Group",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9iOGQzZjE0My05N2I4LTQ0ZTUtOGQ5Zi1jOGM1ODBiYWFiZmU",
-  "emails": "it@parkdentalgroup.com"
+  "emails": ["it@parkdentalgroup.com"]
 },
 
 "PIN_68429": {
@@ -580,7 +580,7 @@
   "role": "customer",
   "orgName": "Pella Corporation",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi80NGFkNzMxNS1kNzgzLTRmNTEtOTMzNi03NDkzNzgxNGY5YTE",
-  "emails": "it@pellacorporation.com"
+  "emails": ["it@pellacorporation.com"]
 },
 
 "PIN_93571": {
@@ -588,7 +588,7 @@
   "role": "customer",
   "orgName": "Pilatus Aircraft",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi83YzYwMWZiMC05MTFlLTQ4ZTAtOGNlOS00MThiMzUwZWYxMGY",
-  "emails": "it@pilatusaircraft.com"
+  "emails": ["it@pilatusaircraft.com"]
 },
 
 "PIN_52864": {
@@ -596,7 +596,7 @@
   "role": "customer",
   "orgName": "RAIN AND HAIL L.L.C.",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi82ZjVjNTY2OS0zOWU3LTRlYjAtYmU1Ni1mZWQ2NzU4OWJjYTg",
-  "emails": "it@rainandhailllc.com"
+  "emails": ["it@rainandhailllc.com"]
 },
   
 "PIN_84715": {
@@ -604,7 +604,7 @@
   "role": "customer",
   "orgName": "ROCHELLE COMMUNITY HOSPITAL ASSOCIATION",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8zYjYyYzlhNi1jZWMzLTQ3YjMtODkyYi04YzZjN2FjYjgxYTE",
-  "emails": "it@rochellecommunityhospitalassociation.com"
+  "emails": ["it@rochellecommunityhospitalassociation.com"]
 },
 
 "PIN_31694": {
@@ -612,7 +612,7 @@
   "role": "customer",
   "orgName": "SANDHILLS PUBLISHING COMPANY",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9hODFhNmIzNi0xZDA0LTQ4OGQtODk3MC00NTI1YWY0NzEzNzg",
-  "emails": "it@sandhillspublishingcompany.com"
+  "emails": ["it@sandhillspublishingcompany.com"]
 },
 
 "PIN_96542": {
@@ -620,7 +620,7 @@
   "role": "customer",
   "orgName": "SOUTHEAST IOWA REGIONAL MEDICAL",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi84NWFjNTI1Yi1kZTg2LTQ4MjEtOTQ2MS1mNzFjMmU1OTg3ZTk",
-  "emails": "it@southeastiowaregionalmedical.com"
+  "emails": ["it@southeastiowaregionalmedical.com"]
 },
 
 "PIN_58473": {
@@ -628,7 +628,7 @@
   "role": "customer",
   "orgName": "South Metro Fire Rescue Authority",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9iMDVjYmZhNS1lNjQyLTQ1ZDgtYWQ2OS1jMzI5ZTVmZWJhMGI",
-  "emails": "it@southmetrofirerescueauthority.com"
+  "emails": ["it@southmetrofirerescueauthority.com"]
 },
 
 "PIN_72948": {
@@ -636,7 +636,7 @@
   "role": "customer",
   "orgName": "TDS TELECOMMUNICATION CORPORATION",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi82NjcwOGZjYS0xMjY5LTRjMjctYTQ2MC1iOWU5YmE3NDc2Zjk",
-  "emails": "it@tdstelecommunicationcorporation.com"
+  "emails": ["it@tdstelecommunicationcorporation.com"]
 },
 
 "PIN_41837": {
@@ -644,7 +644,7 @@
   "role": "customer",
   "orgName": "Telligen Inc",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi85OTAxMmZlNC04NjRkLTQzNGQtYmNkMi02NmU1OTE2NmVlODk",
-  "emails": "it@telligeninc.com"
+  "emails": ["it@telligeninc.com"]
 },
 
 "PIN_85692": {
@@ -652,7 +652,7 @@
   "role": "customer",
   "orgName": "TestCo",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi81MjVjMzJmMy03MTI3LTRhNjQtODQwNi0xMTgwNzY5ZDU2Y2Q",
-  "emails": "it@testco.com"
+  "emails": ["it@testco.com"]
 },
 
 "PIN_63917": {
@@ -660,7 +660,7 @@
   "role": "customer",
   "orgName": "THE UNIVERSITY OF SOUTH DAKOTA",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9hNDk4ZGYyNy0yYTkwLTQxZDctOTZkZS1lMWEwOTZlZTdkNTg",
-  "emails": "it@theuniversityofsouthdakota.com"
+  "emails": ["it@theuniversityofsouthdakota.com"]
 },
 
 "PIN_97264": {
@@ -668,7 +668,7 @@
   "role": "customer",
   "orgName": "TOYOTA FINANCIAL SERVICES",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8yODFmZTlmOS1jNTg0LTQ3ZTItOGY1Yi1kZjc5OWIxOTU3MmQ",
-  "emails": "it@toyotafinancialservices.com"
+  "emails": ["it@toyotafinancialservices.com"]
 },
   
 "PIN_58394": {
@@ -676,7 +676,7 @@
   "role": "customer",
   "orgName": "Vaggalis Corp",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8zZTYyZDU1NC1jN2RmLTQyNjYtOWM2My1mNDY1Y2I3NDM1YTU",
-  "emails": "it@vaggaliscorp.com"
+  "emails": ["it@vaggaliscorp.com"]
 },
 
 "PIN_41786": {
@@ -684,7 +684,7 @@
   "role": "customer",
   "orgName": "VAN DIEST MEDICAL CENTER",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8zZGMxYWI1ZC02MzI0LTQ4YTktYjdiNi0xOTBiNGY2OTI5ODM",
-  "emails": "it@vandiestmedicalcenter.com"
+  "emails": ["it@vandiestmedicalcenter.com"]
 },
 
 "PIN_86492": {
@@ -692,7 +692,7 @@
   "role": "customer",
   "orgName": "Van Diest Supply Company",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9iZjc1Y2UxMC02Mjg2LTQyODUtODE0OC00ZDlhODJjZTRmNjI",
-  "emails": "it@vandiestsupplycompany.com"
+  "emails": ["it@vandiestsupplycompany.com"]
 },
 
 "PIN_39518": {
@@ -700,7 +700,7 @@
   "role": "customer",
   "orgName": "Vermeer",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9hNTI3ZGExZS02YTllLTQ4ZmEtOWVlOS1kZDUxMjdmOTRmZWI",
-  "emails": "it@vermeer.com"
+  "emails": ["it@vermeer.com"]
 },
 
 "PIN_92731": {
@@ -708,7 +708,7 @@
   "role": "customer",
   "orgName": "Via Transportation ",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9hMGJkYmM0Mi05MDU4LTRiNTItODU2Zi0wYWNkYTk4NGU5YWI",
-  "emails": "it@viatransportation.com"
+  "emails": ["it@viatransportation.com"]
 },
 
 "PIN_58419": {
@@ -716,7 +716,7 @@
   "role": "customer",
   "orgName": "VT Industries",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8zZGJmMWE3ZC1kN2IzLTRlMmItOGYzZS1hMWIxZTAwYjQ3NWU",
-  "emails": "it@vtindustries.com"
+  "emails": ["it@vtindustries.com"]
 },
 
 "PIN_71639": {
@@ -724,7 +724,7 @@
   "role": "customer",
   "orgName": "WAGNER EQUIPMENT COMPANY",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9jZjg1MzM2Ni01Mzk5LTQzMGItODdhNy0xZDVjZjc3MzIwNjE",
-  "emails": "it@wagnerequipmentcompany.com"
+  "emails": ["it@wagnerequipmentcompany.com"]
 },
 
 "PIN_83947": {
@@ -732,7 +732,7 @@
   "role": "customer",
   "orgName": "WESTERN INTERSTATE COMMISSION FOR HIGHER EDUCATION",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi8xMGVlY2M0ZC1iNzE5LTQwYTItOWM2NS0yNTQzOTBjYWIwMTQ",
-  "emails": "it@westerninterstatecommissionforhighereducation.com"
+  "emails": ["it@westerninterstatecommissionforhighereducation.com"]
 },
 
 "PIN_42685": {
@@ -740,7 +740,7 @@
   "role": "customer",
   "orgName": "Westminster Public Schools",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi80OTIyNTY4OC1jZjdiLTRhNGQtYTIyNi1jMTJjMTZmMmJiMmU",
-  "emails": "it@westminsterpublicschools.com"
+  "emails": ["it@westminsterpublicschools.com"]
 },
 
 "PIN_95826": {
@@ -748,6 +748,6 @@
   "role": "customer",
   "orgName": "WHOLESTONE FARMS",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi82NWExZjczNi1jMzI0LTRlNzctODU1My1jNjU1MzlhZDkwYTk",
-  "emails": "it@wholestonefarms.com"
+  "emails": ["it@wholestonefarms.com"]
 }
 }
