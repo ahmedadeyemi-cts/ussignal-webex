@@ -546,7 +546,7 @@
 "PIN_57493": {
   "pin": "57493",
   "role": "customer",
-  "orgName": "Organization for emcinsurance.webex.com"],
+  "orgName": "Organization for emcinsurance.webex.com",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi83ZWEwNWYyYy0wMDg3LTQ1MGMtOTk0MS1jYzZiNDVlMTZhYWU",
   "emails": ["it@organizationforemcinsurancewebexcom.com"]
 },
@@ -554,7 +554,7 @@
 "PIN_96371": {
   "pin": "96371",
   "role": "customer",
-  "orgName": "Organization for kuder.webex.com"],
+  "orgName": "Organization for kuder.webex.com",
   "orgId": "Y2lzY29zcGFyazovL3VzL09SR0FOSVpBVElPTi9jMTlkNjM3ZS1lZmY4LTQxNDgtYWRjZS0wMmI2ZmIwZmEzYzA",
   "emails": ["it@organizationforkuderwebexcom.com"]
 },
