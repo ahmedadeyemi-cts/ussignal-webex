@@ -330,6 +330,24 @@ export default {
       }
       throw new Error("Failed to generate unique PIN after many attempts");
     }
+    /* =====================================================
+   Email allowlist helpers (ORG_MAP_KV)
+===================================================== */
+
+function emailKey(email) {
+  return `email:${email.toLowerCase()}`;
+}
+
+async function getOrgByEmail(email) {
+  return await env.ORG_MAP_KV.get(emailKey(email), { type: "json" });
+}
+
+async function putEmailMapping(email, orgId, orgName) {
+  await env.ORG_MAP_KV.put(
+    emailKey(email),
+    JSON.stringify({ orgId, orgName })
+  );
+}
 
     /* =====================================================
        UI: minimal modal app
@@ -576,6 +594,18 @@ if (env.SEED_DISABLED === "true") {
     if (!key.startsWith("PIN_")) {
       skipped++;
       continue;
+      // OPTIONAL: seed email allowlist
+if (Array.isArray(value.emails)) {
+  for (const e of value.emails) {
+    const email = String(e).toLowerCase().trim();
+    if (email) {
+      await env.ORG_MAP_KV.put(
+        `email:${email}`,
+        JSON.stringify({ orgId, orgName: value.orgName })
+      );
+    }
+  }
+}
     }
 
     const pin = key.replace("PIN_", "").trim();
@@ -635,19 +665,34 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
          - returns role
          - returns org context if session exists
       ----------------------------- */
-      if (url.pathname === "/api/me") {
-        const token = await getAccessToken();
-        const user = await getCurrentUser(token);
-        const session = await getSession(user.email);
+     if (url.pathname === "/api/me") {
+  const token = await getAccessToken();
+  const user = await getCurrentUser(token);
 
-        return json({
-          email: user.email,
-          role: user.isAdmin ? "admin" : "customer",
-          orgId: session?.orgId || null,
-          orgName: session?.orgName || null,
-          sessionExpiresInSeconds: session?.expiresAt ? Math.max(0, Math.floor((session.expiresAt - nowMs()) / 1000)) : 0,
-        });
-      }
+  // 1️⃣ Try email-based tenant resolution
+  const emailOrg = await getOrgByEmail(user.email);
+
+  // 2️⃣ Fall back to PIN session
+  const session = await getSession(user.email);
+
+  const resolvedOrg =
+    emailOrg ||
+    (session && session.orgId
+      ? { orgId: session.orgId, orgName: session.orgName }
+      : null);
+
+  return json({
+    email: user.email,
+    role: user.isAdmin ? "admin" : "customer",
+    orgId: resolvedOrg?.orgId || null,
+    orgName: resolvedOrg?.orgName || null,
+    resolution: emailOrg ? "email" : session ? "pin" : null,
+    sessionExpiresInSeconds: session?.expiresAt
+      ? Math.max(0, Math.floor((session.expiresAt - nowMs()) / 1000))
+      : 0,
+  });
+}
+
 
       /* -----------------------------
          /api/pin/verify  (POST)
@@ -731,11 +776,13 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
 
         const session = await getSession(user.email);
 
-        // customers require session (PIN)
-        if (!user.isAdmin) {
-          if (!session || !session.orgId) {
-            return json({ error: "pin_required_or_expired", message: "PIN required." }, 401);
-          }
+       // customers require tenant resolution (email OR PIN)
+if (!user.isAdmin) {
+  const emailOrg = await getOrgByEmail(user.email);
+  if (!emailOrg && (!session || !session.orgId)) {
+    return json({ error: "tenant_not_resolved" }, 401);
+  }
+}
           // session expiry check (KV TTL should handle, but keep a hard check)
           if (session.expiresAt && session.expiresAt <= nowMs()) {
             await clearSession(user.email);
