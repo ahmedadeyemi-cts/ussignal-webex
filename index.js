@@ -521,128 +521,109 @@ async function putEmailMapping(email, orgId, orgName) {
    Admin-only: fetch JSON and seed ORG_MAP_KV
 ----------------------------- */
 if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
-   // 🔒 Kill switch — disable seeding unless explicitly enabled
-if (env.SEED_DISABLED === "true") {
-  return json(
-    {
-      error: "seed_disabled",
-      message: "Seed endpoint is disabled by configuration"
-    },
-    410
-  );
-}
+  if (env.SEED_DISABLED === "true") {
+    return json(
+      { error: "seed_disabled", message: "Seed endpoint is disabled" },
+      410
+    );
+  }
+
   const email =
     request.headers.get("cf-access-authenticated-user-email") ||
     request.headers.get("cf-access-user-email");
 
   if (!email || !email.endsWith("@ussignal.com")) {
-    return json(
-      {
-        error: "admin_only",
-        detail: "Missing or non-ussignal email header from Cloudflare Access",
-        email_seen: email || null,
-      },
-      403
-    );
+    return json({ error: "admin_only" }, 403);
   }
 
   const seedUrl =
     env.PIN_SEED_URL ||
     "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/org-pin-map.json";
 
-  let res;
-  try {
-    res = await fetch(seedUrl, {
-      headers: {
-        "cache-control": "no-store",
-        // helps avoid some edge cases where GitHub varies response
-        "accept": "application/json,text/plain,*/*",
-        "user-agent": "ussignal-webex-seeder",
-      },
-    });
-  } catch (e) {
-    return json({ error: "seed_fetch_exception", message: String(e), seedUrl }, 500);
-  }
+  const res = await fetch(seedUrl, {
+    headers: { accept: "application/json" },
+  });
 
-  const bodyText = await res.text();
   if (!res.ok) {
     return json(
-      {
-        error: "seed_fetch_failed",
-        seedUrl,
-        status: res.status,
-        statusText: res.statusText,
-        bodyPreview: bodyText.slice(0, 600),
-      },
+      { error: "seed_fetch_failed", status: res.status },
       500
     );
   }
 
-  let raw;
-  try {
-    raw = bodyText ? JSON.parse(bodyText) : null;
-  } catch (e) {
-    return json(
-      {
-        error: "seed_json_parse_failed",
-        seedUrl,
-        message: String(e),
-        bodyPreview: bodyText.slice(0, 800),
-      },
-      500
-    );
-  }
-
-  if (!raw || typeof raw !== "object") {
-    return json({ error: "seed_invalid_json_root", seedUrl, rootType: typeof raw }, 500);
-  }
+  const data = await res.json();
 
   let written = 0;
   let skipped = 0;
 
-for (const [key, value] of Object.entries(raw)) {
-  if (!key.startsWith("PIN_")) {
-    skipped++;
-    continue;
-  }
+  for (const [key, value] of Object.entries(data)) {
+    if (!key.startsWith("PIN_")) {
+      skipped++;
+      continue;
+    }
 
-  const pin = key.replace("PIN_", "").trim();
-  if (!/^\d{5}$/.test(pin) || !value?.orgName) {
-    skipped++;
-    continue;
-  }
+    const pin = key.replace("PIN_", "");
+    if (!/^\d{5}$/.test(pin)) {
+      skipped++;
+      continue;
+    }
 
-  const role = value.role || "customer";
+    const orgId =
+      value.orgId ||
+      String(value.orgName || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
 
-  const emails = Array.isArray(value.emails)
-    ? value.emails.map(e => e.toLowerCase().trim())
-    : [];
+    const role = value.role || "customer";
 
-  const orgId =
-    value.orgId ||
-    String(value.orgName).toLowerCase().replace(/[^a-z0-9]/g, "");
+    const emails = Array.isArray(value.emails)
+      ? value.emails.map(e => e.toLowerCase().trim())
+      : [];
 
-  // Email allowlist → org mapping
-  for (const email of emails) {
+    // pin → org
     await env.ORG_MAP_KV.put(
-      `email:${email}`,
+      `pin:${pin}`,
       JSON.stringify({
         orgId,
         orgName: value.orgName,
-        role
+        role,
+        emails,
       })
     );
+
+    // org → pin
+    await env.ORG_MAP_KV.put(
+      `org:${orgId}`,
+      JSON.stringify({
+        pin,
+        orgName: value.orgName,
+        role,
+        emails,
+      })
+    );
+
+    // email → org
+    for (const e of emails) {
+      await env.ORG_MAP_KV.put(
+        `email:${e}`,
+        JSON.stringify({
+          orgId,
+          orgName: value.orgName,
+          role,
+        })
+      );
+    }
+
+    written++;
   }
 
-  // PIN ↔ ORG bidirectional mapping
-  await putPinMapping(pin, orgId, value.orgName, role, emails);
-
-  written++;
-}
-
-
-
-  return json({ status: "ok", pinsLoaded: written, skipped, seedUrl, ranAs: email });
+  return json({
+    status: "ok",
+    pinsLoaded: written,
+    skipped,
+    seedUrl,
+    ranAs: email,
+  });
 }
 
 
