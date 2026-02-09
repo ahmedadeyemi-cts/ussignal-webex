@@ -875,6 +875,71 @@ const emails = existing?.emails || [];
         }
         return json(out);
       }
+      /* =====================================================
+   🔍 ADMIN INSPECTION ENDPOINTS (READ-ONLY)
+   ===================================================== */
+
+/* -----------------------------
+   GET /api/admin/inspect/email/:email
+----------------------------- */
+if (url.pathname.startsWith("/api/admin/inspect/email/") && request.method === "GET") {
+  const token = await getAccessToken();
+  const user = await getCurrentUser(token);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const email = decodeURIComponent(url.pathname.split("/").pop()).toLowerCase();
+
+  const record = await env.ORG_MAP_KV.get(`email:${email}`, { type: "json" });
+
+  return json({
+    lookup: `email:${email}`,
+    found: !!record,
+    record: record || null,
+  });
+}
+
+/* -----------------------------
+   GET /api/admin/inspect/pin/:pin
+----------------------------- */
+if (url.pathname.startsWith("/api/admin/inspect/pin/") && request.method === "GET") {
+  const token = await getAccessToken();
+  const user = await getCurrentUser(token);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const pin = url.pathname.split("/").pop();
+
+  if (!/^\d{5}$/.test(pin)) {
+    return json({ error: "invalid_pin_format" }, 400);
+  }
+
+  const record = await env.ORG_MAP_KV.get(`pin:${pin}`, { type: "json" });
+
+  return json({
+    lookup: `pin:${pin}`,
+    found: !!record,
+    record: record || null,
+  });
+}
+
+/* -----------------------------
+   GET /api/admin/inspect/org/:orgId
+----------------------------- */
+if (url.pathname.startsWith("/api/admin/inspect/org/") && request.method === "GET") {
+  const token = await getAccessToken();
+  const user = await getCurrentUser(token);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const orgId = decodeURIComponent(url.pathname.split("/").pop());
+
+  const record = await env.ORG_MAP_KV.get(`org:${orgId}`, { type: "json" });
+
+  return json({
+    lookup: `org:${orgId}`,
+    found: !!record,
+    record: record || null,
+  });
+}
+
       /* -----------------------------
          🔎 DEBUG: seed + read a PIN
          GET /api/debug/pin-test
