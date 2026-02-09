@@ -305,13 +305,23 @@ export default {
       return await env.ORG_MAP_KV.get(KV.orgKey(orgId), { type: "json" });
     }
 
-    async function putPinMapping(pin, orgId, orgName) {
-      // store forward + reverse
-      await Promise.all([
-        env.ORG_MAP_KV.put(KV.pinKey(pin), JSON.stringify({ orgId, orgName })),
-        env.ORG_MAP_KV.put(KV.orgKey(orgId), JSON.stringify({ pin, orgName })),
-      ]);
-    }
+async function putPinMapping(pin, orgId, orgName, role = "customer", emails = []) {
+  const normEmails = Array.isArray(emails)
+    ? emails.map(e => e.toLowerCase().trim())
+    : [];
+
+  await Promise.all([
+    env.ORG_MAP_KV.put(
+      KV.pinKey(pin),
+      JSON.stringify({ orgId, orgName, role, emails: normEmails })
+    ),
+    env.ORG_MAP_KV.put(
+      KV.orgKey(orgId),
+      JSON.stringify({ pin, orgName, role, emails: normEmails })
+    )
+  ]);
+}
+
 
     async function deletePinMapping(pin, orgId) {
       await Promise.all([
@@ -590,41 +600,47 @@ if (env.SEED_DISABLED === "true") {
   let written = 0;
   let skipped = 0;
 
-  for (const [key, value] of Object.entries(raw)) {
-    if (!key.startsWith("PIN_")) {
-      skipped++;
-      continue;
-      // OPTIONAL: seed email allowlist
-if (Array.isArray(value.emails)) {
-  for (const e of value.emails) {
-    const email = String(e).toLowerCase().trim();
-    if (email) {
-      await env.ORG_MAP_KV.put(
-        `email:${email}`,
-        JSON.stringify({ orgId, orgName: value.orgName })
-      );
-    }
+for (const [key, value] of Object.entries(raw)) {
+  if (!key.startsWith("PIN_")) {
+    skipped++;
+    continue;
   }
+
+  const pin = key.replace("PIN_", "").trim();
+  if (!/^\d{5}$/.test(pin) || !value?.orgName) {
+    skipped++;
+    continue;
+  }
+
+  const role = value.role || "customer";
+
+  const emails = Array.isArray(value.emails)
+    ? value.emails.map(e => e.toLowerCase().trim())
+    : [];
+
+  const orgId =
+    value.orgId ||
+    String(value.orgName).toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  // Email allowlist → org mapping
+  for (const email of emails) {
+    await env.ORG_MAP_KV.put(
+      `email:${email}`,
+      JSON.stringify({
+        orgId,
+        orgName: value.orgName,
+        role
+      })
+    );
+  }
+
+  // PIN ↔ ORG bidirectional mapping
+  await putPinMapping(pin, orgId, value.orgName, role, emails);
+
+  written++;
 }
-    }
 
-    const pin = key.replace("PIN_", "").trim();
-    if (!/^\d{5}$/.test(pin) || !value?.orgName) {
-      skipped++;
-      continue;
-    }
 
-    const orgId =
-      value.orgId ||
-      String(value.orgName).toLowerCase().replace(/[^a-z0-9]/g, "");
-
-    await Promise.all([
-      env.ORG_MAP_KV.put(`pin:${pin}`, JSON.stringify({ orgId, orgName: value.orgName })),
-      env.ORG_MAP_KV.put(`org:${orgId}`, JSON.stringify({ pin, orgName: value.orgName })),
-    ]);
-
-    written++;
-  }
 
   return json({ status: "ok", pinsLoaded: written, skipped, seedUrl, ranAs: email });
 }
@@ -827,15 +843,18 @@ if (!user.isAdmin) {
         if (!orgId) return json({ error: "missing_orgId" }, 400);
 
         // read current mapping
-        const existing = await getPinByOrg(orgId);
-        const oldPin = existing?.pin || null;
-        const name = orgName || existing?.orgName || "Unknown Org";
+const existing = await getPinByOrg(orgId);
+const oldPin = existing?.pin || null;
+const name = orgName || existing?.orgName || "Unknown Org";
+const role = existing?.role || "customer";
+const emails = existing?.emails || [];
+
 
         // generate new pin
         const newPin = await generateUniqueNonEasyPin();
 
         // Write new mapping first
-        await putPinMapping(newPin, orgId, name);
+        await putPinMapping(newPin, orgId, name, role, emails);
 
         // Best-effort delete old mapping
         if (oldPin && isFiveDigitPin(String(oldPin))) {
