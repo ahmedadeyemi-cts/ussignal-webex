@@ -494,62 +494,18 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
       /* -----------------------------
    Admin UI: Tenant Resolution Visualizer
 ----------------------------- */
-if (url.pathname === "/admin/tenant-resolution" && request.method === "GET") {
-  return text(`<!doctype html>
-<html>
-<head>
-<meta charset="utf-8" />
-<title>Tenant Resolution Inspector</title>
-<style>
-  body { font-family: system-ui; background:#0b1220; color:#e5e7eb; padding:20px }
-  input, button { padding:10px; border-radius:8px; border:1px solid #333; background:#111827; color:#e5e7eb }
-  button { background:#2563eb; font-weight:600; cursor:pointer }
-  .row { display:flex; gap:10px; margin-bottom:10px }
-  pre { background:#020617; padding:12px; border-radius:10px; border:1px solid #1f2937 }
-  .card { border:1px solid #1f2937; border-radius:12px; padding:14px; margin-top:12px }
-</style>
-</head>
-<body>
-
-<h1>🧭 Tenant Resolution Visualizer</h1>
-<p>Admin-only. Shows exactly how tenant resolution occurs.</p>
-
-<div class="card">
-  <div class="row">
-    <input id="email" placeholder="email@example.com" />
-    <input id="pin" placeholder="12345" />
-    <input id="orgId" placeholder="orgId" />
-    <button onclick="resolve()">Resolve</button>
-  </div>
-</div>
-
-<div class="card">
-  <h3>Result</h3>
-  <pre id="out">—</pre>
-</div>
-
-<script>
-async function resolve() {
-  const body = {
-    email: document.getElementById("email").value,
-    pin: document.getElementById("pin").value,
-    orgId: document.getElementById("orgId").value
-  };
-
-  const res = await fetch("/api/admin/resolve", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body)
-  });
-
-  const data = await res.json();
-  document.getElementById("out").textContent =
-    JSON.stringify(data, null, 2);
+async function renderTenantResolutionHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/tenant-resolution.html"
+  );
+  if (!res.ok) throw new Error("Failed to load tenant resolution UI");
+  return await res.text();
 }
-</script>
 
-</body>
-</html>`, 200, { "content-type": "text/html; charset=utf-8" });
+if (url.pathname === "/admin/tenant-resolution" && request.method === "GET") {
+  return text(await renderTenantResolutionHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
 }
 
 
