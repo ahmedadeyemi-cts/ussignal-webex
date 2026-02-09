@@ -767,42 +767,45 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
          - Admin: returns all orgs
          - Customer: requires session; returns only matching org
       ----------------------------- */
-      if (url.pathname === "/api/org") {
-        const token = await getAccessToken();
-        const user = await getCurrentUser(token);
+     if (url.pathname === "/api/org") {
+  const token = await getAccessToken();
+  const user = await getCurrentUser(token);
+  const session = await getSession(user.email);
 
-        const session = await getSession(user.email);
-
-       // customers require tenant resolution (email OR PIN)
-if (!user.isAdmin) {
-  const emailOrg = await getOrgByEmail(user.email);
-  if (!emailOrg && (!session || !session.orgId)) {
-    return json({ error: "tenant_not_resolved" }, 401);
+  // customers require tenant resolution (email OR PIN)
+  if (!user.isAdmin) {
+    const emailOrg = await getOrgByEmail(user.email);
+    if (!emailOrg && (!session || !session.orgId)) {
+      return json({ error: "tenant_not_resolved" }, 401);
+    }
   }
+
+  // session expiry check
+  if (session?.expiresAt && session.expiresAt <= nowMs()) {
+    await clearSession(user.email);
+    return json(
+      { error: "pin_required_or_expired", message: "PIN required." },
+      401
+    );
+  }
+
+  const orgRes = await fetch("https://webexapis.com/v1/organizations", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const orgData = await orgRes.json();
+
+  if (!orgRes.ok) {
+    throw new Error(`/organizations failed: ${JSON.stringify(orgData)}`);
+  }
+
+  if (user.isAdmin) {
+    return json(orgData.items);
+  }
+
+  const filtered = orgData.items.filter(o => o.id === session.orgId);
+  return json(filtered);
 }
-          // session expiry check (KV TTL should handle, but keep a hard check)
-          if (session.expiresAt && session.expiresAt <= nowMs()) {
-            await clearSession(user.email);
-            return json({ error: "pin_required_or_expired", message: "PIN required." }, 401);
-          }
-        }
-
-        const orgRes = await fetch("https://webexapis.com/v1/organizations", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const orgData = await orgRes.json();
-
-        if (!orgRes.ok) {
-          throw new Error(`/organizations failed: ${JSON.stringify(orgData)}`);
-        }
-
-        if (user.isAdmin) {
-          return json(orgData.items);
-        }
-
-        const filtered = orgData.items.filter((o) => o.id === session.orgId);
-        return json(filtered);
-      }
 
       /* -----------------------------
          /api/admin/pin/rotate (POST)
