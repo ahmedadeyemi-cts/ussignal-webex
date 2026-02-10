@@ -1,29 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <title>US Signal | Webex Calling License Management</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
-    :root {
+    /* ======================================================
+       Theme system (default LIGHT)
+       - We do NOT rely on prefers-color-scheme
+       ====================================================== */
+    html[data-theme="light"] {
       --bg: #f9fafb;
       --fg: #111827;
       --card: #ffffff;
       --border: #e5e7eb;
       --accent: #2563eb;
       --muted: #6b7280;
+      --danger-bg: #fee2e2;
+      --danger-fg: #991b1b;
+      --pill-bg: rgba(37, 99, 235, 0.08);
+      --pill-fg: #1d4ed8;
+      --shadow: 0 8px 22px rgba(0,0,0,0.06);
+      --rowHover: rgba(17, 24, 39, 0.04);
     }
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0b1220;
-        --fg: #e5e7eb;
-        --card: #020617;
-        --border: #1f2937;
-        --accent: #3b82f6;
-        --muted: #9ca3af;
-      }
+    html[data-theme="dark"] {
+      --bg: #0b1220;
+      --fg: #e5e7eb;
+      --card: #020617;
+      --border: #1f2937;
+      --accent: #3b82f6;
+      --muted: #9ca3af;
+      --danger-bg: rgba(248, 113, 113, 0.18);
+      --danger-fg: #fecaca;
+      --pill-bg: rgba(59, 130, 246, 0.18);
+      --pill-fg: #bfdbfe;
+      --shadow: 0 8px 22px rgba(0,0,0,0.25);
+      --rowHover: rgba(255, 255, 255, 0.06);
     }
 
     * {
@@ -40,82 +54,84 @@
     header {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 16px;
-      padding: 18px 24px;
+      padding: 16px 20px;
       border-bottom: 1px solid var(--border);
       background: var(--card);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 240px;
     }
 
     header img {
-      height: 36px;
+      height: 34px;
+      width: auto;
+      display: block;
     }
 
     header h1 {
-      font-size: 20px;
+      font-size: 18px;
       margin: 0;
+      font-weight: 700;
+      letter-spacing: 0.1px;
+    }
+
+    .headerRight {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      font-size: 12px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--pill-bg);
+      color: var(--pill-fg);
       font-weight: 600;
+      white-space: nowrap;
     }
 
     main {
-      padding: 28px;
-      max-width: 1100px;
+      padding: 24px;
+      max-width: 1200px;
       margin: auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
     }
 
     .card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 20px;
-      margin-bottom: 20px;
+      padding: 18px;
+      box-shadow: var(--shadow);
     }
 
     h2 {
-      margin-top: 0;
-      font-size: 18px;
+      margin: 0 0 10px 0;
+      font-size: 16px;
     }
 
     .muted {
       color: var(--muted);
-      font-size: 14px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid var(--border);
-      text-align: left;
-      font-size: 14px;
-    }
-
-    th {
-      font-weight: 600;
-    }
-
-    input, button {
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--fg);
-      font-size: 14px;
-    }
-
-    button {
-      background: var(--accent);
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    button:hover {
-      opacity: 0.9;
+      font-size: 13px;
+      line-height: 1.45;
     }
 
     .row {
@@ -125,8 +141,98 @@
       flex-wrap: wrap;
     }
 
+    input, select, button {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--fg);
+      font-size: 14px;
+      outline: none;
+    }
+
+    select { min-width: 320px; }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button.secondary {
+      background: transparent;
+      color: var(--fg);
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      overflow: hidden;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    th {
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: rgba(0,0,0,0.02);
+    }
+
+    tr:hover td { background: var(--rowHover); }
+
+    .danger {
+      background: var(--danger-bg) !important;
+      color: var(--danger-fg);
+      font-weight: 800;
+      border-radius: 10px;
+    }
+
+    .right {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
     #admin-note {
       border-left: 4px solid var(--accent);
+    }
+
+    .statusLine {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .errorBox {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(248, 113, 113, 0.12);
+      color: var(--fg);
+      font-size: 13px;
+      display: none;
+      white-space: pre-wrap;
     }
   </style>
 </head>
@@ -134,139 +240,350 @@
 <body>
 
 <header>
-  <img
-    src="https://webex.onenecklab.com/assets/ussignal-logo.jpg"
-    alt="US Signal"
-  />
-  <h1>Webex Calling — License Management</h1>
-</header>
-
-<main>
-
-  <!-- Admin Banner -->
-  <div id="admin-note" class="card" style="display:none">
-    <strong>US Signal Admin View</strong>
-    <p class="muted">
-      You have visibility across all customer organizations.
-      Customer-specific restrictions do not apply.
-    </p>
-  </div>
-
-  <!-- Organization Context -->
-  <div class="card">
-    <h2>Organization Context</h2>
-    <div class="muted" id="orgContext">Loading…</div>
-  </div>
-
-  <!-- License Usage -->
-  <div class="card">
-    <h2>Current License Usage</h2>
-    <div id="licenseLoading" class="muted">Loading license data…</div>
-
-    <table id="licenseTable" style="display:none">
-      <thead>
-        <tr>
-          <th>License Type</th>
-          <th>Assigned</th>
-          <th>Available</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="licenseRows"></tbody>
-    </table>
-  </div>
-
-  <!-- Email Report -->
-  <div class="card">
-    <h2>Email License Report</h2>
-    <p class="muted">
-      A summary of current Webex Calling licenses will be sent to the email address below.
-    </p>
-
-    <div class="row">
-      <input id="reportEmail" placeholder="you@example.com" />
-      <button onclick="sendReport()">Send Report</button>
+  <div class="brand">
+    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" alt="US Signal" />
+    <div>
+      <h1>Webex Calling — License Management</h1>
+      <div class="statusLine" id="whoLine">Loading…</div>
     </div>
   </div>
 
+  <div class="headerRight">
+    <div class="pill" id="tenantPill">Tenant: —</div>
+    <button class="secondary" id="btnTheme">Dark Mode</button>
+    <button class="secondary" id="btnRefresh">Refresh</button>
+  </div>
+</header>
+
+<main>
+  <div class="grid">
+
+    <!-- Admin Banner -->
+    <div id="admin-note" class="card" style="display:none">
+      <strong>US Signal Admin View</strong>
+      <div class="muted">
+        You can switch tenants using the selector below. Customers will only see their own tenant.
+      </div>
+    </div>
+
+    <!-- Tenant Selection + Context -->
+    <div class="card">
+      <h2>Tenant Context</h2>
+      <div class="muted" id="orgContext">Loading…</div>
+
+      <div style="height:12px"></div>
+
+      <div class="row">
+        <select id="tenantSelect" disabled>
+          <option value="">Loading tenants…</option>
+        </select>
+        <button id="btnLoad" disabled>Load Licenses</button>
+      </div>
+
+      <div class="errorBox" id="errBox"></div>
+    </div>
+
+    <!-- License Usage -->
+    <div class="card">
+      <h2>Current License Usage</h2>
+      <div id="licenseLoading" class="muted">Loading license data…</div>
+
+      <table id="licenseTable" style="display:none">
+        <thead>
+          <tr>
+            <th>License Type</th>
+            <th class="right">Assigned</th>
+            <th class="right">Available</th>
+            <th class="right">Deficit (Avail - Assigned)</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="licenseRows"></tbody>
+      </table>
+    </div>
+
+    <!-- Email Report -->
+    <div class="card">
+      <h2>Email License Report</h2>
+      <p class="muted">
+        Sends a license summary for the currently selected tenant.
+      </p>
+
+      <div class="row">
+        <input id="reportEmail" placeholder="you@example.com" style="min-width:300px" />
+        <button id="btnSendEmail">Send Report</button>
+      </div>
+
+      <div class="muted" style="margin-top:10px" id="emailStatus"></div>
+    </div>
+
+  </div>
 </main>
 
 <script>
-/* ---------------------------------
-   Load user + tenant context
---------------------------------- */
-async function loadContext() {
-  const res = await fetch("/api/me");
-  const me = await res.json();
+  const $ = (id) => document.getElementById(id);
 
-  document.getElementById("orgContext").textContent =
-    me.orgName
-      ? `${me.orgName} (${me.resolution} resolution)`
+  // -----------------------------
+  // Theme (default light, persisted)
+  // -----------------------------
+  function loadTheme() {
+    const saved = localStorage.getItem("uiTheme");
+    const theme = saved === "dark" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", theme);
+    $("btnTheme").textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+  }
+
+  function toggleTheme() {
+    const cur = document.documentElement.getAttribute("data-theme") || "light";
+    const next = cur === "dark" ? "light" : "dark";
+    localStorage.setItem("uiTheme", next);
+    loadTheme();
+  }
+
+  $("btnTheme").addEventListener("click", toggleTheme);
+  loadTheme();
+
+  // -----------------------------
+  // Helpers
+  // -----------------------------
+  function setError(msg) {
+    const box = $("errBox");
+    if (!msg) {
+      box.style.display = "none";
+      box.textContent = "";
+      return;
+    }
+    box.style.display = "block";
+    box.textContent = msg;
+  }
+
+  async function api(path, opts) {
+    const res = await fetch(path, opts);
+    const txt = await res.text();
+    let data = null;
+    try { data = txt ? JSON.parse(txt) : null; } catch { data = { raw: txt }; }
+    return { ok: res.ok, status: res.status, data };
+  }
+
+  function safeOrgLabel(o) {
+    const name = o.displayName || o.name || o.orgName || "Unknown";
+    const id = o.id || o.orgId || "";
+    return `${name}${id ? " — " + id.slice(0, 10) + "…" : ""}`;
+  }
+
+  // -----------------------------
+  // State
+  // -----------------------------
+  let ME = null;
+  let ORGS = [];
+  let SELECTED_ORG_ID = null;
+
+  // -----------------------------
+  // Load /api/me
+  // -----------------------------
+  async function loadMe() {
+    const r = await api("/api/me");
+    if (!r.ok) throw new Error("Failed to load /api/me");
+
+    ME = r.data;
+    $("whoLine").textContent = `${ME.email} (${ME.role})`;
+    $("tenantPill").textContent = `Tenant: ${ME.orgName || "—"}`;
+
+    $("orgContext").textContent = ME.orgName
+      ? `${ME.orgName} (${ME.resolution} resolution)`
       : "No tenant resolved";
 
-  if (me.role === "admin") {
-    document.getElementById("admin-note").style.display = "block";
-    document.getElementById("reportEmail").value = me.email;
-  }
-}
+    // default report email
+    $("reportEmail").value = ME.email || "";
 
-/* ---------------------------------
-   Load license data (LIVE)
---------------------------------- */
-async function loadLicenses() {
-  const res = await fetch("/api/licenses");
-  const data = await res.json();
-
-  if (!res.ok) {
-    document.getElementById("licenseLoading").textContent =
-      "Unable to load license data.";
-    return;
+    // admin note
+    $("admin-note").style.display = ME.role === "admin" ? "block" : "none";
   }
 
-  document.getElementById("licenseLoading").style.display = "none";
-  document.getElementById("licenseTable").style.display = "table";
+  // -----------------------------
+  // Load org list (admin: all, customer: one)
+  // Uses your existing /api/org route
+  // -----------------------------
+  async function loadOrgs() {
+    const r = await api("/api/org");
+    if (!r.ok) {
+      // If tenant not resolved (customer), show helpful message
+      if (r.status === 401) {
+        setError("Tenant not resolved. If you're a customer user, verify PIN or ensure your email is mapped to an org.");
+      } else {
+        setError("Failed to load org list.");
+      }
+      return;
+    }
 
-  const rows = data.items.map(l => `
-    <tr>
-      <td>${l.name}</td>
-      <td>${l.consumed}</td>
-      <td>${l.available}</td>
-      <td>${l.status}</td>
-    </tr>
-  `).join("");
+    ORGS = Array.isArray(r.data) ? r.data : [];
+    const sel = $("tenantSelect");
+    sel.innerHTML = "";
 
-  document.getElementById("licenseRows").innerHTML = rows;
-}
+    if (ORGS.length === 0) {
+      sel.innerHTML = `<option value="">No organizations available</option>`;
+      sel.disabled = true;
+      $("btnLoad").disabled = true;
+      return;
+    }
 
-/* ---------------------------------
-   Send license report via Brevo
---------------------------------- */
-async function sendReport() {
-  const email = document.getElementById("reportEmail").value.trim();
-  if (!email) {
-    alert("Please enter an email address.");
-    return;
+    // Build options
+    for (const o of ORGS) {
+      const opt = document.createElement("option");
+      opt.value = o.id || o.orgId || "";
+      opt.textContent = safeOrgLabel(o);
+      sel.appendChild(opt);
+    }
+
+    sel.disabled = false;
+    $("btnLoad").disabled = false;
+
+    // Choose default
+    const defaultOrgId = ME?.orgId || (ORGS[0].id || ORGS[0].orgId);
+    if (defaultOrgId) sel.value = defaultOrgId;
+    SELECTED_ORG_ID = sel.value;
   }
 
-  const res = await fetch("/api/licenses/email", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email }),
+  $("tenantSelect").addEventListener("change", () => {
+    SELECTED_ORG_ID = $("tenantSelect").value;
+    setError(null);
   });
 
-  if (!res.ok) {
-    alert("Failed to send license report.");
-    return;
+  // -----------------------------
+  // Load licenses (calls /api/licenses?orgId=...)
+  // -----------------------------
+  async function loadLicenses() {
+    setError(null);
+    $("licenseLoading").style.display = "block";
+    $("licenseLoading").textContent = "Loading license data…";
+    $("licenseTable").style.display = "none";
+    $("licenseRows").innerHTML = "";
+
+    const orgId = SELECTED_ORG_ID || "";
+    const q = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
+    const r = await api(`/api/licenses${q}`);
+
+    if (!r.ok) {
+      const msg =
+        (r.data && (r.data.message || r.data.error)) ||
+        `Failed to load licenses (HTTP ${r.status}).`;
+      $("licenseLoading").textContent = msg;
+      return;
+    }
+
+    const items = (r.data && r.data.items) ? r.data.items : [];
+    if (!Array.isArray(items) || items.length === 0) {
+      $("licenseLoading").textContent = "No license data returned for this tenant.";
+      return;
+    }
+
+    $("licenseLoading").style.display = "none";
+    $("licenseTable").style.display = "table";
+
+    // Expected item shape:
+    // { name, consumed, available, status }
+    const rows = items.map(l => {
+      const assigned = Number(l.consumed ?? l.assigned ?? 0);
+      const available = Number(l.available ?? 0);
+      const deficit = available - assigned;
+      const deficitCellClass = deficit < 0 ? "danger" : "";
+
+      const status = l.status || (deficit < 0 ? "DEFICIT" : "OK");
+      const name = l.name || l.licenseName || "Unknown";
+
+      return `
+        <tr>
+          <td>${escapeHtml(name)}</td>
+          <td class="right">${fmtInt(assigned)}</td>
+          <td class="right">${fmtInt(available)}</td>
+          <td class="right ${deficitCellClass}">${fmtInt(deficit)}</td>
+          <td>${escapeHtml(String(status))}</td>
+        </tr>
+      `;
+    }).join("");
+
+    $("licenseRows").innerHTML = rows;
   }
 
-  alert("License report sent successfully.");
-}
+  // -----------------------------
+  // Send email (calls /api/licenses/email)
+  // -----------------------------
+  async function sendReport() {
+    setError(null);
+    $("emailStatus").textContent = "";
 
-/* ---------------------------------
-   Init
---------------------------------- */
-loadContext();
-loadLicenses();
+    const email = $("reportEmail").value.trim();
+    if (!email) {
+      alert("Please enter an email address.");
+      return;
+    }
+
+    const orgId = SELECTED_ORG_ID || null;
+
+    $("btnSendEmail").disabled = true;
+    $("emailStatus").textContent = "Sending…";
+
+    const r = await api("/api/licenses/email", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, orgId }),
+    });
+
+    $("btnSendEmail").disabled = false;
+
+    if (!r.ok) {
+      const msg =
+        (r.data && (r.data.message || r.data.error)) ||
+        `Email send failed (HTTP ${r.status}).`;
+      $("emailStatus").textContent = "Failed to send.";
+      setError(msg);
+      return;
+    }
+
+    $("emailStatus").textContent = "✅ License report sent successfully.";
+  }
+
+  $("btnSendEmail").addEventListener("click", sendReport);
+  $("btnLoad").addEventListener("click", loadLicenses);
+  $("btnRefresh").addEventListener("click", async () => {
+    await init();
+  });
+
+  // -----------------------------
+  // Utilities
+  // -----------------------------
+  function fmtInt(n) {
+    if (!Number.isFinite(n)) return "0";
+    const sign = n < 0 ? "-" : "";
+    const abs = Math.abs(Math.trunc(n));
+    return sign + abs.toLocaleString();
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  // -----------------------------
+  // Init
+  // -----------------------------
+  async function init() {
+    try {
+      setError(null);
+      await loadMe();
+      await loadOrgs();
+      SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
+      await loadLicenses();
+    } catch (e) {
+      setError(e?.message || String(e));
+    }
+  }
+
+  init();
 </script>
 
 </body>
