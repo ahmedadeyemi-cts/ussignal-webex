@@ -366,6 +366,17 @@ async function putEmailMapping(email, orgId, orgName) {
   }
   return await res.text();
 }
+async function renderCustomerLicensesHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/licenses.html"
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to load customer licenses UI");
+  }
+
+  return await res.text();
+}
 
     /* =====================================================
        Routes
@@ -487,6 +498,14 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
       // Root UI (includes modal logic)
      if (url.pathname === "/" && request.method === "GET") {
   return text(await renderHomeHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+/* -----------------------------
+   Customer UI: Licenses
+----------------------------- */
+if (url.pathname === "/customer/licenses" && request.method === "GET") {
+  return text(await renderCustomerLicensesHTML(), 200, {
     "content-type": "text/html; charset=utf-8",
   });
 }
