@@ -12,6 +12,7 @@
       --card: #ffffff;
       --border: #e5e7eb;
       --accent: #2563eb;
+      --muted: #6b7280;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -21,6 +22,7 @@
         --card: #020617;
         --border: #1f2937;
         --accent: #3b82f6;
+        --muted: #9ca3af;
       }
     }
 
@@ -74,7 +76,7 @@
     }
 
     .muted {
-      color: #9ca3af;
+      color: var(--muted);
       font-size: 14px;
     }
 
@@ -132,7 +134,10 @@
 <body>
 
 <header>
-  <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" alt="US Signal" />
+  <img
+    src="https://webex.onenecklab.com/assets/ussignal-logo.jpg"
+    alt="US Signal"
+  />
   <h1>Webex Calling — License Management</h1>
 </header>
 
@@ -142,12 +147,12 @@
   <div id="admin-note" class="card" style="display:none">
     <strong>US Signal Admin View</strong>
     <p class="muted">
-      You have visibility across all customer organizations.  
+      You have visibility across all customer organizations.
       Customer-specific restrictions do not apply.
     </p>
   </div>
 
-  <!-- Current Org -->
+  <!-- Organization Context -->
   <div class="card">
     <h2>Organization Context</h2>
     <div class="muted" id="orgContext">Loading…</div>
@@ -188,7 +193,7 @@
 
 <script>
 /* ---------------------------------
-   Load session + tenant context
+   Load user + tenant context
 --------------------------------- */
 async function loadContext() {
   const res = await fetch("/api/me");
@@ -205,37 +210,63 @@ async function loadContext() {
   }
 }
 
-loadContext();
-
 /* ---------------------------------
-   Placeholder license loader
-   (wired in Phase 2B)
+   Load license data (LIVE)
 --------------------------------- */
 async function loadLicenses() {
-  // Placeholder until /api/licenses exists
-  document.getElementById("licenseLoading").textContent =
-    "License data integration pending (Phase 2B).";
+  const res = await fetch("/api/licenses");
+  const data = await res.json();
+
+  if (!res.ok) {
+    document.getElementById("licenseLoading").textContent =
+      "Unable to load license data.";
+    return;
+  }
+
+  document.getElementById("licenseLoading").style.display = "none";
+  document.getElementById("licenseTable").style.display = "table";
+
+  const rows = data.items.map(l => `
+    <tr>
+      <td>${l.name}</td>
+      <td>${l.consumed}</td>
+      <td>${l.available}</td>
+      <td>${l.status}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("licenseRows").innerHTML = rows;
 }
 
-loadLicenses();
-
 /* ---------------------------------
-   Email report stub
+   Send license report via Brevo
 --------------------------------- */
-function sendReport() {
+async function sendReport() {
   const email = document.getElementById("reportEmail").value.trim();
-
   if (!email) {
     alert("Please enter an email address.");
     return;
   }
 
-  alert(
-    "License report delivery is not wired yet.\n\n" +
-    "Phase 2B will send this via Brevo.\n\n" +
-    "Entered email: " + email
-  );
+  const res = await fetch("/api/licenses/email", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!res.ok) {
+    alert("Failed to send license report.");
+    return;
+  }
+
+  alert("License report sent successfully.");
 }
+
+/* ---------------------------------
+   Init
+--------------------------------- */
+loadContext();
+loadLicenses();
 </script>
 
 </body>
