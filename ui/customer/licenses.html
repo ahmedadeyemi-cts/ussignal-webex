@@ -2,68 +2,241 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>US Signal Webex | License Management</title>
+  <title>US Signal | Webex Calling License Management</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
     :root {
-      --bg: #0b1220;
-      --card: #111827;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
+      --bg: #f9fafb;
+      --fg: #111827;
+      --card: #ffffff;
+      --border: #e5e7eb;
       --accent: #2563eb;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b1220;
+        --fg: #e5e7eb;
+        --card: #020617;
+        --border: #1f2937;
+        --accent: #3b82f6;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       background: var(--bg);
-      color: var(--text);
+      color: var(--fg);
     }
 
     header {
       display: flex;
       align-items: center;
       gap: 16px;
-      padding: 16px 24px;
-      border-bottom: 1px solid #1f2937;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
     }
 
     header img {
       height: 36px;
     }
 
-    main {
-      padding: 32px;
-      max-width: 1200px;
-      margin: auto;
+    header h1 {
+      font-size: 20px;
+      margin: 0;
+      font-weight: 600;
     }
 
-    h1 {
-      margin-top: 0;
+    main {
+      padding: 28px;
+      max-width: 1100px;
+      margin: auto;
     }
 
     .card {
       background: var(--card);
-      border: 1px solid #1f2937;
-      border-radius: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
       padding: 20px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 18px;
+    }
+
+    .muted {
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      font-weight: 600;
     }
 
     input, button {
-      padding: 10px;
+      padding: 10px 12px;
       border-radius: 8px;
-      border: 1px solid #374151;
-      background: #020617;
-      color: var(--text);
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--fg);
+      font-size: 14px;
     }
 
     button {
       background: var(--accent);
+      color: white;
       border: none;
-      font-weight: 600;
       cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #admin-note {
+      border-left: 4px solid var(--accent);
     }
   </style>
 </head>
+
+<body>
+
+<header>
+  <img src="https://www.ussignal.com/wp-content/uploads/2020/04/us-signal-logo.svg" alt="US Signal" />
+  <h1>Webex Calling — License Management</h1>
+</header>
+
+<main>
+
+  <!-- Admin Banner -->
+  <div id="admin-note" class="card" style="display:none">
+    <strong>US Signal Admin View</strong>
+    <p class="muted">
+      You have visibility across all customer organizations.  
+      Customer-specific restrictions do not apply.
+    </p>
+  </div>
+
+  <!-- Current Org -->
+  <div class="card">
+    <h2>Organization Context</h2>
+    <div class="muted" id="orgContext">Loading…</div>
+  </div>
+
+  <!-- License Usage -->
+  <div class="card">
+    <h2>Current License Usage</h2>
+    <div id="licenseLoading" class="muted">Loading license data…</div>
+
+    <table id="licenseTable" style="display:none">
+      <thead>
+        <tr>
+          <th>License Type</th>
+          <th>Assigned</th>
+          <th>Available</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="licenseRows"></tbody>
+    </table>
+  </div>
+
+  <!-- Email Report -->
+  <div class="card">
+    <h2>Email License Report</h2>
+    <p class="muted">
+      A summary of current Webex Calling licenses will be sent to the email address below.
+    </p>
+
+    <div class="row">
+      <input id="reportEmail" placeholder="you@example.com" />
+      <button onclick="sendReport()">Send Report</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+/* ---------------------------------
+   Load session + tenant context
+--------------------------------- */
+async function loadContext() {
+  const res = await fetch("/api/me");
+  const me = await res.json();
+
+  document.getElementById("orgContext").textContent =
+    me.orgName
+      ? `${me.orgName} (${me.resolution} resolution)`
+      : "No tenant resolved";
+
+  if (me.role === "admin") {
+    document.getElementById("admin-note").style.display = "block";
+    document.getElementById("reportEmail").value = me.email;
+  }
+}
+
+loadContext();
+
+/* ---------------------------------
+   Placeholder license loader
+   (wired in Phase 2B)
+--------------------------------- */
+async function loadLicenses() {
+  // Placeholder until /api/licenses exists
+  document.getElementById("licenseLoading").textContent =
+    "License data integration pending (Phase 2B).";
+}
+
+loadLicenses();
+
+/* ---------------------------------
+   Email report stub
+--------------------------------- */
+function sendReport() {
+  const email = document.getElementById("reportEmail").value.trim();
+
+  if (!email) {
+    alert("Please enter an email address.");
+    return;
+  }
+
+  alert(
+    "License report delivery is not wired yet.\n\n" +
+    "Phase 2B will send this via Brevo.\n\n" +
+    "Entered email: " + email
+  );
+}
+</script>
+
+</body>
+</html>
