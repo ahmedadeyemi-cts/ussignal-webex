@@ -1,14 +1,69 @@
-<main>
-  <h1>License Management</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>US Signal Webex | License Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <div class="card">
-    <h3>Current License Usage</h3>
-    <pre id="licenseData">Loading…</pre>
-  </div>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #2563eb;
+    }
 
-  <div class="card">
-    <h3>Email License Report</h3>
-    <input id="email" placeholder="your@email.com" />
-    <button onclick="sendReport()">Send</button>
-  </div>
-</main>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 24px;
+      border-bottom: 1px solid #1f2937;
+    }
+
+    header img {
+      height: 36px;
+    }
+
+    main {
+      padding: 32px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    input, button {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #374151;
+      background: #020617;
+      color: var(--text);
+    }
+
+    button {
+      background: var(--accent);
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
