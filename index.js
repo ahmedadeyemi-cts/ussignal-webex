@@ -510,16 +510,6 @@ if (url.pathname === "/customer/licenses" && request.method === "GET") {
   });
 }
 
-      /* -----------------------------
-   Admin UI: Tenant Resolution Visualizer
------------------------------ */
-async function renderTenantResolutionHTML() {
-  const res = await fetch(
-    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/tenant-resolution.html"
-  );
-  if (!res.ok) throw new Error("Failed to load tenant resolution UI");
-  return await res.text();
-}
 
 if (url.pathname === "/admin/tenant-resolution" && request.method === "GET") {
   return text(await renderTenantResolutionHTML(), 200, {
@@ -769,8 +759,17 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
 if (url.pathname === "/api/licenses/email" && request.method === "POST") {
   const token = await getAccessToken();
   const user = await getCurrentUser(token);
+   const body = await request.json().catch(() => ({}));
+  const toEmail = String(body.email || "").toLowerCase().trim();
+  const requestedOrgId = body.orgId || null;
 
-  const body = await request.json().catch(() => ({}));
+  if (!toEmail) {
+    return json({ error: "missing_email" }, 400);
+  }
+
+  if (requestedOrgId && user.isAdmin) {
+    url.searchParams.set("orgId", requestedOrgId);
+  }
   const toEmail = String(body.email || "").toLowerCase().trim();
 
   if (!toEmail) {
@@ -778,7 +777,6 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
   }
 
   const licRes = await fetch(`${url.origin}/api/licenses`, {
-    headers: { Authorization: `Bearer ${token}` },
   });
 
   const licData = await licRes.json();
