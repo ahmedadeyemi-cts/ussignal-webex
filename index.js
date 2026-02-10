@@ -377,6 +377,15 @@ async function renderCustomerLicensesHTML() {
 
   return await res.text();
 }
+async function renderTenantResolutionHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/tenant-resolution.html"
+  );
+  if (!res.ok) {
+    throw new Error("Failed to load tenant resolution UI");
+  }
+  return await res.text();
+}
 
     /* =====================================================
        Routes
@@ -770,7 +779,6 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
   if (requestedOrgId && user.isAdmin) {
     url.searchParams.set("orgId", requestedOrgId);
   }
-  const toEmail = String(body.email || "").toLowerCase().trim();
 
   if (!toEmail) {
     return json({ error: "missing_email" }, 400);
