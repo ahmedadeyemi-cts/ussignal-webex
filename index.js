@@ -704,7 +704,7 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
 }
 /* -----------------------------
    /api/licenses
-   - Admin: all orgs
+   - Admin: may specify ?orgId=...
    - Customer: resolved org only
 ----------------------------- */
 if (url.pathname === "/api/licenses" && request.method === "GET") {
@@ -714,12 +714,18 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
   const emailOrg = await getOrgByEmail(user.email);
   const session = await getSession(user.email);
 
-  const resolvedOrgId =
-    user.isAdmin
-      ? null
-      : emailOrg?.orgId || session?.orgId;
+  const requestedOrgId = url.searchParams.get("orgId");
 
-  if (!user.isAdmin && !resolvedOrgId) {
+  // Resolve org
+  let resolvedOrgId = null;
+
+  if (user.isAdmin) {
+    resolvedOrgId = requestedOrgId || null; // admin may filter
+  } else {
+    resolvedOrgId = emailOrg?.orgId || session?.orgId;
+  }
+
+  if (!resolvedOrgId && !user.isAdmin) {
     return json({ error: "tenant_not_resolved" }, 401);
   }
 
@@ -735,10 +741,9 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   const licenses = data.items || [];
 
-  // Customers only see licenses assigned to their org
-  const filtered = user.isAdmin
-    ? licenses
-    : licenses.filter(l => l.orgId === resolvedOrgId);
+  const filtered = resolvedOrgId
+    ? licenses.filter(l => l.orgId === resolvedOrgId)
+    : licenses;
 
   return json({
     count: filtered.length,
@@ -749,9 +754,11 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
       consumed: l.consumedUnits,
       available: l.totalUnits - l.consumedUnits,
       status:
-        l.totalUnits - l.consumedUnits > 0
-          ? "Available"
-          : "Fully Assigned",
+        l.totalUnits - l.consumedUnits < 0
+          ? "DEFICIT"
+          : l.totalUnits - l.consumedUnits === 0
+          ? "FULL"
+          : "OK",
     })),
   });
 }
@@ -812,10 +819,18 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
       "api-key": env.BREVO_API_KEY,
     },
     body: JSON.stringify({
-      sender: {
-        email: env.LICENSE_REPORT_FROM,
-        name: "US Signal Licensing",
-      },
+     const senderEmail =
+  env.LICENSE_REPORT_FROM ||
+  env.BREVO_SENDER_EMAIL ||
+  "no-reply@ussignal@onenecklab.com";
+
+...
+
+sender: {
+  email: senderEmail,
+  name: "US Signal Licensing",
+},
+
       to: [{ email: toEmail }],
       subject: "Webex Calling License Report",
       htmlContent: html,
