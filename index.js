@@ -819,23 +819,28 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
       "api-key": env.BREVO_API_KEY,
     },
     body: JSON.stringify({
-     const senderEmail =
+    const senderEmail =
   env.LICENSE_REPORT_FROM ||
   env.BREVO_SENDER_EMAIL ||
-  "no-reply@ussignal@onenecklab.com";
+  "no-reply@ussignal.onenecklab.com";
 
-...
+const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
+  method: "POST",
+  headers: {
+    "content-type": "application/json",
+    "api-key": env.BREVO_API_KEY,
+  },
+  body: JSON.stringify({
+    sender: {
+      email: senderEmail,
+      name: "US Signal Licensing",
+    },
+    to: [{ email: toEmail }],
+    subject: "Webex Calling License Report",
+    htmlContent: html,
+  }),
+});
 
-sender: {
-  email: senderEmail,
-  name: "US Signal Licensing",
-},
-
-      to: [{ email: toEmail }],
-      subject: "Webex Calling License Report",
-      htmlContent: html,
-    }),
-  });
 
   if (!brevoRes.ok) {
     const err = await brevoRes.text();
