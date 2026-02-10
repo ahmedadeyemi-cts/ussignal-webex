@@ -702,6 +702,133 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
   const filtered = orgData.items.filter(o => o.id === session.orgId);
   return json(filtered);
 }
+/* -----------------------------
+   /api/licenses
+   - Admin: all orgs
+   - Customer: resolved org only
+----------------------------- */
+if (url.pathname === "/api/licenses" && request.method === "GET") {
+  const token = await getAccessToken();
+  const user = await getCurrentUser(token);
+
+  const emailOrg = await getOrgByEmail(user.email);
+  const session = await getSession(user.email);
+
+  const resolvedOrgId =
+    user.isAdmin
+      ? null
+      : emailOrg?.orgId || session?.orgId;
+
+  if (!user.isAdmin && !resolvedOrgId) {
+    return json({ error: "tenant_not_resolved" }, 401);
+  }
+
+  const res = await fetch(
+    "https://webexapis.com/v1/licenses",
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`/licenses failed: ${JSON.stringify(data)}`);
+  }
+
+  const licenses = data.items || [];
+
+  // Customers only see licenses assigned to their org
+  const filtered = user.isAdmin
+    ? licenses
+    : licenses.filter(l => l.orgId === resolvedOrgId);
+
+  return json({
+    count: filtered.length,
+    items: filtered.map(l => ({
+      id: l.id,
+      name: l.name,
+      total: l.totalUnits,
+      consumed: l.consumedUnits,
+      available: l.totalUnits - l.consumedUnits,
+      status:
+        l.totalUnits - l.consumedUnits > 0
+          ? "Available"
+          : "Fully Assigned",
+    })),
+  });
+}
+/* -----------------------------
+   /api/licenses/email
+   Sends license report via Brevo
+----------------------------- */
+if (url.pathname === "/api/licenses/email" && request.method === "POST") {
+  const token = await getAccessToken();
+  const user = await getCurrentUser(token);
+
+  const body = await request.json().catch(() => ({}));
+  const toEmail = String(body.email || "").toLowerCase().trim();
+
+  if (!toEmail) {
+    return json({ error: "missing_email" }, 400);
+  }
+
+  const licRes = await fetch(`${url.origin}/api/licenses`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const licData = await licRes.json();
+  if (!licRes.ok) {
+    throw new Error("Failed to load license data");
+  }
+
+  const rows = licData.items
+    .map(
+      l =>
+        `<tr>
+          <td>${l.name}</td>
+          <td>${l.consumed}</td>
+          <td>${l.available}</td>
+          <td>${l.status}</td>
+        </tr>`
+    )
+    .join("");
+
+  const html = `
+    <h2>Webex Calling License Report</h2>
+    <p>Generated for ${user.email}</p>
+    <table border="1" cellpadding="6" cellspacing="0">
+      <tr>
+        <th>License</th>
+        <th>Assigned</th>
+        <th>Available</th>
+        <th>Status</th>
+      </tr>
+      ${rows}
+    </table>
+  `;
+
+  const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "api-key": env.BREVO_API_KEY,
+    },
+    body: JSON.stringify({
+      sender: {
+        email: env.LICENSE_REPORT_FROM,
+        name: "US Signal Licensing",
+      },
+      to: [{ email: toEmail }],
+      subject: "Webex Calling License Report",
+      htmlContent: html,
+    }),
+  });
+
+  if (!brevoRes.ok) {
+    const err = await brevoRes.text();
+    throw new Error(`Brevo send failed: ${err}`);
+  }
+
+  return json({ status: "sent", to: toEmail });
+}
 
       /* -----------------------------
          /api/admin/pin/rotate (POST)
