@@ -784,8 +784,18 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
     return json({ error: "missing_email" }, 400);
   }
 
-  const licRes = await fetch(`${url.origin}/api/licenses`, {
-  });
+  const licenseUrl = new URL(`${url.origin}/api/licenses`);
+
+if (requestedOrgId && user.isAdmin) {
+  licenseUrl.searchParams.set("orgId", requestedOrgId);
+}
+
+const licRes = await fetch(licenseUrl.toString(), {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
+
 
   const licData = await licRes.json();
   if (!licRes.ok) {
