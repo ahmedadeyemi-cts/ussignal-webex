@@ -545,13 +545,6 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
     "cf-ray": request.headers.get("cf-ray"),
     "host": request.headers.get("host"),
   };
-if (url.pathname === "/api/debug/brevo") {
-  return json({
-    hasApiKey: !!env.BREVO_API_KEY,
-    hasSender: !!env.BREVO_SENDER_EMAIL,
-    hasFrom: !!env.LICENSE_REPORT_FROM
-  });
-}
 
   return new Response(JSON.stringify(out, null, 2), {
     status: 200,
@@ -1085,6 +1078,16 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
           kvBound: !!env.ORG_MAP_KV,
         });
       }
+/* -----------------------------
+   🔎 DEBUG: Brevo env check
+----------------------------- */
+if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
+  return json({
+    hasApiKey: !!env.BREVO_API_KEY,
+    hasSender: !!env.BREVO_SENDER_EMAIL,
+    hasFrom: !!env.LICENSE_REPORT_FROM
+  });
+}
 
       return json({ error: "not_found", path: url.pathname }, 404);
     } catch (err) {
