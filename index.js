@@ -562,27 +562,30 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
   const user = await getCurrentUser(token);
 
   // 1️⃣ Try email-based tenant resolution
-  const emailOrg = await getOrgByEmail(user.email);
+ const session = await getSession(user.email);
 
-  // 2️⃣ Fall back to PIN session
-  const session = await getSession(user.email);
+let resolvedOrg = null;
 
-  const resolvedOrg =
-    emailOrg ||
-    (session && session.orgId
-      ? { orgId: session.orgId, orgName: session.orgName }
-      : null);
+if (user.isAdmin) {
+  resolvedOrg = null; // admin sees all
+} else if (session && session.orgId) {
+  resolvedOrg = {
+    orgId: session.orgId,
+    orgName: session.orgName
+  };
+}
 
-  return json({
-    email: user.email,
-    role: user.isAdmin ? "admin" : "customer",
-    orgId: resolvedOrg?.orgId || null,
-    orgName: resolvedOrg?.orgName || null,
-    resolution: emailOrg ? "email" : session ? "pin" : null,
-    sessionExpiresInSeconds: session?.expiresAt
-      ? Math.max(0, Math.floor((session.expiresAt - nowMs()) / 1000))
-      : 0,
-  });
+return json({
+  email: user.email,
+  role: user.isAdmin ? "admin" : "customer",
+  orgId: resolvedOrg?.orgId || null,
+  orgName: resolvedOrg?.orgName || null,
+  resolution: session ? "pin" : null,
+  sessionExpiresInSeconds: session?.expiresAt
+    ? Math.max(0, Math.floor((session.expiresAt - nowMs()) / 1000))
+    : 0,
+});
+
 }
 
 
@@ -669,10 +672,10 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
 
   // customers require tenant resolution (email OR PIN)
   if (!user.isAdmin) {
-    const emailOrg = await getOrgByEmail(user.email);
-    if (!emailOrg && (!session || !session.orgId)) {
-      return json({ error: "tenant_not_resolved" }, 401);
-    }
+   if (!user.isAdmin && (!session || !session.orgId)) {
+  return json({ error: "pin_required" }, 401);
+}
+
   }
 
   // session expiry check
@@ -709,29 +712,34 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
 if (url.pathname === "/api/licenses" && request.method === "GET") {
   const token = await getAccessToken();
   const user = await getCurrentUser(token);
-
-  const emailOrg = await getOrgByEmail(user.email);
   const session = await getSession(user.email);
 
   const requestedOrgId = url.searchParams.get("orgId");
 
-  // Resolve org
+  // 🔐 PIN-only for customers
   let resolvedOrgId = null;
 
   if (user.isAdmin) {
-    resolvedOrgId = requestedOrgId || null; // admin may filter
+    // Admin can see all, or optionally filter by orgId
+    resolvedOrgId = requestedOrgId || null;
   } else {
-    resolvedOrgId = emailOrg?.orgId || session?.orgId;
+    // Customer MUST have a PIN session
+    if (!session || !session.orgId) {
+      return json({ error: "pin_required", message: "PIN required." }, 401);
+    }
+
+    // Expiry check
+    if (session.expiresAt && session.expiresAt <= nowMs()) {
+      await clearSession(user.email);
+      return json({ error: "pin_required_or_expired", message: "PIN required." }, 401);
+    }
+
+    resolvedOrgId = session.orgId;
   }
 
-  if (!resolvedOrgId && !user.isAdmin) {
-    return json({ error: "tenant_not_resolved" }, 401);
-  }
-
-  const res = await fetch(
-    "https://webexapis.com/v1/licenses",
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  const res = await fetch("https://webexapis.com/v1/licenses", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
   const data = await res.json();
   if (!res.ok) {
@@ -741,7 +749,7 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
   const licenses = data.items || [];
 
   const filtered = user.isAdmin
-    ? licenses
+    ? (resolvedOrgId ? licenses.filter(l => l.orgId === resolvedOrgId) : licenses)
     : licenses.filter(l => l.orgId === resolvedOrgId);
 
   return json({
