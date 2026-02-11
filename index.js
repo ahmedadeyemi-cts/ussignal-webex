@@ -94,7 +94,101 @@ export default {
       const n = 10000 + (buf[0] % 90000);
       return String(n);
     }
+    //Maintenance API
+function cfgIntAllowZero(name, def) {
+  const v = env[name];
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : def;
+}
 
+const STATUS_CACHE_SECONDS = cfgIntAllowZero("STATUS_CACHE_SECONDS", 60); // 0 disables cache
+
+async function fetchJsonStrict(urlStr, init = {}) {
+  const res = await fetch(urlStr, {
+    ...init,
+    headers: {
+      accept: "application/json",
+      ...(init.headers || {}),
+    },
+  });
+
+  const ct = res.headers.get("content-type") || "";
+  const txt = await res.text();
+
+  // Must be JSON-ish AND parseable
+  if (!ct.toLowerCase().includes("application/json")) {
+    return {
+      ok: false,
+      status: 500,
+      error: "status_not_json",
+      bodyPreview: txt.slice(0, 400),
+      contentType: ct,
+      upstreamStatus: res.status,
+      upstreamUrl: urlStr,
+    };
+  }
+
+  let data = null;
+  try {
+    data = txt ? JSON.parse(txt) : null;
+  } catch (e) {
+    return {
+      ok: false,
+      status: 500,
+      error: "status_json_parse_failed",
+      bodyPreview: txt.slice(0, 400),
+      upstreamStatus: res.status,
+      upstreamUrl: urlStr,
+    };
+  }
+
+  if (!res.ok) {
+    return {
+      ok: false,
+      status: 502,
+      error: "status_upstream_failed",
+      upstreamStatus: res.status,
+      upstreamUrl: urlStr,
+      body: data,
+    };
+  }
+
+  return { ok: true, status: 200, data };
+}
+
+async function fetchJsonCached(request, urlStr) {
+  // cache key varies only by URL (no tenant-specific data inside)
+  const cache = caches.default;
+
+  if (STATUS_CACHE_SECONDS > 0) {
+    const cacheKey = new Request(urlStr, { method: "GET" });
+    const hit = await cache.match(cacheKey);
+    if (hit) return hit;
+
+    const r = await fetchJsonStrict(urlStr);
+    const payload = r.ok ? r.data : r;
+    const resp = new Response(JSON.stringify(payload), {
+      status: r.ok ? 200 : r.status,
+      headers: {
+        "content-type": "application/json",
+        "cache-control": `public, max-age=${STATUS_CACHE_SECONDS}`,
+      },
+    });
+
+    // store
+    await cache.put(cacheKey, resp.clone());
+    return resp;
+  }
+
+  // no cache
+  const r = await fetchJsonStrict(urlStr);
+  const payload = r.ok ? r.data : r;
+  return new Response(JSON.stringify(payload), {
+    status: r.ok ? 200 : r.status,
+    headers: { "content-type": "application/json", "cache-control": "no-store" },
+  });
+}
+//End of Maintenance API
     function looksTooEasy(pin) {
       // reject obvious patterns
       // - all same (11111)
@@ -541,36 +635,38 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
     }
   }
 
-  // ✅ Worker-level 60s cache
-  const cached = await env.WEBEX.get("maintenance_cache", { type: "json" });
-  if (cached && cached.expires > Date.now()) {
-    return json(cached.data);
-  }
+  // ✅ Correct Webex Status API endpoints (per your docs)
+  const BASE = "https://status.webex.com";
+  const URL_INDEX = `${BASE}/index.json`;
+  const URL_UNRESOLVED = `${BASE}/unresolved-incidents.json`;
+  const URL_UPCOMING = `${BASE}/upcoming-scheduled-maintenances.json`;
 
-  const res = await fetch("https://status.webex.com/api/v3/incidents", {
-    headers: {
-      "accept": "application/json"
-    }
-  });
+  // Fetch (cached at worker layer)
+  const [idxRes, incRes, maintRes] = await Promise.all([
+    fetchJsonCached(request, URL_INDEX),
+    fetchJsonCached(request, URL_UNRESOLVED),
+    fetchJsonCached(request, URL_UPCOMING),
+  ]);
 
-  const text = await res.text();
+  // If any upstream came back as an error payload, surface it (most useful one)
+  const idxText = await idxRes.text();
+  const incText = await incRes.text();
+  const maintText = await maintRes.text();
 
-  if (!res.ok) {
-    return json({
-      error: "status_api_failed",
-      status: res.status,
-      bodyPreview: text.slice(0, 300)
-    }, 500);
-  }
+  let idxJson, incJson, maintJson;
+  try { idxJson = JSON.parse(idxText); } catch { idxJson = null; }
+  try { incJson = JSON.parse(incText); } catch { incJson = null; }
+  try { maintJson = JSON.parse(maintText); } catch { maintJson = null; }
 
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch (e) {
-    return json({
-      error: "status_not_json",
-      bodyPreview: text.slice(0, 300)
-    }, 500);
+  // Bubble the first error if present
+  const firstErr =
+    (idxJson && idxJson.error) ? idxJson :
+    (incJson && incJson.error) ? incJson :
+    (maintJson && maintJson.error) ? maintJson :
+    null;
+
+  if (firstErr) {
+    return json(firstErr, 500);
   }
 
   const KEYWORDS = [
@@ -578,47 +674,121 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
     "calling",
     "pstn",
     "voice",
-    "device",
-    "management"
+    "sip",
+    "trunk",
+    "call routing",
+    "local gateway",
+    "management",
+    "device management",
   ];
 
-  function relevant(str) {
-    const s = (str || "").toLowerCase();
-    return KEYWORDS.some(k => s.includes(k));
+  function relevantText(s) {
+    const n = String(s || "").toLowerCase();
+    return KEYWORDS.some(k => n.includes(k));
   }
 
-  const incidents = (data.incidents || []).filter(i =>
-    relevant(i.title) || relevant(i.description)
-  );
+  function isPstnRelated(incidentOrMaint) {
+    const name = incidentOrMaint?.name || "";
+    if (relevantText(name) && String(name).toLowerCase().includes("pstn")) return true;
 
-  const responseObject = {
-    incidents: incidents.map(i => ({
-      name: i.title,
+    const updates = incidentOrMaint?.incident_updates || [];
+    const lastBody = updates.length ? String(updates[updates.length - 1].body || "") : "";
+    const hay = (name + " " + lastBody).toLowerCase();
+
+    return hay.includes("pstn") || hay.includes("carrier") || hay.includes("sip trunk") || hay.includes("trunk");
+  }
+
+  // Data shapes per your pasted docs:
+  // unresolved-incidents.json -> { incidents: [...] }
+  // upcoming-scheduled-maintenances.json -> { scheduled_maintenances: [...] }
+  const incidents = Array.isArray(incJson?.incidents) ? incJson.incidents : [];
+  const scheduled = Array.isArray(maintJson?.scheduled_maintenances) ? maintJson.scheduled_maintenances : [];
+
+  // For relevance, we check incident name + update bodies + component names
+  function incidentRelevant(i) {
+    if (relevantText(i?.name)) return true;
+
+    const comps = Array.isArray(i?.components) ? i.components : [];
+    if (comps.some(c => relevantText(c?.name))) return true;
+
+    const ups = Array.isArray(i?.incident_updates) ? i.incident_updates : [];
+    if (ups.some(u => relevantText(u?.body))) return true;
+
+    return false;
+  }
+
+  function maintenanceRelevant(m) {
+    if (relevantText(m?.name)) return true;
+
+    const comps = Array.isArray(m?.components) ? m.components : [];
+    if (comps.some(c => relevantText(c?.name))) return true;
+
+    const ups = Array.isArray(m?.incident_updates) ? m.incident_updates : [];
+    if (ups.some(u => relevantText(u?.body))) return true;
+
+    return false;
+  }
+
+  const filteredIncidents = incidents.filter(incidentRelevant);
+  const filteredMaint = scheduled.filter(maintenanceRelevant);
+
+  const hasMajorIncident = filteredIncidents.some(i => {
+    const impact = String(i?.impact || "").toLowerCase();
+    return impact === "major" || impact === "critical";
+  });
+
+  // Last updated: take max of updated_at fields we return
+  const updatedCandidates = [
+    ...filteredIncidents.map(i => i?.updated_at).filter(Boolean),
+    ...filteredMaint.map(m => m?.updated_at).filter(Boolean),
+  ].map(d => new Date(d).getTime()).filter(t => Number.isFinite(t));
+
+  const lastUpdatedAt =
+    updatedCandidates.length
+      ? new Date(Math.max(...updatedCandidates)).toISOString()
+      : new Date().toISOString();
+
+  return json({
+    lastUpdatedAt,
+    hasMajorIncident,
+    incidents: filteredIncidents.map(i => ({
+      id: i.id,
+      name: i.name,
       status: i.status,
       impact: i.impact,
-      updated_at: i.updated_at
+      updated_at: i.updated_at,
+      isPstn: isPstnRelated(i),
+      // optional: UI may want the most recent update text
+      latestUpdate:
+        Array.isArray(i.incident_updates) && i.incident_updates.length
+          ? {
+              status: i.incident_updates[i.incident_updates.length - 1].status,
+              body: i.incident_updates[i.incident_updates.length - 1].body,
+              updated_at: i.incident_updates[i.incident_updates.length - 1].updated_at,
+            }
+          : null,
     })),
-    maintenance: []
-  };
-
-  // store in cache
-  await env.WEBEX.put(
-    "maintenance_cache",
-    JSON.stringify({
-      data: responseObject,
-      expires: Date.now() + 60 * 1000
-    })
-  );
-
-  return json(responseObject);
-}
-
-      // Root UI (includes modal logic)
-     if (url.pathname === "/" && request.method === "GET") {
-  return text(await renderHomeHTML(), 200, {
-    "content-type": "text/html; charset=utf-8",
+    maintenance: filteredMaint.map(m => ({
+      id: m.id,
+      name: m.name,
+      status: m.status,
+      start: m?.incident_updates?.[0]?.body ? m.scheduled_for : m.scheduled_for, // keep simple
+      scheduled_for: m.scheduled_for,
+      scheduled_until: m.scheduled_until,
+      updated_at: m.updated_at,
+      isPstn: isPstnRelated(m),
+      latestUpdate:
+        Array.isArray(m.incident_updates) && m.incident_updates.length
+          ? {
+              status: m.incident_updates[m.incident_updates.length - 1].status,
+              body: m.incident_updates[m.incident_updates.length - 1].body,
+              updated_at: m.incident_updates[m.incident_updates.length - 1].updated_at,
+            }
+          : null,
+    })),
   });
 }
+
       /* -----------------------------
    PIN UI
 ----------------------------- */
