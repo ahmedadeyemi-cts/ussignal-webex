@@ -481,6 +481,29 @@ async function putEmailMapping(email, orgId, orgName) {
 
   return await res.text();
 }
+async function renderCustomerStatusHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/status.html"
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to load status UI");
+  }
+
+  return await res.text();
+}
+
+async function renderCustomerIncidentsHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/incidents.html"
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to load incidents UI");
+  }
+
+  return await res.text();
+}
 
 
 async function renderCustomerLicensesHTML() {
@@ -646,7 +669,8 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
 }
 
 
-    if (url.pathname === "/api/maintenance" && request.method === "GET") {
+if (url.pathname === "/api/maintenance" && request.method === "GET") {
+
   const user = getCurrentUser(request);
   const session = await getSession(user.email);
 
@@ -654,10 +678,44 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
     return json({ error: "pin_required" }, 401);
   }
 
-  return await fetchJsonCached(
+  // ✅ Use hardened + cached fetch
+  const upstream = await fetchJsonCached(
     request,
     "https://status.webex.com/api/index.json"
   );
+
+  const payload = await upstream.json();
+
+  if (!upstream.ok) {
+    return json(payload, upstream.status);
+  }
+
+  const data = payload;
+
+  const TARGET_PRODUCTS = [
+    "webex user hub",
+    "webex cloud registered device",
+    "webex app",
+    "webex control hub",
+    "webex calling",
+    "gateway",
+    "dedicated instance"
+  ];
+
+  function matchesProduct(name) {
+    const n = (name || "").toLowerCase();
+    return TARGET_PRODUCTS.some(p => n.includes(p));
+  }
+
+  const maintenance = (data.scheduled_maintenances || []).filter(m =>
+    m.name && matchesProduct(m.name)
+  );
+
+  return json({
+    lastUpdated: new Date().toISOString(),
+    statusIndicator: data.status?.indicator || "unknown",
+    maintenance
+  });
 }
 
 
@@ -683,6 +741,23 @@ if (url.pathname === "/customer/licenses" && request.method === "GET") {
 ----------------------------- */
 if (url.pathname === "/customer/maintenance" && request.method === "GET") {
   return text(await renderCustomerMaintenanceHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+/* -----------------------------
+   Customer UI: Status
+----------------------------- */
+if (url.pathname === "/customer/status" && request.method === "GET") {
+  return text(await renderCustomerStatusHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
+/* -----------------------------
+   Customer UI: Incidents
+----------------------------- */
+if (url.pathname === "/customer/incidents" && request.method === "GET") {
+  return text(await renderCustomerIncidentsHTML(), 200, {
     "content-type": "text/html; charset=utf-8",
   });
 }
