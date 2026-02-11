@@ -742,48 +742,43 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
       })),
     });
   }
+const globalLicenses = licData.items || [];
+// 3️⃣ Load tenant license usage from KV (authoritative source)
+const usageKey = `ORG_LICENSE_USAGE:${requestedOrgId}`;
+const usageRecord = await env.ORG_MAP_KV.get(usageKey, { type: "json" });
 
-  // 3️⃣ Load users for selected org
-  const usersRes = await fetch(
-    `https://webexapis.com/v1/organizations/${requestedOrgId}/users`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+// usageRecord example:
+// {
+//   licenses: {
+//     "Webex Calling Professional": 42,
+//     "Webex Calling Workspace": 10
+//   }
+// }
 
-  const usersData = await usersRes.json();
-  if (!usersRes.ok) {
-    throw new Error(`/org users failed: ${JSON.stringify(usersData)}`);
-  }
+const licenseUsage = usageRecord?.licenses || {};
 
-  // 4️⃣ Count license usage for this org
-  const licenseUsage = {};
 
-  for (const u of usersData.items || []) {
-    const personRes = await fetch(
-      `https://webexapis.com/v1/people/${u.id}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+ const items = globalLicenses.map(l => {
+  const assigned = Number(licenseUsage[l.name] || 0);
+  const available = l.totalUnits - assigned;
 
-    const person = await personRes.json();
-    const licenses = person.licenses || [];
-
-    for (const lic of licenses) {
-      licenseUsage[lic] = (licenseUsage[lic] || 0) + 1;
-    }
-  }
-
-  // 5️⃣ Build tenant-specific view
-  const items = globalLicenses.map(l => {
-    const assigned = licenseUsage[l.id] || 0;
-    const available = l.totalUnits - assigned;
-
-    return {
-      name: l.name,
-      assigned,
-      available,
-      status: available < 0 ? "DEFICIT" : assigned > 0 ? "IN_USE" : "OK",
-    };
-  });
-
+  return {
+    name: l.name,
+    assigned,
+    available,
+    status:
+      available < 0
+        ? "DEFICIT"
+        : available === 0
+        ? "FULL"
+        : assigned > 0
+        ? "IN_USE"
+        : "OK",
+  };
+});
+  if (!usageRecord) {
+  console.warn(`⚠️ No license usage found in KV for org ${requestedOrgId}`);
+}
   return json({
     scope: "tenant",
     orgId: requestedOrgId,
