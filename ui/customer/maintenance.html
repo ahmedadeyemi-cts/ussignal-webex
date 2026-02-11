@@ -1,269 +1,284 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>US Signal | Webex Maintenance</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8"/>
+<title>Webex Platform Maintenance</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-  <style>
-    html[data-theme="light"] {
-      --bg: #f9fafb;
-      --fg: #111827;
-      --card: #ffffff;
-      --border: #e5e7eb;
-      --accent: #2563eb;
-      --muted: #6b7280;
-      --danger-bg: #fee2e2;
-      --danger-fg: #991b1b;
-      --pill-bg: rgba(37, 99, 235, 0.08);
-      --pill-fg: #1d4ed8;
-      --shadow: 0 8px 22px rgba(0,0,0,0.06);
-      --rowHover: rgba(17, 24, 39, 0.04);
-    }
+<style>
+:root {
+  --bg: #f3f4f6;
+  --card: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --primary: #2563eb;
+  --danger: #dc2626;
+}
 
-    html[data-theme="dark"] {
-      --bg: #0b1220;
-      --fg: #e5e7eb;
-      --card: #020617;
-      --border: #1f2937;
-      --accent: #3b82f6;
-      --muted: #9ca3af;
-      --danger-bg: rgba(248,113,113,0.18);
-      --danger-fg: #fecaca;
-      --pill-bg: rgba(59,130,246,0.18);
-      --pill-fg: #bfdbfe;
-      --shadow: 0 8px 22px rgba(0,0,0,0.25);
-      --rowHover: rgba(255,255,255,0.06);
-    }
+body.dark {
+  --bg: #111827;
+  --card: #1f2937;
+  --text: #f9fafb;
+  --muted: #9ca3af;
+  --border: #374151;
+  --primary: #3b82f6;
+  --danger: #ef4444;
+}
 
-    * { box-sizing: border-box; font-family: system-ui; }
+body {
+  margin: 0;
+  font-family: system-ui;
+  background: var(--bg);
+  color: var(--text);
+}
 
-    body { margin: 0; background: var(--bg); color: var(--fg); }
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
 
-    header {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:16px 20px;
-      border-bottom:1px solid var(--border);
-      background:var(--card);
-      position:sticky;
-      top:0;
-      z-index:10;
-    }
+button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
 
-    .brand { display:flex; align-items:center; gap:14px; }
+.primary { background: var(--primary); color: white; }
+.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
 
-    header img { height:34px; }
+.container {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
 
-    header h1 { margin:0; font-size:18px; font-weight:700; }
+.card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+  border: 1px solid var(--border);
+}
 
-    .headerRight { display:flex; gap:10px; align-items:center; }
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
 
-    .pill {
-      font-size:12px;
-      padding:6px 10px;
-      border:1px solid var(--border);
-      border-radius:999px;
-      background:var(--pill-bg);
-      color:var(--pill-fg);
-      font-weight:600;
-    }
+.table th {
+  text-align: left;
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  padding: 12px;
+}
 
-    button {
-      padding:8px 12px;
-      border-radius:10px;
-      border:1px solid var(--border);
-      background:var(--card);
-      cursor:pointer;
-      font-weight:600;
-    }
+.table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
 
-    button.secondary { background:transparent; }
+.badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
 
-    main { padding:24px; max-width:1200px; margin:auto; }
+.alert-banner {
+  background: var(--danger);
+  color: white;
+  padding: 14px 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
 
-    .card {
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:18px;
-      box-shadow:var(--shadow);
-      margin-bottom:18px;
-    }
+.details {
+  padding: 14px;
+  background: rgba(0,0,0,0.04);
+  border-radius: 8px;
+  margin-top: 10px;
+  font-size: 14px;
+}
 
-    table {
-      width:100%;
-      border-collapse:collapse;
-      margin-top:12px;
-      border:1px solid var(--border);
-      border-radius:12px;
-    }
+body.dark .details {
+  background: rgba(255,255,255,0.05);
+}
 
-    th, td {
-      padding:10px 12px;
-      border-bottom:1px solid var(--border);
-      font-size:13px;
-    }
+.hidden { display: none; }
 
-    th {
-      font-size:12px;
-      text-transform:uppercase;
-      color:var(--muted);
-    }
-
-    tr:hover td { background:var(--rowHover); }
-
-    .badge {
-      padding:4px 8px;
-      border-radius:999px;
-      font-size:11px;
-      font-weight:700;
-    }
-
-    .badge-incident { background:var(--danger-bg); color:var(--danger-fg); }
-    .badge-maint { background:var(--pill-bg); color:var(--pill-fg); }
-    .badge-pstn { background:#f59e0b; color:white; }
-
-    .major-banner {
-      background:var(--danger-bg);
-      color:var(--danger-fg);
-      padding:12px;
-      border-radius:10px;
-      font-weight:700;
-      display:none;
-      margin-bottom:18px;
-    }
-
-    .muted { color:var(--muted); font-size:13px; }
-  </style>
+.meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+</style>
 </head>
 
 <body>
 
 <header>
-  <div class="brand">
-    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
-    <div>
-      <h1>Webex Platform Maintenance</h1>
-      <div class="muted" id="whoLine">Loading…</div>
-    </div>
+  <div>
+    <strong>Webex Platform Maintenance</strong>
+    <div id="tenantBadge" style="margin-top:4px;font-size:13px;color:var(--muted);"></div>
   </div>
 
-  <div class="headerRight">
-    <div class="pill" id="tenantPill">Tenant: —</div>
-    <button class="secondary" id="btnTheme">Dark Mode</button>
-    <button class="secondary" id="btnRefresh">Refresh</button>
+  <div>
+    <button class="ghost" onclick="toggleDark()">Dark Mode</button>
+    <button class="ghost" onclick="loadData()">Refresh</button>
   </div>
 </header>
 
-<main>
+<div class="container">
 
-<div id="majorBanner" class="major-banner">
-  ⚠️ Major Incident Impacting Webex Calling / Control Hub
+  <div id="alertBanner" class="alert-banner hidden">
+    ⚠ Major Incident Detected — Review Below
+  </div>
+
+  <div class="card">
+    <div class="meta">
+      Last updated: <span id="lastUpdated">Loading...</span>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
 </div>
-
-<div class="card">
-  <h2>Active Incidents & Maintenance</h2>
-  <div class="muted" id="lastUpdated">Last updated: —</div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody id="rows"></tbody>
-  </table>
-</div>
-
-</main>
 
 <script>
-const $ = id => document.getElementById(id);
 
-/* Theme identical to licenses */
-function loadTheme(){
-  const saved = localStorage.getItem("uiTheme");
-  const theme = saved === "dark" ? "dark" : "light";
-  document.documentElement.setAttribute("data-theme", theme);
-  $("btnTheme").textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
-}
-function toggleTheme(){
-  const cur = document.documentElement.getAttribute("data-theme");
-  const next = cur === "dark" ? "light" : "dark";
-  localStorage.setItem("uiTheme", next);
-  loadTheme();
-}
-$("btnTheme").onclick = toggleTheme;
-loadTheme();
+const TARGET_PRODUCTS = [
+  "webex user hub",
+  "webex cloud registered device",
+  "webex app",
+  "webex control hub",
+  "webex calling",
+  "gateway and solutions",
+  "dedicated instance"
+];
 
-async function api(path){
-  const r = await fetch(path);
-  return r.json();
+function matchesProduct(name) {
+  const n = (name || "").toLowerCase();
+  return TARGET_PRODUCTS.some(p => n.includes(p));
 }
 
-async function loadMe(){
+function formatDate(dateStr) {
+  if (!dateStr) return "N/A";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "N/A";
+  return d.toLocaleString();
+}
+
+function toggleDark() {
+  document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+}
+
+if (localStorage.getItem("darkMode") === "true") {
+  document.body.classList.add("dark");
+}
+
+async function loadTenant() {
   const r = await fetch("/api/me");
-  const data = await r.json();
-  if (!data.orgId && data.role !== "admin"){
-    window.location.href = "/pin";
-    return false;
+  const me = await r.json();
+
+  if (me.orgName) {
+    document.getElementById("tenantBadge").innerHTML =
+      `<span class="badge">Tenant: ${me.orgName}</span>`;
   }
-  $("whoLine").textContent = `${data.email} (${data.role})`;
-  $("tenantPill").textContent = `Tenant: ${data.orgName || "—"}`;
-  return true;
 }
 
-async function loadMaintenance(){
-  const data = await api("/api/maintenance");
-  $("lastUpdated").textContent = "Last updated: " + new Date().toLocaleString();
+async function loadData() {
+  const banner = document.getElementById("alertBanner");
+  banner.classList.add("hidden");
 
-  const rows = [];
-  let hasMajor = false;
+  const r = await fetch("/api/maintenance");
+  const data = await r.json();
 
-  (data.incidents || []).forEach(i=>{
-    if (i.impact === "major") hasMajor = true;
+  document.getElementById("lastUpdated").textContent =
+    formatDate(new Date().toISOString());
 
-    rows.push(`
-      <tr>
-        <td>${new Date(i.updated_at).toLocaleDateString()}</td>
-        <td><span class="badge badge-incident">Incident</span></td>
-        <td>${i.name} ${i.name.toLowerCase().includes("pstn") ? '<span class="badge badge-pstn">PSTN</span>' : ''}</td>
-        <td>${i.status}</td>
-      </tr>
-    `);
+  const tbody = document.getElementById("tableBody");
+  tbody.innerHTML = "";
+
+  const incidents = (data.incidents || []).filter(i =>
+    matchesProduct(i.name)
+  );
+
+  const maintenance = (data.scheduled_maintenances || []).filter(m =>
+    matchesProduct(m.name)
+  );
+
+  const combined = [
+    ...incidents.map(i => ({ ...i, type: "Incident" })),
+    ...maintenance.map(m => ({ ...m, type: "Maintenance" }))
+  ];
+
+  if (combined.some(x => x.impact === "major" || x.impact === "critical")) {
+    banner.classList.remove("hidden");
+  }
+
+  combined.forEach(item => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${formatDate(item.created_at)}</td>
+      <td><span class="badge">${item.type}</span></td>
+      <td>${item.name}</td>
+      <td>${item.status}</td>
+    `;
+
+    const detailRow = document.createElement("tr");
+    detailRow.classList.add("hidden");
+
+    const detailCell = document.createElement("td");
+    detailCell.colSpan = 4;
+
+    const updates = (item.incident_updates || [])
+      .map(u => `
+        <div style="margin-bottom:10px;">
+          <strong>${u.status}</strong> — ${formatDate(u.updated_at)}<br/>
+          ${u.body}
+        </div>
+      `)
+      .join("");
+
+    detailCell.innerHTML = `<div class="details">${updates || "No details available."}</div>`;
+    detailRow.appendChild(detailCell);
+
+    tr.onclick = () => {
+      detailRow.classList.toggle("hidden");
+    };
+
+    tbody.appendChild(tr);
+    tbody.appendChild(detailRow);
   });
-
-  (data.maintenance || []).forEach(m=>{
-    rows.push(`
-      <tr>
-        <td>${new Date(m.start).toLocaleDateString()}</td>
-        <td><span class="badge badge-maint">Maintenance</span></td>
-        <td>${m.name}</td>
-        <td>${m.status}</td>
-      </tr>
-    `);
-  });
-
-  $("rows").innerHTML = rows.length ? rows.join("") :
-    `<tr><td colspan="4" class="muted">No calling or Control Hub incidents.</td></tr>`;
-
-  if (hasMajor) $("majorBanner").style.display = "block";
 }
 
-$("btnRefresh").onclick = loadMaintenance;
+loadTenant();
+loadData();
 
-async function init(){
-  const ok = await loadMe();
-  if (!ok) return;
-  await loadMaintenance();
-}
-init();
 </script>
-
 </body>
 </html>
