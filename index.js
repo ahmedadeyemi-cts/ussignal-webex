@@ -703,86 +703,62 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
 }
 /* -----------------------------
    /api/licenses
-   - Always returns global license pool
-   - If ?orgId is provided, derives tenant usage
+   - Admin: may specify ?orgId=...
+   - Customer: resolved org only
 ----------------------------- */
 if (url.pathname === "/api/licenses" && request.method === "GET") {
   const token = await getAccessToken();
   const user = await getCurrentUser(token);
 
+  const emailOrg = await getOrgByEmail(user.email);
+  const session = await getSession(user.email);
+
   const requestedOrgId = url.searchParams.get("orgId");
 
-  // 1️⃣ Load global license pool (partner-level)
-  const licRes = await fetch(
+  // Resolve org
+  let resolvedOrgId = null;
+
+  if (user.isAdmin) {
+    resolvedOrgId = requestedOrgId || null; // admin may filter
+  } else {
+    resolvedOrgId = emailOrg?.orgId || session?.orgId;
+  }
+
+  if (!resolvedOrgId && !user.isAdmin) {
+    return json({ error: "tenant_not_resolved" }, 401);
+  }
+
+  const res = await fetch(
     "https://webexapis.com/v1/licenses",
     { headers: { Authorization: `Bearer ${token}` } }
   );
 
-  const licData = await licRes.json();
-  if (!licRes.ok) {
-    throw new Error(`/licenses failed: ${JSON.stringify(licData)}`);
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`/licenses failed: ${JSON.stringify(data)}`);
   }
 
-  const globalLicenses = licData.items || [];
+  const licenses = data.items || [];
 
-  // 2️⃣ If no org selected → global view
-  if (!requestedOrgId) {
-    return json({
-      scope: "global",
-      items: globalLicenses.map(l => ({
-        name: l.name,
-        assigned: l.consumedUnits,
-        available: l.totalUnits - l.consumedUnits,
-        status:
-          l.totalUnits - l.consumedUnits < 0
-            ? "DEFICIT"
-            : l.totalUnits - l.consumedUnits === 0
-            ? "FULL"
-            : "OK",
-      })),
-    });
-  }
-const globalLicenses = licData.items || [];
-// 3️⃣ Load tenant license usage from KV (authoritative source)
-const usageKey = `ORG_LICENSE_USAGE:${requestedOrgId}`;
-const usageRecord = await env.ORG_MAP_KV.get(usageKey, { type: "json" });
+  const filtered = user.isAdmin
+    ? licenses
+    : licenses.filter(l => l.orgId === resolvedOrgId);
 
-// usageRecord example:
-// {
-//   licenses: {
-//     "Webex Calling Professional": 42,
-//     "Webex Calling Workspace": 10
-//   }
-// }
-
-const licenseUsage = usageRecord?.licenses || {};
-
-
- const items = globalLicenses.map(l => {
-  const assigned = Number(licenseUsage[l.name] || 0);
-  const available = l.totalUnits - assigned;
-
-  return {
-    name: l.name,
-    assigned,
-    available,
-    status:
-      available < 0
-        ? "DEFICIT"
-        : available === 0
-        ? "FULL"
-        : assigned > 0
-        ? "IN_USE"
-        : "OK",
-  };
-});
-  if (!usageRecord) {
-  console.warn(`⚠️ No license usage found in KV for org ${requestedOrgId}`);
-}
   return json({
-    scope: "tenant",
-    orgId: requestedOrgId,
-    items,
+    count: filtered.length,
+    items: filtered.map(l => ({
+      id: l.id,
+      name: l.name,
+      total: l.totalUnits,
+      consumed: l.consumedUnits,
+      available: l.totalUnits - l.consumedUnits,
+      status:
+        l.totalUnits - l.consumedUnits < 0
+          ? "DEFICIT"
+          : l.totalUnits - l.consumedUnits === 0
+          ? "FULL"
+          : "OK",
+    })),
   });
 }
 /* -----------------------------
