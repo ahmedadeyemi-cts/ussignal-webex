@@ -48,8 +48,17 @@
     }
 
     .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
       font-weight: 700;
       font-size: 18px;
+    }
+
+    .brand img {
+      height: 34px;
+      width: auto;
+      display: block;
     }
 
     #tenantBadge {
@@ -116,7 +125,13 @@
 <body>
 
 <header>
-  <div class="brand">US Signal Webex Portal</div>
+  <div class="brand">
+    <img 
+      src="https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ussignal-logo.jpg"
+      alt="US Signal"
+    />
+    <span>Webex Calling Portal</span>
+  </div>
 
   <div class="topActions">
     <span id="tenantBadge">Tenant: —</span>
@@ -138,7 +153,6 @@
 <script>
   const $ = id => document.getElementById(id);
 
-  // Theme
   function loadTheme() {
     const saved = localStorage.getItem("uiTheme");
     const theme = saved === "dark" ? "dark" : "light";
@@ -155,18 +169,11 @@
 
   loadTheme();
 
-  // Load user + tenant context
   async function loadMe() {
     const res = await fetch("/api/me");
     if (!res.ok) return;
 
     const data = await res.json();
-
-    if (data.role !== "admin" && !data.orgId) {
-      // Customer without PIN → redirect
-      window.location.href = "/";
-      return;
-    }
 
     $("tenantBadge").textContent =
       "Tenant: " + (data.orgName || "—");
