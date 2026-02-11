@@ -853,10 +853,17 @@ const licRes = await fetch(licenseUrl.toString());
     }),
   });
 
-  if (!brevoRes.ok) {
-    const err = await brevoRes.text();
-    throw new Error(`Brevo send failed: ${err}`);
-  }
+  const brevoText = await brevoRes.text();
+
+if (!brevoRes.ok) {
+  console.error("Brevo error:", brevoText);
+  return json({
+    error: "brevo_failed",
+    status: brevoRes.status,
+    body: brevoText
+  }, 500);
+}
+
 
   return json({ status: "sent", to: toEmail });
 }
