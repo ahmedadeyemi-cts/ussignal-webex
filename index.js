@@ -757,6 +757,19 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
   }
 
   const res = await fetch("https://webexapis.com/v1/licenses", {
+const headers = {
+  Authorization: `Bearer ${token}`,
+};
+
+// If admin viewing a specific org OR customer resolved via PIN,
+// send Partner header so Webex returns that org's licenses.
+if (resolvedOrgId) {
+  headers["X-Partner-OrgId"] = resolvedOrgId;
+}
+
+const res = await fetch("https://webexapis.com/v1/licenses", {
+  headers,
+});
     headers: { Authorization: `Bearer ${token}` },
   });
 
