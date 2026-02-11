@@ -625,169 +625,41 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
    Pulls live Webex status data
    Filters for Calling / Control Hub only
 ----------------------------- */
-if (url.pathname === "/api/maintenance" && request.method === "GET") {
+//TBD
+
+ if (url.pathname === "/api/status" && request.method === "GET") {
+  const user = getCurrentUser(request);
+
+  return await fetchJsonCached(
+    request,
+    "https://status.webex.com/api/components.json"
+  );
+}
+
+if (url.pathname === "/api/incidents" && request.method === "GET") {
+  const user = getCurrentUser(request);
+
+  return await fetchJsonCached(
+    request,
+    "https://status.webex.com/api/all-incidents.json"
+  );
+}
+
+
+    if (url.pathname === "/api/maintenance" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = await getSession(user.email);
 
-  if (!user.isAdmin) {
-    if (!session || !session.orgId) {
-      return json({ error: "pin_required" }, 401);
-    }
+  if (!user.isAdmin && (!session || !session.orgId)) {
+    return json({ error: "pin_required" }, 401);
   }
 
-  // ✅ Correct Webex Status API endpoints (per your docs)
-  const BASE = "https://status.webex.com";
-  const URL_INDEX = `${BASE}/index.json`;
-  const URL_UNRESOLVED = `${BASE}/unresolved-incidents.json`;
-  const URL_UPCOMING = `${BASE}/upcoming-scheduled-maintenances.json`;
-
-  // Fetch (cached at worker layer)
-  const [idxRes, incRes, maintRes] = await Promise.all([
-    fetchJsonCached(request, URL_INDEX),
-    fetchJsonCached(request, URL_UNRESOLVED),
-    fetchJsonCached(request, URL_UPCOMING),
-  ]);
-
-  // If any upstream came back as an error payload, surface it (most useful one)
-  const idxText = await idxRes.text();
-  const incText = await incRes.text();
-  const maintText = await maintRes.text();
-
-  let idxJson, incJson, maintJson;
-  try { idxJson = JSON.parse(idxText); } catch { idxJson = null; }
-  try { incJson = JSON.parse(incText); } catch { incJson = null; }
-  try { maintJson = JSON.parse(maintText); } catch { maintJson = null; }
-
-  // Bubble the first error if present
-  const firstErr =
-    (idxJson && idxJson.error) ? idxJson :
-    (incJson && incJson.error) ? incJson :
-    (maintJson && maintJson.error) ? maintJson :
-    null;
-
-  if (firstErr) {
-    return json(firstErr, 500);
-  }
-
-  const KEYWORDS = [
-    "control hub",
-    "calling",
-    "pstn",
-    "voice",
-    "sip",
-    "trunk",
-    "call routing",
-    "local gateway",
-    "management",
-    "device management",
-  ];
-
-  function relevantText(s) {
-    const n = String(s || "").toLowerCase();
-    return KEYWORDS.some(k => n.includes(k));
-  }
-
-  function isPstnRelated(incidentOrMaint) {
-    const name = incidentOrMaint?.name || "";
-    if (relevantText(name) && String(name).toLowerCase().includes("pstn")) return true;
-
-    const updates = incidentOrMaint?.incident_updates || [];
-    const lastBody = updates.length ? String(updates[updates.length - 1].body || "") : "";
-    const hay = (name + " " + lastBody).toLowerCase();
-
-    return hay.includes("pstn") || hay.includes("carrier") || hay.includes("sip trunk") || hay.includes("trunk");
-  }
-
-  // Data shapes per your pasted docs:
-  // unresolved-incidents.json -> { incidents: [...] }
-  // upcoming-scheduled-maintenances.json -> { scheduled_maintenances: [...] }
-  const incidents = Array.isArray(incJson?.incidents) ? incJson.incidents : [];
-  const scheduled = Array.isArray(maintJson?.scheduled_maintenances) ? maintJson.scheduled_maintenances : [];
-
-  // For relevance, we check incident name + update bodies + component names
-  function incidentRelevant(i) {
-    if (relevantText(i?.name)) return true;
-
-    const comps = Array.isArray(i?.components) ? i.components : [];
-    if (comps.some(c => relevantText(c?.name))) return true;
-
-    const ups = Array.isArray(i?.incident_updates) ? i.incident_updates : [];
-    if (ups.some(u => relevantText(u?.body))) return true;
-
-    return false;
-  }
-
-  function maintenanceRelevant(m) {
-    if (relevantText(m?.name)) return true;
-
-    const comps = Array.isArray(m?.components) ? m.components : [];
-    if (comps.some(c => relevantText(c?.name))) return true;
-
-    const ups = Array.isArray(m?.incident_updates) ? m.incident_updates : [];
-    if (ups.some(u => relevantText(u?.body))) return true;
-
-    return false;
-  }
-
-  const filteredIncidents = incidents.filter(incidentRelevant);
-  const filteredMaint = scheduled.filter(maintenanceRelevant);
-
-  const hasMajorIncident = filteredIncidents.some(i => {
-    const impact = String(i?.impact || "").toLowerCase();
-    return impact === "major" || impact === "critical";
-  });
-
-  // Last updated: take max of updated_at fields we return
-  const updatedCandidates = [
-    ...filteredIncidents.map(i => i?.updated_at).filter(Boolean),
-    ...filteredMaint.map(m => m?.updated_at).filter(Boolean),
-  ].map(d => new Date(d).getTime()).filter(t => Number.isFinite(t));
-
-  const lastUpdatedAt =
-    updatedCandidates.length
-      ? new Date(Math.max(...updatedCandidates)).toISOString()
-      : new Date().toISOString();
-
-  return json({
-    lastUpdatedAt,
-    hasMajorIncident,
-    incidents: filteredIncidents.map(i => ({
-      id: i.id,
-      name: i.name,
-      status: i.status,
-      impact: i.impact,
-      updated_at: i.updated_at,
-      isPstn: isPstnRelated(i),
-      // optional: UI may want the most recent update text
-      latestUpdate:
-        Array.isArray(i.incident_updates) && i.incident_updates.length
-          ? {
-              status: i.incident_updates[i.incident_updates.length - 1].status,
-              body: i.incident_updates[i.incident_updates.length - 1].body,
-              updated_at: i.incident_updates[i.incident_updates.length - 1].updated_at,
-            }
-          : null,
-    })),
-    maintenance: filteredMaint.map(m => ({
-      id: m.id,
-      name: m.name,
-      status: m.status,
-      start: m?.incident_updates?.[0]?.body ? m.scheduled_for : m.scheduled_for, // keep simple
-      scheduled_for: m.scheduled_for,
-      scheduled_until: m.scheduled_until,
-      updated_at: m.updated_at,
-      isPstn: isPstnRelated(m),
-      latestUpdate:
-        Array.isArray(m.incident_updates) && m.incident_updates.length
-          ? {
-              status: m.incident_updates[m.incident_updates.length - 1].status,
-              body: m.incident_updates[m.incident_updates.length - 1].body,
-              updated_at: m.incident_updates[m.incident_updates.length - 1].updated_at,
-            }
-          : null,
-    })),
-  });
+  return await fetchJsonCached(
+    request,
+    "https://status.webex.com/api/index.json"
+  );
 }
+
 
       /* -----------------------------
    PIN UI
