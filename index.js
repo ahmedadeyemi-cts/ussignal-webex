@@ -740,9 +740,10 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   const licenses = data.items || [];
 
-  const filtered = resolvedOrgId
-    ? licenses.filter(l => l.orgId === resolvedOrgId)
-    : licenses;
+  const filtered = user.isAdmin
+  ? licenses
+  : licenses.filter(l => l.orgId === resolvedOrgId);
+
 
   return json({
     count: filtered.length,
