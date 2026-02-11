@@ -185,65 +185,7 @@ export default {
 
       return data.access_token;
     }
-    /* =====================================================
-       Load Maintenance
-    ===================================================== */
-async function loadMaintenance() {
-  $("maintenanceLoading").style.display = "block";
-  $("maintenanceTable").style.display = "none";
-  $("maintenanceRows").innerHTML = "";
-
-  const r = await api("/api/maintenance");
-
-  if (!r.ok) {
-    $("maintenanceLoading").textContent = "Failed to load Webex maintenance data.";
-    return;
-  }
-
-  const incidents = r.data.incidents || [];
-  const maintenance = r.data.maintenance || [];
-
-  if (!incidents.length && !maintenance.length) {
-    $("maintenanceLoading").textContent =
-      "No active calling or Control Hub incidents.";
-    return;
-  }
-
-  $("maintenanceLoading").style.display = "none";
-  $("maintenanceTable").style.display = "table";
-
-  const rows = [];
-
-  incidents.forEach(i => {
-    rows.push(`
-      <tr>
-        <td>${new Date(i.updated_at).toLocaleDateString()}</td>
-        <td>—</td>
-        <td>—</td>
-        <td>Incident</td>
-        <td>${i.name}</td>
-        <td>${i.status}</td>
-      </tr>
-    `);
-  });
-
-  maintenance.forEach(m => {
-    rows.push(`
-      <tr>
-        <td>${new Date(m.start).toLocaleDateString()}</td>
-        <td>${new Date(m.start).toLocaleTimeString()}</td>
-        <td>${new Date(m.end).toLocaleTimeString()}</td>
-        <td>Maintenance</td>
-        <td>${m.name}</td>
-        <td>${m.status}</td>
-      </tr>
-    `);
-  });
-
-  $("maintenanceRows").innerHTML = rows.join("");
-}
-
-
+ 
     
     /* =====================================================
        Identity helpers
@@ -434,6 +376,18 @@ async function putEmailMapping(email, orgId, orgName) {
 
   return await res.text();
 }
+    async function renderCustomerMaintenanceHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/maintenance.html"
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to load maintenance UI");
+  }
+
+  return await res.text();
+}
+
 
 async function renderCustomerLicensesHTML() {
   const res = await fetch(
@@ -656,6 +610,14 @@ if (url.pathname === "/pin" && request.method === "GET") {
 ----------------------------- */
 if (url.pathname === "/customer/licenses" && request.method === "GET") {
   return text(await renderCustomerLicensesHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+/* -----------------------------
+   Customer UI: Maintenance
+----------------------------- */
+if (url.pathname === "/customer/maintenance" && request.method === "GET") {
+  return text(await renderCustomerMaintenanceHTML(), 200, {
     "content-type": "text/html; charset=utf-8",
   });
 }
