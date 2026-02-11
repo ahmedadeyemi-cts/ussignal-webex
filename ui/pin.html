@@ -28,7 +28,7 @@
       margin-top: 16px;
       border-radius: 8px;
       border: 1px solid #e5e7eb;
-      font-size: 16px;
+      font-size: 18px;
       text-align: center;
       letter-spacing: 4px;
     }
@@ -47,6 +47,7 @@
       margin-top: 12px;
       color: #dc2626;
       font-size: 14px;
+      min-height: 20px;
     }
   </style>
 </head>
@@ -54,7 +55,11 @@
 
 <div class="card">
   <h2>Enter Tenant PIN</h2>
-  <input id="pin" maxlength="6" placeholder="123456" />
+  <input id="pin"
+         maxlength="5"
+         inputmode="numeric"
+         pattern="\d{5}"
+         placeholder="12345" />
   <button onclick="verify()">Verify</button>
   <div id="error" class="error"></div>
 </div>
@@ -65,8 +70,8 @@ async function verify() {
   const errorBox = document.getElementById("error");
   errorBox.textContent = "";
 
-  if (!pin) {
-    errorBox.textContent = "Enter your PIN.";
+  if (!/^\d{5}$/.test(pin)) {
+    errorBox.textContent = "PIN must be exactly 5 digits.";
     return;
   }
 
@@ -79,7 +84,7 @@ async function verify() {
   const data = await r.json();
 
   if (!r.ok) {
-    errorBox.textContent = data?.error || "Invalid PIN.";
+    errorBox.textContent = data?.message || "Invalid PIN.";
     return;
   }
 
