@@ -185,7 +185,66 @@ export default {
 
       return data.access_token;
     }
+    /* =====================================================
+       Load Maintenance
+    ===================================================== */
+async function loadMaintenance() {
+  $("maintenanceLoading").style.display = "block";
+  $("maintenanceTable").style.display = "none";
+  $("maintenanceRows").innerHTML = "";
 
+  const r = await api("/api/maintenance");
+
+  if (!r.ok) {
+    $("maintenanceLoading").textContent = "Failed to load Webex maintenance data.";
+    return;
+  }
+
+  const incidents = r.data.incidents || [];
+  const maintenance = r.data.maintenance || [];
+
+  if (!incidents.length && !maintenance.length) {
+    $("maintenanceLoading").textContent =
+      "No active calling or Control Hub incidents.";
+    return;
+  }
+
+  $("maintenanceLoading").style.display = "none";
+  $("maintenanceTable").style.display = "table";
+
+  const rows = [];
+
+  incidents.forEach(i => {
+    rows.push(`
+      <tr>
+        <td>${new Date(i.updated_at).toLocaleDateString()}</td>
+        <td>—</td>
+        <td>—</td>
+        <td>Incident</td>
+        <td>${i.name}</td>
+        <td>${i.status}</td>
+      </tr>
+    `);
+  });
+
+  maintenance.forEach(m => {
+    rows.push(`
+      <tr>
+        <td>${new Date(m.start).toLocaleDateString()}</td>
+        <td>${new Date(m.start).toLocaleTimeString()}</td>
+        <td>${new Date(m.end).toLocaleTimeString()}</td>
+        <td>Maintenance</td>
+        <td>${m.name}</td>
+        <td>${m.status}</td>
+      </tr>
+    `);
+  });
+
+  $("maintenanceRows").innerHTML = rows.join("");
+}
+
+
+    
     /* =====================================================
        Identity helpers
     ===================================================== */
@@ -513,6 +572,69 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
   });
 }
 
+/* -----------------------------
+   /api/maintenance
+   Pulls live Webex status data
+   Filters for Calling / Control Hub only
+----------------------------- */
+if (url.pathname === "/api/maintenance" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  const session = await getSession(user.email);
+
+  if (!user.isAdmin) {
+    if (!session || !session.orgId) {
+      return json({ error: "pin_required" }, 401);
+    }
+  }
+
+  const res = await fetch("https://status.webex.com/api/v2/summary.json");
+  const data = await res.json();
+
+  if (!res.ok) {
+    return json({ error: "status_api_failed" }, 500);
+  }
+
+  const KEYWORDS = [
+    "control hub",
+    "calling",
+    "pstn",
+    "voice",
+    "device",
+    "management"
+  ];
+
+  function relevant(name) {
+    const n = (name || "").toLowerCase();
+    return KEYWORDS.some(k => n.includes(k));
+  }
+
+  const components = data.components || [];
+  const incidents = data.incidents || [];
+  const maintenance = data.scheduled_maintenances || [];
+
+  const filteredIncidents = incidents.filter(i =>
+    (i.components || []).some(c => relevant(c.name))
+  );
+
+  const filteredMaintenance = maintenance.filter(m =>
+    (m.components || []).some(c => relevant(c.name))
+  );
+
+  return json({
+    incidents: filteredIncidents.map(i => ({
+      name: i.name,
+      status: i.status,
+      impact: i.impact,
+      updated_at: i.updated_at
+    })),
+    maintenance: filteredMaintenance.map(m => ({
+      name: m.name,
+      status: m.status,
+      start: m.scheduled_for,
+      end: m.scheduled_until
+    }))
+  });
+}
 
       // Root UI (includes modal logic)
      if (url.pathname === "/" && request.method === "GET") {
