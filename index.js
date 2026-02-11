@@ -767,10 +767,10 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   const licenses = data.items || [];
 
-  const filtered = user.isAdmin
-    ? (resolvedOrgId ? licenses.filter(l => l.orgId === resolvedOrgId) : licenses)
-    : licenses.filter(l => l.orgId === resolvedOrgId);
+ // Webex licenses are already scoped by token.
+// Do not filter by orgId unless you are truly multi-org tokening.
 
+const filtered = licenses;
   return json({
     count: filtered.length,
     items: filtered.map(l => ({
