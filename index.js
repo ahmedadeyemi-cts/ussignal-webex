@@ -732,22 +732,17 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
   const user = getCurrentUser(request);
   const token = await getAccessToken();
   const session = await getSession(user.email);
-
   const requestedOrgId = url.searchParams.get("orgId");
 
-  // 🔐 PIN-only for customers
   let resolvedOrgId = null;
 
   if (user.isAdmin) {
-    // Admin can see all, or optionally filter by orgId
     resolvedOrgId = requestedOrgId || null;
   } else {
-    // Customer MUST have a PIN session
     if (!session || !session.orgId) {
       return json({ error: "pin_required", message: "PIN required." }, 401);
     }
 
-    // Expiry check
     if (session.expiresAt && session.expiresAt <= nowMs()) {
       await clearSession(user.email);
       return json({ error: "pin_required_or_expired", message: "PIN required." }, 401);
@@ -756,37 +751,34 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     resolvedOrgId = session.orgId;
   }
 
+  const headers = {
+    Authorization: `Bearer ${token}`,
+  };
+
+  // 🚨 CRITICAL: Partner scope enforcement
+  if (resolvedOrgId) {
+    headers["X-Partner-OrgId"] = resolvedOrgId;
+  }
+
   const res = await fetch("https://webexapis.com/v1/licenses", {
-const headers = {
-  Authorization: `Bearer ${token}`,
-};
-
-// If admin viewing a specific org OR customer resolved via PIN,
-// send Partner header so Webex returns that org's licenses.
-if (resolvedOrgId) {
-  headers["X-Partner-OrgId"] = resolvedOrgId;
-}
-
-const res = await fetch("https://webexapis.com/v1/licenses", {
-  headers,
-});
-    headers: { Authorization: `Bearer ${token}` },
+    headers,
   });
 
   const data = await res.json();
+
   if (!res.ok) {
-    throw new Error(`/licenses failed: ${JSON.stringify(data)}`);
+    return json({
+      error: "webex_license_failed",
+      status: res.status,
+      body: data
+    }, 500);
   }
 
   const licenses = data.items || [];
 
- // Webex licenses are already scoped by token.
-// Do not filter by orgId unless you are truly multi-org tokening.
-
-const filtered = licenses;
   return json({
-    count: filtered.length,
-    items: filtered.map(l => ({
+    count: licenses.length,
+    items: licenses.map(l => ({
       id: l.id,
       name: l.name,
       total: l.totalUnits,
