@@ -776,9 +776,9 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
     return json({ error: "missing_email" }, 400);
   }
 
-  if (requestedOrgId && user.isAdmin) {
-    url.searchParams.set("orgId", requestedOrgId);
-  }
+//  if (requestedOrgId && user.isAdmin) {
+ //   url.searchParams.set("orgId", requestedOrgId);
+//  }
 
   if (!toEmail) {
     return json({ error: "missing_email" }, 400);
@@ -786,15 +786,12 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
 
   const licenseUrl = new URL(`${url.origin}/api/licenses`);
 
-if (requestedOrgId && user.isAdmin) {
-  licenseUrl.searchParams.set("orgId", requestedOrgId);
-}
+//if (requestedOrgId && user.isAdmin) {
+ // licenseUrl.searchParams.set("orgId", requestedOrgId);
+//}
 
-const licRes = await fetch(licenseUrl.toString(), {
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
+const licRes = await fetch(licenseUrl.toString());
+
 
 
   const licData = await licRes.json();
@@ -802,18 +799,23 @@ const licRes = await fetch(licenseUrl.toString(), {
     throw new Error("Failed to load license data");
   }
 
-  const rows = licData.items
-    .map(
-      l => `
-        <tr>
-          <td>${l.name}</td>
-          <td>${l.consumed}</td>
-          <td>${l.available}</td>
-          <td>${l.status}</td>
-        </tr>
-      `
-    )
-    .join("");
+  const rows = (licData.items || [])
+  .map(l => {
+    const assigned = l.consumed ?? l.assigned ?? 0;
+    const available = l.available ?? 0;
+    const status = l.status ?? "OK";
+
+    return `
+      <tr>
+        <td>${l.name}</td>
+        <td>${assigned}</td>
+        <td>${available}</td>
+        <td>${status}</td>
+      </tr>
+    `;
+  })
+  .join("");
+
 
   const html = `
     <h2>Webex Calling License Report</h2>
