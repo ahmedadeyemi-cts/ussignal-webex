@@ -387,11 +387,10 @@ async function loadMe() {
 
   ME = r.data;
 
-  if (ME.role !== "admin" && !ME.orgId) {
-    setError("Tenant not resolved. Please verify your PIN or contact US Signal.");
-    $("licenseLoading").textContent = "Tenant not resolved.";
-    return false; // 🔴 STOP INIT
-  }
+if (ME.role !== "admin" && !ME.orgId) {
+  window.location.href = "/";
+  return;
+}
 
   $("whoLine").textContent = `${ME.email} (${ME.role})`;
   $("tenantPill").textContent = `Tenant: ${ME.orgName || "—"}`;
