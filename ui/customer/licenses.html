@@ -388,7 +388,7 @@ async function loadMe() {
   ME = r.data;
 
 if (ME.role !== "admin" && !ME.orgId) {
-  window.location.href = "/";
+  window.location.href = "/pin";
   return;
 }
 
