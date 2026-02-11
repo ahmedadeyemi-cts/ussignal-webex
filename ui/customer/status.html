@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Webex Platform Status</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<style>
+:root {
+  --bg: #f3f4f6;
+  --card: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --green: #16a34a;
+  --yellow: #f59e0b;
+  --red: #dc2626;
+}
+
+body.dark {
+  --bg: #111827;
+  --card: #1f2937;
+  --text: #f9fafb;
+  --muted: #9ca3af;
+  --border: #374151;
+  --green: #22c55e;
+  --yellow: #fbbf24;
+  --red: #ef4444;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.container {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+
+.status-pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.green { background: rgba(22,163,74,0.15); color: var(--green); }
+.yellow { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.red { background: rgba(220,38,38,0.15); color: var(--red); }
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  padding: 12px;
+}
+
+.table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.alert-banner {
+  background: var(--red);
+  color: white;
+  padding: 14px 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div>
+    <strong>Webex Platform Status</strong>
+    <div id="tenantBadge" style="margin-top:4px;font-size:13px;color:var(--muted);"></div>
+  </div>
+
+  <div>
+    <button onclick="toggleDark()">Dark Mode</button>
+    <button onclick="loadData()">Refresh</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <div id="alertBanner" class="alert-banner" style="display:none;">
+    ⚠ Major Outage Detected
+  </div>
+
+  <div class="card">
+    <div class="meta">
+      Last updated: <span id="lastUpdated">Loading...</span>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      Overall Status:
+      <span id="overallStatus" class="status-pill">Loading...</span>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>Status</th>
+          <th>Product Group</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+
+const TARGET_PRODUCTS = [
+  "webex user hub",
+  "webex cloud registered device",
+  "webex app",
+  "webex control hub",
+  "webex calling",
+  "gateway and solutions",
+  "dedicated instance"
+];
+
+function matchesProduct(name) {
+  const n = (name || "").toLowerCase();
+  return TARGET_PRODUCTS.some(p => n.includes(p));
+}
+
+function toggleDark() {
+  document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+}
+
+if (localStorage.getItem("darkMode") === "true") {
+  document.body.classList.add("dark");
+}
+
+async function loadTenant() {
+  const r = await fetch("/api/me");
+  const me = await r.json();
+
+  if (me.orgName) {
+    document.getElementById("tenantBadge").innerHTML =
+      `<span class="badge">Tenant: ${me.orgName}</span>`;
+  }
+}
+
+function getStatusClass(status) {
+  switch(status) {
+    case "operational": return "green";
+    case "degraded_performance":
+    case "partial_outage":
+    case "under_maintenance": return "yellow";
+    case "major_outage": return "red";
+    default: return "";
+  }
+}
+
+async function loadData() {
+  const r = await fetch("/api/status");
+  const data = await r.json();
+
+  document.getElementById("lastUpdated").textContent =
+    new Date().toLocaleString();
+
+  const overall = data.status?.indicator || "unknown";
+  const overallEl = document.getElementById("overallStatus");
+  overallEl.textContent = overall.toUpperCase();
+  overallEl.className = "status-pill " + (
+    overall === "green" ? "green" :
+    overall === "yellow" ? "yellow" :
+    overall === "red" ? "red" : ""
+  );
+
+  if (overall === "red") {
+    document.getElementById("alertBanner").style.display = "block";
+  } else {
+    document.getElementById("alertBanner").style.display = "none";
+  }
+
+  const tbody = document.getElementById("tableBody");
+  tbody.innerHTML = "";
+
+  const components = (data.components || [])
+    .filter(c => matchesProduct(c.name));
+
+  components.forEach(c => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${c.name}</td>
+      <td><span class="status-pill ${getStatusClass(c.status)}">${c.status}</span></td>
+      <td>${c.product_group || "-"}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+loadTenant();
+loadData();
+
+</script>
+
+</body>
+</html>
