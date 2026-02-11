@@ -1,14 +1,127 @@
 <!doctype html>
-<html data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8" />
-  <title>US Signal Webex Portal</title>
-  <link rel="stylesheet" href="/ui/styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>US Signal | Webex Calling Portal</title>
+
+  <style>
+    html[data-theme="light"] {
+      --bg: #f9fafb;
+      --fg: #111827;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --muted: #6b7280;
+      --shadow: 0 8px 22px rgba(0,0,0,0.06);
+    }
+
+    html[data-theme="dark"] {
+      --bg: #0b1220;
+      --fg: #e5e7eb;
+      --card: #020617;
+      --border: #1f2937;
+      --accent: #3b82f6;
+      --muted: #9ca3af;
+      --shadow: 0 8px 22px rgba(0,0,0,0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    #tenantBadge {
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(37,99,235,0.1);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    main {
+      padding: 40px 24px;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+      font-size: 26px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      display: block;
+      padding: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      text-decoration: none;
+      color: var(--fg);
+      font-weight: 600;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: var(--shadow);
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+    }
+
+    .topActions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    button {
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      cursor: pointer;
+      font-weight: 600;
+    }
+  </style>
 </head>
+
 <body>
+
 <header>
-  <img src="/ui/logo.svg" alt="US Signal" />
-  <span id="tenantBadge">Tenant: —</span>
+  <div class="brand">US Signal Webex Portal</div>
+
+  <div class="topActions">
+    <span id="tenantBadge">Tenant: —</span>
+    <button id="btnTheme">Dark Mode</button>
+  </div>
 </header>
 
 <main>
@@ -22,6 +135,45 @@
   </section>
 </main>
 
-<script src="/ui/common.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+
+  // Theme
+  function loadTheme() {
+    const saved = localStorage.getItem("uiTheme");
+    const theme = saved === "dark" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", theme);
+    $("btnTheme").textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+  }
+
+  $("btnTheme").addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "dark" ? "light" : "dark";
+    localStorage.setItem("uiTheme", next);
+    loadTheme();
+  });
+
+  loadTheme();
+
+  // Load user + tenant context
+  async function loadMe() {
+    const res = await fetch("/api/me");
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    if (data.role !== "admin" && !data.orgId) {
+      // Customer without PIN → redirect
+      window.location.href = "/";
+      return;
+    }
+
+    $("tenantBadge").textContent =
+      "Tenant: " + (data.orgName || "—");
+  }
+
+  loadMe();
+</script>
+
 </body>
 </html>
