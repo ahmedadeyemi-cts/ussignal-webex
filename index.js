@@ -789,15 +789,34 @@ const licenseUrl = new URL(`${url.origin}/api/licenses`);
 if (requestedOrgId && user.isAdmin) {
   licenseUrl.searchParams.set("orgId", requestedOrgId);
 }
-
+  // Begining of New Add
 const licRes = await fetch(licenseUrl.toString(), {
   method: "GET",
   headers: request.headers
 });
 
+const licText = await licRes.text();
 
+if (!licRes.ok) {
+  return json({
+    error: "license_fetch_failed",
+    status: licRes.status,
+    body: licText.slice(0, 500)
+  }, 500);
+}
 
-  const licData = await licRes.json();
+// Try to parse safely
+let licData;
+try {
+  licData = JSON.parse(licText);
+} catch (e) {
+  return json({
+    error: "license_not_json",
+    status: licRes.status,
+    bodyPreview: licText.slice(0, 500)
+  }, 500);
+}
+// End of New Add
   if (!licRes.ok) {
     throw new Error("Failed to load license data");
   }
