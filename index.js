@@ -541,11 +541,36 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
     }
   }
 
-  const res = await fetch("https://status.webex.com/api/v2/summary.json");
-  const data = await res.json();
+  // ✅ Worker-level 60s cache
+  const cached = await env.WEBEX.get("maintenance_cache", { type: "json" });
+  if (cached && cached.expires > Date.now()) {
+    return json(cached.data);
+  }
+
+  const res = await fetch("https://status.webex.com/api/v3/incidents", {
+    headers: {
+      "accept": "application/json"
+    }
+  });
+
+  const text = await res.text();
 
   if (!res.ok) {
-    return json({ error: "status_api_failed" }, 500);
+    return json({
+      error: "status_api_failed",
+      status: res.status,
+      bodyPreview: text.slice(0, 300)
+    }, 500);
+  }
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    return json({
+      error: "status_not_json",
+      bodyPreview: text.slice(0, 300)
+    }, 500);
   }
 
   const KEYWORDS = [
@@ -557,37 +582,35 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
     "management"
   ];
 
-  function relevant(name) {
-    const n = (name || "").toLowerCase();
-    return KEYWORDS.some(k => n.includes(k));
+  function relevant(str) {
+    const s = (str || "").toLowerCase();
+    return KEYWORDS.some(k => s.includes(k));
   }
 
-  const components = data.components || [];
-  const incidents = data.incidents || [];
-  const maintenance = data.scheduled_maintenances || [];
-
-  const filteredIncidents = incidents.filter(i =>
-    (i.components || []).some(c => relevant(c.name))
+  const incidents = (data.incidents || []).filter(i =>
+    relevant(i.title) || relevant(i.description)
   );
 
-  const filteredMaintenance = maintenance.filter(m =>
-    (m.components || []).some(c => relevant(c.name))
-  );
-
-  return json({
-    incidents: filteredIncidents.map(i => ({
-      name: i.name,
+  const responseObject = {
+    incidents: incidents.map(i => ({
+      name: i.title,
       status: i.status,
       impact: i.impact,
       updated_at: i.updated_at
     })),
-    maintenance: filteredMaintenance.map(m => ({
-      name: m.name,
-      status: m.status,
-      start: m.scheduled_for,
-      end: m.scheduled_until
-    }))
-  });
+    maintenance: []
+  };
+
+  // store in cache
+  await env.WEBEX.put(
+    "maintenance_cache",
+    JSON.stringify({
+      data: responseObject,
+      expires: Date.now() + 60 * 1000
+    })
+  );
+
+  return json(responseObject);
 }
 
       // Root UI (includes modal logic)
