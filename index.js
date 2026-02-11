@@ -703,63 +703,91 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
 }
 /* -----------------------------
    /api/licenses
-   - Admin: may specify ?orgId=...
-   - Customer: resolved org only
+   - Always returns global license pool
+   - If ?orgId is provided, derives tenant usage
 ----------------------------- */
 if (url.pathname === "/api/licenses" && request.method === "GET") {
   const token = await getAccessToken();
   const user = await getCurrentUser(token);
 
-  const emailOrg = await getOrgByEmail(user.email);
-  const session = await getSession(user.email);
-
   const requestedOrgId = url.searchParams.get("orgId");
 
-  // Resolve org
-  let resolvedOrgId = null;
-
-  if (user.isAdmin) {
-    resolvedOrgId = requestedOrgId || null; // admin may filter
-  } else {
-    resolvedOrgId = emailOrg?.orgId || session?.orgId;
-  }
-
-  if (!resolvedOrgId && !user.isAdmin) {
-    return json({ error: "tenant_not_resolved" }, 401);
-  }
-
-  const res = await fetch(
+  // 1️⃣ Load global license pool (partner-level)
+  const licRes = await fetch(
     "https://webexapis.com/v1/licenses",
     { headers: { Authorization: `Bearer ${token}` } }
   );
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(`/licenses failed: ${JSON.stringify(data)}`);
+  const licData = await licRes.json();
+  if (!licRes.ok) {
+    throw new Error(`/licenses failed: ${JSON.stringify(licData)}`);
   }
 
-  const licenses = data.items || [];
+  const globalLicenses = licData.items || [];
 
-  const filtered = user.isAdmin
-  ? licenses
-  : licenses.filter(l => l.orgId === resolvedOrgId);
+  // 2️⃣ If no org selected → global view
+  if (!requestedOrgId) {
+    return json({
+      scope: "global",
+      items: globalLicenses.map(l => ({
+        name: l.name,
+        assigned: l.consumedUnits,
+        available: l.totalUnits - l.consumedUnits,
+        status:
+          l.totalUnits - l.consumedUnits < 0
+            ? "DEFICIT"
+            : l.totalUnits - l.consumedUnits === 0
+            ? "FULL"
+            : "OK",
+      })),
+    });
+  }
 
+  // 3️⃣ Load users for selected org
+  const usersRes = await fetch(
+    `https://webexapis.com/v1/organizations/${requestedOrgId}/users`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  const usersData = await usersRes.json();
+  if (!usersRes.ok) {
+    throw new Error(`/org users failed: ${JSON.stringify(usersData)}`);
+  }
+
+  // 4️⃣ Count license usage for this org
+  const licenseUsage = {};
+
+  for (const u of usersData.items || []) {
+    const personRes = await fetch(
+      `https://webexapis.com/v1/people/${u.id}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const person = await personRes.json();
+    const licenses = person.licenses || [];
+
+    for (const lic of licenses) {
+      licenseUsage[lic] = (licenseUsage[lic] || 0) + 1;
+    }
+  }
+
+  // 5️⃣ Build tenant-specific view
+  const items = globalLicenses.map(l => {
+    const assigned = licenseUsage[l.id] || 0;
+    const available = l.totalUnits - assigned;
+
+    return {
+      name: l.name,
+      assigned,
+      available,
+      status: available < 0 ? "DEFICIT" : assigned > 0 ? "IN_USE" : "OK",
+    };
+  });
 
   return json({
-    count: filtered.length,
-    items: filtered.map(l => ({
-      id: l.id,
-      name: l.name,
-      total: l.totalUnits,
-      consumed: l.consumedUnits,
-      available: l.totalUnits - l.consumedUnits,
-      status:
-        l.totalUnits - l.consumedUnits < 0
-          ? "DEFICIT"
-          : l.totalUnits - l.consumedUnits === 0
-          ? "FULL"
-          : "OK",
-    })),
+    scope: "tenant",
+    orgId: requestedOrgId,
+    items,
   });
 }
 /* -----------------------------
