@@ -387,10 +387,10 @@ async function loadMe() {
 
   ME = r.data;
 
-  // 🔐 If customer and no tenant resolved → go to PIN screen
   if (ME.role !== "admin" && !ME.orgId) {
-    window.location.href = "/";
-    return;
+    setError("Tenant not resolved. Please verify your PIN or contact US Signal.");
+    $("licenseLoading").textContent = "Tenant not resolved.";
+    return false; // 🔴 STOP INIT
   }
 
   $("whoLine").textContent = `${ME.email} (${ME.role})`;
@@ -402,6 +402,8 @@ async function loadMe() {
 
   $("reportEmail").value = ME.email || "";
   $("admin-note").style.display = ME.role === "admin" ? "block" : "none";
+
+  return true; // ✅ OK to continue
 }
 
   // -----------------------------
@@ -413,8 +415,10 @@ async function loadMe() {
     if (!r.ok) {
       // If tenant not resolved (customer), show helpful message
      if (r.status === 401) {
-  window.location.href = "/";
-  return;
+  setError("Tenant not resolved. Please verify your PIN or contact US Signal.");
+$("licenseLoading").textContent = "Tenant not resolved.";
+return;
+
 }
  else {
         setError("Failed to load org list.");
@@ -470,10 +474,11 @@ async function loadMe() {
     const r = await api(`/api/licenses${q}`);
 
    if (!r.ok) {
-  if (r.status === 401) {
-    window.location.href = "/";
-    return;
-  }
+ if (r.status === 401) {
+  setError("Tenant not resolved. Please verify your PIN.");
+  $("licenseLoading").textContent = "Unauthorized.";
+  return;
+}
 
   const msg =
     (r.data && (r.data.message || r.data.error)) ||
@@ -586,10 +591,13 @@ async function loadMe() {
   async function init() {
     try {
       setError(null);
-      await loadMe();
-      await loadOrgs();
-      SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
-      await loadLicenses();
+    const ok = await loadMe();
+if (!ok) return;
+
+await loadOrgs();
+SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
+await loadLicenses();
+
     } catch (e) {
       setError(e?.message || String(e));
     }
