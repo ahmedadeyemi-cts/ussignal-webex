@@ -190,24 +190,22 @@ export default {
        Identity helpers
     ===================================================== */
 
-    async function getCurrentUser(token) {
-      const res = await fetch("https://webexapis.com/v1/people/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+function getCurrentUser(request) {
+  const email =
+    request.headers.get("cf-access-authenticated-user-email") ||
+    request.headers.get("cf-access-user-email");
 
-      const me = await res.json();
-      if (!res.ok) {
-        throw new Error(`/people/me failed: ${JSON.stringify(me)}`);
-      }
+  if (!email) {
+    throw new Error("Cloudflare Access email header missing");
+  }
 
-      const email = me.emails?.[0]?.toLowerCase();
-      if (!email) throw new Error("User email not found");
+  const normalized = email.toLowerCase().trim();
 
-      return {
-        email,
-        isAdmin: email.endsWith("@ussignal.com"),
-      };
-    }
+  return {
+    email: normalized,
+    isAdmin: normalized.endsWith("@ussignal.com"),
+  };
+}
 
     /* =====================================================
        Session helpers
@@ -558,8 +556,8 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
          - returns org context if session exists
       ----------------------------- */
      if (url.pathname === "/api/me") {
+  const user = getCurrentUser(request);
   const token = await getAccessToken();
-  const user = await getCurrentUser(token);
 
   // 1️⃣ Try email-based tenant resolution
  const session = await getSession(user.email);
@@ -597,8 +595,8 @@ return json({
          - throttles attempts (per email + ip)
       ----------------------------- */
       if (url.pathname === "/api/pin/verify" && request.method === "POST") {
+        const user = getCurrentUser(request);
         const token = await getAccessToken();
-        const user = await getCurrentUser(token);
         const ip = getIP(request);
 
         // Admins don't need PIN; but allow admin to verify PIN for demo if desired
@@ -654,8 +652,8 @@ return json({
          - clears session
       ----------------------------- */
       if (url.pathname === "/api/pin/logout" && request.method === "POST") {
+        const user = getCurrentUser(request);
         const token = await getAccessToken();
-        const user = await getCurrentUser(token);
         await clearSession(user.email);
         return json({ status: "ok" });
       }
@@ -666,8 +664,8 @@ return json({
          - Customer: requires session; returns only matching org
       ----------------------------- */
      if (url.pathname === "/api/org") {
+  const user = getCurrentUser(request);
   const token = await getAccessToken();
-  const user = await getCurrentUser(token);
   const session = await getSession(user.email);
 
   // customers require tenant resolution (email OR PIN)
@@ -710,8 +708,8 @@ return json({
    - Customer: resolved org only
 ----------------------------- */
 if (url.pathname === "/api/licenses" && request.method === "GET") {
+  const user = getCurrentUser(request);
   const token = await getAccessToken();
-  const user = await getCurrentUser(token);
   const session = await getSession(user.email);
 
   const requestedOrgId = url.searchParams.get("orgId");
@@ -774,8 +772,8 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
    Sends license report via Brevo
 ----------------------------- */
 if (url.pathname === "/api/licenses/email" && request.method === "POST") {
+  const user = getCurrentUser(request);
   const token = await getAccessToken();
-  const user = await getCurrentUser(token);
    const body = await request.json().catch(() => ({}));
   const toEmail = String(body.email || "").toLowerCase().trim();
   const requestedOrgId = body.orgId || null;
@@ -908,8 +906,8 @@ if (!brevoRes.ok) {
            { oldPin, newPin, orgId, orgName }
       ----------------------------- */
       if (url.pathname === "/api/admin/pin/rotate" && request.method === "POST") {
+        const user = getCurrentUser(request);
         const token = await getAccessToken();
-        const user = await getCurrentUser(token);
         if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
         const body = await request.json().catch(() => ({}));
@@ -953,8 +951,8 @@ const emails = existing?.emails || [];
          For demo, you can skip this.
       ----------------------------- */
       if (url.pathname === "/api/admin/pin/list" && request.method === "POST") {
+        const user = getCurrentUser(request);
         const token = await getAccessToken();
-        const user = await getCurrentUser(token);
         if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
         const body = await request.json().catch(() => ({}));
@@ -975,8 +973,8 @@ const emails = existing?.emails || [];
    GET /api/admin/inspect/email/:email
 ----------------------------- */
 if (url.pathname.startsWith("/api/admin/inspect/email/") && request.method === "GET") {
+  const user = getCurrentUser(request);
   const token = await getAccessToken();
-  const user = await getCurrentUser(token);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const email = decodeURIComponent(url.pathname.split("/").pop()).toLowerCase();
@@ -994,8 +992,8 @@ if (url.pathname.startsWith("/api/admin/inspect/email/") && request.method === "
    GET /api/admin/inspect/pin/:pin
 ----------------------------- */
 if (url.pathname.startsWith("/api/admin/inspect/pin/") && request.method === "GET") {
+  const user = getCurrentUser(request);
   const token = await getAccessToken();
-  const user = await getCurrentUser(token);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const pin = url.pathname.split("/").pop();
@@ -1017,8 +1015,8 @@ if (url.pathname.startsWith("/api/admin/inspect/pin/") && request.method === "GE
    GET /api/admin/inspect/org/:orgId
 ----------------------------- */
 if (url.pathname.startsWith("/api/admin/inspect/org/") && request.method === "GET") {
+  const user = getCurrentUser(request);
   const token = await getAccessToken();
-  const user = await getCurrentUser(token);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const orgId = decodeURIComponent(url.pathname.split("/").pop());
@@ -1036,8 +1034,8 @@ if (url.pathname.startsWith("/api/admin/inspect/org/") && request.method === "GE
    ===================================================== */
 
 if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
+  const user = getCurrentUser(request);
   const token = await getAccessToken();
-  const user = await getCurrentUser(token);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const body = await request.json().catch(() => ({}));
