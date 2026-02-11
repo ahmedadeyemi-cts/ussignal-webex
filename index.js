@@ -364,6 +364,18 @@ async function putEmailMapping(email, orgId, orgName) {
   }
   return await res.text();
 }
+    async function renderPinHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/pin.html"
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to load PIN UI");
+  }
+
+  return await res.text();
+}
+
 async function renderCustomerLicensesHTML() {
   const res = await fetch(
     "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/licenses.html"
@@ -508,6 +520,15 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
+      /* -----------------------------
+   PIN UI
+----------------------------- */
+if (url.pathname === "/pin" && request.method === "GET") {
+  return text(await renderPinHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
 /* -----------------------------
    Customer UI: Licenses
 ----------------------------- */
