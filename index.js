@@ -545,6 +545,13 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
     "cf-ray": request.headers.get("cf-ray"),
     "host": request.headers.get("host"),
   };
+if (url.pathname === "/api/debug/brevo") {
+  return json({
+    hasApiKey: !!env.BREVO_API_KEY,
+    hasSender: !!env.BREVO_SENDER_EMAIL,
+    hasFrom: !!env.LICENSE_REPORT_FROM
+  });
+}
 
   return new Response(JSON.stringify(out, null, 2), {
     status: 200,
