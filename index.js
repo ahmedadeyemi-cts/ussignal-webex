@@ -790,7 +790,11 @@ if (requestedOrgId && user.isAdmin) {
   licenseUrl.searchParams.set("orgId", requestedOrgId);
 }
 
-const licRes = await fetch(licenseUrl.toString());
+const licRes = await fetch(licenseUrl.toString(), {
+  method: "GET",
+  headers: request.headers
+});
+
 
 
   const licData = await licRes.json();
