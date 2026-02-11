@@ -381,24 +381,28 @@
   // -----------------------------
   // Load /api/me
   // -----------------------------
-  async function loadMe() {
-    const r = await api("/api/me");
-    if (!r.ok) throw new Error("Failed to load /api/me");
+async function loadMe() {
+  const r = await api("/api/me");
+  if (!r.ok) throw new Error("Failed to load /api/me");
 
-    ME = r.data;
-    $("whoLine").textContent = `${ME.email} (${ME.role})`;
-    $("tenantPill").textContent = `Tenant: ${ME.orgName || "—"}`;
+  ME = r.data;
 
-    $("orgContext").textContent = ME.orgName
-      ? `${ME.orgName} (${ME.resolution} resolution)`
-      : "No tenant resolved";
-
-    // default report email
-    $("reportEmail").value = ME.email || "";
-
-    // admin note
-    $("admin-note").style.display = ME.role === "admin" ? "block" : "none";
+  // 🔐 If customer and no tenant resolved → go to PIN screen
+  if (ME.role !== "admin" && !ME.orgId) {
+    window.location.href = "/";
+    return;
   }
+
+  $("whoLine").textContent = `${ME.email} (${ME.role})`;
+  $("tenantPill").textContent = `Tenant: ${ME.orgName || "—"}`;
+
+  $("orgContext").textContent = ME.orgName
+    ? `${ME.orgName} (${ME.resolution} resolution)`
+    : "No tenant resolved";
+
+  $("reportEmail").value = ME.email || "";
+  $("admin-note").style.display = ME.role === "admin" ? "block" : "none";
+}
 
   // -----------------------------
   // Load org list (admin: all, customer: one)
@@ -408,9 +412,11 @@
     const r = await api("/api/org");
     if (!r.ok) {
       // If tenant not resolved (customer), show helpful message
-      if (r.status === 401) {
-        setError("Tenant not resolved. If you're a customer user, verify PIN or ensure your email is mapped to an org.");
-      } else {
+     if (r.status === 401) {
+  window.location.href = "/";
+  return;
+}
+ else {
         setError("Failed to load org list.");
       }
       return;
@@ -463,13 +469,19 @@
     const q = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
     const r = await api(`/api/licenses${q}`);
 
-    if (!r.ok) {
-      const msg =
-        (r.data && (r.data.message || r.data.error)) ||
-        `Failed to load licenses (HTTP ${r.status}).`;
-      $("licenseLoading").textContent = msg;
-      return;
-    }
+   if (!r.ok) {
+  if (r.status === 401) {
+    window.location.href = "/";
+    return;
+  }
+
+  const msg =
+    (r.data && (r.data.message || r.data.error)) ||
+    `Failed to load licenses (HTTP ${r.status}).`;
+  $("licenseLoading").textContent = msg;
+  return;
+}
+
 
     const items = (r.data && r.data.items) ? r.data.items : [];
     if (!Array.isArray(items) || items.length === 0) {
