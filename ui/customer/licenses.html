@@ -257,7 +257,23 @@
 
 <main>
   <div class="grid">
+    
+  <div class="card">
+  <h2>Devices</h2>
+  <div id="deviceLoading" class="muted">Loading devices…</div>
 
+  <table id="deviceTable" style="display:none">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Model</th>
+        <th>Status</th>
+        <th>Last Seen</th>
+      </tr>
+    </thead>
+    <tbody id="deviceRows"></tbody>
+  </table>
+</div>
     <!-- Admin Banner -->
     <div id="admin-note" class="card" style="display:none">
       <strong>US Signal Admin View</strong>
@@ -364,6 +380,39 @@
     try { data = txt ? JSON.parse(txt) : null; } catch { data = { raw: txt }; }
     return { ok: res.ok, status: res.status, data };
   }
+
+  async function loadDevices() {
+  $("deviceLoading").style.display = "block";
+  $("deviceTable").style.display = "none";
+
+  const orgId = SELECTED_ORG_ID || "";
+  const q = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
+  const r = await api(`/api/devices${q}`);
+
+  if (!r.ok) {
+    $("deviceLoading").textContent = "Failed to load devices.";
+    return;
+  }
+
+  const items = r.data.items || [];
+
+  if (!items.length) {
+    $("deviceLoading").textContent = "No devices found.";
+    return;
+  }
+
+  $("deviceLoading").style.display = "none";
+  $("deviceTable").style.display = "table";
+
+  $("deviceRows").innerHTML = items.map(d => `
+    <tr>
+      <td>${escapeHtml(d.displayName || d.name || "—")}</td>
+      <td>${escapeHtml(d.product || "—")}</td>
+      <td>${escapeHtml(d.connectionStatus || "—")}</td>
+      <td>${d.lastSeen ? new Date(d.lastSeen).toLocaleString() : "—"}</td>
+    </tr>
+  `).join("");
+}
 
   function safeOrgLabel(o) {
     const name = o.displayName || o.name || o.orgName || "Unknown";
@@ -560,7 +609,10 @@ return;
   }
 
   $("btnSendEmail").addEventListener("click", sendReport);
-  $("btnLoad").addEventListener("click", loadLicenses);
+  $("btnLoad").addEventListener("click", async () => {
+  await loadLicenses();
+  await loadDevices();
+});
   $("btnRefresh").addEventListener("click", async () => {
     await init();
   });
@@ -587,22 +639,27 @@ return;
   // -----------------------------
   // Init
   // -----------------------------
-  async function init() {
-    try {
-      setError(null);
+async function init() {
+  try {
+    setError(null);
+
     const ok = await loadMe();
-if (!ok) return;
+    if (!ok) return;
 
-await loadOrgs();
-SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
-await loadLicenses();
+    await loadOrgs();
+    SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
 
-    } catch (e) {
-      setError(e?.message || String(e));
-    }
+    await loadLicenses();
+    await loadDevices();   // ✅ moved here
+
+  } catch (e) {
+    setError(e?.message || String(e));
   }
+}
+
 
   init();
+
 </script>
 
 </body>
