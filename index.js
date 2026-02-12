@@ -677,7 +677,8 @@ function formatDate(dateStr) {
   return d.toLocaleString();
 }
 
-function buildComponentSets(data) {
+/* ENTERPRISE WEBEX STATUS ENGINE */
+      function buildComponentSets(data) {
   const components = data.components || [];
 
   const parents = components.filter(c =>
@@ -688,7 +689,11 @@ function buildComponentSets(data) {
   );
 
   const parentIds = new Set(parents.map(p => p.id));
-  const children = components.filter(c => parentIds.has(c.group_id));
+
+  const children = components.filter(c =>
+    parentIds.has(c.group_id)
+  );
+
   const allRelevant = [...parents, ...children];
 
   return {
@@ -697,7 +702,7 @@ function buildComponentSets(data) {
     relevantIds: new Set(allRelevant.map(c => c.id))
   };
 }
-/* ENTERPRISE WEBEX STATUS ENGINE */
+
 async function getFilteredComponents() {
   const cache = caches.default;
   const cacheKey = new Request("https://status.webex.com/api/components.json");
