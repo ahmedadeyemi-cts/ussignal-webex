@@ -814,22 +814,29 @@ if (url.pathname === "/api/status" && request.method === "GET") {
     return json({ error: "pin_required" }, 401);
   }
 
-  const statusRes = await fetchJsonStrict("https://status.webex.com/api/status.json");
-  if (!statusRes.ok) return json(statusRes, statusRes.status);
+  try {
+    const statusRes = await fetchJsonStrict("https://status.webex.com/api/status.json");
+    if (!statusRes.ok) return json(statusRes, statusRes.status);
 
-  const { parents } = await getFilteredComponents();
+    const { parents } = await getFilteredComponents();
 
-  return json({
-    pageIndicator: statusRes.data.status?.indicator || "unknown",
-    components: parents.map(p => ({
-      id: p.id,
-      name: p.name,
-      status: p.status,
-      productGroup: p.product_group,
-      lastUpdated: formatDate(p.updated_at)
-    })),
-    lastUpdated: new Date().toISOString()
-  });
+    const response = {
+      globalIndicator: statusRes.data.status?.indicator || "unknown",
+      globalDescription: statusRes.data.status?.description || null,
+      components: parents.map(p => ({
+        id: p.id,
+        name: p.name,
+        status: p.status,
+        description: p.description || null,
+        lastUpdated: formatDate(p.updated_at)
+      })),
+      lastUpdated: new Date().toISOString()
+    };
+
+    return json(response);
+  } catch (e) {
+    return json({ error: "status_engine_failed", message: e.message }, 500);
+  }
 }
 if (url.pathname === "/api/incidents" && request.method === "GET") {
   const user = getCurrentUser(request);
@@ -839,31 +846,39 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
     return json({ error: "pin_required" }, 401);
   }
 
-  const incidentRes = await fetchJsonStrict("https://status.webex.com/api/all-incidents.json");
-  if (!incidentRes.ok) return json(incidentRes, incidentRes.status);
+  try {
+    const incidentRes = await fetchJsonStrict("https://status.webex.com/api/all-incidents.json");
+    if (!incidentRes.ok) return json(incidentRes, incidentRes.status);
 
-  const { relevantIds } = await getFilteredComponents();
+    const { relevantIds } = await getFilteredComponents();
 
-  const incidents = (incidentRes.data.incidents || []).filter(i =>
-    (i.components || []).some(c => relevantIds.has(c.id))
-  );
+    const filtered = (incidentRes.data.incidents || []).filter(i =>
+      (i.components || []).some(c => relevantIds.has(c.id))
+    );
 
-  return json({
-    incidents: incidents.map(i => ({
+    const structured = filtered.map(i => ({
       id: i.id,
       name: i.name,
       impact: i.impact,
       status: i.status,
       created: formatDate(i.created_at),
       resolved: formatDate(i.resolved_at),
+      shortlink: i.shortlink || null,
       updates: (i.incident_updates || []).map(u => ({
         status: u.status,
         body: u.body,
         updated: formatDate(u.updated_at)
       }))
-    })),
-    lastUpdated: new Date().toISOString()
-  });
+    }));
+
+    return json({
+      count: structured.length,
+      incidents: structured,
+      lastUpdated: new Date().toISOString()
+    });
+  } catch (e) {
+    return json({ error: "incident_engine_failed", message: e.message }, 500);
+  }
 }
 if (url.pathname === "/api/maintenance" && request.method === "GET") {
   const user = getCurrentUser(request);
@@ -873,41 +888,50 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
     return json({ error: "pin_required" }, 401);
   }
 
-  const upcomingRes = await fetchJsonStrict("https://status.webex.com/api/upcoming-scheduled-maintenances.json");
-  const activeRes = await fetchJsonStrict("https://status.webex.com/api/active-scheduled-maintenances.json");
+  try {
+    const upcomingRes = await fetchJsonStrict("https://status.webex.com/api/upcoming-scheduled-maintenances.json");
+    const activeRes = await fetchJsonStrict("https://status.webex.com/api/active-scheduled-maintenances.json");
 
-  if (!upcomingRes.ok) return json(upcomingRes, upcomingRes.status);
-  if (!activeRes.ok) return json(activeRes, activeRes.status);
+    if (!upcomingRes.ok) return json(upcomingRes, upcomingRes.status);
+    if (!activeRes.ok) return json(activeRes, activeRes.status);
 
-  const { relevantIds } = await getFilteredComponents();
+    const { relevantIds } = await getFilteredComponents();
 
-  const combined = [
-    ...(upcomingRes.data.scheduled_maintenances || []),
-    ...(activeRes.data.scheduled_maintenances || [])
-  ];
+    const combined = [
+      ...(upcomingRes.data.scheduled_maintenances || []),
+      ...(activeRes.data.scheduled_maintenances || [])
+    ];
 
-  const filtered = combined.filter(m =>
-    (m.components || []).some(c => relevantIds.has(c.id))
-  );
+    const filtered = combined.filter(m =>
+      (m.components || []).some(c => relevantIds.has(c.id))
+    );
 
-  return json({
-    maintenance: filtered.map(m => ({
+    const structured = filtered.map(m => ({
       id: m.id,
       name: m.name,
       status: m.status,
       impact: m.impact,
-      changeRef: m.change || null,
+      scheduledFor: formatDate(m.scheduled_for),
+      scheduledUntil: formatDate(m.scheduled_until),
       created: formatDate(m.created_at),
-      resolved: formatDate(m.resolved_at),
+      shortlink: m.shortlink || null,
       updates: (m.incident_updates || []).map(u => ({
         status: u.status,
         body: u.body,
         updated: formatDate(u.updated_at)
       }))
-    })),
-    lastUpdated: new Date().toISOString()
-  });
+    }));
+
+    return json({
+      count: structured.length,
+      maintenance: structured,
+      lastUpdated: new Date().toISOString()
+    });
+  } catch (e) {
+    return json({ error: "maintenance_engine_failed", message: e.message }, 500);
+  }
 }
+
 
       /* -----------------------------
          /api/me
