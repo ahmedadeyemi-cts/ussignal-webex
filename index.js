@@ -316,11 +316,12 @@ function getCurrentUser(request) {
       return await env.USER_SESSION_KV.get(KV.sessKey(email), { type: "json" });
     }
 
-    async function setSession(email, session) {
-      await env.USER_SESSION_KV.put(KV.sessKey(email), JSON.stringify(session), {
-        expirationTtl: SESSION_TTL_SECONDS,
-      });
-    }
+async function setSession(email, session) {
+  await env.USER_SESSION_KV.put(
+    KV.sessKey(email),
+    JSON.stringify(session)
+  );
+}
 
     async function clearSession(email) {
       await env.USER_SESSION_KV.delete(KV.sessKey(email));
@@ -760,24 +761,33 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
     headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
   });
 }
-
+//API/STATUS
 if (url.pathname === "/api/status" && request.method === "GET") {
-  const user = getCurrentUser(request);
+
+  let user;
+  try {
+    user = getCurrentUser(request);
+  } catch (e) {
+    return json({ error: "auth_failed", message: e.message }, 401);
+  }
+
   const session = await getSession(user.email);
 
-  if (!user.isAdmin && (!session || !session.orgId)) {
-    return json({ error: "pin_required" }, 401);
+  if (!user.isAdmin) {
+    if (!session || !session.orgId) {
+      return json({ error: "pin_required" }, 401);
+    }
+
+    if (session.expiresAt && session.expiresAt <= nowMs()) {
+      await clearSession(user.email);
+      return json({ error: "pin_expired" }, 401);
+    }
   }
 
   try {
     const upstream = await fetch(
-      "https://status.webex.com/api/index.json",
-      {
-        headers: {
-          "Accept": "application/json",
-          "User-Agent": "USSignal-Webex-Portal/1.0"
-        }
-      }
+      "https://status.webex.com/api/status.json",
+      { headers: { Accept: "application/json" } }
     );
 
     const textBody = await upstream.text();
@@ -786,19 +796,13 @@ if (url.pathname === "/api/status" && request.method === "GET") {
     try {
       data = JSON.parse(textBody);
     } catch {
-      return json({
-        ok: false,
-        error: "status_not_json",
-        bodyPreview: textBody.slice(0, 400)
-      }, 500);
+      return json({ error: "status_not_json" }, 500);
     }
 
     if (!upstream.ok) {
       return json({
-        ok: false,
         error: "status_upstream_failed",
-        status: upstream.status,
-        body: data
+        upstreamStatus: upstream.status
       }, 502);
     }
 
@@ -820,20 +824,28 @@ if (url.pathname === "/api/status" && request.method === "GET") {
       
 //api/incidents block
 if (url.pathname === "/api/incidents" && request.method === "GET") {
+
   const user = getCurrentUser(request);
   const session = await getSession(user.email);
 
-  if (!user.isAdmin && (!session || !session.orgId)) {
-    return json({ error: "pin_required" }, 401);
+  if (!user.isAdmin) {
+    if (!session || !session.orgId) {
+      return json({ error: "pin_required" }, 401);
+    }
+
+    if (session.expiresAt && session.expiresAt <= nowMs()) {
+      await clearSession(user.email);
+      return json({ error: "pin_expired" }, 401);
+    }
   }
 
   try {
-    const incidentRes = await fetch(
+    const upstream = await fetch(
       "https://status.webex.com/api/all-incidents.json",
       { headers: { Accept: "application/json" } }
     );
 
-    const textBody = await incidentRes.text();
+    const textBody = await upstream.text();
 
     let data;
     try {
@@ -842,55 +854,51 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
       return json({ error: "incident_not_json" }, 500);
     }
 
-    if (!incidentRes.ok) {
-      return json({
-        error: "incident_upstream_failed",
-        status: incidentRes.status,
-        body: data
-      }, 502);
+    if (!upstream.ok) {
+      return json({ error: "incident_upstream_failed" }, 502);
     }
 
-    return json(data);
+    return json({
+      incidents: data.incidents || [],
+      lastUpdated: new Date().toISOString()
+    });
 
   } catch (e) {
     return json({ error: "incident_engine_failed", message: e.message }, 500);
   }
 }
-
       ///api/maintenance block
       
 if (url.pathname === "/api/maintenance" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = await getSession(user.email);
-
-  if (!user.isAdmin && (!session || !session.orgId)) {
+if (!user.isAdmin) {
+  if (!session || !session.orgId) {
     return json({ error: "pin_required" }, 401);
   }
 
+  if (session.expiresAt && session.expiresAt <= nowMs()) {
+    await clearSession(user.email);
+    return json({ error: "pin_expired" }, 401);
+  }
+}
+
   try {
-    const res = await fetch(
-      "https://status.webex.com/api/upcoming-scheduled-maintenances.json",
-      { headers: { Accept: "application/json" } }
-    );
+    const upcoming = await fetch("https://status.webex.com/api/upcoming-scheduled-maintenances.json");
+    const active = await fetch("https://status.webex.com/api/active-scheduled-maintenances.json");
 
-    const textBody = await res.text();
+    const upcomingData = await upcoming.json();
+    const activeData = await active.json();
 
-    let data;
-    try {
-      data = JSON.parse(textBody);
-    } catch {
-      return json({ error: "maintenance_not_json" }, 500);
-    }
+    const combined = [
+      ...(upcomingData.scheduled_maintenances || []),
+      ...(activeData.scheduled_maintenances || [])
+    ];
 
-    if (!res.ok) {
-      return json({
-        error: "maintenance_upstream_failed",
-        status: res.status,
-        body: data
-      }, 502);
-    }
-
-    return json(data);
+    return json({
+      maintenance: combined,
+      lastUpdated: new Date().toISOString()
+    });
 
   } catch (e) {
     return json({ error: "maintenance_engine_failed", message: e.message }, 500);
