@@ -1119,22 +1119,48 @@ const res = await fetch(licenseUrl, {
 
   const licenses = data.items || [];
 
-  return json({
-    count: licenses.length,
-    items: licenses.map(l => ({
-      id: l.id,
-      name: l.name,
-      total: l.totalUnits,
-      consumed: l.consumedUnits,
-      available: l.totalUnits - l.consumedUnits,
-      status:
-        l.totalUnits - l.consumedUnits < 0
-          ? "DEFICIT"
-          : l.totalUnits - l.consumedUnits === 0
-          ? "FULL"
-          : "OK",
-    })),
-  });
+const normalized = licenses.map(l => {
+ const rawTotal = l.totalUnits;
+const rawConsumed = l.consumedUnits;
+
+const total = (rawTotal === null || rawTotal === undefined) ? null : Number(rawTotal);
+const consumed = Number(rawConsumed ?? 0);
+
+const isUnlimited = total === -1;
+const hasTotal = Number.isFinite(total);
+
+const available = isUnlimited ? -1 : (hasTotal ? Math.max(0, total - consumed) : null);
+const deficit = isUnlimited ? 0 : (hasTotal ? Math.max(0, consumed - total) : 0);
+
+let status = "OK";
+if (isUnlimited) status = "UNLIMITED";
+else if (!hasTotal) status = "UNKNOWN";
+else if (deficit > 0) status = "DEFICIT";
+else if (available === 0) status = "FULL";
+
+  return {
+    id: l.id,
+    name: l.name,
+    total,
+    consumed,
+    available,
+    deficit,
+    status
+  };
+});
+
+const summary = {
+  totalLicenses: normalized.length,
+  totalConsumed: normalized.reduce((a, l) => a + (l.consumed || 0), 0),
+  totalDeficit: normalized.reduce((a, l) => a + (l.deficit || 0), 0),
+  hasDeficit: normalized.some(l => l.status === "DEFICIT")
+};
+
+return json({
+  orgId: resolvedOrgId,
+  summary,
+  items: normalized
+});
 }
   
 
@@ -1156,11 +1182,6 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
 //  if (requestedOrgId && user.isAdmin) {
  //   url.searchParams.set("orgId", requestedOrgId);
 //  }
-
-  if (!toEmail) {
-    return json({ error: "missing_email" }, 400);
-  }
-
 const licenseUrl = new URL(`${url.origin}/api/licenses`);
 
 if (requestedOrgId && user.isAdmin) {
@@ -1193,38 +1214,36 @@ try {
     bodyPreview: licText.slice(0, 500)
   }, 500);
 }
-// End of New Add
-  if (!licRes.ok) {
-    throw new Error("Failed to load license data");
-  }
 
-  const rows = (licData.items || [])
+const rows = (licData.items || [])
   .map(l => {
-    const assigned = l.consumed ?? l.assigned ?? 0;
+    const assigned = l.consumed ?? 0;
     const available = l.available ?? 0;
+    const deficit = l.deficit ?? 0;
     const status = l.status ?? "OK";
 
     return `
       <tr>
         <td>${l.name}</td>
         <td>${assigned}</td>
-        <td>${available}</td>
+        <td>${available === -1 ? "Unlimited" : available}</td>
+        <td>${deficit}</td>
         <td>${status}</td>
       </tr>
     `;
   })
   .join("");
 
-
   const html = `
     <h2>Webex Calling License Report</h2>
     <p>Generated for ${user.email}</p>
     <table border="1" cellpadding="6" cellspacing="0">
       <tr>
-        <th>License</th>
-        <th>Assigned</th>
-        <th>Available</th>
-        <th>Status</th>
+<th>License</th>
+<th>Assigned</th>
+<th>Available</th>
+<th>Deficit</th>
+<th>Status</th>
       </tr>
       ${rows}
     </table>
@@ -1272,7 +1291,7 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
   const token = await getAccessToken();
   const session = await getSession(user.email);
   const requestedOrgId = url.searchParams.get("orgId");
-if (session.expiresAt && session.expiresAt <= nowMs()) {
+  if (session?.expiresAt && session.expiresAt <= nowMs()) {
   await clearSession(user.email);
   return json({ error: "pin_required_or_expired" }, 401);
 }
