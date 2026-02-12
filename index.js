@@ -106,10 +106,11 @@ const STATUS_CACHE_SECONDS = cfgIntAllowZero("STATUS_CACHE_SECONDS", 60); // 0 d
 async function fetchJsonStrict(urlStr, init = {}) {
   const res = await fetch(urlStr, {
     ...init,
-    headers: {
-      accept: "application/json",
-      ...(init.headers || {}),
-    },
+   headers: {
+  "Accept": "application/json",
+  "User-Agent": "USSignal-Webex-Portal/1.0",
+  ...(init.headers || {}),
+},
   });
 
   const ct = res.headers.get("content-type") || "";
@@ -1165,6 +1166,8 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     })),
   });
 }
+  
+
 /* -----------------------------
    /api/licenses/email
    Sends license report via Brevo
