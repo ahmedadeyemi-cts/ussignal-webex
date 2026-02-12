@@ -1092,12 +1092,20 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   // 🚨 CRITICAL: Partner scope enforcement
   if (resolvedOrgId) {
-    headers["X-Partner-OrgId"] = resolvedOrgId;
   }
 
-  const res = await fetch("https://webexapis.com/v1/licenses", {
-    headers,
-  });
+let licenseUrl = "https://webexapis.com/v1/licenses";
+
+if (resolvedOrgId) {
+  licenseUrl += `?orgId=${encodeURIComponent(resolvedOrgId)}`;
+}
+
+const res = await fetch(licenseUrl, {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+});
+
 
   const data = await res.json();
 
@@ -1258,6 +1266,46 @@ if (!brevoRes.ok) {
 
 
   return json({ status: "sent", to: toEmail });
+}
+if (url.pathname === "/api/devices" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  const token = await getAccessToken();
+  const session = await getSession(user.email);
+  const requestedOrgId = url.searchParams.get("orgId");
+
+  let resolvedOrgId = null;
+
+  if (user.isAdmin) {
+    resolvedOrgId = requestedOrgId || null;
+  } else {
+    if (!session || !session.orgId) {
+      return json({ error: "pin_required" }, 401);
+    }
+    resolvedOrgId = session.orgId;
+  }
+
+  let deviceUrl = "https://webexapis.com/v1/devices";
+
+  if (resolvedOrgId) {
+    deviceUrl += `?orgId=${encodeURIComponent(resolvedOrgId)}`;
+  }
+
+  const res = await fetch(deviceUrl, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    return json({ error: "webex_devices_failed", body: data }, 500);
+  }
+
+  return json({
+    count: data.items?.length || 0,
+    items: data.items || []
+  });
 }
 
       /* -----------------------------
