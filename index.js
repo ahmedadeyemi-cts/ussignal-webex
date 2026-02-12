@@ -899,7 +899,7 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
   }
 
   try {
-    const upcomingRes = await fetchJsonStrict("https://status.webex.com/api/upcoming-scheduled-maintenances.json");
+    const upcomingRes = await fetchJsonStrict("https://status.webex.com/api/v2/scheduled-maintenances.json");
     const activeRes = await fetchJsonStrict("https://status.webex.com/api/v2/scheduled-maintenances.json");
 
     if (!upcomingRes.ok) return json(upcomingRes, upcomingRes.status);
