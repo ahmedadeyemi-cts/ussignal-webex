@@ -297,8 +297,8 @@ async function loadData() {
   const data = await apiFetch("/api/incidents");
   if (!data) return;
 
-  document.getElementById("lastUpdated").textContent =
-    formatDate(data.lastUpdated);
+document.getElementById("lastUpdated").textContent =
+  formatDate(data.lastUpdated || new Date().toISOString());
 
   const unresolvedContainer = document.getElementById("unresolved");
   const resolvedContainer = document.getElementById("resolved");
