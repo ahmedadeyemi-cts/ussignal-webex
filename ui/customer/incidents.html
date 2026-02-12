@@ -181,6 +181,38 @@ button {
 
 <script>
 
+/* ============================
+   GLOBAL API FETCH WITH PIN FIX
+============================ */
+
+async function apiFetch(url) {
+  const res = await fetch(url, { credentials: "include" });
+
+  if (res.status === 401) {
+    window.location.href = "/pin";
+    return null;
+  }
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    window.location.href = "/pin";
+    return null;
+  }
+
+  if (data?.error === "pin_required" || data?.error === "pin_required_or_expired") {
+    window.location.href = "/pin";
+    return null;
+  }
+
+  return data;
+}
+
+/* ============================
+   UI Helpers
+============================ */
+
 function toggleDark() {
   document.body.classList.toggle("dark");
   localStorage.setItem("darkMode", document.body.classList.contains("dark"));
@@ -190,20 +222,30 @@ if (localStorage.getItem("darkMode") === "true") {
   document.body.classList.add("dark");
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleString();
+}
+
+/* ============================
+   Tenant Info
+============================ */
+
 async function loadTenant() {
-  const r = await fetch("/api/me");
-  const me = await r.json();
+  const me = await apiFetch("/api/me");
+  if (!me) return;
+
   if (me.orgName) {
     document.getElementById("tenantBadge").innerHTML =
       `<span class="badge">Tenant: ${me.orgName}</span>`;
   }
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  return d.toLocaleString();
-}
+/* ============================
+   Incident Rendering
+============================ */
 
 function createIncidentCard(incident) {
   const div = document.createElement("div");
@@ -214,26 +256,25 @@ function createIncidentCard(incident) {
       <div>
         <strong>${incident.name}</strong>
         <div style="font-size:13px;color:var(--muted);margin-top:4px;">
-          Created: ${formatDate(incident.created_at)}
+          Created: ${formatDate(incident.created)}
         </div>
       </div>
       <div class="impact ${incident.impact}">
-        ${incident.impact.toUpperCase()}
+        ${incident.impact?.toUpperCase() || ""}
       </div>
     </div>
-
     <div class="updates"></div>
   `;
 
   const updatesDiv = div.querySelector(".updates");
 
-  (incident.incident_updates || []).forEach(update => {
+  (incident.updates || []).forEach(update => {
     const u = document.createElement("div");
     u.className = "update-item";
     u.innerHTML = `
-      <div class="update-status">${update.status.toUpperCase()}</div>
+      <div class="update-status">${update.status?.toUpperCase()}</div>
       <div style="font-size:12px;color:var(--muted);">
-        ${formatDate(update.created_at)}
+        ${formatDate(update.updated)}
       </div>
       <div style="margin-top:6px;">${update.body}</div>
     `;
@@ -248,12 +289,16 @@ function createIncidentCard(incident) {
   return div;
 }
 
+/* ============================
+   Load Incidents
+============================ */
+
 async function loadData() {
-  const r = await fetch("/api/incidents");
-  const data = await r.json();
+  const data = await apiFetch("/api/incidents");
+  if (!data) return;
 
   document.getElementById("lastUpdated").textContent =
-    new Date().toLocaleString();
+    formatDate(data.lastUpdated);
 
   const unresolvedContainer = document.getElementById("unresolved");
   const resolvedContainer = document.getElementById("resolved");
@@ -276,12 +321,13 @@ async function loadData() {
     }
   });
 
-  if (hasMajor) {
-    document.getElementById("alertBanner").style.display = "block";
-  } else {
-    document.getElementById("alertBanner").style.display = "none";
-  }
+  document.getElementById("alertBanner").style.display =
+    hasMajor ? "block" : "none";
 }
+
+/* ============================
+   Init
+============================ */
 
 loadTenant();
 loadData();
