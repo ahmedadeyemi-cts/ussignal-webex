@@ -247,7 +247,7 @@ async function loadTenant() {
 ============================ */
 
 async function loadData() {
-  const data = await apiFetch("/api/status");
+  const data = await apifetch("https://webexstatus.statuspage.io/api/v2/status.json");
   if (!data) return;
 
   document.getElementById("lastUpdated").textContent =
