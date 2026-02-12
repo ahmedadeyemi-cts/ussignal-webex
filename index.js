@@ -1272,6 +1272,10 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
   const token = await getAccessToken();
   const session = await getSession(user.email);
   const requestedOrgId = url.searchParams.get("orgId");
+if (session.expiresAt && session.expiresAt <= nowMs()) {
+  await clearSession(user.email);
+  return json({ error: "pin_required_or_expired" }, 401);
+}
 
   let resolvedOrgId = null;
 
