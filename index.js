@@ -677,11 +677,8 @@ function formatDate(dateStr) {
   return d.toLocaleString();
 }
 
-async function getFilteredComponents() {
-  const compRes = await fetchJsonStrict("https://status.webex.com/api/components.json");
-  if (!compRes.ok) throw new Error("Failed to fetch components");
-
-  const components = compRes.data.components || [];
+function buildComponentSets(data) {
+  const components = data.components || [];
 
   const parents = components.filter(c =>
     c.isGroup === "Y" &&
@@ -691,11 +688,7 @@ async function getFilteredComponents() {
   );
 
   const parentIds = new Set(parents.map(p => p.id));
-
-  const children = components.filter(c =>
-    parentIds.has(c.group_id)
-  );
-
+  const children = components.filter(c => parentIds.has(c.group_id));
   const allRelevant = [...parents, ...children];
 
   return {
@@ -704,6 +697,37 @@ async function getFilteredComponents() {
     relevantIds: new Set(allRelevant.map(c => c.id))
   };
 }
+/* ENTERPRISE WEBEX STATUS ENGINE */
+async function getFilteredComponents() {
+  const cache = caches.default;
+  const cacheKey = new Request("https://status.webex.com/api/components.json");
+
+  if (STATUS_CACHE_SECONDS > 0) {
+    const hit = await cache.match(cacheKey);
+    if (hit) {
+      const cached = await hit.json();
+      return buildComponentSets(cached);
+    }
+  }
+
+  const compRes = await fetchJsonStrict("https://status.webex.com/api/components.json");
+  if (!compRes.ok) throw new Error("Failed to fetch components");
+
+  if (STATUS_CACHE_SECONDS > 0) {
+    await cache.put(
+      cacheKey,
+      new Response(JSON.stringify(compRes.data), {
+        headers: {
+          "content-type": "application/json",
+          "cache-control": `public, max-age=${STATUS_CACHE_SECONDS}`,
+        },
+      })
+    );
+  }
+
+  return buildComponentSets(compRes.data);
+}
+
 
 
 
