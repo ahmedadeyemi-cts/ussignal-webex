@@ -45,13 +45,12 @@ header {
 button {
   padding: 8px 14px;
   border-radius: 8px;
-  border: none;
+  border: 1px solid var(--border);
   cursor: pointer;
   font-weight: 600;
+  background: transparent;
+  color: var(--text);
 }
-
-.primary { background: var(--primary); color: white; }
-.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
 
 .container {
   max-width: 1100px;
@@ -135,15 +134,15 @@ body.dark .details {
   </div>
 
   <div>
-    <button class="ghost" onclick="toggleDark()">Dark Mode</button>
-    <button class="ghost" onclick="loadData()">Refresh</button>
+    <button onclick="toggleDark()">Dark Mode</button>
+    <button onclick="loadData()">Refresh</button>
   </div>
 </header>
 
 <div class="container">
 
   <div id="alertBanner" class="alert-banner hidden">
-    ⚠ Major Incident Detected — Review Below
+    ⚠ Major Maintenance / Critical Impact Detected
   </div>
 
   <div class="card">
@@ -154,10 +153,10 @@ body.dark .details {
     <table class="table">
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Type</th>
-          <th>Description</th>
+          <th>Scheduled For</th>
           <th>Status</th>
+          <th>Impact</th>
+          <th>Description</th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -168,27 +167,37 @@ body.dark .details {
 
 <script>
 
-const TARGET_PRODUCTS = [
-  "webex user hub",
-  "webex cloud registered device",
-  "webex app",
-  "webex control hub",
-  "webex calling",
-  "gateway and solutions",
-  "dedicated instance"
-];
+/* ============================
+   SAFE FETCH (PIN REDIRECT)
+============================ */
 
-function matchesProduct(name) {
-  const n = (name || "").toLowerCase();
-  return TARGET_PRODUCTS.some(p => n.includes(p));
+async function apiFetch(url) {
+  const res = await fetch(url, { credentials: "include" });
+
+  if (res.status === 401) {
+    window.location.href = "/pin";
+    return null;
+  }
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    window.location.href = "/pin";
+    return null;
+  }
+
+  if (data?.error === "pin_required" || data?.error === "pin_required_or_expired") {
+    window.location.href = "/pin";
+    return null;
+  }
+
+  return data;
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return "N/A";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "N/A";
-  return d.toLocaleString();
-}
+/* ============================
+   UI
+============================ */
 
 function toggleDark() {
   document.body.classList.toggle("dark");
@@ -199,9 +208,20 @@ if (localStorage.getItem("darkMode") === "true") {
   document.body.classList.add("dark");
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleString();
+}
+
+/* ============================
+   Tenant
+============================ */
+
 async function loadTenant() {
-  const r = await fetch("/api/me");
-  const me = await r.json();
+  const me = await apiFetch("/api/me");
+  if (!me) return;
 
   if (me.orgName) {
     document.getElementById("tenantBadge").innerHTML =
@@ -209,44 +229,39 @@ async function loadTenant() {
   }
 }
 
+/* ============================
+   Load Maintenance
+============================ */
+
 async function loadData() {
+
   const banner = document.getElementById("alertBanner");
   banner.classList.add("hidden");
 
-  const r = await fetch("/api/maintenance");
-  const data = await r.json();
+  const data = await apiFetch("/api/maintenance");
+  if (!data) return;
 
   document.getElementById("lastUpdated").textContent =
-    formatDate(new Date().toISOString());
+    formatDate(data.lastUpdated);
 
   const tbody = document.getElementById("tableBody");
   tbody.innerHTML = "";
 
-  const incidents = (data.incidents || []).filter(i =>
-    matchesProduct(i.name)
-  );
+  const maintenance = data.maintenance || [];
 
-  const maintenance = (data.scheduled_maintenances || []).filter(m =>
-    matchesProduct(m.name)
-  );
-
-  const combined = [
-    ...incidents.map(i => ({ ...i, type: "Incident" })),
-    ...maintenance.map(m => ({ ...m, type: "Maintenance" }))
-  ];
-
-  if (combined.some(x => x.impact === "major" || x.impact === "critical")) {
+  if (maintenance.some(m => m.impact === "major" || m.impact === "critical")) {
     banner.classList.remove("hidden");
   }
 
-  combined.forEach(item => {
+  maintenance.forEach(item => {
+
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-      <td>${formatDate(item.created_at)}</td>
-      <td><span class="badge">${item.type}</span></td>
-      <td>${item.name}</td>
+      <td>${formatDate(item.scheduledFor)}</td>
       <td>${item.status}</td>
+      <td>${item.impact || "—"}</td>
+      <td>${item.name}</td>
     `;
 
     const detailRow = document.createElement("tr");
@@ -255,16 +270,18 @@ async function loadData() {
     const detailCell = document.createElement("td");
     detailCell.colSpan = 4;
 
-    const updates = (item.incident_updates || [])
+    const updates = (item.updates || [])
       .map(u => `
         <div style="margin-bottom:10px;">
-          <strong>${u.status}</strong> — ${formatDate(u.updated_at)}<br/>
-          ${u.body}
+          <strong>${u.status}</strong> — ${formatDate(u.updated)}
+          <div style="margin-top:6px;">${u.body}</div>
         </div>
       `)
       .join("");
 
-    detailCell.innerHTML = `<div class="details">${updates || "No details available."}</div>`;
+    detailCell.innerHTML =
+      `<div class="details">${updates || "No details available."}</div>`;
+
     detailRow.appendChild(detailCell);
 
     tr.onclick = () => {
@@ -275,6 +292,10 @@ async function loadData() {
     tbody.appendChild(detailRow);
   });
 }
+
+/* ============================
+   Init
+============================ */
 
 loadTenant();
 loadData();
