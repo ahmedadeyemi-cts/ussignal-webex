@@ -683,63 +683,6 @@ function formatDate(dateStr) {
   return d.toLocaleString();
 }
 
-/* ENTERPRISE WEBEX STATUS ENGINE */
-      function buildComponentSets(data) {
-  const components = data.components || [];
-
-  const parents = components.filter(c =>
-    c.isGroup === "Y" &&
-    TARGET_PARENT_GROUPS.some(t =>
-      normalize(c.name).includes(normalize(t))
-    )
-  );
-
-  const parentIds = new Set(parents.map(p => p.id));
-
-  const children = components.filter(c =>
-    parentIds.has(c.group_id)
-  );
-
-  const allRelevant = [...parents, ...children];
-
-  return {
-    parents,
-    allRelevant,
-    relevantIds: new Set(allRelevant.map(c => c.id))
-  };
-}
-
-async function getFilteredComponents() {
-  const cache = caches.default;
-  const cacheKey = new Request("https://webexstatus.statuspage.io/api/v2/components.json");
-
-  if (STATUS_CACHE_SECONDS > 0) {
-    const hit = await cache.match(cacheKey);
-    if (hit) {
-      const cached = await hit.json();
-      return buildComponentSets(cached);
-    }
-  }
-
-  const compRes = await fetchJsonStrict("https://webexstatus.statuspage.io/api/v2/components.json");
-  if (!compRes.ok) throw new Error("Failed to fetch components");
-
-  if (STATUS_CACHE_SECONDS > 0) {
-    await cache.put(
-      cacheKey,
-      new Response(JSON.stringify(compRes.data), {
-        headers: {
-          "content-type": "application/json",
-          "cache-control": `public, max-age=${STATUS_CACHE_SECONDS}`,
-        },
-      })
-    );
-  }
-
-  return buildComponentSets(compRes.data);
-}
-
-
 
 
       /* -----------------------------
@@ -817,6 +760,7 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
     headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
   });
 }
+
 if (url.pathname === "/api/status" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = await getSession(user.email);
@@ -826,53 +770,55 @@ if (url.pathname === "/api/status" && request.method === "GET") {
   }
 
   try {
-   const upstream = await fetch(
-  "https://webexstatus.statuspage.io/api/v2/summary.json",
-  {
-    method: "GET",
-    redirect: "manual",
-    headers: {
-      "Accept": "application/json",
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    const upstream = await fetch(
+      "https://status.webex.com/api/index.json",
+      {
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": "USSignal-Webex-Portal/1.0"
+        }
+      }
+    );
+
+    const textBody = await upstream.text();
+
+    let data;
+    try {
+      data = JSON.parse(textBody);
+    } catch {
+      return json({
+        ok: false,
+        error: "status_not_json",
+        bodyPreview: textBody.slice(0, 400)
+      }, 500);
     }
-  }
-);
 
-const text = await upstream.text();
+    if (!upstream.ok) {
+      return json({
+        ok: false,
+        error: "status_upstream_failed",
+        status: upstream.status,
+        body: data
+      }, 502);
+    }
 
-let data;
-try {
-  data = JSON.parse(text);
-} catch {
-  return json({
-    ok: false,
-    error: "status_not_json",
-    bodyPreview: text.slice(0, 400)
-  }, 500);
-}
-
-    if (!statusRes.ok) return json(statusRes, statusRes.status);
-
-    const { parents } = await getFilteredComponents();
-
-    const response = {
-      globalIndicator: statusRes.data.status?.indicator || "unknown",
-      globalDescription: statusRes.data.status?.description || null,
-      components: parents.map(p => ({
-        id: p.id,
-        name: p.name,
-        status: p.status,
-        description: p.description || null,
-        lastUpdated: formatDate(p.updated_at)
-      })),
+    return json({
+      globalIndicator: data.status?.indicator || "unknown",
+      globalDescription: data.status?.description || null,
+      components: data.components || [],
       lastUpdated: new Date().toISOString()
-    };
+    });
 
-    return json(response);
   } catch (e) {
-    return json({ error: "status_engine_failed", message: e.message }, 500);
+    return json({
+      error: "status_engine_failed",
+      message: e.message
+    }, 500);
   }
 }
+
+      
+//api/incidents block
 if (url.pathname === "/api/incidents" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = await getSession(user.email);
@@ -882,39 +828,37 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
   }
 
   try {
-    const incidentRes = await fetchJsonStrict("https://status.webex.com/api/all-incidents.json");
-    if (!incidentRes.ok) return json(incidentRes, incidentRes.status);
-
-    const { relevantIds } = await getFilteredComponents();
-
-    const filtered = (incidentRes.data.incidents || []).filter(i =>
-      (i.components || []).some(c => relevantIds.has(c.id))
+    const incidentRes = await fetch(
+      "https://status.webex.com/api/all-incidents.json",
+      { headers: { Accept: "application/json" } }
     );
 
-    const structured = filtered.map(i => ({
-      id: i.id,
-      name: i.name,
-      impact: i.impact,
-      status: i.status,
-      created: formatDate(i.created_at),
-      resolved: formatDate(i.resolved_at),
-      shortlink: i.shortlink || null,
-      updates: (i.incident_updates || []).map(u => ({
-        status: u.status,
-        body: u.body,
-        updated: formatDate(u.updated_at)
-      }))
-    }));
+    const textBody = await incidentRes.text();
 
-    return json({
-      count: structured.length,
-      incidents: structured,
-      lastUpdated: new Date().toISOString()
-    });
+    let data;
+    try {
+      data = JSON.parse(textBody);
+    } catch {
+      return json({ error: "incident_not_json" }, 500);
+    }
+
+    if (!incidentRes.ok) {
+      return json({
+        error: "incident_upstream_failed",
+        status: incidentRes.status,
+        body: data
+      }, 502);
+    }
+
+    return json(data);
+
   } catch (e) {
     return json({ error: "incident_engine_failed", message: e.message }, 500);
   }
 }
+
+      ///api/maintenance block
+      
 if (url.pathname === "/api/maintenance" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = await getSession(user.email);
@@ -924,44 +868,30 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
   }
 
   try {
-    const upcomingRes = await fetchJsonStrict("https://status.webex.com/api/upcoming-scheduled-maintenances.json");
-    const activeRes = await fetchJsonStrict("https://status.webex.com/api/upcoming-scheduled-maintenances.json");
-
-    if (!upcomingRes.ok) return json(upcomingRes, upcomingRes.status);
-    if (!activeRes.ok) return json(activeRes, activeRes.status);
-
-    const { relevantIds } = await getFilteredComponents();
-
-    const combined = [
-      ...(upcomingRes.data.scheduled_maintenances || []),
-      ...(activeRes.data.scheduled_maintenances || [])
-    ];
-
-    const filtered = combined.filter(m =>
-      (m.components || []).some(c => relevantIds.has(c.id))
+    const res = await fetch(
+      "https://status.webex.com/api/upcoming-scheduled-maintenances.json",
+      { headers: { Accept: "application/json" } }
     );
 
-    const structured = filtered.map(m => ({
-      id: m.id,
-      name: m.name,
-      status: m.status,
-      impact: m.impact,
-      scheduledFor: formatDate(m.scheduled_for),
-      scheduledUntil: formatDate(m.scheduled_until),
-      created: formatDate(m.created_at),
-      shortlink: m.shortlink || null,
-      updates: (m.incident_updates || []).map(u => ({
-        status: u.status,
-        body: u.body,
-        updated: formatDate(u.updated_at)
-      }))
-    }));
+    const textBody = await res.text();
 
-    return json({
-      count: structured.length,
-      maintenance: structured,
-      lastUpdated: new Date().toISOString()
-    });
+    let data;
+    try {
+      data = JSON.parse(textBody);
+    } catch {
+      return json({ error: "maintenance_not_json" }, 500);
+    }
+
+    if (!res.ok) {
+      return json({
+        error: "maintenance_upstream_failed",
+        status: res.status,
+        body: data
+      }, 502);
+    }
+
+    return json(data);
+
   } catch (e) {
     return json({ error: "maintenance_engine_failed", message: e.message }, 500);
   }
