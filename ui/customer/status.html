@@ -254,22 +254,20 @@ async function loadData() {
 
   try {
 
-    const res = await fetch(
-      "https://webexstatus.statuspage.io/api/v2/summary.json"
-    );
+    const data = await apiFetch("/api/status");
 
     if (!res.ok) throw new Error("Status API failed");
 
     const data = await res.json();
 
     document.getElementById("lastUpdated").textContent =
-      formatDate(data.page.updated_at);
+      formatDate(data.lastUpdated);
 
     /* ============================
        OVERALL STATUS
     ============================ */
 
-    const overall = data.status.indicator; 
+    const overall = data.globalIndicator; 
     // possible values: none, minor, major, critical
 
     const overallEl = document.getElementById("overallStatus");
