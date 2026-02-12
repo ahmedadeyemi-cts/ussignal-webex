@@ -826,7 +826,31 @@ if (url.pathname === "/api/status" && request.method === "GET") {
   }
 
   try {
-    const statusRes = await fetchJsonStrict("https://status.webex.com/api/status.json");
+   const upstream = await fetch(
+  "https://webexstatus.statuspage.io/api/v2/summary.json",
+  {
+    method: "GET",
+    redirect: "manual",
+    headers: {
+      "Accept": "application/json",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    }
+  }
+);
+
+const text = await upstream.text();
+
+let data;
+try {
+  data = JSON.parse(text);
+} catch {
+  return json({
+    ok: false,
+    error: "status_not_json",
+    bodyPreview: text.slice(0, 400)
+  }, 500);
+}
+
     if (!statusRes.ok) return json(statusRes, statusRes.status);
 
     const { parents } = await getFilteredComponents();
