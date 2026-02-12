@@ -234,6 +234,31 @@
       display: none;
       white-space: pre-wrap;
     }
+    .tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 600;
+  border-bottom: 3px solid transparent;
+}
+
+.tab.active {
+  border-bottom: 3px solid var(--accent);
+  color: var(--accent);
+}
+
+.tabpanel.hidden {
+  display: none;
+}
+
   </style>
 </head>
 
@@ -258,22 +283,7 @@
 <main>
   <div class="grid">
     
-  <div class="card">
-  <h2>Devices</h2>
-  <div id="deviceLoading" class="muted">Loading devices…</div>
 
-  <table id="deviceTable" style="display:none">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Model</th>
-        <th>Status</th>
-        <th>Last Seen</th>
-      </tr>
-    </thead>
-    <tbody id="deviceRows"></tbody>
-  </table>
-</div>
     <!-- Admin Banner -->
     <div id="admin-note" class="card" style="display:none">
       <strong>US Signal Admin View</strong>
@@ -298,41 +308,67 @@
 
       <div class="errorBox" id="errBox"></div>
     </div>
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" data-tab="licenses">Licenses</button>
+  <button class="tab" data-tab="devices">Devices</button>
+</div>
 
     <!-- License Usage -->
-    <div class="card">
-      <h2>Current License Usage</h2>
-      <div id="licenseLoading" class="muted">Loading license data…</div>
+  <section id="tab-licenses" class="tabpanel">
+  <div class="card">
+    <h2>Current License Usage</h2>
 
-      <table id="licenseTable" style="display:none">
-        <thead>
-          <tr>
-            <th>License Type</th>
-            <th class="right">Assigned</th>
-            <th class="right">Available</th>
-            <th class="right">Deficit (Avail - Assigned)</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="licenseRows"></tbody>
-      </table>
+    <div id="licenseLoading" class="muted">Loading license data…</div>
+
+    <table id="licenseTable" style="display:none">
+      <thead>
+        <tr>
+          <th>License Type</th>
+          <th class="right">Assigned</th>
+          <th class="right">Available</th>
+          <th class="right">Deficit (Avail - Assigned)</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="licenseRows"></tbody>
+    </table>
+  </div>
+
+  <!-- Email Report INSIDE licenses tab -->
+  <div class="card">
+    <h2>Email License Report</h2>
+    <p class="muted">
+      Sends a license summary for the currently selected tenant.
+    </p>
+
+    <div class="row">
+      <input id="reportEmail" placeholder="you@example.com" style="min-width:300px" />
+      <button id="btnSendEmail">Send Report</button>
     </div>
 
-    <!-- Email Report -->
-    <div class="card">
-      <h2>Email License Report</h2>
-      <p class="muted">
-        Sends a license summary for the currently selected tenant.
-      </p>
+    <div class="muted" style="margin-top:10px" id="emailStatus"></div>
+  </div>
+</section>
 
-      <div class="row">
-        <input id="reportEmail" placeholder="you@example.com" style="min-width:300px" />
-        <button id="btnSendEmail">Send Report</button>
-      </div>
+<section id="tab-devices" class="tabpanel hidden">
+  <div class="card">
+    <h2>Devices</h2>
+    <div id="deviceLoading" class="muted">Loading devices…</div>
 
-      <div class="muted" style="margin-top:10px" id="emailStatus"></div>
-    </div>
-
+    <table id="deviceTable" style="display:none">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Model</th>
+          <th>Status</th>
+          <th>Last Seen</th>
+        </tr>
+      </thead>
+      <tbody id="deviceRows"></tbody>
+    </table>
+  </div>
+</section>
   </div>
 </main>
 
@@ -506,6 +542,28 @@ return;
     SELECTED_ORG_ID = $("tenantSelect").value;
     setError(null);
   });
+function initTabs() {
+  const tabs = document.querySelectorAll(".tab");
+
+  tabs.forEach(btn => {
+    btn.addEventListener("click", async () => {
+      tabs.forEach(t => t.classList.remove("active"));
+      btn.classList.add("active");
+
+      document
+        .querySelectorAll(".tabpanel")
+        .forEach(p => p.classList.add("hidden"));
+
+      const target = document.getElementById("tab-" + btn.dataset.tab);
+      target.classList.remove("hidden");
+
+      // Lazy load devices only when clicked
+      if (btn.dataset.tab === "devices") {
+        await loadDevices();
+      }
+    });
+  });
+}
 
   // -----------------------------
   // Load licenses (calls /api/licenses?orgId=...)
@@ -609,10 +667,14 @@ return;
   }
 
   $("btnSendEmail").addEventListener("click", sendReport);
-  $("btnLoad").addEventListener("click", async () => {
+$("btnLoad").addEventListener("click", async () => {
   await loadLicenses();
-  await loadDevices();
+
+  if (document.querySelector(".tab.active").dataset.tab === "devices") {
+    await loadDevices();
+  }
 });
+
   $("btnRefresh").addEventListener("click", async () => {
     await init();
   });
@@ -649,8 +711,9 @@ async function init() {
     await loadOrgs();
     SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
 
-    await loadLicenses();
-    await loadDevices();   // ✅ moved here
+await loadLicenses();   // default landing
+initTabs();             // initialize tabs
+
 
   } catch (e) {
     setError(e?.message || String(e));
