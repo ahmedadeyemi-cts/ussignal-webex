@@ -170,7 +170,7 @@ button {
 <script>
 
 /* ============================
-   GLOBAL SAFE FETCH (PIN FIX)
+   PIN SAFE FETCH (ONLY for /api/*)
 ============================ */
 
 async function apiFetch(url) {
@@ -198,7 +198,7 @@ async function apiFetch(url) {
 }
 
 /* ============================
-   UI
+   DARK MODE
 ============================ */
 
 function toggleDark() {
@@ -209,6 +209,10 @@ function toggleDark() {
 if (localStorage.getItem("darkMode") === "true") {
   document.body.classList.add("dark");
 }
+
+/* ============================
+   HELPERS
+============================ */
 
 function formatDate(dateStr) {
   if (!dateStr) return "—";
@@ -229,7 +233,7 @@ function getStatusClass(status) {
 }
 
 /* ============================
-   Tenant
+   TENANT
 ============================ */
 
 async function loadTenant() {
@@ -243,40 +247,80 @@ async function loadTenant() {
 }
 
 /* ============================
-   Load Status
+   LOAD STATUS (DIRECT PUBLIC API)
 ============================ */
 
 async function loadData() {
-  const data = await apifetch("https://webexstatus.statuspage.io/api/v2/status.json");
-  if (!data) return;
 
-  document.getElementById("lastUpdated").textContent =
-    formatDate(data.lastUpdated);
+  try {
 
-  const overall = data.globalIndicator || "unknown";
+    const res = await fetch(
+      "https://webexstatus.statuspage.io/api/v2/summary.json"
+    );
 
-  const overallEl = document.getElementById("overallStatus");
-  overallEl.textContent = overall.toUpperCase();
-  overallEl.className = "status-pill " + getStatusClass(overall);
+    if (!res.ok) throw new Error("Status API failed");
 
-  document.getElementById("alertBanner").style.display =
-    overall === "major_outage" ? "block" : "none";
+    const data = await res.json();
 
-  const tbody = document.getElementById("tableBody");
-  tbody.innerHTML = "";
+    document.getElementById("lastUpdated").textContent =
+      formatDate(data.page.updated_at);
 
-  (data.components || []).forEach(c => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${c.name}</td>
-      <td><span class="status-pill ${getStatusClass(c.status)}">${c.status}</span></td>
-    `;
-    tbody.appendChild(tr);
-  });
+    /* ============================
+       OVERALL STATUS
+    ============================ */
+
+    const overall = data.status.indicator; 
+    // possible values: none, minor, major, critical
+
+    const overallEl = document.getElementById("overallStatus");
+
+    overallEl.textContent = overall.toUpperCase();
+
+    overallEl.className = "status-pill " + (
+      overall === "none" ? "green" :
+      overall === "minor" ? "yellow" :
+      overall === "major" || overall === "critical" ? "red" :
+      ""
+    );
+
+    document.getElementById("alertBanner").style.display =
+      (overall === "major" || overall === "critical") ? "block" : "none";
+
+    /* ============================
+       COMPONENT TABLE
+    ============================ */
+
+    const tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+
+    data.components.forEach(c => {
+
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${c.name}</td>
+        <td>
+          <span class="status-pill ${getStatusClass(c.status)}">
+            ${c.status}
+          </span>
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+  } catch (err) {
+
+    console.error("Status load failed:", err);
+
+    document.getElementById("overallStatus").textContent = "ERROR";
+    document.getElementById("overallStatus").className =
+      "status-pill red";
+  }
 }
 
 /* ============================
-   Init
+   INIT
 ============================ */
 
 loadTenant();
