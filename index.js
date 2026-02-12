@@ -116,17 +116,22 @@ async function fetchJsonStrict(urlStr, init = {}) {
   const txt = await res.text();
 
   // Must be JSON-ish AND parseable
-  if (!ct.toLowerCase().includes("application/json")) {
-    return {
-      ok: false,
-      status: 500,
-      error: "status_not_json",
-      bodyPreview: txt.slice(0, 400),
-      contentType: ct,
-      upstreamStatus: res.status,
-      upstreamUrl: urlStr,
-    };
-  }
+// Allow json OR javascript
+if (
+  !ct.toLowerCase().includes("application/json") &&
+  !ct.toLowerCase().includes("text/javascript")
+) {
+  return {
+    ok: false,
+    status: 500,
+    error: "status_not_json",
+    bodyPreview: txt.slice(0, 400),
+    contentType: ct,
+    upstreamStatus: res.status,
+    upstreamUrl: urlStr,
+  };
+}
+
 
   let data = null;
   try {
