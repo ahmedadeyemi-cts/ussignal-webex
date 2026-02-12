@@ -47,11 +47,10 @@ header {
 button {
   padding: 8px 14px;
   border-radius: 8px;
-  border: none;
+  border: 1px solid var(--border);
   cursor: pointer;
   font-weight: 600;
   background: transparent;
-  border: 1px solid var(--border);
   color: var(--text);
 }
 
@@ -160,7 +159,6 @@ button {
         <tr>
           <th>Component</th>
           <th>Status</th>
-          <th>Product Group</th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -171,20 +169,37 @@ button {
 
 <script>
 
-const TARGET_PRODUCTS = [
-  "webex user hub",
-  "webex cloud registered device",
-  "webex app",
-  "webex control hub",
-  "webex calling",
-  "gateway and solutions",
-  "dedicated instance"
-];
+/* ============================
+   GLOBAL SAFE FETCH (PIN FIX)
+============================ */
 
-function matchesProduct(name) {
-  const n = (name || "").toLowerCase();
-  return TARGET_PRODUCTS.some(p => n.includes(p));
+async function apiFetch(url) {
+  const res = await fetch(url, { credentials: "include" });
+
+  if (res.status === 401) {
+    window.location.href = "/pin";
+    return null;
+  }
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    window.location.href = "/pin";
+    return null;
+  }
+
+  if (data?.error === "pin_required" || data?.error === "pin_required_or_expired") {
+    window.location.href = "/pin";
+    return null;
+  }
+
+  return data;
 }
+
+/* ============================
+   UI
+============================ */
 
 function toggleDark() {
   document.body.classList.toggle("dark");
@@ -195,14 +210,11 @@ if (localStorage.getItem("darkMode") === "true") {
   document.body.classList.add("dark");
 }
 
-async function loadTenant() {
-  const r = await fetch("/api/me");
-  const me = await r.json();
-
-  if (me.orgName) {
-    document.getElementById("tenantBadge").innerHTML =
-      `<span class="badge">Tenant: ${me.orgName}</span>`;
-  }
+function formatDate(dateStr) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleString();
 }
 
 function getStatusClass(status) {
@@ -216,44 +228,56 @@ function getStatusClass(status) {
   }
 }
 
+/* ============================
+   Tenant
+============================ */
+
+async function loadTenant() {
+  const me = await apiFetch("/api/me");
+  if (!me) return;
+
+  if (me.orgName) {
+    document.getElementById("tenantBadge").innerHTML =
+      `<span class="badge">Tenant: ${me.orgName}</span>`;
+  }
+}
+
+/* ============================
+   Load Status
+============================ */
+
 async function loadData() {
-  const r = await fetch("/api/status");
-  const data = await r.json();
+  const data = await apiFetch("/api/status");
+  if (!data) return;
 
   document.getElementById("lastUpdated").textContent =
-    new Date().toLocaleString();
+    formatDate(data.lastUpdated);
 
-  const overall = data.status?.indicator || "unknown";
+  const overall = data.globalIndicator || "unknown";
+
   const overallEl = document.getElementById("overallStatus");
   overallEl.textContent = overall.toUpperCase();
-  overallEl.className = "status-pill " + (
-    overall === "green" ? "green" :
-    overall === "yellow" ? "yellow" :
-    overall === "red" ? "red" : ""
-  );
+  overallEl.className = "status-pill " + getStatusClass(overall);
 
-  if (overall === "red") {
-    document.getElementById("alertBanner").style.display = "block";
-  } else {
-    document.getElementById("alertBanner").style.display = "none";
-  }
+  document.getElementById("alertBanner").style.display =
+    overall === "major_outage" ? "block" : "none";
 
   const tbody = document.getElementById("tableBody");
   tbody.innerHTML = "";
 
-  const components = (data.components || [])
-    .filter(c => matchesProduct(c.name));
-
-  components.forEach(c => {
+  (data.components || []).forEach(c => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${c.name}</td>
       <td><span class="status-pill ${getStatusClass(c.status)}">${c.status}</span></td>
-      <td>${c.product_group || "-"}</td>
     `;
     tbody.appendChild(tr);
   });
 }
+
+/* ============================
+   Init
+============================ */
 
 loadTenant();
 loadData();
