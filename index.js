@@ -826,7 +826,7 @@ if (url.pathname === "/api/status" && request.method === "GET") {
   }
 
   try {
-    const statusRes = await fetchJsonStrict("https://webexstatus.statuspage.io/api/v2/status.json");
+    const statusRes = await fetchJsonStrict("https://status.webex.com/api/status.json");
     if (!statusRes.ok) return json(statusRes, statusRes.status);
 
     const { parents } = await getFilteredComponents();
@@ -858,7 +858,7 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
   }
 
   try {
-    const incidentRes = await fetchJsonStrict("https://webexstatus.statuspage.io/api/v2/incidents.json");
+    const incidentRes = await fetchJsonStrict("https://status.webex.com/api/all-incidents.json");
     if (!incidentRes.ok) return json(incidentRes, incidentRes.status);
 
     const { relevantIds } = await getFilteredComponents();
@@ -900,8 +900,8 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
   }
 
   try {
-    const upcomingRes = await fetchJsonStrict("https://webexstatus.statuspage.io/api/v2/scheduled-maintenances.json");
-    const activeRes = await fetchJsonStrict("https://webexstatus.statuspage.io/api/v2/scheduled-maintenances.json");
+    const upcomingRes = await fetchJsonStrict("https://status.webex.com/api/upcoming-scheduled-maintenances.json");
+    const activeRes = await fetchJsonStrict("https://status.webex.com/api/upcoming-scheduled-maintenances.json");
 
     if (!upcomingRes.ok) return json(upcomingRes, upcomingRes.status);
     if (!activeRes.ok) return json(activeRes, activeRes.status);
