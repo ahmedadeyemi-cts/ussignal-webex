@@ -650,73 +650,61 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
 ----------------------------- */
 //TBD
 
- if (url.pathname === "/api/status" && request.method === "GET") {
-  const user = getCurrentUser(request);
+/* =====================================================
+   ENTERPRISE WEBEX STATUS ENGINE
+   Parent Group Matching Architecture
+===================================================== */
 
-  return await fetchJsonCached(
-    request,
-    "https://status.webex.com/api/components.json"
-  );
+const TARGET_PARENT_GROUPS = [
+  "Webex User Hub",
+  "Webex Cloud Registered Devices",
+  "Webex App",
+  "Webex Control Hub",
+  "Webex Calling",
+  "Gateway and Solutions",
+  "Dedicated Instance",
+  "UCM Cloud"
+];
+
+function normalize(str) {
+  return (str || "").toLowerCase().trim();
 }
 
-if (url.pathname === "/api/incidents" && request.method === "GET") {
-  const user = getCurrentUser(request);
-
-  return await fetchJsonCached(
-    request,
-    "https://status.webex.com/api/all-incidents.json"
-  );
+function formatDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleString();
 }
 
+async function getFilteredComponents() {
+  const compRes = await fetchJsonStrict("https://status.webex.com/api/components.json");
+  if (!compRes.ok) throw new Error("Failed to fetch components");
 
-if (url.pathname === "/api/maintenance" && request.method === "GET") {
+  const components = compRes.data.components || [];
 
-  const user = getCurrentUser(request);
-  const session = await getSession(user.email);
-
-  if (!user.isAdmin && (!session || !session.orgId)) {
-    return json({ error: "pin_required" }, 401);
-  }
-
-  // ✅ Use hardened + cached fetch
-  const upstream = await fetchJsonCached(
-    request,
-    "https://status.webex.com/api/index.json"
+  const parents = components.filter(c =>
+    c.isGroup === "Y" &&
+    TARGET_PARENT_GROUPS.some(t =>
+      normalize(c.name).includes(normalize(t))
+    )
   );
 
-  const payload = await upstream.json();
+  const parentIds = new Set(parents.map(p => p.id));
 
-  if (!upstream.ok) {
-    return json(payload, upstream.status);
-  }
-
-  const data = payload;
-
-  const TARGET_PRODUCTS = [
-    "webex user hub",
-    "webex cloud registered device",
-    "webex app",
-    "webex control hub",
-    "webex calling",
-    "gateway",
-    "dedicated instance"
-  ];
-
-  function matchesProduct(name) {
-    const n = (name || "").toLowerCase();
-    return TARGET_PRODUCTS.some(p => n.includes(p));
-  }
-
-  const maintenance = (data.scheduled_maintenances || []).filter(m =>
-    m.name && matchesProduct(m.name)
+  const children = components.filter(c =>
+    parentIds.has(c.group_id)
   );
 
-  return json({
-    lastUpdated: new Date().toISOString(),
-    statusIndicator: data.status?.indicator || "unknown",
-    maintenance
-  });
+  const allRelevant = [...parents, ...children];
+
+  return {
+    parents,
+    allRelevant,
+    relevantIds: new Set(allRelevant.map(c => c.id))
+  };
 }
+
 
 
       /* -----------------------------
@@ -792,6 +780,108 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
   return new Response(JSON.stringify(out, null, 2), {
     status: 200,
     headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+  });
+}
+if (url.pathname === "/api/status" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  const session = await getSession(user.email);
+
+  if (!user.isAdmin && (!session || !session.orgId)) {
+    return json({ error: "pin_required" }, 401);
+  }
+
+  const statusRes = await fetchJsonStrict("https://status.webex.com/api/status.json");
+  if (!statusRes.ok) return json(statusRes, statusRes.status);
+
+  const { parents } = await getFilteredComponents();
+
+  return json({
+    pageIndicator: statusRes.data.status?.indicator || "unknown",
+    components: parents.map(p => ({
+      id: p.id,
+      name: p.name,
+      status: p.status,
+      productGroup: p.product_group,
+      lastUpdated: formatDate(p.updated_at)
+    })),
+    lastUpdated: new Date().toISOString()
+  });
+}
+if (url.pathname === "/api/incidents" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  const session = await getSession(user.email);
+
+  if (!user.isAdmin && (!session || !session.orgId)) {
+    return json({ error: "pin_required" }, 401);
+  }
+
+  const incidentRes = await fetchJsonStrict("https://status.webex.com/api/all-incidents.json");
+  if (!incidentRes.ok) return json(incidentRes, incidentRes.status);
+
+  const { relevantIds } = await getFilteredComponents();
+
+  const incidents = (incidentRes.data.incidents || []).filter(i =>
+    (i.components || []).some(c => relevantIds.has(c.id))
+  );
+
+  return json({
+    incidents: incidents.map(i => ({
+      id: i.id,
+      name: i.name,
+      impact: i.impact,
+      status: i.status,
+      created: formatDate(i.created_at),
+      resolved: formatDate(i.resolved_at),
+      updates: (i.incident_updates || []).map(u => ({
+        status: u.status,
+        body: u.body,
+        updated: formatDate(u.updated_at)
+      }))
+    })),
+    lastUpdated: new Date().toISOString()
+  });
+}
+if (url.pathname === "/api/maintenance" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  const session = await getSession(user.email);
+
+  if (!user.isAdmin && (!session || !session.orgId)) {
+    return json({ error: "pin_required" }, 401);
+  }
+
+  const upcomingRes = await fetchJsonStrict("https://status.webex.com/api/upcoming-scheduled-maintenances.json");
+  const activeRes = await fetchJsonStrict("https://status.webex.com/api/active-scheduled-maintenances.json");
+
+  if (!upcomingRes.ok) return json(upcomingRes, upcomingRes.status);
+  if (!activeRes.ok) return json(activeRes, activeRes.status);
+
+  const { relevantIds } = await getFilteredComponents();
+
+  const combined = [
+    ...(upcomingRes.data.scheduled_maintenances || []),
+    ...(activeRes.data.scheduled_maintenances || [])
+  ];
+
+  const filtered = combined.filter(m =>
+    (m.components || []).some(c => relevantIds.has(c.id))
+  );
+
+  return json({
+    maintenance: filtered.map(m => ({
+      id: m.id,
+      name: m.name,
+      status: m.status,
+      impact: m.impact,
+      changeRef: m.change || null,
+      created: formatDate(m.created_at),
+      resolved: formatDate(m.resolved_at),
+      updates: (m.incident_updates || []).map(u => ({
+        status: u.status,
+        body: u.body,
+        updated: formatDate(u.updated_at)
+      }))
+    })),
+    lastUpdated: new Date().toISOString()
   });
 }
 
