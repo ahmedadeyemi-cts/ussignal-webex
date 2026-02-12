@@ -710,7 +710,7 @@ function formatDate(dateStr) {
 
 async function getFilteredComponents() {
   const cache = caches.default;
-  const cacheKey = new Request("https://status.webex.com/api/components.json");
+  const cacheKey = new Request("https://status.webex.com/api/v2/components.json");
 
   if (STATUS_CACHE_SECONDS > 0) {
     const hit = await cache.match(cacheKey);
@@ -720,7 +720,7 @@ async function getFilteredComponents() {
     }
   }
 
-  const compRes = await fetchJsonStrict("https://status.webex.com/api/components.json");
+  const compRes = await fetchJsonStrict("https://status.webex.com/api/v2/components.json");
   if (!compRes.ok) throw new Error("Failed to fetch components");
 
   if (STATUS_CACHE_SECONDS > 0) {
@@ -825,7 +825,7 @@ if (url.pathname === "/api/status" && request.method === "GET") {
   }
 
   try {
-    const statusRes = await fetchJsonStrict("https://status.webex.com/api/status.json");
+    const statusRes = await fetchJsonStrict("https://status.webex.com/api/v2/status.json");
     if (!statusRes.ok) return json(statusRes, statusRes.status);
 
     const { parents } = await getFilteredComponents();
@@ -857,7 +857,7 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
   }
 
   try {
-    const incidentRes = await fetchJsonStrict("https://status.webex.com/api/all-incidents.json");
+    const incidentRes = await fetchJsonStrict("https://status.webex.com/api/v2/incidents.json");
     if (!incidentRes.ok) return json(incidentRes, incidentRes.status);
 
     const { relevantIds } = await getFilteredComponents();
@@ -900,7 +900,7 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
 
   try {
     const upcomingRes = await fetchJsonStrict("https://status.webex.com/api/upcoming-scheduled-maintenances.json");
-    const activeRes = await fetchJsonStrict("https://status.webex.com/api/active-scheduled-maintenances.json");
+    const activeRes = await fetchJsonStrict("https://status.webex.com/api/v2/scheduled-maintenances.json");
 
     if (!upcomingRes.ok) return json(upcomingRes, upcomingRes.status);
     if (!activeRes.ok) return json(activeRes, activeRes.status);
