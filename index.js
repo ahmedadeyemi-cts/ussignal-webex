@@ -1107,7 +1107,27 @@ const res = await fetch(licenseUrl, {
 });
 
 
-  const data = await res.json();
+const textBody = await res.text();
+
+if (!res.ok) {
+  return json({
+    error: "webex_license_failed",
+    status: res.status,
+    bodyPreview: textBody.slice(0, 500)
+  }, 500);
+}
+
+let data;
+try {
+  data = JSON.parse(textBody);
+} catch {
+  return json({
+    error: "webex_license_not_json",
+    status: res.status,
+    bodyPreview: textBody.slice(0, 500)
+  }, 500);
+}
+
 
   if (!res.ok) {
     return json({
