@@ -761,6 +761,21 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
     headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
   });
 }
+      if (url.pathname === "/api/debug/token-test") {
+  const token = await getAccessToken();
+
+  const test = await fetch("https://webexapis.com/v1/organizations", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const text = await test.text();
+
+  return json({
+    status: test.status,
+    body: text.slice(0, 500)
+  });
+}
+
 //API/STATUS
 if (url.pathname === "/api/status" && request.method === "GET") {
 
