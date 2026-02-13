@@ -1128,15 +1128,6 @@ try {
   }, 500);
 }
 
-
-  if (!res.ok) {
-    return json({
-      error: "webex_license_failed",
-      status: res.status,
-      body: data
-    }, 500);
-  }
-
   const licenses = data.items || [];
 
 const normalized = licenses.map(l => {
