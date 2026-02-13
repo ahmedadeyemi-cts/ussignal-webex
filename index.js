@@ -1215,9 +1215,9 @@ if (requestedOrgId && user.isAdmin) {
 }
   // Begining of New Add
 const licRes = await fetch(licenseUrl.toString(), {
-  method: "GET",
-  headers: request.headers
+  method: "GET"
 });
+
 
 const licText = await licRes.text();
 
