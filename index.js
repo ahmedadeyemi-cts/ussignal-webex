@@ -286,7 +286,45 @@ async function fetchJsonCached(request, urlStr) {
       return data.access_token;
     }
  
-    
+async function getAnalyticsAccessToken() {
+  const cached = await env.WEBEX.get("analytics_access_token", { type: "json" });
+
+  if (cached && cached.token && cached.expires_at > nowMs()) {
+    return cached.token;
+  }
+
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    client_id: env.ANALYTICS_CLIENT_ID,
+    client_secret: env.ANALYTICS_CLIENT_SECRET,
+    refresh_token: env.ANALYTICS_REFRESH_TOKEN,
+  });
+
+  const res = await fetch("https://idbroker.webex.com/idb/oauth2/v1/access_token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error("Analytics token refresh failed");
+  }
+
+  const expiresAt = nowMs() + data.expires_in * 1000 - 60_000;
+
+  await env.WEBEX.put(
+    "analytics_access_token",
+    JSON.stringify({
+      token: data.access_token,
+      expires_at: expiresAt,
+    })
+  );
+
+  return data.access_token;
+}
+
     /* =====================================================
        Identity helpers
     ===================================================== */
@@ -1355,6 +1393,186 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
     count: data.items?.length || 0,
     items: data.items || []
   });
+}
+/* =====================================================
+   CUSTOMER-SCOPED ROUTES
+   Mirrors Partner Portal contract
+===================================================== */
+
+if (url.pathname.startsWith("/api/customer/")) {
+
+  const user = getCurrentUser(request);
+  const session = await getSession(user.email);
+
+  if (!user.isAdmin) {
+    if (!session || !session.orgId) {
+      return json({ ok: false, error: "pin_required" }, 401);
+    }
+
+    if (session.expiresAt && session.expiresAt <= nowMs()) {
+      await clearSession(user.email);
+      return json({ ok: false, error: "pin_expired" }, 401);
+    }
+  }
+
+  const parts = url.pathname.split("/");
+  const key = parts[3]; // customer key
+  const action = parts[4]; // licenses/devices/analytics/etc
+
+  const resolvedOrgId = user.isAdmin ? key : session.orgId;
+
+  /* ---------- LICENSES ---------- */
+if (action === "licenses") {
+  const token = await getAccessToken();
+
+  const res = await fetch(
+    `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(resolvedOrgId)}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  const textBody = await res.text();
+
+  if (!res.ok) {
+    return json({
+      ok: false,
+      error: "webex_license_failed",
+      status: res.status,
+      bodyPreview: textBody.slice(0, 500)
+    }, 500);
+  }
+
+  let data;
+  try {
+    data = JSON.parse(textBody);
+  } catch {
+    return json({
+      ok: false,
+      error: "webex_license_not_json"
+    }, 500);
+  }
+
+  const normalized = (data.items || []).map(l => {
+    const rawTotal = l.totalUnits;
+    const rawConsumed = l.consumedUnits;
+
+    const total = (rawTotal === null || rawTotal === undefined)
+      ? null
+      : Number(rawTotal);
+
+    const consumed = Number(rawConsumed ?? 0);
+
+    const isUnlimited = total === -1;
+    const hasTotal = Number.isFinite(total);
+
+    const available = isUnlimited
+      ? -1
+      : (hasTotal ? Math.max(0, total - consumed) : null);
+
+    const deficit = isUnlimited
+      ? 0
+      : (hasTotal ? Math.max(0, consumed - total) : 0);
+
+    let status = "OK";
+    if (isUnlimited) status = "UNLIMITED";
+    else if (!hasTotal) status = "UNKNOWN";
+    else if (deficit > 0) status = "DEFICIT";
+    else if (available === 0) status = "FULL";
+
+    return {
+      id: l.id,
+      name: l.name,
+      total,
+      consumed,
+      available,
+      deficit,
+      status
+    };
+  });
+
+  const summary = {
+    totalLicenses: normalized.length,
+    totalConsumed: normalized.reduce((a, l) => a + (l.consumed || 0), 0),
+    totalDeficit: normalized.reduce((a, l) => a + (l.deficit || 0), 0),
+    hasDeficit: normalized.some(l => l.status === "DEFICIT")
+  };
+
+  return json({
+    ok: true,
+    orgId: resolvedOrgId,
+    summary,
+    items: normalized
+  });
+}
+
+  /* ---------- DEVICES ---------- */
+  if (action === "devices") {
+    const token = await getAccessToken();
+
+    const res = await fetch(
+      `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(resolvedOrgId)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const data = await res.json();
+
+    return json({
+      ok: true,
+      devices: data.items || []
+    });
+  }
+
+  /* ---------- ANALYTICS ---------- */
+  if (action === "analytics") {
+    const token = await getAnalyticsAccessToken();
+
+    const res = await fetch(
+      `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(resolvedOrgId)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const data = await res.json();
+
+    return json({
+      ok: true,
+      analytics: data
+    });
+  }
+
+  /* ---------- CDR ---------- */
+  if (action === "cdr") {
+    const token = await getAnalyticsAccessToken();
+
+    const res = await fetch(
+      `https://webexapis.com/v1/cdr?orgId=${encodeURIComponent(resolvedOrgId)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const data = await res.json();
+
+    return json({
+      ok: true,
+      records: data.items || []
+    });
+  }
+
+  /* ---------- PSTN HEALTH ---------- */
+  if (action === "pstn-health") {
+    const token = await getAccessToken();
+
+    const res = await fetch(
+      `https://webexapis.com/v1/telephony/config/locations?orgId=${encodeURIComponent(resolvedOrgId)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const data = await res.json();
+
+    return json({
+      ok: true,
+      locations: data.items || []
+    });
+  }
+
+  return json({ ok: false, error: "unknown_customer_action" }, 404);
 }
 
       /* -----------------------------
