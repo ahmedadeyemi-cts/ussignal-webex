@@ -325,7 +325,11 @@
   <button class="tab active" data-tab="licenses">Licenses</button>
   <button class="tab" data-tab="devices">Devices</button>
 </div>
-<!-- SUMMARY ROW (matches working layout idea) -->
+
+
+    <!-- License Usage -->
+  <section id="tab-licenses" class="tabpanel">
+    <!-- SUMMARY ROW (matches working layout idea) -->
 <div class="card">
   <div class="row" style="justify-content:space-between; align-items:center;">
     <h2 style="margin:0;">Deficient SKUs</h2>
@@ -350,9 +354,20 @@
     </tbody>
   </table>
 </div>
+  <!-- Email Report INSIDE licenses tab -->
+  <div class="card">
+    <h2>Email License Report</h2>
+    <p class="muted">
+      Sends a license summary for the currently selected tenant.
+    </p>
 
-    <!-- License Usage -->
-  <section id="tab-licenses" class="tabpanel">
+    <div class="row">
+      <input id="reportEmail" placeholder="you@example.com" style="min-width:300px" />
+      <button id="btnSendEmail">Send Report</button>
+    </div>
+
+    <div class="muted" style="margin-top:10px" id="emailStatus"></div>
+  </div>
   <div class="card">
     <h2>Current License Usage</h2>
 
@@ -373,20 +388,6 @@
     </table>
   </div>
 
-  <!-- Email Report INSIDE licenses tab -->
-  <div class="card">
-    <h2>Email License Report</h2>
-    <p class="muted">
-      Sends a license summary for the currently selected tenant.
-    </p>
-
-    <div class="row">
-      <input id="reportEmail" placeholder="you@example.com" style="min-width:300px" />
-      <button id="btnSendEmail">Send Report</button>
-    </div>
-
-    <div class="muted" style="margin-top:10px" id="emailStatus"></div>
-  </div>
 </section>
 
 <section id="tab-devices" class="tabpanel hidden">
@@ -633,38 +634,97 @@ function initTabs() {
 
 
     const items = (r.data && r.data.items) ? r.data.items : [];
-    if (!Array.isArray(items) || items.length === 0) {
-      $("licenseLoading").textContent = "No license data returned for this tenant.";
-      return;
-    }
+  if (!Array.isArray(items) || items.length === 0) {
+  $("licenseLoading").textContent = "No license data returned for this tenant.";
+  renderDeficits([]);
+  return;
+}
 
     $("licenseLoading").style.display = "none";
     $("licenseTable").style.display = "table";
 
     // Expected item shape:
     // { name, consumed, available, status }
-    const rows = items.map(l => {
-      const assigned = Number(l.consumed ?? l.assigned ?? 0);
-      const available = Number(l.available ?? 0);
-      const deficit = available - assigned;
-      const deficitCellClass = deficit < 0 ? "danger" : "";
+  const rows = items.map(l => {
+  const name = l.name || l.licenseName || "Unknown";
 
-      const status = l.status || (deficit < 0 ? "DEFICIT" : "OK");
-      const name = l.name || l.licenseName || "Unknown";
+  const totalRaw = l.total;
+  const usedRaw = l.consumed ?? l.assigned ?? 0;
 
-      return `
-        <tr>
-          <td>${escapeHtml(name)}</td>
-          <td class="right">${fmtInt(assigned)}</td>
-          <td class="right">${fmtInt(available)}</td>
-          <td class="right ${deficitCellClass}">${fmtInt(deficit)}</td>
-          <td>${escapeHtml(String(status))}</td>
-        </tr>
-      `;
-    }).join("");
+  const total = (totalRaw === null || totalRaw === undefined) ? null : Number(totalRaw);
+  const used = Number(usedRaw ?? 0);
+
+  // available: -1 means Unlimited (per your worker)
+  const available = (l.available === null || l.available === undefined) ? null : Number(l.available);
+
+  // deficit is already normalized in the worker (0+). If missing, compute safely.
+  const deficit = Number.isFinite(Number(l.deficit))
+    ? Number(l.deficit)
+    : (Number.isFinite(total) && total !== -1 ? Math.max(0, used - total) : 0);
+
+  const status = l.status || "OK";
+
+  const isDeficit = deficit > 0 || status === "DEFICIT";
+  const deficitCellClass = isDeficit ? "danger" : "";
+
+  const totalDisplay = (total === -1) ? "Unlimited" : (Number.isFinite(total) ? fmtInt(total) : "—");
+  const availDisplay = (available === -1) ? "Unlimited" : (Number.isFinite(available) ? fmtInt(available) : "—");
+
+  return `
+    <tr>
+      <td>${escapeHtml(name)}</td>
+      <td class="right">${totalDisplay}</td>
+      <td class="right">${fmtInt(used)}</td>
+      <td class="right">${availDisplay}</td>
+      <td class="right ${deficitCellClass}">${fmtInt(deficit)}</td>
+      <td>${escapeHtml(String(status))}</td>
+    </tr>
+  `;
+}).join("");
+
 
     $("licenseRows").innerHTML = rows;
+    renderDeficits(items);
   }
+function renderDeficits(items) {
+  const tbody = $("deficitRows");
+  if (!tbody) return;
+
+  // Only show deficit > 0
+  const deficient = (items || []).filter(l => Number(l.deficit || 0) > 0);
+
+  if (!deficient.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="muted">No deficient SKUs 🎉</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = deficient.map(l => {
+    const name = l.name || l.licenseName || "Unknown";
+
+    const total = (l.total === -1) ? "Unlimited" : (Number.isFinite(Number(l.total)) ? fmtInt(Number(l.total)) : "—");
+    const used = fmtInt(Number(l.consumed ?? 0));
+    const available = (l.available === -1) ? "Unlimited" : (Number.isFinite(Number(l.available)) ? fmtInt(Number(l.available)) : "—");
+    const needed = fmtInt(Number(l.deficit || 0));
+
+    return `
+      <tr>
+        <td>${escapeHtml(name)}</td>
+        <td class="right">${available}</td>
+        <td class="right">${total}</td>
+        <td class="right">${used}</td>
+        <td class="right"><span class="badge badge-danger">${needed}</span></td>
+      </tr>
+    `;
+  }).join("");
+}
+
+  const btnEmailAlert = $("btnEmailAlert");
+if (btnEmailAlert) {
+  btnEmailAlert.addEventListener("click", async () => {
+    // Sends to the email in the field (defaulted to ME.email)
+    await sendReport();
+  });
+}
 
   // -----------------------------
   // Send email (calls /api/licenses/email)
@@ -681,7 +741,12 @@ function initTabs() {
 
     const orgId = SELECTED_ORG_ID || null;
 
-    $("btnSendEmail").disabled = true;
+    const btn1 = $("btnSendEmail");
+    const btn2 = $("btnEmailAlert");
+
+    if (btn1) btn1.disabled = true;
+    if (btn2) btn2.disabled = true;
+
     $("emailStatus").textContent = "Sending…";
 
     const r = await api("/api/licenses/email", {
@@ -690,7 +755,8 @@ function initTabs() {
       body: JSON.stringify({ email, orgId }),
     });
 
-    $("btnSendEmail").disabled = false;
+   if (btn1) btn1.disabled = false;
+if (btn2) btn2.disabled = false;
 
     if (!r.ok) {
       const msg =
@@ -748,9 +814,9 @@ async function init() {
 
     await loadOrgs();
     SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
-
-await loadLicenses();   // default landing
 initTabs();             // initialize tabs
+await loadLicenses();   // default landing
+
 
 
   } catch (e) {
