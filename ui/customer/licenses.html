@@ -258,7 +258,19 @@
 .tabpanel.hidden {
   display: none;
 }
+.badge {
+  display:inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid var(--border);
+}
 
+.badge-danger {
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+}
   </style>
 </head>
 
@@ -313,6 +325,31 @@
   <button class="tab active" data-tab="licenses">Licenses</button>
   <button class="tab" data-tab="devices">Devices</button>
 </div>
+<!-- SUMMARY ROW (matches working layout idea) -->
+<div class="card">
+  <div class="row" style="justify-content:space-between; align-items:center;">
+    <h2 style="margin:0;">Deficient SKUs</h2>
+    <button id="btnEmailAlert" class="secondary">Send License Alert Email</button>
+  </div>
+  <div class="muted" style="margin-top:6px;">
+    Only shows SKUs that are in deficit based on the current tenant selection.
+  </div>
+
+  <table id="deficitTable" style="margin-top:12px;">
+    <thead>
+      <tr>
+        <th>SKU</th>
+        <th class="right">Available</th>
+        <th class="right">Total</th>
+        <th class="right">Used</th>
+        <th class="right">Licenses Needed</th>
+      </tr>
+    </thead>
+    <tbody id="deficitRows">
+      <tr><td colspan="5" class="muted">Loading…</td></tr>
+    </tbody>
+  </table>
+</div>
 
     <!-- License Usage -->
   <section id="tab-licenses" class="tabpanel">
@@ -322,15 +359,16 @@
     <div id="licenseLoading" class="muted">Loading license data…</div>
 
     <table id="licenseTable" style="display:none">
-      <thead>
-        <tr>
-          <th>License Type</th>
-          <th class="right">Assigned</th>
-          <th class="right">Available</th>
-          <th class="right">Deficit (Avail - Assigned)</th>
-          <th>Status</th>
-        </tr>
-      </thead>
+     <thead>
+  <tr>
+    <th>SKU</th>
+    <th class="right">Total</th>
+    <th class="right">Used</th>
+    <th class="right">Available</th>
+    <th class="right">Deficit</th>
+    <th>Status</th>
+  </tr>
+</thead>
       <tbody id="licenseRows"></tbody>
     </table>
   </div>
