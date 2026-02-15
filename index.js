@@ -103,6 +103,14 @@ function cfgIntAllowZero(name, def) {
 
 const STATUS_CACHE_SECONDS = cfgIntAllowZero("STATUS_CACHE_SECONDS", 60); // 0 disables cache
 
+  function normalizeOrgIdParam(v) {
+  const s = String(v || "").trim();
+  if (!s) return null;
+  const low = s.toLowerCase();
+  if (low === "null" || low === "undefined") return null;
+  return s;
+}
+
 async function fetchJsonStrict(urlStr, init = {}) {
   const res = await fetch(urlStr, {
     ...init,
@@ -562,12 +570,6 @@ async function renderCustomerHubHTML() {
   return await res.text();
 }
 
-  if (!res.ok) {
-    throw new Error("Failed to load admin hub UI");
-  }
-
-  return await res.text();
-}
 async function renderAdminHubHTML() {
   const res = await fetch(
     "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/hub.html"
@@ -856,11 +858,6 @@ if (url.pathname === "/customer/status" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
-if (url.pathname === "/admin" && request.method === "GET") {
-  return text(await renderAdminHubHTML(), 200, {
-    "content-type": "text/html; charset=utf-8",
-  });
-}
 
 /* -----------------------------
    Customer UI: Incidents
@@ -1080,10 +1077,14 @@ let resolvedOrg = null;
 if (user.isAdmin) {
   resolvedOrg = null; // admin sees all
 } else if (session && session.orgId) {
-  resolvedOrg = {
-    orgId: session.orgId,
-    orgName: session.orgName
-  };
+  if (session.expiresAt && session.expiresAt <= nowMs()) {
+    await clearSession(user.email);
+  } else {
+    resolvedOrg = {
+      orgId: session.orgId,
+      orgName: session.orgName
+    };
+  }
 }
 
 return json({
@@ -1305,7 +1306,7 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
   const user = getCurrentUser(request);
   const token = await getAccessToken();
   const session = await getSession(user.email);
-  const requestedOrgId = url.searchParams.get("orgId");
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
   let resolvedOrgId = null;
 
@@ -1539,7 +1540,7 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
   const user = getCurrentUser(request);
   const token = await getAccessToken();
   const session = await getSession(user.email);
-  const requestedOrgId = url.searchParams.get("orgId");
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
   if (session?.expiresAt && session.expiresAt <= nowMs()) {
   await clearSession(user.email);
   return json({ error: "pin_required_or_expired" }, 401);
@@ -1616,7 +1617,16 @@ if (url.pathname.startsWith("/api/customer/")) {
   const key = parts[3]; // customer key
   const action = parts[4]; // licenses/devices/analytics/etc
 
-  const resolvedOrgId = user.isAdmin ? key : session.orgId;
+  let resolvedOrgId = null;
+
+if (user.isAdmin) {
+  // Look up orgId from KV using key mapping
+  const mapping = await env.ORG_MAP_KV.get(`org:${key}`, { type: "json" });
+  resolvedOrgId = mapping?.orgId || null;
+} else {
+  resolvedOrgId = session.orgId;
+}
+
 
   /* ---------- LICENSES ---------- */
 if (action === "licenses") {
