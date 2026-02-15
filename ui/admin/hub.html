@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Signal | Admin Hub</title>
+
+<style>
+:root{
+  --bg:#f4f6f9;
+  --card:#ffffff;
+  --text:#1e293b;
+  --muted:#64748b;
+  --accent:#0f62fe;
+  --danger:#dc2626;
+  --success:#16a34a;
+}
+
+[data-theme="dark"]{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --text:#e2e8f0;
+  --muted:#94a3b8;
+  --accent:#3b82f6;
+  --danger:#ef4444;
+  --success:#22c55e;
+}
+
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:18px 32px;
+  background:var(--card);
+  box-shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+
+.logo{
+  font-weight:700;
+  font-size:20px;
+}
+
+.header-actions button{
+  margin-left:10px;
+}
+
+button{
+  padding:8px 14px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+  font-weight:500;
+}
+
+.btn-primary{
+  background:var(--accent);
+  color:white;
+}
+
+.btn-outline{
+  background:none;
+  border:1px solid var(--muted);
+  color:var(--text);
+}
+
+.container{
+  padding:30px;
+  max-width:1400px;
+  margin:auto;
+}
+
+.section-title{
+  font-size:18px;
+  font-weight:600;
+  margin-bottom:15px;
+}
+
+.grid{
+  display:grid;
+  gap:20px;
+}
+
+.grid-4{
+  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+}
+
+.card{
+  background:var(--card);
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 2px 12px rgba(0,0,0,0.05);
+}
+
+.card h3{
+  margin:0 0 8px 0;
+  font-size:14px;
+  color:var(--muted);
+}
+
+.metric{
+  font-size:28px;
+  font-weight:600;
+}
+
+.danger{ color:var(--danger); }
+.success{ color:var(--success); }
+
+.table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.table th, .table td{
+  padding:12px;
+  border-bottom:1px solid rgba(0,0,0,0.08);
+  text-align:left;
+}
+
+.loading{
+  text-align:center;
+  padding:40px;
+  color:var(--muted);
+}
+
+.session{
+  font-size:13px;
+  color:var(--muted);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">US Signal | Partner Admin Hub</div>
+
+  <div class="header-actions">
+    <span class="session" id="sessionTimer"></span>
+    <button class="btn-outline" id="btnTheme">Dark Mode</button>
+    <button class="btn-primary" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Executive Overview -->
+  <div class="section-title">Executive Summary</div>
+  <div class="grid grid-4">
+
+    <div class="card">
+      <h3>Total Partner Orgs</h3>
+      <div class="metric" id="totalOrgs">—</div>
+    </div>
+
+    <div class="card">
+      <h3>License Deficits</h3>
+      <div class="metric danger" id="totalDeficits">—</div>
+    </div>
+
+    <div class="card">
+      <h3>Offline Devices</h3>
+      <div class="metric danger" id="offlineDevices">—</div>
+    </div>
+
+    <div class="card">
+      <h3>Total Call Volume (7d)</h3>
+      <div class="metric success" id="totalCalls">—</div>
+    </div>
+
+  </div>
+
+  <br><br>
+
+  <!-- Multi-Tenant Health -->
+  <div class="section-title">Multi-Tenant Health Dashboard</div>
+  <div class="card">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Organization</th>
+          <th>License Status</th>
+          <th>Offline Devices</th>
+          <th>Call Volume</th>
+        </tr>
+      </thead>
+      <tbody id="tenantTable">
+        <tr><td colspan="4" class="loading">Loading tenants...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <br><br>
+
+  <!-- PIN Management -->
+  <div class="section-title">PIN Management</div>
+  <div class="card">
+    <button class="btn-primary" onclick="openPinManager()">Manage Tenant PINs</button>
+  </div>
+
+  <br><br>
+
+  <!-- Tenant Resolution Inspector -->
+  <div class="section-title">Tenant Resolution Inspector</div>
+  <div class="card">
+    <input id="inspectEmail" placeholder="Enter email" />
+    <button class="btn-outline" onclick="resolveTenant()">Inspect</button>
+    <pre id="inspectResult"></pre>
+  </div>
+
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+let SESSION_TIMER;
+
+/* -----------------------------
+   Theme
+------------------------------ */
+function loadTheme(){
+  const saved = localStorage.getItem("uiTheme") || "light";
+  document.documentElement.setAttribute("data-theme", saved);
+  $("btnTheme").textContent =
+    saved === "dark" ? "Light Mode" : "Dark Mode";
+}
+
+$("btnTheme").onclick = () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur === "dark" ? "light" : "dark";
+  localStorage.setItem("uiTheme", next);
+  loadTheme();
+};
+
+loadTheme();
+
+/* -----------------------------
+   API Helper
+------------------------------ */
+async function api(path){
+  const res = await fetch(path);
+  if (!res.ok) {
+    if (res.status === 401) {
+      window.location.href = "/pin";
+      return null;
+    }
+    throw new Error("API failed: " + path);
+  }
+  return await res.json();
+}
+
+/* -----------------------------
+   Load Global Summary
+------------------------------ */
+async function loadAdminSummary(){
+
+  const data = await api("/api/admin/global-summary");
+  if (!data) return;
+
+  $("totalOrgs").textContent = data.totalOrgs;
+  $("totalDeficits").textContent = data.totalDeficits;
+  $("offlineDevices").textContent = data.offlineDevices;
+  $("totalCalls").textContent = data.totalCalls.toLocaleString();
+
+  const rows = data.tenants.map(t => `
+    <tr>
+      <td>${t.orgName}</td>
+      <td class="${t.deficit > 0 ? 'danger':''}">
+        ${t.deficit > 0 ? t.deficit + ' deficit' : 'Healthy'}
+      </td>
+      <td>${t.offlineDevices}</td>
+      <td>${t.callVolume}</td>
+    </tr>
+  `).join("");
+
+  $("tenantTable").innerHTML = rows;
+}
+
+/* -----------------------------
+   Tenant Inspector
+------------------------------ */
+async function resolveTenant(){
+  const email = $("inspectEmail").value;
+  const result = await api("/api/admin/resolve", {
+    method:"POST",
+    headers:{ "content-type":"application/json" },
+    body:JSON.stringify({ email })
+  });
+  $("inspectResult").textContent = JSON.stringify(result,null,2);
+}
+
+/* -----------------------------
+   Session Timer
+------------------------------ */
+function startSessionTimer(seconds){
+  if (!seconds) return;
+  let remaining = seconds;
+  SESSION_TIMER = setInterval(()=>{
+    remaining--;
+    $("sessionTimer").textContent =
+      "Session: " + remaining + "s";
+    if (remaining <= 0){
+      clearInterval(SESSION_TIMER);
+      window.location.href="/pin";
+    }
+  },1000);
+}
+
+/* -----------------------------
+   Logout
+------------------------------ */
+async function logout(){
+  await fetch("/api/pin/logout",{ method:"POST" });
+  window.location.href="/pin";
+}
+
+/* -----------------------------
+   Init
+------------------------------ */
+async function init(){
+  const me = await api("/api/me");
+  if (!me || me.role !== "admin"){
+    window.location.href="/pin";
+    return;
+  }
+  startSessionTimer(me.sessionExpiresInSeconds);
+  loadAdminSummary();
+}
+
+init();
+</script>
+
+</body>
+</html>
