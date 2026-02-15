@@ -331,37 +331,42 @@
 <div class="tabs">
   <button class="tab active" data-tab="licenses">Licenses</button>
   <button class="tab" data-tab="devices">Devices</button>
+  <button class="tab" data-tab="analytics">Analytics</button>
+  <button class="tab" data-tab="cdr">CDR</button>
 </div>
 
 
-    <!-- License Usage -->
-  <section id="tab-licenses" class="tabpanel">
-    <!-- SUMMARY ROW (matches working layout idea) -->
-<div class="card">
-  <div class="row" style="justify-content:space-between; align-items:center;">
-    <h2 style="margin:0;">Deficient SKUs</h2>
-    <button id="btnEmailAlert" class="secondary">Send License Alert Email</button>
-  </div>
-  <div class="muted" style="margin-top:6px;">
-    Only shows SKUs that are in deficit based on the current tenant selection.
+   <!-- ============================= -->
+<!-- LICENSES TAB -->
+<!-- ============================= -->
+<section id="tab-licenses" class="tabpanel">
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between; align-items:center;">
+      <h2 style="margin:0;">Deficient SKUs</h2>
+      <button id="btnEmailAlert" class="secondary">Send License Alert Email</button>
+    </div>
+
+    <div class="muted" style="margin-top:6px;">
+      Only shows SKUs that are in deficit based on the current tenant selection.
+    </div>
+
+    <table id="deficitTable" style="margin-top:12px;">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th class="right">Available</th>
+          <th class="right">Total</th>
+          <th class="right">Used</th>
+          <th class="right">Licenses Needed</th>
+        </tr>
+      </thead>
+      <tbody id="deficitRows">
+        <tr><td colspan="5" class="muted">Loading…</td></tr>
+      </tbody>
+    </table>
   </div>
 
-  <table id="deficitTable" style="margin-top:12px;">
-    <thead>
-      <tr>
-        <th>SKU</th>
-        <th class="right">Available</th>
-        <th class="right">Total</th>
-        <th class="right">Used</th>
-        <th class="right">Licenses Needed</th>
-      </tr>
-    </thead>
-    <tbody id="deficitRows">
-      <tr><td colspan="5" class="muted">Loading…</td></tr>
-    </tbody>
-  </table>
-</div>
-  <!-- Email Report INSIDE licenses tab -->
   <div class="card">
     <h2>Email License Report</h2>
     <p class="muted">
@@ -375,27 +380,88 @@
 
     <div class="muted" style="margin-top:10px" id="emailStatus"></div>
   </div>
+
   <div class="card">
     <h2>Current License Usage</h2>
 
     <div id="licenseLoading" class="muted">Loading license data…</div>
 
     <table id="licenseTable" style="display:none">
-     <thead>
-  <tr>
-    <th>SKU</th>
-    <th class="right">Total</th>
-    <th class="right">Used</th>
-    <th class="right">Available</th>
-    <th class="right">Deficit</th>
-    <th>Status</th>
-  </tr>
-</thead>
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th class="right">Total</th>
+          <th class="right">Used</th>
+          <th class="right">Available</th>
+          <th class="right">Deficit</th>
+          <th>Status</th>
+        </tr>
+      </thead>
       <tbody id="licenseRows"></tbody>
     </table>
   </div>
 
 </section>
+
+
+<!-- ============================= -->
+<!-- DEVICES TAB -->
+<!-- ============================= -->
+<section id="tab-devices" class="tabpanel hidden">
+  <div class="card">
+    <h2>Devices</h2>
+    <div id="deviceLoading" class="muted">Loading devices…</div>
+
+    <table id="deviceTable" style="display:none">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Model</th>
+          <th>Status</th>
+          <th>Last Seen</th>
+        </tr>
+      </thead>
+      <tbody id="deviceRows"></tbody>
+    </table>
+  </div>
+</section>
+
+
+<!-- ============================= -->
+<!-- ANALYTICS TAB -->
+<!-- ============================= -->
+<section id="tab-analytics" class="tabpanel hidden">
+  <div class="card">
+    <h2>Calling Analytics (7 Day Summary)</h2>
+    <div id="analyticsLoading" class="muted">Loading analytics…</div>
+    <div id="analyticsData"></div>
+  </div>
+</section>
+
+
+<!-- ============================= -->
+<!-- CDR TAB -->
+<!-- ============================= -->
+<section id="tab-cdr" class="tabpanel hidden">
+  <div class="card">
+    <h2>Call Detail Records</h2>
+    <div id="cdrLoading" class="muted">Loading CDR…</div>
+
+    <table id="cdrTable" style="display:none">
+      <thead>
+        <tr>
+          <th>Start Time</th>
+          <th>Caller</th>
+          <th>Callee</th>
+          <th>Duration</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody id="cdrRows"></tbody>
+    </table>
+  </div>
+</section>
+
 
 <section id="tab-devices" class="tabpanel hidden">
   <div class="card">
@@ -501,6 +567,60 @@
     const id = o.id || o.orgId || "";
     return `${name}${id ? " — " + id.slice(0, 10) + "…" : ""}`;
   }
+async function loadAnalytics() {
+  $("analyticsLoading").style.display = "block";
+  $("analyticsData").innerHTML = "";
+
+  const orgId = SELECTED_ORG_ID || "";
+  const r = await api(`/api/analytics?orgId=${encodeURIComponent(orgId)}`);
+
+  if (!r.ok) {
+    $("analyticsLoading").textContent = "Failed to load analytics.";
+    return;
+  }
+
+  $("analyticsLoading").style.display = "none";
+
+  const d = r.data;
+
+  const total = d?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
+
+  $("analyticsData").innerHTML = `
+    <p><strong>Total Calls (7 days):</strong> ${total}</p>
+  `;
+}
+async function loadCDR() {
+  $("cdrLoading").style.display = "block";
+  $("cdrTable").style.display = "none";
+
+  const orgId = SELECTED_ORG_ID || "";
+  const r = await api(`/api/cdr?orgId=${encodeURIComponent(orgId)}`);
+
+  if (!r.ok) {
+    $("cdrLoading").textContent = "Failed to load CDR.";
+    return;
+  }
+
+  const items = r.data.items || [];
+
+  if (!items.length) {
+    $("cdrLoading").textContent = "No CDR records found.";
+    return;
+  }
+
+  $("cdrLoading").style.display = "none";
+  $("cdrTable").style.display = "table";
+
+  $("cdrRows").innerHTML = items.map(c => `
+    <tr>
+      <td>${new Date(c.startTime).toLocaleString()}</td>
+      <td>${escapeHtml(c.localNumber || "—")}</td>
+      <td>${escapeHtml(c.remoteNumber || "—")}</td>
+      <td>${fmtInt(c.duration || 0)}s</td>
+      <td>${escapeHtml(c.callResult || "—")}</td>
+    </tr>
+  `).join("");
+}
 
   // -----------------------------
   // State
@@ -508,7 +628,11 @@
   let ME = null;
   let ORGS = [];
   let SELECTED_ORG_ID = null;
-
+  
+// Load guards (prevents repeated API calls)
+let ANALYTICS_LOADED = false;
+let CDR_LOADED = false;
+let DEVICES_LOADED = false;
   // -----------------------------
   // Load /api/me
   // -----------------------------
@@ -584,10 +708,15 @@ return;
     SELECTED_ORG_ID = sel.value;
   }
 
-  $("tenantSelect").addEventListener("change", () => {
-    SELECTED_ORG_ID = $("tenantSelect").value;
-    setError(null);
-  });
+ $("tenantSelect").addEventListener("change", () => {
+  SELECTED_ORG_ID = $("tenantSelect").value;
+  setError(null);
+
+  // Reset tab load states for new tenant
+  ANALYTICS_LOADED = false;
+  CDR_LOADED = false;
+  DEVICES_LOADED = false;
+});
 function initTabs() {
   const tabs = document.querySelectorAll(".tab");
 
@@ -602,11 +731,21 @@ function initTabs() {
 
       const target = document.getElementById("tab-" + btn.dataset.tab);
       target.classList.remove("hidden");
+if (btn.dataset.tab === "analytics" && !ANALYTICS_LOADED) {
+  await loadAnalytics();
+  ANALYTICS_LOADED = true;
+}
 
-      // Lazy load devices only when clicked
-      if (btn.dataset.tab === "devices") {
-        await loadDevices();
-      }
+if (btn.dataset.tab === "cdr" && !CDR_LOADED) {
+  await loadCDR();
+  CDR_LOADED = true;
+}
+
+if (btn.dataset.tab === "devices" && !DEVICES_LOADED) {
+  await loadDevices();
+  DEVICES_LOADED = true;
+}
+
     });
   });
 }
