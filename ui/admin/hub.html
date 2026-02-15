@@ -610,56 +610,43 @@ async function api(path){
 /* -----------------------------
    Load Global Summary
 ------------------------------ */
-async function loadAdminSummary(){
-
-  const data = await api("/api/admin/global-summary");
+async function loadAdminSummary() {
+  const data = await api("/api/admin/orgs");
   if (!data) return;
 
-  $("totalOrgs").textContent = data.totalOrgs;
-  $("totalDeficits").textContent = data.totalDeficits;
-  $("offlineDevices").textContent = data.offlineDevices;
-  $("totalCalls").textContent = data.totalCalls.toLocaleString();
-  $("totalCustomers").textContent = data.totalOrgs;
+  $("totalOrgs").textContent = data.items.length;
+  $("totalCustomers").textContent = data.items.length;
 
-  const rows = data.tenants.map(t => {
-
-  const licenseText =
-    t.deficit > 0
-      ? `<span class="danger">${t.deficit} deficit</span>`
-      : `<span class="success">Healthy</span>`;
-
-  const deviceText =
-    t.offlineDevices > 0
-      ? `<span class="danger">${t.offlineDevices}</span>`
-      : `<span class="success">0</span>`;
-
-  const analyticsText =
-    t.status?.analyticsOk
-      ? `<span class="success">${t.callVolume}</span>`
-      : `<span class="danger">Unavailable</span>`;
-
-  const healthIndicator =
-    t.status?.failed
-      ? `<span class="danger">Partial Failure</span>`
-      : (
-          (t.deficit > 0 || t.offlineDevices > 0)
-            ? `<span class="danger">Attention</span>`
-            : `<span class="success">Healthy</span>`
-        );
-
-  return `
-    <tr>
-      <td>${t.orgName}</td>
-      <td>${licenseText}</td>
-      <td>${deviceText}</td>
-      <td>${analyticsText}</td>
-      <td>${healthIndicator}</td>
+  const rows = data.items.map(o => `
+    <tr id="row-${o.orgId}">
+      <td>${o.orgName}</td>
+      <td colspan="4">Loading...</td>
     </tr>
-  `;
-}).join("");
+  `).join("");
 
   $("tenantTable").innerHTML = rows;
+
+  for (const o of data.items) {
+    loadOrgHealth(o.orgId, o.orgName);
+  }
 }
+
+async function loadOrgHealth(orgId, orgName) {
+  const r = await api(`/api/admin/org-health?orgId=${orgId}`);
+  if (!r) return;
+
+  const row = document.getElementById(`row-${orgId}`);
+  if (!row) return;
+
+  row.innerHTML = `
+    <td>${orgName}</td>
+    <td>${r.deficit}</td>
+    <td>${r.offline}</td>
+    <td>—</td>
+    <td>${r.deficit > 0 || r.offline > 0 ? "Attention" : "Healthy"}</td>
+  `;
+}
+
 
 /* -----------------------------
    Tenant Inspector
