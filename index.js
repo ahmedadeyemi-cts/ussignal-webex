@@ -39,6 +39,22 @@ export default {
     /* =====================================================
        Helpers
     ===================================================== */
+async function auditLog(env, userEmail, path, metadata = {}) {
+  try {
+    await env.WEBEX.put(
+      `audit:${Date.now()}:${userEmail}`,
+      JSON.stringify({
+        user: userEmail,
+        path,
+        metadata,
+        timestamp: new Date().toISOString()
+      }),
+      { expirationTtl: 60 * 60 * 24 * 30 } // 30 days
+    );
+  } catch (e) {
+    console.error("Audit logging failed:", e.message);
+  }
+}
 
     function json(data, status = 200, extraHeaders = {}) {
       return new Response(JSON.stringify(data), {
@@ -569,6 +585,45 @@ async function renderCustomerHubHTML() {
 
   return await res.text();
 }
+async function renderAdminCustomersHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/customers.html"
+  );
+  if (!res.ok) throw new Error("Failed to load admin customers UI");
+  return await res.text();
+}
+
+async function renderAdminMonitoringHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/monitoring.html"
+  );
+  if (!res.ok) throw new Error("Failed to load admin monitoring UI");
+  return await res.text();
+}
+
+async function renderAdminSupportHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/support.html"
+  );
+  if (!res.ok) throw new Error("Failed to load admin support UI");
+  return await res.text();
+}
+
+async function renderAdminImplementationHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/implementation.html"
+  );
+  if (!res.ok) throw new Error("Failed to load admin implementation UI");
+  return await res.text();
+}
+
+async function renderAdminPSTNHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/pstn.html"
+  );
+  if (!res.ok) throw new Error("Failed to load admin PSTN UI");
+  return await res.text();
+}
 
 async function renderAdminHubHTML() {
   const res = await fetch(
@@ -658,6 +713,21 @@ async function apiCDR(env, request) {
     ===================================================== */
 
     try {
+      /* =====================================================
+   🔐 GLOBAL ACCESS ENFORCEMENT
+   ===================================================== */
+
+const accessEmail =
+  request.headers.get("cf-access-authenticated-user-email") ||
+  request.headers.get("cf-access-user-email");
+
+// Allow health endpoint without auth (optional)
+const publicPaths = ["/health", "/favicon.ico"];
+
+if (!accessEmail && !publicPaths.includes(url.pathname)) {
+  return json({ error: "access_required" }, 401);
+}
+
 
       /* -----------------------------
    /api/admin/seed-pins (GET)
@@ -678,6 +748,9 @@ if (url.pathname === "/api/admin/seed-pins" && request.method === "GET") {
   if (!email || !email.endsWith("@ussignal.com")) {
     return json({ error: "admin_only" }, 403);
   }
+await auditLog(env, email, url.pathname, {
+  action: "seed_pins"
+});
 
   const seedUrl =
     env.PIN_SEED_URL ||
@@ -813,11 +886,44 @@ if (url.pathname === "/pin" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
+      
+      /* -----------------------------
+ Admin Pages
+----------------------------- */
 if (
   (url.pathname === "/admin" || url.pathname === "/admin/") &&
   request.method === "GET"
 ) {
   return text(await renderAdminHubHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+if (url.pathname === "/admin/customers" && request.method === "GET") {
+  return text(await renderAdminCustomersHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
+if (url.pathname === "/admin/monitoring" && request.method === "GET") {
+  return text(await renderAdminMonitoringHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
+if (url.pathname === "/admin/support" && request.method === "GET") {
+  return text(await renderAdminSupportHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
+if (url.pathname === "/admin/implementation" && request.method === "GET") {
+  return text(await renderAdminImplementationHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
+if (url.pathname === "/admin/pstn" && request.method === "GET") {
+  return text(await renderAdminPSTNHTML(), 200, {
     "content-type": "text/html; charset=utf-8",
   });
 }
@@ -887,6 +993,9 @@ if (url.pathname === "/admin/tenant-resolution" && request.method === "GET") {
       }
 // Debug Access headers (plain text so Firefox can't "pretty viewer" hide it)
 if (url.pathname === "/api/debug/access" && request.method === "GET") {
+  if (env.DEBUG_MODE !== "true") {
+  return json({ error: "disabled" }, 403);
+}
   const out = {
     "cf-access-authenticated-user-email": request.headers.get("cf-access-authenticated-user-email"),
     "cf-access-user-email": request.headers.get("cf-access-user-email"),
@@ -901,6 +1010,9 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
   });
 }
       if (url.pathname === "/api/debug/token-test") {
+  if (env.DEBUG_MODE !== "true") {
+    return json({ error: "disabled" }, 403);
+  }
   const token = await getAccessToken();
 
   const test = await fetch("https://webexapis.com/v1/organizations", {
@@ -1211,9 +1323,18 @@ return json({
       if (url.pathname === "/api/admin/pin/allowlist" && request.method === "POST") {
   const user = getCurrentUser(request);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+const body = await request.json().catch(() => ({}));
+const orgId = String(body.orgId || "").trim();
+const orgName = String(body.orgName || "").trim() || "Unknown Org";
+const emails = Array.isArray(body.emails) ? body.emails : [];
 
-  const body = await request.json().catch(() => ({}));
-  const orgId = String(body.orgId || "").trim();
+if (!orgId) return json({ error:"missing_orgId" }, 400);
+
+await auditLog(env, user.email, url.pathname, {
+  action: "pin_allowlist_update",
+  orgId
+});
+
   const orgName = String(body.orgName || "").trim() || "Unknown Org";
   const emails = Array.isArray(body.emails) ? body.emails : [];
 
@@ -1253,7 +1374,7 @@ return json({
   return json({ ok:true, orgId, orgName, pin, emails: normEmails }, 200);
 }
 if (url.pathname === "/api/admin/orgs") {
-  const token = await getPartnerToken(env);
+  const token = await getAccessToken();
 
   const res = await fetch("https://webexapis.com/v1/organizations", {
     headers: { Authorization: `Bearer ${token}` }
@@ -1276,7 +1397,7 @@ if (url.pathname === "/api/admin/org-health") {
   const orgId = url.searchParams.get("orgId");
   if (!orgId) return json({ error: "missing_orgId" }, 400);
 
-  const token = await getPartnerToken(env);
+  const token = await getAccessToken();
 
   let deficit = 0;
   let offline = 0;
@@ -1861,9 +1982,17 @@ try {
         const user = getCurrentUser(request);
         const token = await getAccessToken();
         if (!user.isAdmin) return json({ error: "admin_only" }, 403);
-
         const body = await request.json().catch(() => ({}));
-        const orgId = String(body.orgId || "").trim();
+const orgId = String(body.orgId || "").trim();
+const orgName = String(body.orgName || "").trim();
+
+if (!orgId) return json({ error: "missing_orgId" }, 400);
+
+await auditLog(env, user.email, url.pathname, {
+  action: "pin_rotate",
+  orgId
+});
+
         const orgName = String(body.orgName || "").trim();
 
         if (!orgId) return json({ error: "missing_orgId" }, 400);
@@ -1955,7 +2084,13 @@ async function mapLimit(items, limit, fn) {
 // ===============================
 if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
   const user = getCurrentUser(request);
+  if (env.ADMIN_GLOBAL_SUMMARY_DISABLED === "true") {
+  return json({ error: "disabled_in_production" }, 403);
+}
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+await auditLog(env, user.email, url.pathname, {
+  action: "view_global_summary"
+});
 
   const CACHE_SECONDS = cfgIntAllowZero("ADMIN_GLOBAL_SUMMARY_CACHE_SECONDS", 60);
 
@@ -2280,6 +2415,10 @@ if (url.pathname === "/api/cdr" && request.method === "GET") {
    🔎 DEBUG: Brevo env check
 ----------------------------- */
 if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
+  if (env.DEBUG_MODE !== "true") {
+  return json({ error: "disabled" }, 403);
+}
+
   return json({
     hasApiKey: !!env.BREVO_API_KEY,
     hasSender: !!env.BREVO_SENDER_EMAIL,
