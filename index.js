@@ -579,7 +579,7 @@ async function apiCallingAnalytics(env, request) {
     return json({ error: "missing_orgId" }, 400);
   }
 
-  const token = await getAccessToken(env);
+  const token = await getAccessToken();
 
   const res = await fetch(
     `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(orgId)}&interval=DAY&from=-7d`,
@@ -606,7 +606,7 @@ async function apiCDR(env, request) {
     return json({ error: "missing_orgId" }, 400);
   }
 
-  const token = await getAccessToken(env);
+  const token = await getAccessToken();
 
   const res = await fetch(
     `https://webexapis.com/v1/cdr?orgId=${encodeURIComponent(orgId)}&max=200`,
@@ -1437,7 +1437,19 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
     }
   });
 
-  const data = await res.json();
+  const textBody = await res.text();
+let data;
+
+try {
+  data = JSON.parse(textBody);
+} catch {
+  return json({
+    error: "webex_devices_not_json",
+    status: res.status,
+    bodyPreview: textBody.slice(0, 500)
+  }, 500);
+}
+
 
   if (!res.ok) {
     return json({ error: "webex_devices_failed", body: data }, 500);
@@ -1567,7 +1579,14 @@ if (action === "licenses") {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    const data = await res.json();
+    const textBody = await res.text();
+let data;
+try {
+  data = JSON.parse(textBody);
+} catch {
+  return json({ ok: false, error: "webex_devices_not_json" }, 500);
+}
+
 
     return json({
       ok: true,
@@ -1810,11 +1829,11 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
 
   return json(result);
 }
-if (path === "/api/analytics") {
+if (url.pathname === "/api/analytics" && request.method === "GET") {
   return await apiCallingAnalytics(env, request);
 }
 
-if (path === "/api/cdr") {
+if (url.pathname === "/api/cdr" && request.method === "GET") {
   return await apiCDR(env, request);
 }
       /* -----------------------------
