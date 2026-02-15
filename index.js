@@ -28,25 +28,66 @@
  */
 
 export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
 
-    const jsonHeaders = {
-      "content-type": "application/json",
-      "cache-control": "no-store",
-    };
-async scheduled(event, env, ctx) {
-    ctx.waitUntil((async () => {
-      try {
-        const payload = await computeGlobalSummary(env);
-        await putGlobalSummarySnapshot(env, payload);
-      } catch (e) {
-        console.error("Scheduled snapshot failed:", e.message);
-      }
-    })());
+  async fetch(request, env) {
+    try {
+      const url = new URL(request.url);
+
+      const jsonHeaders = {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+      };
+
+      /* =====================================================
+         EVERYTHING YOU ALREADY HAVE INSIDE fetch()
+         stays exactly as-is below this line.
+         Do NOT remove your helpers or routes.
+      ===================================================== */
+
+      // 🔽 KEEP ALL YOUR EXISTING ROUTES + LOGIC HERE 🔽
+      // (Your 2000+ lines of code live here unchanged)
+
+      return json({ error: "not_found", path: url.pathname }, 404);
+
+    } catch (err) {
+      console.error("🔥 Worker error:", err);
+      return new Response(
+        JSON.stringify({
+          error: "internal_error",
+          message: err?.message || String(err),
+        }),
+        {
+          status: 500,
+          headers: {
+            "content-type": "application/json",
+            "cache-control": "no-store",
+          },
+        }
+      );
+    }
+  },
+
+  /* =====================================================
+     CRON SNAPSHOT HANDLER
+     Runs via Cloudflare Cron Trigger
+  ===================================================== */
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      (async () => {
+        try {
+          const payload = await computeGlobalSummary(env);
+          await putGlobalSummarySnapshot(env, payload);
+
+          console.log("✅ Global summary snapshot updated");
+        } catch (e) {
+          console.error("❌ Scheduled snapshot failed:", e.message);
+        }
+      })()
+    );
   }
 
 };
+
     /* =====================================================
        Helpers
     ===================================================== */
