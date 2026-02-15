@@ -33,6 +33,10 @@ const JSON_HEADERS = {
   "content-type": "application/json",
   "cache-control": "no-store",
 };
+// Global throttle configuration (set per request inside fetch)
+let PIN_THROTTLE_WINDOW_SECONDS = 900;
+let PIN_MAX_ATTEMPTS = 5;
+let PIN_LOCKOUT_SECONDS = 900;
 
     const GLOBAL_SUMMARY_KEY = "globalSummarySnapshotV1";
 
@@ -177,7 +181,7 @@ const STATUS_CACHE_SECONDS = 60; // 0 disables cache
        Webex Token Handling (refresh + KV cache)
     ===================================================== */
 
-    async function getAccessToken() {
+    async function getAccessToken(env) {
       const cached = await env.WEBEX.get("access_token", { type: "json" });
 
       if (cached && cached.token && cached.expires_at > nowMs()) {
@@ -216,7 +220,7 @@ const STATUS_CACHE_SECONDS = 60; // 0 disables cache
       return data.access_token;
     }
  
-async function getAnalyticsAccessToken() {
+async function getAnalyticsAccessToken(env) {
   const cached = await env.WEBEX.get("analytics_access_token", { type: "json" });
 
   if (cached && cached.token && cached.expires_at > nowMs()) {
@@ -280,18 +284,18 @@ function getCurrentUser(request) {
        Session helpers
     ===================================================== */
 
-    async function getSession(email) {
-      return await env.USER_SESSION_KV.get(KV.sessKey(email), { type: "json" });
-    }
+ async function getSession(env, email) {
+  return await env.USER_SESSION_KV.get(KV.sessKey(email), { type: "json" });
+}
 
-async function setSession(email, session) {
+async function setSession(env, email, session) {
   await env.USER_SESSION_KV.put(
     KV.sessKey(email),
     JSON.stringify(session)
   );
 }
 
-    async function clearSession(email) {
+    async function clearSession(env, email) {
       await env.USER_SESSION_KV.delete(KV.sessKey(email));
     }
 
@@ -299,12 +303,12 @@ async function setSession(email, session) {
        Throttling helpers (per email + per IP)
     ===================================================== */
 
-    async function readAttempts(key) {
+    async function readAttempts(env, key) {
       const data = await env.USER_SESSION_KV.get(key, { type: "json" });
       return data || { count: 0, lockedUntil: 0, windowStart: nowMs() };
     }
 
-    async function writeAttempts(key, data) {
+    async function writeAttempts(env, key, data) {
       await env.USER_SESSION_KV.put(key, JSON.stringify(data), {
         expirationTtl: Math.max(PIN_THROTTLE_WINDOW_SECONDS, PIN_LOCKOUT_SECONDS),
       });
@@ -314,7 +318,11 @@ async function setSession(email, session) {
       const kEmail = KV.attemptsKeyEmail(email);
       const kIp = KV.attemptsKeyIp(ip);
 
-      const [aEmail, aIp] = await Promise.all([readAttempts(kEmail), readAttempts(kIp)]);
+    const [aEmail, aIp] = await Promise.all([
+  readAttempts(env, kEmail),
+  readAttempts(env, kIp)
+]);
+
 
       const t = nowMs();
 
@@ -334,7 +342,11 @@ async function setSession(email, session) {
       const kEmail = KV.attemptsKeyEmail(email);
       const kIp = KV.attemptsKeyIp(ip);
 
-      const [aEmail, aIp] = await Promise.all([readAttempts(kEmail), readAttempts(kIp)]);
+     const [aEmail, aIp] = await Promise.all([
+  readAttempts(env, kEmail),
+  readAttempts(env, kIp)
+]);
+
 
       function bump(a) {
         // reset window if old
@@ -350,7 +362,11 @@ async function setSession(email, session) {
         return a;
       }
 
-      await Promise.all([writeAttempts(kEmail, bump(aEmail)), writeAttempts(kIp, bump(aIp))]);
+     await Promise.all([
+  writeAttempts(env, kEmail, bump(aEmail)),
+  writeAttempts(env, kIp, bump(aIp))
+]);
+
     }
 
     async function throttleClear(email, ip) {
@@ -365,15 +381,15 @@ async function setSession(email, session) {
        PIN map helpers (ORG_MAP_KV)
     ===================================================== */
 
-    async function getOrgByPin(pin) {
+    async function getOrgByPin(env, pin) {
       return await env.ORG_MAP_KV.get(KV.pinKey(pin), { type: "json" });
     }
 
-    async function getPinByOrg(orgId) {
+    async function getPinByOrg(env, orgId) {
       return await env.ORG_MAP_KV.get(KV.orgKey(orgId), { type: "json" });
     }
 
-async function putPinMapping(pin, orgId, orgName, role = "customer", emails = []) {
+async function putPinMapping(env, pin, orgId, orgName, role = "customer", emails = []) {
   const normEmails = Array.isArray(emails)
     ? emails.map(e => e.toLowerCase().trim())
     : [];
@@ -398,7 +414,7 @@ async function putPinMapping(pin, orgId, orgName, role = "customer", emails = []
       ]);
     }
 
-    async function generateUniqueNonEasyPin() {
+    async function generateUniqueNonEasyPin(env) {
       // best-effort uniqueness (KV check); try multiple times
       for (let i = 0; i < 40; i++) {
         const candidate = randomPin5();
@@ -613,7 +629,7 @@ async function apiCallingAnalytics(env, request) {
     return json({ error: "missing_orgId" }, 400);
   }
 
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
 
   const res = await fetch(
     `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(orgId)}&interval=DAY&from=-7d`,
@@ -640,7 +656,7 @@ async function apiCDR(env, request) {
     return json({ error: "missing_orgId" }, 400);
   }
 
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
 
   const res = await fetch(
     `https://webexapis.com/v1/cdr?orgId=${encodeURIComponent(orgId)}&max=200`,
@@ -660,7 +676,7 @@ async function apiCDR(env, request) {
   return json(data, 200);
 }
 async function computeGlobalSummary(env) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
 
   const orgRes = await fetch("https://webexapis.com/v1/organizations", {
     headers: { Authorization: `Bearer ${token}` }
@@ -749,9 +765,9 @@ export default {
       const url = new URL(request.url);
 
 const SESSION_TTL_SECONDS = cfgIntAllowZero(env, "SESSION_TTL_SECONDS", 3600);
-const PIN_THROTTLE_WINDOW_SECONDS = cfgIntAllowZero(env, "PIN_THROTTLE_WINDOW_SECONDS", 900);
-const PIN_MAX_ATTEMPTS = cfgIntAllowZero(env, "PIN_MAX_ATTEMPTS", 5);
-const PIN_LOCKOUT_SECONDS = cfgIntAllowZero(env, "PIN_LOCKOUT_SECONDS", 900);
+PIN_THROTTLE_WINDOW_SECONDS = cfgIntAllowZero(env, "PIN_THROTTLE_WINDOW_SECONDS", 900);
+PIN_MAX_ATTEMPTS = cfgIntAllowZero(env, "PIN_MAX_ATTEMPTS", 5);
+PIN_LOCKOUT_SECONDS = cfgIntAllowZero(env, "PIN_LOCKOUT_SECONDS", 900);
 
     
 
@@ -1087,7 +1103,7 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
   if (env.DEBUG_MODE !== "true") {
     return json({ error: "disabled" }, 403);
   }
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
 
   const test = await fetch("https://webexapis.com/v1/organizations", {
     headers: { Authorization: `Bearer ${token}` }
@@ -1111,7 +1127,7 @@ if (url.pathname === "/api/status" && request.method === "GET") {
     return json({ error: "auth_failed", message: e.message }, 401);
   }
 
-  const session = await getSession(user.email);
+  const session = await getSession(env, user.email);
 
   if (!user.isAdmin) {
     if (!session || !session.orgId) {
@@ -1119,7 +1135,7 @@ if (url.pathname === "/api/status" && request.method === "GET") {
     }
 
     if (session.expiresAt && session.expiresAt <= nowMs()) {
-      await clearSession(user.email);
+      await clearSession(env, user.email);
       return json({ error: "pin_expired" }, 401);
     }
   }
@@ -1166,7 +1182,7 @@ if (url.pathname === "/api/status" && request.method === "GET") {
 if (url.pathname === "/api/incidents" && request.method === "GET") {
 
   const user = getCurrentUser(request);
-  const session = await getSession(user.email);
+  const session = await getSession(env, user.email);
 
   if (!user.isAdmin) {
     if (!session || !session.orgId) {
@@ -1174,7 +1190,7 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
     }
 
     if (session.expiresAt && session.expiresAt <= nowMs()) {
-      await clearSession(user.email);
+      await clearSession(env, user.email);
       return json({ error: "pin_expired" }, 401);
     }
   }
@@ -1211,14 +1227,14 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
       
 if (url.pathname === "/api/maintenance" && request.method === "GET") {
   const user = getCurrentUser(request);
-  const session = await getSession(user.email);
+  const session = await getSession(env, user.email);
 if (!user.isAdmin) {
   if (!session || !session.orgId) {
     return json({ error: "pin_required" }, 401);
   }
 
   if (session.expiresAt && session.expiresAt <= nowMs()) {
-    await clearSession(user.email);
+    await clearSession(env, user.email);
     return json({ error: "pin_expired" }, 401);
   }
 }
@@ -1251,39 +1267,44 @@ if (!user.isAdmin) {
          - returns role
          - returns org context if session exists
       ----------------------------- */
-     if (url.pathname === "/api/me") {
-  const user = getCurrentUser(request);
-  const token = await getAccessToken();
+  if (url.pathname === "/api/me") {
 
-  // 1️⃣ Try email-based tenant resolution
- const session = await getSession(user.email);
+  const accessEmail =
+    request.headers.get("cf-access-authenticated-user-email") ||
+    request.headers.get("cf-access-user-email");
 
-let resolvedOrg = null;
-
-if (user.isAdmin) {
-  resolvedOrg = null; // admin sees all
-} else if (session && session.orgId) {
-  if (session.expiresAt && session.expiresAt <= nowMs()) {
-    await clearSession(user.email);
-  } else {
-    resolvedOrg = {
-      orgId: session.orgId,
-      orgName: session.orgName
-    };
+  if (!accessEmail) {
+    return json({ error: "not_authenticated" }, 401);
   }
-}
 
-return json({
-  email: user.email,
-  role: user.isAdmin ? "admin" : "customer",
-  orgId: resolvedOrg?.orgId || null,
-  orgName: resolvedOrg?.orgName || null,
-  resolution: session ? "pin" : null,
-  sessionExpiresInSeconds: session?.expiresAt
-    ? Math.max(0, Math.floor((session.expiresAt - nowMs()) / 1000))
-    : 0,
-});
+  const email = accessEmail.toLowerCase().trim();
+  const isAdmin = email.endsWith("@ussignal.com");
 
+  const session = await getSession(env, email);
+
+  let resolvedOrg = null;
+
+  if (!isAdmin && session && session.orgId) {
+    if (session.expiresAt && session.expiresAt <= nowMs()) {
+      await clearSession(env, email);
+    } else {
+      resolvedOrg = {
+        orgId: session.orgId,
+        orgName: session.orgName
+      };
+    }
+  }
+
+  return json({
+    email,
+    role: isAdmin ? "admin" : "customer",
+    orgId: resolvedOrg?.orgId || null,
+    orgName: resolvedOrg?.orgName || null,
+    resolution: session ? "pin" : null,
+    sessionExpiresInSeconds: session?.expiresAt
+      ? Math.max(0, Math.floor((session.expiresAt - nowMs()) / 1000))
+      : 0,
+  });
 }
 
 
@@ -1296,7 +1317,7 @@ return json({
       ----------------------------- */
       if (url.pathname === "/api/pin/verify" && request.method === "POST") {
         const user = getCurrentUser(request);
-        const token = await getAccessToken();
+        const token = await getAccessToken(env);
         const ip = getIP(request);
 
         // Admins don't need PIN; but allow admin to verify PIN for demo if desired
@@ -1317,7 +1338,7 @@ return json({
           );
         }
 
-        const pinData = await getOrgByPin(pin);
+        const pinData = await getOrgByPin(env, pin);
         if (!pinData || !pinData.orgId) {
           await throttleRecordFailure(user.email, ip);
           // add small delay to slow brute forcing
@@ -1337,7 +1358,7 @@ return json({
           expiresAt: nowMs() + SESSION_TTL_SECONDS * 1000,
         };
 
-        await setSession(user.email, session);
+        await setSession(env, user.email, session);
 
         return json({
           status: "ok",
@@ -1353,8 +1374,8 @@ return json({
       ----------------------------- */
       if (url.pathname === "/api/pin/logout" && request.method === "POST") {
         const user = getCurrentUser(request);
-        const token = await getAccessToken();
-        await clearSession(user.email);
+        const token = await getAccessToken(env);
+        await clearSession(env, user.email);
         return json({ status: "ok" });
       }
 
@@ -1363,7 +1384,7 @@ return json({
   const user = getCurrentUser(request);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
   const orgRes = await fetch("https://webexapis.com/v1/organizations", {
     headers: { Authorization: `Bearer ${token}` }
   });
@@ -1443,7 +1464,10 @@ if (url.pathname === "/api/admin/pin/allowlist" && request.method === "POST") {
 }
 
 if (url.pathname === "/api/admin/orgs") {
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
+ const user = getCurrentUser(request);
+if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
 
   const res = await fetch("https://webexapis.com/v1/organizations", {
     headers: { Authorization: `Bearer ${token}` }
@@ -1464,16 +1488,18 @@ if (url.pathname === "/api/admin/orgs") {
 }
       
 if (url.pathname === "/api/admin/org-health") {
+ const user = getCurrentUser(request);
+if (!user.isAdmin) return json({ error: "admin_only" }, 403);
   const orgId = url.searchParams.get("orgId");
   if (!orgId) return json({ error: "missing_orgId" }, 400);
 
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
 
   let deficit = 0;
   let offline = 0;
 
   const lic = await fetch(
-    `https://webexapis.com/v1/licenses?orgId=${orgId}`,
+    `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(orgId)}`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
 
@@ -1486,7 +1512,7 @@ if (url.pathname === "/api/admin/org-health") {
   }
 
   const dev = await fetch(
-    `https://webexapis.com/v1/devices?orgId=${orgId}`,
+    `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(orgId)}`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
 
@@ -1511,8 +1537,8 @@ if (url.pathname === "/api/admin/org-health") {
       ----------------------------- */
      if (url.pathname === "/api/org") {
   const user = getCurrentUser(request);
-  const token = await getAccessToken();
-  const session = await getSession(user.email);
+  const token = await getAccessToken(env);
+  const session = await getSession(env, user.email);
 
   // customers require tenant resolution (email OR PIN)
   if (!user.isAdmin) {
@@ -1524,7 +1550,7 @@ if (url.pathname === "/api/admin/org-health") {
 
   // session expiry check
   if (session?.expiresAt && session.expiresAt <= nowMs()) {
-    await clearSession(user.email);
+    await clearSession(env, user.email);
     return json(
       { error: "pin_required_or_expired", message: "PIN required." },
       401
@@ -1555,8 +1581,8 @@ if (url.pathname === "/api/admin/org-health") {
 ----------------------------- */
 if (url.pathname === "/api/licenses" && request.method === "GET") {
   const user = getCurrentUser(request);
-  const token = await getAccessToken();
-  const session = await getSession(user.email);
+  const token = await getAccessToken(env);
+  const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
   let resolvedOrgId = null;
@@ -1569,7 +1595,7 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     }
 
     if (session.expiresAt && session.expiresAt <= nowMs()) {
-      await clearSession(user.email);
+      await clearSession(env, user.email);
       return json({ error: "pin_required_or_expired", message: "PIN required." }, 401);
     }
 
@@ -1671,7 +1697,7 @@ return json({
 ----------------------------- */
 if (url.pathname === "/api/licenses/email" && request.method === "POST") {
   const user = getCurrentUser(request);
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
    const body = await request.json().catch(() => ({}));
   const toEmail = String(body.email || "").toLowerCase().trim();
   const requestedOrgId = body.orgId || null;
@@ -1789,11 +1815,11 @@ if (!brevoRes.ok) {
 }
 if (url.pathname === "/api/devices" && request.method === "GET") {
   const user = getCurrentUser(request);
-  const token = await getAccessToken();
-  const session = await getSession(user.email);
+  const token = await getAccessToken(env);
+  const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
   if (session?.expiresAt && session.expiresAt <= nowMs()) {
-  await clearSession(user.email);
+  await clearSession(env, user.email);
   return json({ error: "pin_required_or_expired" }, 401);
 }
 
@@ -1851,7 +1877,7 @@ try {
 if (url.pathname.startsWith("/api/customer/")) {
 
   const user = getCurrentUser(request);
-  const session = await getSession(user.email);
+  const session = await getSession(env, user.email);
 
   if (!user.isAdmin) {
     if (!session || !session.orgId) {
@@ -1859,7 +1885,7 @@ if (url.pathname.startsWith("/api/customer/")) {
     }
 
     if (session.expiresAt && session.expiresAt <= nowMs()) {
-      await clearSession(user.email);
+      await clearSession(env, user.email);
       return json({ ok: false, error: "pin_expired" }, 401);
     }
   }
@@ -1881,7 +1907,7 @@ if (user.isAdmin) {
 
   /* ---------- LICENSES ---------- */
 if (action === "licenses") {
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
 
   const res = await fetch(
     `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(resolvedOrgId)}`,
@@ -1964,7 +1990,7 @@ if (action === "licenses") {
 
   /* ---------- DEVICES ---------- */
   if (action === "devices") {
-    const token = await getAccessToken();
+    const token = await getAccessToken(env);
 
     const res = await fetch(
       `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(resolvedOrgId)}`,
@@ -1988,7 +2014,7 @@ try {
 
   /* ---------- ANALYTICS ---------- */
   if (action === "analytics") {
-    const token = await getAnalyticsAccessToken();
+    const token = await getAnalyticsAccessToken(env);
 
     const res = await fetch(
       `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(resolvedOrgId)}`,
@@ -2005,7 +2031,7 @@ try {
 
   /* ---------- CDR ---------- */
   if (action === "cdr") {
-    const token = await getAnalyticsAccessToken();
+    const token = await getAnalyticsAccessToken(env);
 
     const res = await fetch(
       `https://webexapis.com/v1/cdr?orgId=${encodeURIComponent(resolvedOrgId)}`,
@@ -2022,7 +2048,7 @@ try {
 
   /* ---------- PSTN HEALTH ---------- */
   if (action === "pstn-health") {
-    const token = await getAccessToken();
+    const token = await getAccessToken(env);
 
     const res = await fetch(
       `https://webexapis.com/v1/telephony/config/locations?orgId=${encodeURIComponent(resolvedOrgId)}`,
@@ -2071,7 +2097,7 @@ try {
 
   const newPin = await generateUniqueNonEasyPin();
 
-  await putPinMapping(newPin, orgId, orgName, role, emails);
+  await putPinMapping(env, newPin, orgId, orgName, role, emails);
 
   if (oldPin && /^\d{5}$/.test(oldPin)) {
     await env.ORG_MAP_KV.delete(`pin:${oldPin}`);
@@ -2139,6 +2165,26 @@ async function mapLimit(items, limit, fn) {
   await Promise.all(workers);
   return out;
 }
+   if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const snapshot = await getGlobalSummarySnapshot(env);
+
+  if (!snapshot) {
+    return json({
+      ok: false,
+      message: "No snapshot available yet"
+    }, 404);
+  }
+
+  return json({
+    ok: true,
+    generatedAt: snapshot.generatedAt,
+    ...snapshot.payload
+  }, 200);
+}
+  
 if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
   const user = getCurrentUser(request);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
@@ -2163,7 +2209,7 @@ if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "
       ----------------------------- */
       if (url.pathname === "/api/admin/pin/list" && request.method === "POST") {
         const user = getCurrentUser(request);
-        const token = await getAccessToken();
+        const token = await getAccessToken(env);
         if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
         const body = await request.json().catch(() => ({}));
@@ -2185,7 +2231,7 @@ if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "
 ----------------------------- */
 if (url.pathname.startsWith("/api/admin/inspect/email/") && request.method === "GET") {
   const user = getCurrentUser(request);
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const email = decodeURIComponent(url.pathname.split("/").pop()).toLowerCase();
@@ -2204,7 +2250,7 @@ if (url.pathname.startsWith("/api/admin/inspect/email/") && request.method === "
 ----------------------------- */
 if (url.pathname.startsWith("/api/admin/inspect/pin/") && request.method === "GET") {
   const user = getCurrentUser(request);
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const pin = url.pathname.split("/").pop();
@@ -2227,7 +2273,7 @@ if (url.pathname.startsWith("/api/admin/inspect/pin/") && request.method === "GE
 ----------------------------- */
 if (url.pathname.startsWith("/api/admin/inspect/org/") && request.method === "GET") {
   const user = getCurrentUser(request);
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const orgId = decodeURIComponent(url.pathname.split("/").pop());
@@ -2246,7 +2292,7 @@ if (url.pathname.startsWith("/api/admin/inspect/org/") && request.method === "GE
 
 if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
   const user = getCurrentUser(request);
-  const token = await getAccessToken();
+  const token = await getAccessToken(env);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const body = await request.json().catch(() => ({}));
