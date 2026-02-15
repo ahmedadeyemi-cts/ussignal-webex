@@ -1749,6 +1749,191 @@ const emails = existing?.emails || [];
           newPin,
         });
       }
+function cfgIntAllowZero(name, def) {
+  const v = env[name];
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : def;
+}
+
+async function jsonSafe(res) {
+  const txt = await res.text();
+  try { return { ok: res.ok, status: res.status, data: JSON.parse(txt), preview: txt.slice(0, 400) }; }
+  catch { return { ok: false, status: res.status, error: "not_json", preview: txt.slice(0, 400) }; }
+}
+
+function makeCacheKey(urlStr){
+  return new Request(urlStr, { method:"GET" });
+}
+
+async function cacheJson(cacheSeconds, urlStr, computeFn){
+  const cache = caches.default;
+  const key = makeCacheKey(urlStr);
+
+  if (cacheSeconds > 0) {
+    const hit = await cache.match(key);
+    if (hit) return hit;
+  }
+
+  const payload = await computeFn();
+
+  const resp = new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: {
+      "content-type":"application/json",
+      "cache-control": cacheSeconds > 0 ? `public, max-age=${cacheSeconds}` : "no-store"
+    }
+  });
+
+  if (cacheSeconds > 0) {
+    await cache.put(key, resp.clone());
+  }
+
+  return resp;
+}
+
+// Simple concurrency limiter for partner-wide fanout calls
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let i = 0;
+
+  async function worker() {
+    while (true) {
+      const idx = i++;
+      if (idx >= items.length) return;
+      out[idx] = await fn(items[idx], idx);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
+  await Promise.all(workers);
+  return out;
+}
+// ===============================
+// ADMIN: Global Summary
+// GET /api/admin/global-summary
+// ===============================
+if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const CACHE_SECONDS = cfgIntAllowZero("ADMIN_GLOBAL_SUMMARY_CACHE_SECONDS", 60);
+
+  const keyUrl = `${url.origin}/api/admin/global-summary`; // stable cache key
+
+  return await cacheJson(CACHE_SECONDS, keyUrl, async () => {
+    const token = await getAccessToken();
+
+    // 1) All orgs
+    const orgRes = await fetch("https://webexapis.com/v1/organizations", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const orgSafe = await jsonSafe(orgRes);
+    if (!orgSafe.ok) {
+      return {
+        ok: false,
+        error: "org_list_failed",
+        upstreamStatus: orgSafe.status,
+        preview: orgSafe.preview
+      };
+    }
+
+    const orgs = orgSafe.data.items || [];
+
+    // 2) Fanout per org with concurrency limit
+    // Keep this sane: 6-10 concurrent calls is plenty
+    const CONCURRENCY = 8;
+
+    async function perOrg(org) {
+      const orgId = org.id;
+      const orgName = org.displayName || org.name || "Unknown";
+
+      // Licenses
+      const licUrl = `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(orgId)}`;
+      const licRes = await fetch(licUrl, { headers: { Authorization: `Bearer ${token}` } });
+      const licSafe = await jsonSafe(licRes);
+
+      let deficit = 0;
+      if (licSafe.ok) {
+        const items = licSafe.data.items || [];
+        // normalize quickly (same logic as your /api/licenses)
+        for (const l of items) {
+          const total = (l.totalUnits === null || l.totalUnits === undefined) ? null : Number(l.totalUnits);
+          const consumed = Number(l.consumedUnits ?? 0);
+          const isUnlimited = total === -1;
+          const hasTotal = Number.isFinite(total);
+          const d = isUnlimited ? 0 : (hasTotal ? Math.max(0, consumed - total) : 0);
+          deficit += d;
+        }
+      }
+
+      // Devices
+      const devUrl = `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(orgId)}`;
+      const devRes = await fetch(devUrl, { headers: { Authorization: `Bearer ${token}` } });
+      const devSafe = await jsonSafe(devRes);
+
+      let offlineDevices = 0;
+      if (devSafe.ok) {
+        const items = devSafe.data.items || [];
+        offlineDevices = items.filter(d => {
+          const s = String(d.connectionStatus || "").toLowerCase();
+          return s.includes("disconnected") || s.includes("offline") || s.includes("not connected");
+        }).length;
+      }
+
+      // Analytics (best-effort)
+      // If analytics token differs in your env, you can swap getAnalyticsAccessToken()
+      let callVolume = 0;
+      try {
+        const aTok = await getAnalyticsAccessToken();
+        const aUrl = `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(orgId)}&interval=DAY&from=-7d`;
+        const aRes = await fetch(aUrl, { headers: { Authorization: `Bearer ${aTok}` } });
+        const aSafe = await jsonSafe(aRes);
+        if (aSafe.ok) {
+          callVolume = aSafe.data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
+        }
+      } catch {
+        // keep as 0; we don't fail the whole summary
+      }
+
+      return {
+        orgId,
+        orgName,
+        deficit,
+        offlineDevices,
+        callVolume,
+        status: {
+          licensesOk: !!licSafe.ok,
+          devicesOk: !!devSafe.ok
+        }
+      };
+    }
+
+    const tenants = await mapLimit(orgs, CONCURRENCY, perOrg);
+
+    const totalOrgs = tenants.length;
+    const totalDeficits = tenants.reduce((a, t) => a + (t.deficit || 0), 0);
+    const offlineDevices = tenants.reduce((a, t) => a + (t.offlineDevices || 0), 0);
+    const totalCalls = tenants.reduce((a, t) => a + (Number(t.callVolume) || 0), 0);
+
+    // Sort worst-first for the UI table
+    tenants.sort((a,b) =>
+      (b.deficit - a.deficit) ||
+      (b.offlineDevices - a.offlineDevices) ||
+      (b.callVolume - a.callVolume)
+    );
+
+    return {
+      ok: true,
+      generatedAt: new Date().toISOString(),
+      cacheSeconds: CACHE_SECONDS,
+      totalOrgs,
+      totalDeficits,
+      offlineDevices,
+      totalCalls,
+      tenants
+    };
+  });
+}
 
       /* -----------------------------
          /api/admin/pin/list (GET)
