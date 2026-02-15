@@ -573,6 +573,13 @@ async function renderAdminHubHTML() {
 
   return await res.text();
 }
+async function renderAdminHubHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/hub.html"
+  );
+  if (!res.ok) throw new Error("Failed to load admin hub UI");
+  return await res.text();
+}
 
 async function renderCustomerLicensesHTML() {
   const res = await fetch(
@@ -851,6 +858,11 @@ if (url.pathname === "/customer/maintenance" && request.method === "GET") {
 ----------------------------- */
 if (url.pathname === "/customer/status" && request.method === "GET") {
   return text(await renderCustomerStatusHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+if (url.pathname === "/admin" && request.method === "GET") {
+  return text(await renderAdminHubHTML(), 200, {
     "content-type": "text/html; charset=utf-8",
   });
 }
