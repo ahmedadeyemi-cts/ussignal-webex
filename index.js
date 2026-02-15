@@ -1320,51 +1320,45 @@ return json({
 }
 
 
-      if (url.pathname === "/api/admin/pin/allowlist" && request.method === "POST") {
+if (url.pathname === "/api/admin/pin/allowlist" && request.method === "POST") {
   const user = getCurrentUser(request);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
-const body = await request.json().catch(() => ({}));
-const orgId = String(body.orgId || "").trim();
-const orgName = String(body.orgName || "").trim() || "Unknown Org";
-const emails = Array.isArray(body.emails) ? body.emails : [];
 
-if (!orgId) return json({ error:"missing_orgId" }, 400);
-
-await auditLog(env, user.email, url.pathname, {
-  action: "pin_allowlist_update",
-  orgId
-});
-
+  const body = await request.json().catch(() => ({}));
+  const orgId = String(body.orgId || "").trim();
   const orgName = String(body.orgName || "").trim() || "Unknown Org";
   const emails = Array.isArray(body.emails) ? body.emails : [];
 
   if (!orgId) return json({ error:"missing_orgId" }, 400);
 
-  // Read existing mapping
+  await auditLog(env, user.email, url.pathname, {
+    action: "pin_allowlist_update",
+    orgId
+  });
+
   const existing = await env.ORG_MAP_KV.get(`org:${orgId}`, { type:"json" });
   const pin = existing?.pin || null;
   const role = existing?.role || "customer";
 
   if (!pin) {
-    return json({ error:"missing_pin_mapping", message:"No org->pin mapping exists for this org yet." }, 404);
+    return json({
+      error:"missing_pin_mapping",
+      message:"No org->pin mapping exists for this org yet."
+    }, 404);
   }
 
   const normEmails = emails
     .map(e => String(e || "").toLowerCase().trim())
     .filter(Boolean);
 
-  // Update org mapping
   await env.ORG_MAP_KV.put(`org:${orgId}`, JSON.stringify({
     pin, orgName, role, emails: normEmails
   }));
 
-  // Update pin mapping
   await env.ORG_MAP_KV.put(`pin:${pin}`, JSON.stringify({
     orgId, orgName, role, emails: normEmails
   }));
 
-  // Update email -> org mapping
-  // (clear old email mappings is hard without storing previous; this is best-effort add)
   for (const e of normEmails) {
     await env.ORG_MAP_KV.put(`email:${e}`, JSON.stringify({
       orgId, orgName, role
@@ -1373,6 +1367,7 @@ await auditLog(env, user.email, url.pathname, {
 
   return json({ ok:true, orgId, orgName, pin, emails: normEmails }, 200);
 }
+
 if (url.pathname === "/api/admin/orgs") {
   const token = await getAccessToken();
 
@@ -1978,52 +1973,43 @@ try {
          Returns:
            { oldPin, newPin, orgId, orgName }
       ----------------------------- */
-      if (url.pathname === "/api/admin/pin/rotate" && request.method === "POST") {
-        const user = getCurrentUser(request);
-        const token = await getAccessToken();
-        if (!user.isAdmin) return json({ error: "admin_only" }, 403);
-        const body = await request.json().catch(() => ({}));
-const orgId = String(body.orgId || "").trim();
-const orgName = String(body.orgName || "").trim();
+     if (url.pathname === "/api/admin/pin/rotate" && request.method === "POST") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
-if (!orgId) return json({ error: "missing_orgId" }, 400);
+  const body = await request.json().catch(() => ({}));
+  const orgId = String(body.orgId || "").trim();
+  const providedName = String(body.orgName || "").trim();
 
-await auditLog(env, user.email, url.pathname, {
-  action: "pin_rotate",
-  orgId
-});
+  if (!orgId) return json({ error: "missing_orgId" }, 400);
 
-        const orgName = String(body.orgName || "").trim();
+  await auditLog(env, user.email, url.pathname, {
+    action: "pin_rotate",
+    orgId
+  });
 
-        if (!orgId) return json({ error: "missing_orgId" }, 400);
+  const existing = await getPinByOrg(orgId);
+  const oldPin = existing?.pin || null;
+  const orgName = providedName || existing?.orgName || "Unknown Org";
+  const role = existing?.role || "customer";
+  const emails = existing?.emails || [];
 
-        // read current mapping
-const existing = await getPinByOrg(orgId);
-const oldPin = existing?.pin || null;
-const name = orgName || existing?.orgName || "Unknown Org";
-const role = existing?.role || "customer";
-const emails = existing?.emails || [];
+  const newPin = await generateUniqueNonEasyPin();
 
+  await putPinMapping(newPin, orgId, orgName, role, emails);
 
-        // generate new pin
-        const newPin = await generateUniqueNonEasyPin();
+  if (oldPin && /^\d{5}$/.test(oldPin)) {
+    await env.ORG_MAP_KV.delete(`pin:${oldPin}`);
+  }
 
-        // Write new mapping first
-        await putPinMapping(newPin, orgId, name, role, emails);
-
-        // Best-effort delete old mapping
-        if (oldPin && isFiveDigitPin(String(oldPin))) {
-          await env.ORG_MAP_KV.delete(KV.pinKey(String(oldPin)));
-        }
-
-        return json({
-          status: "ok",
-          orgId,
-          orgName: name,
-          oldPin,
-          newPin,
-        });
-      }
+  return json({
+    status: "ok",
+    orgId,
+    orgName,
+    oldPin,
+    newPin
+  });
+}
 
 async function jsonSafe(res) {
   const txt = await res.text();
@@ -2388,7 +2374,10 @@ if (url.pathname === "/api/cdr" && request.method === "GET") {
          GET /api/debug/pin-test
          TEMPORARY — remove after testing
       ----------------------------- */
-      if (url.pathname === "/api/debug/pin-test") {
+   if (url.pathname === "/api/debug/pin-test") {
+  if (env.DEBUG_MODE !== "true") {
+    return json({ error: "disabled" }, 403);
+  }
         const testPin = "12345";
 
         // Write to KV
