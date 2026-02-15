@@ -434,8 +434,14 @@ async function logout(){
    INIT
 ===================================================== */
 async function init(){
-  const ok = await loadMe();
-  if (!ok) return;
+
+  await loadMe();
+
+  if (!ME) return;
+
+  if (ME.role !== "admin" && !SELECTED_ORG_ID) {
+    return;
+  }
 
   await Promise.allSettled([
     loadLicenseHealth(),
@@ -444,7 +450,6 @@ async function init(){
     loadIncidents()
   ]);
 }
-
 init();
 </script>
 
