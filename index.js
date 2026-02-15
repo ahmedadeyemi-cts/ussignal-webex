@@ -67,26 +67,7 @@ export default {
     }
   },
 
-  /* =====================================================
-     CRON SNAPSHOT HANDLER
-     Runs via Cloudflare Cron Trigger
-  ===================================================== */
-  async scheduled(event, env, ctx) {
-    ctx.waitUntil(
-      (async () => {
-        try {
-          const payload = await computeGlobalSummary(env);
-          await putGlobalSummarySnapshot(env, payload);
-
-          console.log("✅ Global summary snapshot updated");
-        } catch (e) {
-          console.error("❌ Scheduled snapshot failed:", e.message);
-        }
-      })()
-    );
-  }
-
-};
+  
 
     /* =====================================================
        Helpers
@@ -2394,10 +2375,23 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
   });
 }
 
-      return json({ error: "not_found", path: url.pathname }, 404);
+         return json({ error: "not_found", path: url.pathname }, 404);
     } catch (err) {
       console.error("🔥 Worker error:", err);
       return json({ error: "internal_error", message: err?.message || String(err) }, 500);
     }
   },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil((async () => {
+      try {
+        const payload = await computeGlobalSummary(env);
+        await putGlobalSummarySnapshot(env, payload);
+        console.log("Global summary snapshot updated");
+      } catch (e) {
+        console.error("Scheduled snapshot failed:", e.message);
+      }
+    })());
+  }
+
 };
