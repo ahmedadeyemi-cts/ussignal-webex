@@ -26,52 +26,14 @@
  * - PIN_LOCKOUT_SECONDS (default 900)           // 15 min
  * - PIN_SEED_URL (default: your GitHub raw URL used below)
  */
-
-export default {
-
-  async fetch(request, env) {
-    try {
-      const url = new URL(request.url);
-
-      const jsonHeaders = {
-        "content-type": "application/json",
-        "cache-control": "no-store",
-      };
-
-      /* =====================================================
-         EVERYTHING YOU ALREADY HAVE INSIDE fetch()
-         stays exactly as-is below this line.
-         Do NOT remove your helpers or routes.
-      ===================================================== */
-
-      // 🔽 KEEP ALL YOUR EXISTING ROUTES + LOGIC HERE 🔽
-      // (Your 2000+ lines of code live here unchanged)
-
-      return json({ error: "not_found", path: url.pathname }, 404);
-
-    } catch (err) {
-      console.error("🔥 Worker error:", err);
-      return new Response(
-        JSON.stringify({
-          error: "internal_error",
-          message: err?.message || String(err),
-        }),
-        {
-          status: 500,
-          headers: {
-            "content-type": "application/json",
-            "cache-control": "no-store",
-          },
-        }
-      );
-    }
-  },
-
-  
-
-    /* =====================================================
+ /* =====================================================
        Helpers
     ===================================================== */
+const JSON_HEADERS = {
+  "content-type": "application/json",
+  "cache-control": "no-store",
+};
+
     const GLOBAL_SUMMARY_KEY = "globalSummarySnapshotV1";
 
 async function putGlobalSummarySnapshot(env, payload) {
@@ -102,13 +64,12 @@ async function auditLog(env, userEmail, path, metadata = {}) {
   }
 }
 
-    function json(data, status = 200, extraHeaders = {}) {
-      return new Response(JSON.stringify(data), {
-        status,
-        headers: { ...jsonHeaders, ...extraHeaders },
-      });
-    }
-
+  function json(data, status = 200, extraHeaders = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...JSON_HEADERS, ...extraHeaders },
+  });
+}
     function text(body, status = 200, headers = {}) {
       return new Response(body, {
         status,
@@ -157,13 +118,13 @@ async function auditLog(env, userEmail, path, metadata = {}) {
       return String(n);
     }
     //Maintenance API
-function cfgIntAllowZero(name, def) {
+function cfgIntAllowZero(env, name, def) {
   const v = env[name];
   const n = Number(v);
   return Number.isFinite(n) && n >= 0 ? Math.floor(n) : def;
 }
 
-const STATUS_CACHE_SECONDS = cfgIntAllowZero("STATUS_CACHE_SECONDS", 60); // 0 disables cache
+const STATUS_CACHE_SECONDS = 60; // 0 disables cache
 
   function normalizeOrgIdParam(v) {
   const s = String(v || "").trim();
@@ -199,17 +160,7 @@ const STATUS_CACHE_SECONDS = cfgIntAllowZero("STATUS_CACHE_SECONDS", 60); // 0 d
       return false;
     }
 
-    function cfgInt(name, def) {
-      const v = env[name];
-      const n = Number(v);
-      return Number.isFinite(n) && n > 0 ? Math.floor(n) : def;
-    }
-
-    const SESSION_TTL_SECONDS = cfgInt("SESSION_TTL_SECONDS", 3600);
-
-    const PIN_THROTTLE_WINDOW_SECONDS = cfgInt("PIN_THROTTLE_WINDOW_SECONDS", 900); // 15m
-    const PIN_MAX_ATTEMPTS = cfgInt("PIN_MAX_ATTEMPTS", 5);
-    const PIN_LOCKOUT_SECONDS = cfgInt("PIN_LOCKOUT_SECONDS", 900); // 15m
+    
 
     // KV key conventions
     const KV = {
@@ -791,11 +742,25 @@ async function computeGlobalSummary(env) {
   };
 }
 
+export default {
+
+  async fetch(request, env) {
+    try {
+      const url = new URL(request.url);
+
+const SESSION_TTL_SECONDS = cfgIntAllowZero(env, "SESSION_TTL_SECONDS", 3600);
+const PIN_THROTTLE_WINDOW_SECONDS = cfgIntAllowZero(env, "PIN_THROTTLE_WINDOW_SECONDS", 900);
+const PIN_MAX_ATTEMPTS = cfgIntAllowZero(env, "PIN_MAX_ATTEMPTS", 5);
+const PIN_LOCKOUT_SECONDS = cfgIntAllowZero(env, "PIN_LOCKOUT_SECONDS", 900);
+
+    
+
+   
+
     /* =====================================================
        Routes
     ===================================================== */
 
-    try {
       /* =====================================================
    🔐 GLOBAL ACCESS ENFORCEMENT
    ===================================================== */
@@ -2174,18 +2139,20 @@ async function mapLimit(items, limit, fn) {
   await Promise.all(workers);
   return out;
 }
-
-      if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
+if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
   const user = getCurrentUser(request);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
-  // IMPORTANT: reuse your existing global-summary compute logic,
-  // but run it here ONCE, and store snapshot.
-  const payload = await computeGlobalSummary(env, url.origin); // you’ll create this function
+  const payload = await computeGlobalSummary(env);
   await putGlobalSummarySnapshot(env, payload);
 
-  return json({ ok: true, message: "Snapshot refreshed", generatedAt: new Date().toISOString() }, 200);
+  return json({
+    ok: true,
+    message: "Snapshot refreshed",
+    generatedAt: new Date().toISOString()
+  }, 200);
 }
+
 
 
       /* -----------------------------
