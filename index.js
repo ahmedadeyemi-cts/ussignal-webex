@@ -675,6 +675,44 @@ async function apiCDR(env, request) {
 
   return json(data, 200);
 }
+// Simple concurrency limiter for partner-wide fanout calls
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let i = 0;
+
+  async function worker() {
+    while (true) {
+      const idx = i++;
+      if (idx >= items.length) return;
+      out[idx] = await fn(items[idx], idx);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
+  await Promise.all(workers);
+  return out;
+}
+   if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const snapshot = await getGlobalSummarySnapshot(env);
+
+  if (!snapshot) {
+    return json({
+      ok: false,
+      message: "No snapshot available yet"
+    }, 404);
+  }
+
+  return json({
+    ok: true,
+    generatedAt: snapshot.generatedAt,
+    ...snapshot.payload
+  }, 200);
+}
+  
+
 async function computeGlobalSummary(env) {
   const token = await getAccessToken(env);
 
@@ -2155,43 +2193,6 @@ async function cacheJson(cacheSeconds, urlStr, computeFn){
   return resp;
 }
 
-// Simple concurrency limiter for partner-wide fanout calls
-async function mapLimit(items, limit, fn) {
-  const out = new Array(items.length);
-  let i = 0;
-
-  async function worker() {
-    while (true) {
-      const idx = i++;
-      if (idx >= items.length) return;
-      out[idx] = await fn(items[idx], idx);
-    }
-  }
-
-  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
-  await Promise.all(workers);
-  return out;
-}
-   if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
-  const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
-
-  const snapshot = await getGlobalSummarySnapshot(env);
-
-  if (!snapshot) {
-    return json({
-      ok: false,
-      message: "No snapshot available yet"
-    }, 404);
-  }
-
-  return json({
-    ok: true,
-    generatedAt: snapshot.generatedAt,
-    ...snapshot.payload
-  }, 200);
-}
-  
 
 
 
