@@ -255,20 +255,140 @@ main {
 </main>
 
 <script>
-// Simple theme toggle
+const $ = (id) => document.getElementById(id);
+
+let ME = null;
+let SELECTED_ORG_ID = null;
+let SESSION_TIMER = null;
+
+/* ---------------------------
+   Theme
+---------------------------- */
 function loadTheme(){
   const saved = localStorage.getItem("uiTheme") || "light";
   document.documentElement.setAttribute("data-theme", saved);
-  document.getElementById("btnTheme").textContent =
+  $("btnTheme").textContent =
     saved === "dark" ? "Light Mode" : "Dark Mode";
 }
-document.getElementById("btnTheme").onclick = () => {
-  const current = document.documentElement.getAttribute("data-theme");
-  const next = current === "dark" ? "light" : "dark";
+$("btnTheme").onclick = () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur === "dark" ? "light" : "dark";
   localStorage.setItem("uiTheme", next);
   loadTheme();
 };
 loadTheme();
+
+/* ---------------------------
+   API Helper
+---------------------------- */
+async function api(path){
+  const res = await fetch(path);
+  if (!res.ok) {
+    if (res.status === 401) {
+      window.location.href = "/pin";
+      return null;
+    }
+    throw new Error("API failed: " + path);
+  }
+  return await res.json();
+}
+
+/* ---------------------------
+   Load Session
+---------------------------- */
+async function loadMe(){
+  const me = await api("/api/me");
+  if (!me) return;
+
+  ME = me;
+  SELECTED_ORG_ID = me.orgId;
+
+  if (!ME.role || (ME.role !== "admin" && !ME.orgId)) {
+    window.location.href = "/pin";
+  }
+
+  startSessionTimer(me.sessionExpiresInSeconds);
+}
+
+/* ---------------------------
+   Session Timer
+---------------------------- */
+function startSessionTimer(seconds){
+  if (!seconds) return;
+
+  let remaining = seconds;
+
+  SESSION_TIMER = setInterval(() => {
+    remaining--;
+    if (remaining <= 0){
+      clearInterval(SESSION_TIMER);
+      window.location.href = "/pin";
+    }
+  }, 1000);
+}
+
+/* ---------------------------
+   KPI Loaders
+---------------------------- */
+async function loadLicenseHealth(){
+  const data = await api(`/api/licenses?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`);
+  if (!data) return;
+
+  const deficit = data.summary.totalDeficit;
+  $("licenseHealth").textContent =
+    deficit > 0 ? `${deficit} Deficit` : "Healthy";
+}
+
+async function loadDeviceHealth(){
+  const data = await api(`/api/devices?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`);
+  if (!data) return;
+
+  const offline = (data.items || []).filter(d =>
+    (d.connectionStatus || "").toLowerCase().includes("disconnected")
+  ).length;
+
+  $("deviceHealth").textContent =
+    offline > 0 ? `${offline} Offline` : "All Online";
+}
+
+async function loadAnalytics(){
+  const data = await api(`/api/analytics?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`);
+  if (!data) return;
+
+  const total = data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
+  $("callVolume").textContent = total.toLocaleString();
+}
+
+async function loadIncidents(){
+  const data = await api("/api/incidents");
+  if (!data) return;
+
+  const open = (data.incidents || []).filter(i => i.status !== "resolved").length;
+  $("incidentCount").textContent = open;
+}
+
+/* ---------------------------
+   Logout
+---------------------------- */
+async function logout(){
+  await fetch("/api/pin/logout", { method:"POST" });
+  window.location.href = "/pin";
+}
+
+/* ---------------------------
+   Init
+---------------------------- */
+async function init(){
+  await loadMe();
+  await Promise.all([
+    loadLicenseHealth(),
+    loadDeviceHealth(),
+    loadAnalytics(),
+    loadIncidents()
+  ]);
+}
+
+init();
 </script>
 
 </body>
