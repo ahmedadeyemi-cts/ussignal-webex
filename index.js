@@ -2380,9 +2380,8 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
     hasFrom: !!env.LICENSE_REPORT_FROM
   });
 }
-if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
- // const user = getCurrentUser(request);
-//  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+ if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
 
   const payload = await computeGlobalSummary(env);
   await putGlobalSummarySnapshot(env, payload);
@@ -2392,13 +2391,8 @@ if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "
     message: "Snapshot refreshed",
     generatedAt: new Date().toISOString()
   }, 200);
-}
-         return json({ error: "not_found", path: url.pathname }, 404);
-    } catch (err) {
-      console.error("🔥 Worker error:", err);
-      return json({ error: "internal_error", message: err?.message || String(err) }, 500);
-    }
-  },
+},
+
 
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
