@@ -223,6 +223,11 @@ input{
       <h3>Total Call Volume (7d)</h3>
       <div class="metric success" id="totalCalls">—</div>
     </div>
+    
+    <div class="card">
+  <h3>Total Customers</h3>
+  <div class="metric success" id="totalCustomers">—</div>
+</div>
 
   </div>
 
@@ -275,6 +280,11 @@ input{
   display:none;
   align-items:center; justify-content:center;
   z-index:9999;
+  align-items:center;
+  justify-content:center;
+  padding:40px;
+  
+
 ">
   <div style="
     width:920px; max-width:95vw;
@@ -321,7 +331,12 @@ input{
 
       <div style="height:12px"></div>
 
-      <div style="overflow:auto; border-radius:12px; border:1px solid rgba(0,0,0,.08);">
+    <div style="
+  overflow:auto;
+  max-height:60vh;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,.08);
+">
         <table style="width:100%; border-collapse:collapse;">
           <thead>
             <tr style="background:rgba(0,0,0,.03);">
@@ -604,6 +619,7 @@ async function loadAdminSummary(){
   $("totalDeficits").textContent = data.totalDeficits;
   $("offlineDevices").textContent = data.offlineDevices;
   $("totalCalls").textContent = data.totalCalls.toLocaleString();
+  $("totalCustomers").textContent = data.totalOrgs;
 
   const rows = data.tenants.map(t => {
 
@@ -650,13 +666,21 @@ async function loadAdminSummary(){
 ------------------------------ */
 async function resolveTenant(){
   const email = $("inspectEmail").value;
-  const result = await api("/api/admin/resolve", {
-    method:"POST",
-    headers:{ "content-type":"application/json" },
-    body:JSON.stringify({ email })
+
+  const res = await fetch("/api/admin/resolve", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email })
   });
-  $("inspectResult").textContent = JSON.stringify(result,null,2);
+
+  if (!res.ok) {
+    throw new Error("Resolve failed");
+  }
+
+  const result = await res.json();
+  $("inspectResult").textContent = JSON.stringify(result, null, 2);
 }
+
 
 /* -----------------------------
    Session Timer
