@@ -1924,111 +1924,108 @@ if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
     // Keep this sane: 6-10 concurrent calls is plenty
     const CONCURRENCY = 8;
 
- async function perOrg(org) {
-  const orgId = org.id;
-  const orgName = org.displayName || org.name || "Unknown";
-
-  // Licenses
-  const licUrl = `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(orgId)}`;
-  const licRes = await fetch(licUrl, { headers: { Authorization: `Bearer ${token}` } });
-  const licSafe = await jsonSafe(licRes);
-
-  let deficit = 0;
-  if (licSafe.ok) {
-    const items = licSafe.data.items || [];
-    for (const l of items) {
-      const total = (l.totalUnits === null || l.totalUnits === undefined) ? null : Number(l.totalUnits);
-      const consumed = Number(l.consumedUnits ?? 0);
-      const isUnlimited = total === -1;
-      const hasTotal = Number.isFinite(total);
-      const d = isUnlimited ? 0 : (hasTotal ? Math.max(0, consumed - total) : 0);
-      deficit += d;
-    }
-  }
-
-  // Devices
-  const devUrl = `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(orgId)}`;
-  const devRes = await fetch(devUrl, { headers: { Authorization: `Bearer ${token}` } });
-  const devSafe = await jsonSafe(devRes);
-
-  let offlineDevices = 0;
-  if (devSafe.ok) {
-    const items = devSafe.data.items || [];
-    offlineDevices = items.filter(d => {
-      const s = String(d.connectionStatus || "").toLowerCase();
-      return s.includes("disconnected") || s.includes("offline") || s.includes("not connected");
-    }).length;
-  }
-
-  // Analytics (safe)
-  let callVolume = 0;
-  let analyticsOk = false;
-
+async function perOrg(org) {
   try {
-    if (
-      env.ANALYTICS_CLIENT_ID &&
-      env.ANALYTICS_CLIENT_SECRET &&
-      env.ANALYTICS_REFRESH_TOKEN
-    ) {
-      const aTok = await getAnalyticsAccessToken();
+    const orgId = org.id;
+    const orgName = org.displayName || org.name || "Unknown";
 
-      const aUrl =
-        `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(orgId)}&interval=DAY&from=-7d`;
+    let deficit = 0;
+    let offlineDevices = 0;
+    let callVolume = 0;
+    let analyticsOk = false;
 
-      const aRes = await fetch(aUrl, {
-        headers: { Authorization: `Bearer ${aTok}` }
-      });
+    // Licenses
+    try {
+      const licUrl = `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(orgId)}`;
+      const licRes = await fetch(licUrl, { headers: { Authorization: `Bearer ${token}` } });
+      const licSafe = await jsonSafe(licRes);
 
-      const aSafe = await jsonSafe(aRes);
-
-      if (aSafe.ok) {
-        callVolume =
-          aSafe.data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
-        analyticsOk = true;
+      if (licSafe.ok) {
+        const items = licSafe.data.items || [];
+        for (const l of items) {
+          const total = (l.totalUnits === null || l.totalUnits === undefined)
+            ? null
+            : Number(l.totalUnits);
+          const consumed = Number(l.consumedUnits ?? 0);
+          const isUnlimited = total === -1;
+          const hasTotal = Number.isFinite(total);
+          const d = isUnlimited ? 0 : (hasTotal ? Math.max(0, consumed - total) : 0);
+          deficit += d;
+        }
       }
+    } catch (e) {
+      console.error("License fetch failed:", orgId, e.message);
     }
+
+    // Devices
+    try {
+      const devUrl = `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(orgId)}`;
+      const devRes = await fetch(devUrl, { headers: { Authorization: `Bearer ${token}` } });
+      const devSafe = await jsonSafe(devRes);
+
+      if (devSafe.ok) {
+        const items = devSafe.data.items || [];
+        offlineDevices = items.filter(d => {
+          const s = String(d.connectionStatus || "").toLowerCase();
+          return s.includes("disconnected") ||
+                 s.includes("offline") ||
+                 s.includes("not connected");
+        }).length;
+      }
+    } catch (e) {
+      console.error("Device fetch failed:", orgId, e.message);
+    }
+
+    // Analytics
+    try {
+      if (
+        env.ANALYTICS_CLIENT_ID &&
+        env.ANALYTICS_CLIENT_SECRET &&
+        env.ANALYTICS_REFRESH_TOKEN
+      ) {
+        const aTok = await getAnalyticsAccessToken();
+        const aUrl =
+          `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(orgId)}&interval=DAY&from=-7d`;
+
+        const aRes = await fetch(aUrl, {
+          headers: { Authorization: `Bearer ${aTok}` }
+        });
+
+        const aSafe = await jsonSafe(aRes);
+
+        if (aSafe.ok) {
+          callVolume =
+            aSafe.data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
+          analyticsOk = true;
+        }
+      }
+    } catch (e) {
+      console.error("Analytics failed:", orgId, e.message);
+    }
+
+    return {
+      orgId,
+      orgName,
+      deficit,
+      offlineDevices,
+      callVolume,
+      status: {
+        analyticsOk
+      }
+    };
+
   } catch (e) {
-    console.error("Analytics failed for org:", orgId, e?.message || e);
+    console.error("perOrg hard failure:", e.message);
+    return {
+      orgId: org.id,
+      orgName: org.displayName || "Unknown",
+      deficit: 0,
+      offlineDevices: 0,
+      callVolume: 0,
+      status: { analyticsOk: false, failed: true }
+    };
   }
-
-  return {
-    orgId,
-    orgName,
-    deficit,
-    offlineDevices,
-    callVolume,
-    status: {
-      licensesOk: !!licSafe.ok,
-      devicesOk: !!devSafe.ok,
-      analyticsOk
-    }
-  };
 }
-const tenants = await mapLimit(orgs, CONCURRENCY, perOrg);
-
-const totalOrgs = tenants.length;
-const totalDeficits = tenants.reduce((a, t) => a + (t.deficit || 0), 0);
-const totalOfflineDevices = tenants.reduce((a, t) => a + (t.offlineDevices || 0), 0);
-const totalCalls = tenants.reduce((a, t) => a + (Number(t.callVolume) || 0), 0);
-
-tenants.sort((a,b) =>
-  (b.deficit - a.deficit) ||
-  (b.offlineDevices - a.offlineDevices) ||
-  (b.callVolume - a.callVolume)
-);
-
-return {
-  ok: true,
-  generatedAt: new Date().toISOString(),
-  cacheSeconds: CACHE_SECONDS,
-  totalOrgs,
-  totalDeficits,
-  offlineDevices: totalOfflineDevices,
-  totalCalls,
-  tenants
-};
-      });  // closes cacheJson
-}      // closes /api/admin/global-summary route
 
 
       /* -----------------------------
