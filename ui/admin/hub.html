@@ -146,6 +146,35 @@ button{
   font-size:18px;
   font-weight:700;
 }
+input{
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid rgba(0,0,0,.18);
+    background:var(--card);
+    color:var(--text);
+    font-size:14px;
+    outline:none;
+  }
+  .btn-primary{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:10px 12px;
+    cursor:pointer;
+    font-weight:800;
+  }
+  .btn-outline{
+    background:transparent;
+    color:var(--text);
+    border:1px solid rgba(0,0,0,.22);
+    border-radius:10px;
+    padding:10px 12px;
+    cursor:pointer;
+    font-weight:700;
+  }
+  [data-theme="dark"] input{ border-color: rgba(255,255,255,.14); }
+  [data-theme="dark"] .btn-outline{ border-color: rgba(255,255,255,.16); }
 </style>
 </head>
 <body>
@@ -236,11 +265,297 @@ button{
   </div>
 
 </div>
+<!-- =========================
+     Admin PIN Manager Modal
+========================== -->
+<div id="pinModal" style="
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.55);
+  display:none;
+  align-items:center; justify-content:center;
+  z-index:9999;
+">
+  <div style="
+    width:920px; max-width:95vw;
+    background:var(--card);
+    border-radius:16px;
+    box-shadow:0 18px 60px rgba(0,0,0,.35);
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.06);
+  ">
+
+    <div style="
+      display:flex; align-items:center; justify-content:space-between;
+      padding:18px 20px;
+      border-bottom:1px solid rgba(0,0,0,.08);
+    ">
+      <div>
+        <div style="font-weight:800; font-size:16px;">PIN Management</div>
+        <div style="color:var(--muted); font-size:13px; margin-top:4px;">
+          Search tenants, rotate PINs, and manage email allowlists.
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button class="btn-outline" onclick="refreshPinManager()">Refresh</button>
+        <button class="btn-primary" onclick="closePinManager()">Close</button>
+      </div>
+    </div>
+
+    <div style="padding:18px 20px;">
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <input id="pinSearch" placeholder="Search org name..." style="flex:1; min-width:280px;" />
+        <button class="btn-outline" onclick="refreshPinManager()">Search</button>
+      </div>
+
+      <div id="pinMgrError" style="
+        margin-top:12px; padding:10px 12px; border-radius:12px;
+        border:1px solid rgba(0,0,0,.10);
+        background:rgba(239,68,68,.10);
+        color:var(--text);
+        display:none;
+        white-space:pre-wrap;
+        font-size:13px;
+      "></div>
+
+      <div style="height:12px"></div>
+
+      <div style="overflow:auto; border-radius:12px; border:1px solid rgba(0,0,0,.08);">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr style="background:rgba(0,0,0,.03);">
+              <th style="text-align:left; padding:12px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;">Org</th>
+              <th style="text-align:left; padding:12px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;">Org ID</th>
+              <th style="text-align:left; padding:12px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;">PIN</th>
+              <th style="text-align:left; padding:12px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;">Allowlisted Emails</th>
+              <th style="text-align:right; padding:12px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pinMgrRows">
+            <tr><td colspan="5" style="padding:18px; color:var(--muted);">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="height:14px"></div>
+
+      <!-- Inline editor -->
+      <div id="pinEditor" style="
+        display:none;
+        padding:14px; border-radius:14px;
+        border:1px solid rgba(0,0,0,.08);
+        background:rgba(0,0,0,.02);
+      ">
+        <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:800;" id="pinEditorTitle">Tenant</div>
+            <div style="font-size:13px; color:var(--muted);" id="pinEditorSubtitle">—</div>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button class="btn-outline" onclick="closePinEditor()">Cancel</button>
+            <button class="btn-primary" onclick="saveAllowlist()">Save Allowlist</button>
+          </div>
+        </div>
+
+        <div style="height:12px"></div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <input id="allowlistInput" placeholder="comma-separated emails (e.g. a@x.com,b@y.com)" style="flex:1; min-width:300px;" />
+          <button class="btn-outline" onclick="rotatePinFromEditor()">Rotate PIN</button>
+        </div>
+
+        <div style="margin-top:10px; font-size:13px; color:var(--muted);">
+          Rotating a PIN keeps the org mapping intact and updates the PIN → org mapping in KV.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 <script>
 const $ = (id) => document.getElementById(id);
 
 let SESSION_TIMER;
+  // -----------------------------
+// PIN Manager Modal UI
+// Requires Worker endpoints:
+//  - GET  /api/admin/pins (list pins + allowlist)
+//  - POST /api/admin/pin/rotate { orgId, orgName }
+//  - POST /api/admin/pin/allowlist { orgId, orgName, emails[] }
+// -----------------------------
+let PIN_MGR_CACHE = [];
+let PIN_EDITOR = { orgId:null, orgName:null, pin:null, emails:[] };
+
+function openPinManager(){
+  document.getElementById("pinModal").style.display = "flex";
+  refreshPinManager();
+}
+
+function closePinManager(){
+  document.getElementById("pinModal").style.display = "none";
+  closePinEditor();
+}
+
+function setPinMgrError(msg){
+  const el = document.getElementById("pinMgrError");
+  if(!msg){
+    el.style.display = "none";
+    el.textContent = "";
+    return;
+  }
+  el.style.display = "block";
+  el.textContent = msg;
+}
+
+async function api2(path, opts){
+  const res = await fetch(path, opts);
+  const txt = await res.text();
+  let data = null;
+  try { data = txt ? JSON.parse(txt) : null; } catch { data = { raw: txt }; }
+  if (!res.ok) {
+    if (res.status === 401) { window.location.href = "/pin"; return null; }
+    throw new Error((data && (data.message || data.error)) || `API failed ${res.status}: ${path}`);
+  }
+  return data;
+}
+
+async function refreshPinManager(){
+  try{
+    setPinMgrError(null);
+    const list = await api2("/api/admin/pins");
+    if(!list) return;
+
+    PIN_MGR_CACHE = Array.isArray(list.items) ? list.items : [];
+
+    const q = (document.getElementById("pinSearch").value || "").toLowerCase().trim();
+    const filtered = !q ? PIN_MGR_CACHE : PIN_MGR_CACHE.filter(x =>
+      (x.orgName || "").toLowerCase().includes(q)
+    );
+
+    renderPinMgrRows(filtered);
+  } catch(e){
+    setPinMgrError(e?.message || String(e));
+  }
+}
+
+function renderPinMgrRows(items){
+  const tbody = document.getElementById("pinMgrRows");
+  if(!items.length){
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:18px; color:var(--muted);">No tenants found.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = items.map(t => {
+    const emails = Array.isArray(t.emails) ? t.emails : [];
+    const emailText = emails.length ? emails.join(", ") : "—";
+
+    return `
+      <tr>
+        <td style="padding:12px; font-weight:800;">${escapeHtml(t.orgName || "Unknown")}</td>
+        <td style="padding:12px; color:var(--muted); font-size:13px;">${escapeHtml(t.orgId || "—")}</td>
+        <td style="padding:12px;">
+          <span style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-weight:900;">
+            ${escapeHtml(t.pin || "—")}
+          </span>
+        </td>
+        <td style="padding:12px; color:var(--muted); font-size:13px;">${escapeHtml(emailText)}</td>
+        <td style="padding:12px; text-align:right;">
+          <button class="btn-outline" onclick='editAllowlist(${JSON.stringify(t).replaceAll("'", "\\'")})'>Edit</button>
+          <button class="btn-primary" onclick="rotatePin('${escapeJs(t.orgId)}','${escapeJs(t.orgName)}')">Rotate PIN</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function editAllowlist(t){
+  PIN_EDITOR = {
+    orgId: t.orgId,
+    orgName: t.orgName,
+    pin: t.pin,
+    emails: Array.isArray(t.emails) ? t.emails : []
+  };
+
+  document.getElementById("pinEditorTitle").textContent = t.orgName || "Tenant";
+  document.getElementById("pinEditorSubtitle").textContent = t.orgId || "—";
+  document.getElementById("allowlistInput").value = (PIN_EDITOR.emails || []).join(", ");
+  document.getElementById("pinEditor").style.display = "block";
+}
+
+function closePinEditor(){
+  document.getElementById("pinEditor").style.display = "none";
+  PIN_EDITOR = { orgId:null, orgName:null, pin:null, emails:[] };
+}
+
+async function rotatePin(orgId, orgName){
+  try{
+    setPinMgrError(null);
+    const r = await api2("/api/admin/pin/rotate", {
+      method:"POST",
+      headers:{ "content-type":"application/json" },
+      body: JSON.stringify({ orgId, orgName })
+    });
+    if(!r) return;
+    await refreshPinManager();
+  } catch(e){
+    setPinMgrError(e?.message || String(e));
+  }
+}
+
+async function rotatePinFromEditor(){
+  if(!PIN_EDITOR.orgId) return;
+  await rotatePin(PIN_EDITOR.orgId, PIN_EDITOR.orgName);
+}
+
+async function saveAllowlist(){
+  try{
+    setPinMgrError(null);
+    if(!PIN_EDITOR.orgId) return;
+
+    const raw = (document.getElementById("allowlistInput").value || "")
+      .split(",")
+      .map(x => x.trim().toLowerCase())
+      .filter(Boolean);
+
+    const emails = Array.from(new Set(raw));
+
+    const r = await api2("/api/admin/pin/allowlist", {
+      method:"POST",
+      headers:{ "content-type":"application/json" },
+      body: JSON.stringify({
+        orgId: PIN_EDITOR.orgId,
+        orgName: PIN_EDITOR.orgName,
+        emails
+      })
+    });
+    if(!r) return;
+
+    await refreshPinManager();
+    closePinEditor();
+  } catch(e){
+    setPinMgrError(e?.message || String(e));
+  }
+}
+
+function escapeHtml(str){
+  return String(str ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function escapeJs(str){
+  return String(str ?? "").replaceAll("\\","\\\\").replaceAll("'","\\'");
+}
+
+// Hook your existing button
+function openPinManager(){
+  document.getElementById("pinModal").style.display="flex";
+  refreshPinManager();
+}
+
 
 /* -----------------------------
    Theme
