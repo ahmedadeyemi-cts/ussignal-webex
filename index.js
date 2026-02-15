@@ -2319,13 +2319,15 @@ async function perOrg(org) {
     const totalCalls = tenants.reduce((a, t) => a + (t.callVolume || 0), 0);
 
     return {
-      ok: true,
-      totalOrgs,
-      totalDeficits,
-      offlineDevices: totalOffline,
-      totalCalls,
-      tenants
-    };
+  ok: true,
+  summary: {
+    totalOrgs,
+    totalDeficits,
+    offlineDevices: totalOffline,
+    totalCalls
+  },
+  tenants
+};
   });
 }
 
