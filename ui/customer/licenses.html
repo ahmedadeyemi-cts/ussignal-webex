@@ -278,6 +278,70 @@
   background: var(--danger-bg);
   color: var(--danger-fg);
 }
+    .status-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.status-online {
+  background: rgba(34,197,94,0.15);
+  color: #15803d;
+}
+
+.status-offline {
+  background: rgba(239,68,68,0.15);
+  color: #b91c1c;
+}
+
+.status-warning {
+  background: rgba(234,179,8,0.18);
+  color: #a16207;
+}
+.health-pill {
+  display:inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.health-good {
+  background: rgba(34,197,94,0.18);
+  color: #15803d;
+}
+
+.health-mid {
+  background: rgba(234,179,8,0.18);
+  color: #a16207;
+}
+
+.health-bad {
+  background: rgba(239,68,68,0.18);
+  color: #b91c1c;
+}
+tr {
+  transition: background 0.15s ease;
+}
+.status-online::after {
+  content: "";
+  display:inline-block;
+  width:6px;
+  height:6px;
+  background:#22c55e;
+  border-radius:50%;
+  margin-left:6px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity:1; transform:scale(1); }
+  50% { opacity:0.4; transform:scale(1.4); }
+  100% { opacity:1; transform:scale(1); }
+}
+
   </style>
 </head>
 
@@ -409,24 +473,51 @@
 <!-- ============================= -->
 <section id="tab-devices" class="tabpanel hidden">
   <div class="card">
-    <h2>Devices</h2>
+
+ <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+  <h2 style="margin:0;">Devices</h2>
+  <div class="muted" id="deviceSummary">—</div>
+</div>
+
+<!-- Organization Health Overview -->
+<div class="card" style="margin-bottom:12px;">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <strong>Organization Health</strong>
+    <div id="orgHealthScore">—</div>
+  </div>
+</div>
+
+
+    <!-- Filter Bar -->
+    <div class="row" style="margin-bottom:12px;">
+      <select id="deviceFilter">
+        <option value="all">All</option>
+        <option value="offline">Offline / Disconnected</option>
+        <option value="online">Online</option>
+      </select>
+
+      <input id="deviceSearch" placeholder="Search devices..." style="min-width:260px;" />
+    </div>
+
     <div id="deviceLoading" class="muted">Loading devices…</div>
 
     <table id="deviceTable" style="display:none">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Model</th>
-          <th>Status</th>
-          <th>Last Seen</th>
-        </tr>
-      </thead>
+     <thead>
+  <tr>
+    <th onclick="sortDevices('displayName')">Name</th>
+    <th onclick="sortDevices('product')">Model</th>
+    <th onclick="sortDevices('connectionStatus')">Status</th>
+    <th onclick="sortDevices('lastSeen')">Last Seen</th>
+    <th onclick="sortDevices('health')">Health</th>
+    <th>Location</th>
+    <th>Notes</th>
+  </tr>
+</thead>
       <tbody id="deviceRows"></tbody>
     </table>
   </div>
 </section>
-
-
+    
 <!-- ============================= -->
 <!-- ANALYTICS TAB -->
 <!-- ============================= -->
@@ -458,26 +549,6 @@
         </tr>
       </thead>
       <tbody id="cdrRows"></tbody>
-    </table>
-  </div>
-</section>
-
-
-<section id="tab-devices" class="tabpanel hidden">
-  <div class="card">
-    <h2>Devices</h2>
-    <div id="deviceLoading" class="muted">Loading devices…</div>
-
-    <table id="deviceTable" style="display:none">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Model</th>
-          <th>Status</th>
-          <th>Last Seen</th>
-        </tr>
-      </thead>
-      <tbody id="deviceRows"></tbody>
     </table>
   </div>
 </section>
@@ -529,7 +600,7 @@
     return { ok: res.ok, status: res.status, data };
   }
 
-  async function loadDevices() {
+ async function loadDevices() {
   $("deviceLoading").style.display = "block";
   $("deviceTable").style.display = "none";
 
@@ -552,14 +623,149 @@
   $("deviceLoading").style.display = "none";
   $("deviceTable").style.display = "table";
 
-  $("deviceRows").innerHTML = items.map(d => `
-    <tr>
-      <td>${escapeHtml(d.displayName || d.name || "—")}</td>
-      <td>${escapeHtml(d.product || "—")}</td>
-      <td>${escapeHtml(d.connectionStatus || "—")}</td>
-      <td>${d.lastSeen ? new Date(d.lastSeen).toLocaleString() : "—"}</td>
-    </tr>
-  `).join("");
+  DEVICE_CACHE = items;
+renderDevices(items);
+
+}
+function normalizeStatus(status) {
+  if (!status) return "offline";
+
+  const s = status.toLowerCase();
+
+  if (s.includes("issue")) return "warning";
+  if (s.includes("connected") && !s.includes("disconnected")) return "online";
+  return "offline";
+}
+
+function renderDevices(devices) {
+  const filter = $("deviceFilter").value;
+  const search = $("deviceSearch").value.toLowerCase();
+
+  let working = [...devices];
+
+if (DEVICE_SORT_KEY) {
+  working.sort((a, b) => {
+
+  let valA;
+let valB;
+
+if (DEVICE_SORT_KEY === "health") {
+  valA = calculateHealthScore(a);
+  valB = calculateHealthScore(b);
+} else {
+  valA = a[DEVICE_SORT_KEY];
+  valB = b[DEVICE_SORT_KEY];
+}
+
+
+    if (DEVICE_SORT_KEY === "lastSeen") {
+      valA = valA ? new Date(valA).getTime() : 0;
+      valB = valB ? new Date(valB).getTime() : 0;
+    } else {
+      valA = (valA || "").toString().toLowerCase();
+      valB = (valB || "").toString().toLowerCase();
+    }
+
+    if (valA < valB) return DEVICE_SORT_ASC ? -1 : 1;
+    if (valA > valB) return DEVICE_SORT_ASC ? 1 : -1;
+    return 0;
+  });
+}
+
+
+const filtered = working.filter(d => {
+
+    const normalized = normalizeStatus(d.connectionStatus);
+    const matchesFilter =
+      filter === "all" ||
+      (filter === "online" && normalized === "online") ||
+      (filter === "offline" && normalized !== "online");
+
+    const matchesSearch =
+      !search ||
+      (d.displayName || "").toLowerCase().includes(search) ||
+      (d.product || "").toLowerCase().includes(search);
+
+    return matchesFilter && matchesSearch;
+  });
+
+  const offlineCount = devices.filter(d =>
+    normalizeStatus(d.connectionStatus) !== "online"
+  ).length;
+
+  $("deviceSummary").textContent =
+    `${devices.length} devices • ${offlineCount} offline/disconnected`;
+updateOrgHealth(devices);
+  
+  $("deviceRows").innerHTML = filtered.map(d => {
+    const normalized = normalizeStatus(d.connectionStatus);
+
+    const statusClass =
+      normalized === "online"
+        ? "status-online"
+        : normalized === "warning"
+        ? "status-warning"
+        : "status-offline";
+
+    const statusLabel =
+      normalized === "online"
+        ? "ONLINE"
+        : normalized === "warning"
+        ? "ISSUES"
+        : "OFFLINE";
+    const healthScore = calculateHealthScore(d);
+
+let healthClass =
+  healthScore >= 85 ? "health-good" :
+  healthScore >= 60 ? "health-mid" :
+  "health-bad";
+
+
+   return `
+  <tr>
+    <td>
+      <span style="cursor:pointer; font-weight:600;"
+        onclick="openDeviceModalById('${escapeHtml(d.id || "")}')">
+        ${escapeHtml(d.displayName || "—")}
+      </span>
+    </td>
+    <td>${escapeHtml(d.product || "—")}</td>
+    <td>
+      <span class="status-badge ${statusClass}">
+        ${statusLabel}
+      </span>
+      ${normalized === "online" ? `
+        <div class="muted" style="font-size:11px;">
+          Uptime: ${calculateUptime(d.lastSeen, d.connectionStatus)}
+        </div>
+      ` : ""}
+    </td>
+    <td>
+      ${d.lastSeen ? `
+        ${new Date(d.lastSeen).toLocaleString()}
+        <div class="muted" style="font-size:11px;">
+          ${timeAgo(d.lastSeen)}
+        </div>
+      ` : "—"}
+    </td>
+
+    <!-- HEALTH COLUMN -->
+    <td>
+      <span class="health-pill ${healthClass}">
+        ${healthScore}%
+      </span>
+    </td>
+
+    <td>${normalized === "offline" ? "Power / site outage likely" : "—"}</td>
+  </tr>
+`;
+  }).join("");
+}
+
+  function openDeviceModalById(id) {
+  const device = DEVICE_CACHE.find(d => d.id === id);
+  if (!device) return;
+  openDeviceModal(device);
 }
 
   function safeOrgLabel(o) {
@@ -632,7 +838,15 @@ async function loadCDR() {
 // Load guards (prevents repeated API calls)
 let ANALYTICS_LOADED = false;
 let CDR_LOADED = false;
-let DEVICES_LOADED = false;
+let DEVICE_CACHE = [];
+
+let DEVICE_SORT_KEY = null;
+let DEVICE_SORT_ASC = true;
+
+  let DEVICE_REFRESH_INTERVAL = null;
+  let DEVICES_LOADED = false;
+
+
   // -----------------------------
   // Load /api/me
   // -----------------------------
@@ -715,7 +929,7 @@ return;
   // Reset tab load states for new tenant
   ANALYTICS_LOADED = false;
   CDR_LOADED = false;
-  DEVICES_LOADED = false;
+  DEVICE_CACHE = [];
 });
 function initTabs() {
   const tabs = document.querySelectorAll(".tab");
@@ -871,6 +1085,47 @@ if (btnEmailAlert) {
     await sendReport();
   });
 }
+$("deviceFilter").addEventListener("change", () => {
+  renderDevices(DEVICE_CACHE);
+});
+
+$("deviceSearch").addEventListener("input", () => {
+  renderDevices(DEVICE_CACHE);
+});
+
+
+$("deviceSearch").addEventListener("input", () => {
+  loadDevices();
+});
+
+  function updateOrgHealth(devices) {
+  if (!devices.length) {
+    $("orgHealthScore").textContent = "No Data";
+    return;
+  }
+
+  const avg =
+    devices.reduce((sum, d) => sum + calculateHealthScore(d), 0) /
+    devices.length;
+
+  const rounded = Math.round(avg);
+
+  let label =
+    rounded >= 85 ? "Excellent" :
+    rounded >= 70 ? "Good" :
+    rounded >= 50 ? "Fair" :
+    "Critical";
+
+  $("orgHealthScore").innerHTML = `
+    <span class="health-pill ${
+      rounded >= 85 ? "health-good" :
+      rounded >= 60 ? "health-mid" :
+      "health-bad"
+    }">
+      ${rounded}% — ${label}
+    </span>
+  `;
+}
 
   // -----------------------------
   // Send email (calls /api/licenses/email)
@@ -932,6 +1187,62 @@ $("btnLoad").addEventListener("click", async () => {
   // -----------------------------
   // Utilities
   // -----------------------------
+  function openDeviceModal(device) {
+  $("modalTitle").textContent = device.displayName || "Device";
+
+  $("modalContent").innerHTML = `
+    <strong>Model:</strong> ${escapeHtml(device.product || "—")}<br>
+    <strong>Status:</strong> ${escapeHtml(device.connectionStatus || "—")}<br>
+    <strong>Last Seen:</strong> ${
+      device.lastSeen
+        ? new Date(device.lastSeen).toLocaleString()
+        : "—"
+    }
+  `;
+
+  $("deviceModal").style.display = "flex";
+}
+
+function closeDeviceModal() {
+  $("deviceModal").style.display = "none";
+}
+  // Close modal when clicking outside inner card
+$("deviceModal").addEventListener("click", (e) => {
+  if (e.target.id === "deviceModal") {
+    closeDeviceModal();
+  }
+});
+
+
+function calculateUptime(lastSeen, status) {
+  if (!lastSeen || normalizeStatus(status) !== "online") return "—";
+
+  const minutes = Math.floor((Date.now() - new Date(lastSeen)) / 60000);
+
+  if (minutes < 60) return "< 1 hr";
+  if (minutes < 1440) return `${Math.floor(minutes / 60)} hrs`;
+  return `${Math.floor(minutes / 1440)} days`;
+}
+
+  function calculateHealthScore(device) {
+  const status = normalizeStatus(device.connectionStatus);
+
+  if (status === "offline") return 20;
+  if (status === "warning") return 60;
+
+  if (!device.lastSeen) return 70;
+
+  const minutes = Math.floor((Date.now() - new Date(device.lastSeen)) / 60000);
+
+  if (minutes < 5) return 100;
+  if (minutes < 30) return 90;
+  if (minutes < 120) return 80;
+  if (minutes < 1440) return 70;
+
+  return 50;
+}
+
+
   function fmtInt(n) {
     if (!Number.isFinite(n)) return "0";
     const sign = n < 0 ? "-" : "";
@@ -947,6 +1258,32 @@ $("btnLoad").addEventListener("click", async () => {
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
   }
+  
+function timeAgo(dateString) {
+  if (!dateString) return "—";
+
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+
+  const days = Math.floor(hours / 24);
+  return `${days} day${days !== 1 ? "s" : ""} ago`;
+}
+  
+function sortDevices(key) {
+  if (DEVICE_SORT_KEY === key) {
+    DEVICE_SORT_ASC = !DEVICE_SORT_ASC;
+  } else {
+    DEVICE_SORT_KEY = key;
+    DEVICE_SORT_ASC = true;
+  }
+  renderDevices(DEVICE_CACHE);
+}
 
   // -----------------------------
   // Init
@@ -960,10 +1297,21 @@ async function init() {
 
     await loadOrgs();
     SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
-initTabs();             // initialize tabs
-await loadLicenses();   // default landing
+    initTabs();
+    await loadLicenses();
 
+    // 🔁 Auto refresh devices every 60 seconds
+   if (DEVICE_REFRESH_INTERVAL) {
+  clearInterval(DEVICE_REFRESH_INTERVAL);
+}
 
+DEVICE_REFRESH_INTERVAL = setInterval(() => {
+
+      const active = document.querySelector(".tab.active");
+      if (active && active.dataset.tab === "devices") {
+        loadDevices();
+      }
+    }, 60000);
 
   } catch (e) {
     setError(e?.message || String(e));
@@ -974,6 +1322,30 @@ await loadLicenses();   // default landing
   init();
 
 </script>
+<div id="deviceModal" style="
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.5);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+">
+  <div style="
+    background:var(--card);
+    padding:24px;
+    border-radius:14px;
+    width:500px;
+    max-width:90%;
+  ">
+    <h3 id="modalTitle"></h3>
+    <div id="modalContent" class="muted" style="margin-top:10px;"></div>
+    <div style="margin-top:16px; text-align:right;">
+      <button onclick="closeDeviceModal()">Close</button>
+    </div>
+  </div>
+</div>
 
 </body>
+  
 </html>
