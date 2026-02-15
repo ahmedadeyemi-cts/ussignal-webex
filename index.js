@@ -1924,105 +1924,112 @@ if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
     // Keep this sane: 6-10 concurrent calls is plenty
     const CONCURRENCY = 8;
 
-    async function perOrg(org) {
-      const orgId = org.id;
-      const orgName = org.displayName || org.name || "Unknown";
+ async function perOrg(org) {
+  const orgId = org.id;
+  const orgName = org.displayName || org.name || "Unknown";
 
-      // Licenses
-      const licUrl = `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(orgId)}`;
-      const licRes = await fetch(licUrl, { headers: { Authorization: `Bearer ${token}` } });
-      const licSafe = await jsonSafe(licRes);
+  // Licenses
+  const licUrl = `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(orgId)}`;
+  const licRes = await fetch(licUrl, { headers: { Authorization: `Bearer ${token}` } });
+  const licSafe = await jsonSafe(licRes);
 
-      let deficit = 0;
-      if (licSafe.ok) {
-        const items = licSafe.data.items || [];
-        // normalize quickly (same logic as your /api/licenses)
-        for (const l of items) {
-          const total = (l.totalUnits === null || l.totalUnits === undefined) ? null : Number(l.totalUnits);
-          const consumed = Number(l.consumedUnits ?? 0);
-          const isUnlimited = total === -1;
-          const hasTotal = Number.isFinite(total);
-          const d = isUnlimited ? 0 : (hasTotal ? Math.max(0, consumed - total) : 0);
-          deficit += d;
-        }
-      }
-
-      // Devices
-      const devUrl = `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(orgId)}`;
-      const devRes = await fetch(devUrl, { headers: { Authorization: `Bearer ${token}` } });
-      const devSafe = await jsonSafe(devRes);
-
-      let offlineDevices = 0;
-      if (devSafe.ok) {
-        const items = devSafe.data.items || [];
-        offlineDevices = items.filter(d => {
-          const s = String(d.connectionStatus || "").toLowerCase();
-          return s.includes("disconnected") || s.includes("offline") || s.includes("not connected");
-        }).length;
-      }
-
-      // Analytics (best-effort)
-      // If analytics token differs in your env, you can swap getAnalyticsAccessToken()
-      // Analytics (fully safe)
-let callVolume = 0;
-let analyticsOk = false;
-
-try {
-  // Only attempt analytics if env vars exist
-  if (
-    env.ANALYTICS_CLIENT_ID &&
-    env.ANALYTICS_CLIENT_SECRET &&
-    env.ANALYTICS_REFRESH_TOKEN
-  ) {
-    const aTok = await getAnalyticsAccessToken();
-
-    const aUrl =
-      `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(orgId)}&interval=DAY&from=-7d`;
-
-    const aRes = await fetch(aUrl, {
-      headers: { Authorization: `Bearer ${aTok}` }
-    });
-
-    const aSafe = await jsonSafe(aRes);
-
-    if (aSafe.ok) {
-      callVolume =
-        aSafe.data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
-      analyticsOk = true;
+  let deficit = 0;
+  if (licSafe.ok) {
+    const items = licSafe.data.items || [];
+    for (const l of items) {
+      const total = (l.totalUnits === null || l.totalUnits === undefined) ? null : Number(l.totalUnits);
+      const consumed = Number(l.consumedUnits ?? 0);
+      const isUnlimited = total === -1;
+      const hasTotal = Number.isFinite(total);
+      const d = isUnlimited ? 0 : (hasTotal ? Math.max(0, consumed - total) : 0);
+      deficit += d;
     }
   }
-} catch (e) {
-  console.error("Analytics failed for org:", orgId, e?.message || e);
-}
 
+  // Devices
+  const devUrl = `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(orgId)}`;
+  const devRes = await fetch(devUrl, { headers: { Authorization: `Bearer ${token}` } });
+  const devSafe = await jsonSafe(devRes);
 
-    const tenants = await mapLimit(orgs, CONCURRENCY, perOrg);
-
-    const totalOrgs = tenants.length;
-    const totalDeficits = tenants.reduce((a, t) => a + (t.deficit || 0), 0);
-    const offlineDevices = tenants.reduce((a, t) => a + (t.offlineDevices || 0), 0);
-    const totalCalls = tenants.reduce((a, t) => a + (Number(t.callVolume) || 0), 0);
-
-    // Sort worst-first for the UI table
-    tenants.sort((a,b) =>
-      (b.deficit - a.deficit) ||
-      (b.offlineDevices - a.offlineDevices) ||
-      (b.callVolume - a.callVolume)
-    );
-
- return {
-  orgId,
-  orgName,
-  deficit,
-  offlineDevices,
-  callVolume,
-  status: {
-    licensesOk: !!licSafe.ok,
-    devicesOk: !!devSafe.ok,
-    analyticsOk
+  let offlineDevices = 0;
+  if (devSafe.ok) {
+    const items = devSafe.data.items || [];
+    offlineDevices = items.filter(d => {
+      const s = String(d.connectionStatus || "").toLowerCase();
+      return s.includes("disconnected") || s.includes("offline") || s.includes("not connected");
+    }).length;
   }
-};
+
+  // Analytics (safe)
+  let callVolume = 0;
+  let analyticsOk = false;
+
+  try {
+    if (
+      env.ANALYTICS_CLIENT_ID &&
+      env.ANALYTICS_CLIENT_SECRET &&
+      env.ANALYTICS_REFRESH_TOKEN
+    ) {
+      const aTok = await getAnalyticsAccessToken();
+
+      const aUrl =
+        `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(orgId)}&interval=DAY&from=-7d`;
+
+      const aRes = await fetch(aUrl, {
+        headers: { Authorization: `Bearer ${aTok}` }
+      });
+
+      const aSafe = await jsonSafe(aRes);
+
+      if (aSafe.ok) {
+        callVolume =
+          aSafe.data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
+        analyticsOk = true;
+      }
+    }
+  } catch (e) {
+    console.error("Analytics failed for org:", orgId, e?.message || e);
+  }
+
+  return {
+    orgId,
+    orgName,
+    deficit,
+    offlineDevices,
+    callVolume,
+    status: {
+      licensesOk: !!licSafe.ok,
+      devicesOk: !!devSafe.ok,
+      analyticsOk
+    }
+  };
 }
+const tenants = await mapLimit(orgs, CONCURRENCY, perOrg);
+
+const totalOrgs = tenants.length;
+const totalDeficits = tenants.reduce((a, t) => a + (t.deficit || 0), 0);
+const totalOfflineDevices = tenants.reduce((a, t) => a + (t.offlineDevices || 0), 0);
+const totalCalls = tenants.reduce((a, t) => a + (Number(t.callVolume) || 0), 0);
+
+tenants.sort((a,b) =>
+  (b.deficit - a.deficit) ||
+  (b.offlineDevices - a.offlineDevices) ||
+  (b.callVolume - a.callVolume)
+);
+
+return {
+  ok: true,
+  generatedAt: new Date().toISOString(),
+  cacheSeconds: CACHE_SECONDS,
+  totalOrgs,
+  totalDeficits,
+  offlineDevices: totalOfflineDevices,
+  totalCalls,
+  tenants
+};
+      });  // closes cacheJson
+}      // closes /api/admin/global-summary route
+
 
       /* -----------------------------
          /api/admin/pin/list (GET)
