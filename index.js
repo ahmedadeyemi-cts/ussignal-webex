@@ -36,15 +36,15 @@ export default {
       "cache-control": "no-store",
     };
 async scheduled(event, env, ctx) {
-    ctx.waitUntil((async () => {
-      try {
-        const payload = await computeGlobalSummary(env);
-        await putGlobalSummarySnapshot(env, payload);
-      } catch (e) {
-        console.error("Scheduled snapshot failed:", e.message);
-      }
-    })());
-  }
+  ctx.waitUntil((async () => {
+    try {
+      const payload = await computeGlobalSummary(env);
+      await putGlobalSummarySnapshot(env, payload);
+    } catch (e) {
+      console.error("Scheduled snapshot failed:", e.message);
+    }
+  })());
+}
 
 };
     /* =====================================================
