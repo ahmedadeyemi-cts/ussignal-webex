@@ -314,7 +314,7 @@ async function setSession(env, email, session) {
       });
     }
 
-    async function throttleCheckOrThrow(email, ip) {
+    async function throttleCheckOrThrow(env, email, ip) {
       const kEmail = KV.attemptsKeyEmail(email);
       const kIp = KV.attemptsKeyIp(ip);
 
@@ -337,7 +337,7 @@ async function setSession(env, email, session) {
       return { allowed: true, retryAfter: 0 };
     }
 
-    async function throttleRecordFailure(email, ip) {
+    async function throttleRecordFailure(env, email, ip) {
       const t = nowMs();
       const kEmail = KV.attemptsKeyEmail(email);
       const kIp = KV.attemptsKeyIp(ip);
@@ -369,7 +369,7 @@ async function setSession(env, email, session) {
 
     }
 
-    async function throttleClear(email, ip) {
+    async function throttleClear(env, email, ip) {
       // optional: clear attempts on success
       await Promise.all([
         env.USER_SESSION_KV.delete(KV.attemptsKeyEmail(email)),
@@ -1332,7 +1332,7 @@ if (!user.isAdmin) {
         }
 
         // Throttle check
-        const th = await throttleCheckOrThrow(user.email, ip);
+        const th = await throttleCheckOrThrow(env, user.email, ip);
         if (!th.allowed) {
           return json(
             { error: "too_many_attempts", message: `Too many attempts. Try again in ${th.retryAfter}s.` },
