@@ -562,11 +562,6 @@ async function renderCustomerHubHTML() {
   return await res.text();
 }
 
-async function renderAdminHubHTML() {
-  const res = await fetch(
-    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/index.html"
-  );
-
   if (!res.ok) {
     throw new Error("Failed to load admin hub UI");
   }
@@ -1176,6 +1171,87 @@ return json({
         return json({ status: "ok" });
       }
 
+
+      if (url.pathname === "/api/admin/pins" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const token = await getAccessToken();
+  const orgRes = await fetch("https://webexapis.com/v1/organizations", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const orgData = await orgRes.json();
+
+  if (!orgRes.ok) return json({ error:"org_list_failed", details: orgData }, 500);
+
+  const orgs = orgData.items || [];
+
+  // For each org, attempt to read org->pin mapping from KV
+  const items = await Promise.all(orgs.map(async (o) => {
+    const orgId = o.id;
+    const orgName = o.displayName || o.name || "Unknown";
+    const kv = await env.ORG_MAP_KV.get(`org:${orgId}`, { type:"json" });
+
+    return {
+      orgId,
+      orgName,
+      pin: kv?.pin || null,
+      emails: kv?.emails || []
+    };
+  }));
+
+  // Sort alphabetical
+  items.sort((a,b) => (a.orgName || "").localeCompare(b.orgName || ""));
+
+  return json({ ok:true, items }, 200);
+}
+
+
+      if (url.pathname === "/api/admin/pin/allowlist" && request.method === "POST") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const body = await request.json().catch(() => ({}));
+  const orgId = String(body.orgId || "").trim();
+  const orgName = String(body.orgName || "").trim() || "Unknown Org";
+  const emails = Array.isArray(body.emails) ? body.emails : [];
+
+  if (!orgId) return json({ error:"missing_orgId" }, 400);
+
+  // Read existing mapping
+  const existing = await env.ORG_MAP_KV.get(`org:${orgId}`, { type:"json" });
+  const pin = existing?.pin || null;
+  const role = existing?.role || "customer";
+
+  if (!pin) {
+    return json({ error:"missing_pin_mapping", message:"No org->pin mapping exists for this org yet." }, 404);
+  }
+
+  const normEmails = emails
+    .map(e => String(e || "").toLowerCase().trim())
+    .filter(Boolean);
+
+  // Update org mapping
+  await env.ORG_MAP_KV.put(`org:${orgId}`, JSON.stringify({
+    pin, orgName, role, emails: normEmails
+  }));
+
+  // Update pin mapping
+  await env.ORG_MAP_KV.put(`pin:${pin}`, JSON.stringify({
+    orgId, orgName, role, emails: normEmails
+  }));
+
+  // Update email -> org mapping
+  // (clear old email mappings is hard without storing previous; this is best-effort add)
+  for (const e of normEmails) {
+    await env.ORG_MAP_KV.put(`email:${e}`, JSON.stringify({
+      orgId, orgName, role
+    }));
+  }
+
+  return json({ ok:true, orgId, orgName, pin, emails: normEmails }, 200);
+}
+
       /* -----------------------------
          /api/org
          - Admin: returns all orgs
@@ -1749,11 +1825,6 @@ const emails = existing?.emails || [];
           newPin,
         });
       }
-function cfgIntAllowZero(name, def) {
-  const v = env[name];
-  const n = Number(v);
-  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : def;
-}
 
 async function jsonSafe(res) {
   const txt = await res.text();
