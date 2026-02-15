@@ -554,7 +554,29 @@ tr {
 </section>
   </div>
 </main>
-
+<div id="deviceModal" style="
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.5);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+">
+  <div style="
+    background:var(--card);
+    padding:24px;
+    border-radius:14px;
+    width:500px;
+    max-width:90%;
+  ">
+    <h3 id="modalTitle"></h3>
+    <div id="modalContent" class="muted" style="margin-top:10px;"></div>
+    <div style="margin-top:16px; text-align:right;">
+      <button onclick="closeDeviceModal()">Close</button>
+    </div>
+  </div>
+</div>
 <script>
   const $ = (id) => document.getElementById(id);
 
@@ -615,10 +637,12 @@ tr {
 
   const items = r.data.items || [];
 
-  if (!items.length) {
-    $("deviceLoading").textContent = "No devices found.";
-    return;
-  }
+if (!items.length) {
+  $("deviceLoading").textContent = "No devices found.";
+  $("deviceTable").style.display = "none";   // 👈 ADD THIS
+  DEVICE_CACHE = [];
+  return;
+}
 
   $("deviceLoading").style.display = "none";
   $("deviceTable").style.display = "table";
@@ -930,6 +954,7 @@ return;
   ANALYTICS_LOADED = false;
   CDR_LOADED = false;
   DEVICE_CACHE = [];
+  DEVICES_LOADED = false;
 });
 function initTabs() {
   const tabs = document.querySelectorAll(".tab");
@@ -1093,11 +1118,6 @@ $("deviceSearch").addEventListener("input", () => {
   renderDevices(DEVICE_CACHE);
 });
 
-
-$("deviceSearch").addEventListener("input", () => {
-  loadDevices();
-});
-
   function updateOrgHealth(devices) {
   if (!devices.length) {
     $("orgHealthScore").textContent = "No Data";
@@ -1207,8 +1227,18 @@ function closeDeviceModal() {
   $("deviceModal").style.display = "none";
 }
   // Close modal when clicking outside inner card
-$("deviceModal").addEventListener("click", (e) => {
-  if (e.target.id === "deviceModal") {
+const modalEl = $("deviceModal");
+if (modalEl) {
+  modalEl.addEventListener("click", (e) => {
+    if (e.target.id === "deviceModal") {
+      closeDeviceModal();
+    }
+  });
+}
+
+// ESC key support (add ONCE globally)
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
     closeDeviceModal();
   }
 });
@@ -1320,31 +1350,8 @@ DEVICE_REFRESH_INTERVAL = setInterval(() => {
 
 
   init();
-
 </script>
-<div id="deviceModal" style="
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.5);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:999;
-">
-  <div style="
-    background:var(--card);
-    padding:24px;
-    border-radius:14px;
-    width:500px;
-    max-width:90%;
-  ">
-    <h3 id="modalTitle"></h3>
-    <div id="modalContent" class="muted" style="margin-top:10px;"></div>
-    <div style="margin-top:16px; text-align:right;">
-      <button onclick="closeDeviceModal()">Close</button>
-    </div>
-  </div>
-</div>
+
 
 </body>
   
