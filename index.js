@@ -715,17 +715,20 @@ async function computeGlobalSummary(env) {
       }
 
       // Devices
-      const devRes = await fetch(
-        `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(orgId)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+     // const devRes = await fetch(
+   //       `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(orgId)}`,
+    //      { headers: { Authorization: `Bearer ${token}` } }
+   //     );
 
-      if (devRes.ok) {
-        const devData = await devRes.json();
-        offlineDevices = (devData.items || []).filter(d =>
-          String(d.connectionStatus || "").toLowerCase() !== "connected"
-        ).length;
-      }
+   //     if (devRes.ok) {
+   //       const devData = await devRes.json();
+     //     offlineDevices = (devData.items || []).filter(d =>
+    //        String(d.connectionStatus || "").toLowerCase() !== "connected"
+    //      ).length;
+   //     }
+     // Devices disabled for Free plan stability
+offlineDevices = 0;
+
 
       return {
         orgId,
@@ -2185,19 +2188,7 @@ async function mapLimit(items, limit, fn) {
   }, 200);
 }
   
-if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
-  const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
-  const payload = await computeGlobalSummary(env);
-  await putGlobalSummarySnapshot(env, payload);
-
-  return json({
-    ok: true,
-    message: "Snapshot refreshed",
-    generatedAt: new Date().toISOString()
-  }, 200);
-}
 
 
 
@@ -2387,7 +2378,19 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
     hasFrom: !!env.LICENSE_REPORT_FROM
   });
 }
+if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
+  const payload = await computeGlobalSummary(env);
+  await putGlobalSummarySnapshot(env, payload);
+
+  return json({
+    ok: true,
+    message: "Snapshot refreshed",
+    generatedAt: new Date().toISOString()
+  }, 200);
+}
          return json({ error: "not_found", path: url.pathname }, 404);
     } catch (err) {
       console.error("🔥 Worker error:", err);
