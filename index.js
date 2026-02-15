@@ -692,25 +692,7 @@ async function mapLimit(items, limit, fn) {
   await Promise.all(workers);
   return out;
 }
-   if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
-  const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
-
-  const snapshot = await getGlobalSummarySnapshot(env);
-
-  if (!snapshot) {
-    return json({
-      ok: false,
-      message: "No snapshot available yet"
-    }, 404);
-  }
-
-  return json({
-    ok: true,
-    generatedAt: snapshot.generatedAt,
-    ...snapshot.payload
-  }, 200);
-}
+ 
   
 
 async function computeGlobalSummary(env) {
@@ -1385,14 +1367,14 @@ if (!user.isAdmin) {
 
         const pinData = await getOrgByPin(env, pin);
         if (!pinData || !pinData.orgId) {
-          await throttleRecordFailure(user.email, ip);
+          await throttleRecordFailure(env, user.email, ip);
           // add small delay to slow brute forcing
           await sleep(200);
           return json({ error: "invalid_pin", message: "Invalid PIN." }, 403);
         }
 
         // success → clear throttles
-        await throttleClear(user.email, ip);
+        await throttleClear(env, user.email, ip);
 
         const session = {
           email: user.email,
@@ -2134,7 +2116,7 @@ try {
     orgId
   });
 
-  const existing = await getPinByOrg(orgId);
+  const existing = await getPinByOrg(env, orgId);
   const oldPin = existing?.pin || null;
   const orgName = providedName || existing?.orgName || "Unknown Org";
   const role = existing?.role || "customer";
@@ -2382,6 +2364,25 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
     hasSender: !!env.BREVO_SENDER_EMAIL,
     hasFrom: !!env.LICENSE_REPORT_FROM
   });
+}
+if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const snapshot = await getGlobalSummarySnapshot(env);
+
+  if (!snapshot) {
+    return json({
+      ok: false,
+      message: "No snapshot available yet"
+    }, 404);
+  }
+
+  return json({
+    ok: true,
+    generatedAt: snapshot.generatedAt,
+    ...snapshot.payload
+  }, 200);
 }
 if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
  // const user = getCurrentUser(request);
