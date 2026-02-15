@@ -175,11 +175,43 @@ input{
   }
   [data-theme="dark"] input{ border-color: rgba(255,255,255,.14); }
   [data-theme="dark"] .btn-outline{ border-color: rgba(255,255,255,.16); }
+  nav a{
+  text-decoration:none;
+  color:var(--text);
+  font-weight:600;
+  font-size:14px;
+}
+
+nav a:hover{
+  color:var(--accent);
+}
+
 </style>
 </head>
 <body>
 
 <header>
+  <nav style="
+  background:var(--card);
+  padding:12px 30px;
+  border-bottom:1px solid rgba(0,0,0,.08);
+  display:flex;
+  gap:18px;
+  flex-wrap:wrap;
+">
+  <a href="/admin">Dashboard</a>
+  <a href="/admin/customers">Customers</a>
+  <a href="/admin/analytics">Analytics</a>
+  <a href="/admin/licenses">Licenses</a>
+  <a href="/admin/devices">Devices</a>
+  <a href="/admin/alerts">Alerts</a>
+  <a href="/admin/pins">PIN Management</a>
+  <a href="/admin/support">Support</a>
+  <a href="/admin/implementation">Implementation</a>
+  <a href="/admin/pstn">PSTN</a>
+  <a href="/admin/tenant-resolution">Resolution</a>
+</nav>
+
   <!-- <div class="brand">
     <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
     <h1>Partner Admin Hub</h1>
