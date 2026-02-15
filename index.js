@@ -788,12 +788,16 @@ const accessEmail =
   request.headers.get("cf-access-authenticated-user-email") ||
   request.headers.get("cf-access-user-email");
 
-// Allow health endpoint without auth (optional)
-const publicPaths = ["/health", "/favicon.ico"];
+const publicPaths = [
+  "/health",
+  "/favicon.ico",
+  "/api/admin/global-summary/refresh"   // 👈 allow Postman testing
+];
 
 if (!accessEmail && !publicPaths.includes(url.pathname)) {
   return json({ error: "access_required" }, 401);
 }
+
 
 
       /* -----------------------------
