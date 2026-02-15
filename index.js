@@ -1963,31 +1963,38 @@ if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
 
       // Analytics (best-effort)
       // If analytics token differs in your env, you can swap getAnalyticsAccessToken()
-      let callVolume = 0;
-      try {
-        const aTok = await getAnalyticsAccessToken();
-        const aUrl = `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(orgId)}&interval=DAY&from=-7d`;
-        const aRes = await fetch(aUrl, { headers: { Authorization: `Bearer ${aTok}` } });
-        const aSafe = await jsonSafe(aRes);
-        if (aSafe.ok) {
-          callVolume = aSafe.data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
-        }
-      } catch {
-        // keep as 0; we don't fail the whole summary
-      }
+      // Analytics (fully safe)
+let callVolume = 0;
+let analyticsOk = false;
 
-      return {
-        orgId,
-        orgName,
-        deficit,
-        offlineDevices,
-        callVolume,
-        status: {
-          licensesOk: !!licSafe.ok,
-          devicesOk: !!devSafe.ok
-        }
-      };
+try {
+  // Only attempt analytics if env vars exist
+  if (
+    env.ANALYTICS_CLIENT_ID &&
+    env.ANALYTICS_CLIENT_SECRET &&
+    env.ANALYTICS_REFRESH_TOKEN
+  ) {
+    const aTok = await getAnalyticsAccessToken();
+
+    const aUrl =
+      `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(orgId)}&interval=DAY&from=-7d`;
+
+    const aRes = await fetch(aUrl, {
+      headers: { Authorization: `Bearer ${aTok}` }
+    });
+
+    const aSafe = await jsonSafe(aRes);
+
+    if (aSafe.ok) {
+      callVolume =
+        aSafe.data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
+      analyticsOk = true;
     }
+  }
+} catch (e) {
+  console.error("Analytics failed for org:", orgId, e?.message || e);
+}
+
 
     const tenants = await mapLimit(orgs, CONCURRENCY, perOrg);
 
@@ -2003,17 +2010,18 @@ if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
       (b.callVolume - a.callVolume)
     );
 
-    return {
-      ok: true,
-      generatedAt: new Date().toISOString(),
-      cacheSeconds: CACHE_SECONDS,
-      totalOrgs,
-      totalDeficits,
-      offlineDevices,
-      totalCalls,
-      tenants
-    };
-  });
+ return {
+  orgId,
+  orgName,
+  deficit,
+  offlineDevices,
+  callVolume,
+  status: {
+    licensesOk: !!licSafe.ok,
+    devicesOk: !!devSafe.ok,
+    analyticsOk
+  }
+};
 }
 
       /* -----------------------------
