@@ -573,6 +573,23 @@ async function renderCustomerIncidentsHTML() {
 
   return await res.text();
 }
+async function renderCustomerDevicesHTML() {
+  const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/devices.html");
+  if (!res.ok) throw new Error("Failed to load customer devices UI");
+  return await res.text();
+}
+
+async function renderCustomerAnalyticsHTML() {
+  const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/analytics.html");
+  if (!res.ok) throw new Error("Failed to load customer analytics UI");
+  return await res.text();
+}
+
+async function renderCustomerCDRHTML() {
+  const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/cdr.html");
+  if (!res.ok) throw new Error("Failed to load customer CDR UI");
+  return await res.text();
+}
 
 async function renderCustomerHubHTML() {
   const res = await fetch(
@@ -630,6 +647,35 @@ async function renderAdminHubHTML() {
     "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/hub.html"
   );
   if (!res.ok) throw new Error("Failed to load admin hub UI");
+  return await res.text();
+}
+async function renderAdminAnalyticsHTML() {
+  const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/analytics.html");
+  if (!res.ok) throw new Error("Failed to load admin analytics UI");
+  return await res.text();
+}
+
+async function renderAdminLicensesHTML() {
+  const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/licenses.html");
+  if (!res.ok) throw new Error("Failed to load admin licenses UI");
+  return await res.text();
+}
+
+async function renderAdminDevicesHTML() {
+  const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/devices.html");
+  if (!res.ok) throw new Error("Failed to load admin devices UI");
+  return await res.text();
+}
+
+async function renderAdminAlertsHTML() {
+  const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/alerts.html");
+  if (!res.ok) throw new Error("Failed to load admin alerts UI");
+  return await res.text();
+}
+
+async function renderAdminPinsHTML() {
+  const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/pins.html");
+  if (!res.ok) throw new Error("Failed to load admin pins UI");
   return await res.text();
 }
 
@@ -886,7 +932,15 @@ if (url.pathname === "/pin" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
-      
+/* -----------------------------
+   UI Used for renderHomeHTML()
+----------------------------- */
+      if (url.pathname === "/" && request.method === "GET") {
+  return text(await renderHomeHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
       /* -----------------------------
  Admin Pages
 ----------------------------- */
@@ -927,6 +981,35 @@ if (url.pathname === "/admin/pstn" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
+if (url.pathname === "/admin/analytics" && request.method === "GET") {
+  return text(await renderAdminAnalyticsHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
+if (url.pathname === "/admin/licenses" && request.method === "GET") {
+  return text(await renderAdminLicensesHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
+if (url.pathname === "/admin/devices" && request.method === "GET") {
+  return text(await renderAdminDevicesHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
+if (url.pathname === "/admin/alerts" && request.method === "GET") {
+  return text(await renderAdminAlertsHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
+if (url.pathname === "/admin/pins" && request.method === "GET") {
+  return text(await renderAdminPinsHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
 
 /* -----------------------------
    Customer UI: Hub (Default)
@@ -948,6 +1031,24 @@ if (url.pathname === "/customer/licenses" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
+      if (url.pathname === "/customer/devices" && request.method === "GET") {
+  return text(await renderCustomerDevicesHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
+if (url.pathname === "/customer/analytics" && request.method === "GET") {
+  return text(await renderCustomerAnalyticsHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
+if (url.pathname === "/customer/cdr" && request.method === "GET") {
+  return text(await renderCustomerCDRHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
 /* -----------------------------
    Customer UI: Maintenance
 ----------------------------- */
