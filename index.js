@@ -811,8 +811,11 @@ const accessEmail =
 const publicPaths = [
   "/health",
   "/favicon.ico",
-  "/api/admin/global-summary/refresh"   // 👈 allow Postman testing
+  "/pin",   // ✅ allow PIN page
+  "/",      // ✅ allow home UI
+  "/api/admin/global-summary/refresh"
 ];
+
 
 if (!accessEmail && !publicPaths.includes(url.pathname)) {
   return json({ error: "access_required" }, 401);
