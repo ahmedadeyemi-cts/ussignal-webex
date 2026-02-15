@@ -253,7 +253,6 @@ main {
 </div>
 
 </main>
-
 <script>
 const $ = (id) => document.getElementById(id);
 
@@ -261,65 +260,89 @@ let ME = null;
 let SELECTED_ORG_ID = null;
 let SESSION_TIMER = null;
 
-/* ---------------------------
-   Theme
----------------------------- */
+/* =====================================================
+   THEME SYSTEM
+===================================================== */
 function loadTheme(){
   const saved = localStorage.getItem("uiTheme") || "light";
   document.documentElement.setAttribute("data-theme", saved);
   $("btnTheme").textContent =
     saved === "dark" ? "Light Mode" : "Dark Mode";
 }
+
 $("btnTheme").onclick = () => {
   const cur = document.documentElement.getAttribute("data-theme");
   const next = cur === "dark" ? "light" : "dark";
   localStorage.setItem("uiTheme", next);
   loadTheme();
 };
+
 loadTheme();
 
-/* ---------------------------
-   API Helper
----------------------------- */
+/* =====================================================
+   API HELPER (HARDENED)
+===================================================== */
 async function api(path){
-  const res = await fetch(path);
-  if (!res.ok) {
+  try {
+    const res = await fetch(path, { cache: "no-store" });
+
     if (res.status === 401) {
       window.location.href = "/pin";
       return null;
     }
-    throw new Error("API failed: " + path);
+
+    if (!res.ok) {
+      console.error("API failed:", path, res.status);
+      return null;
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error("API exception:", path, err);
+    return null;
   }
-  return await res.json();
 }
 
-/* ---------------------------
-   Load Session
----------------------------- */
+/* =====================================================
+   LOAD SESSION
+===================================================== */
 async function loadMe(){
   const me = await api("/api/me");
-  if (!me) return;
+  if (!me) return false;
 
   ME = me;
-  SELECTED_ORG_ID = me.orgId;
 
-  if (!ME.role || (ME.role !== "admin" && !ME.orgId)) {
+  // Admin may not have orgId
+  SELECTED_ORG_ID = me.orgId || null;
+
+  // Customer must have orgId
+  if (ME.role !== "admin" && !ME.orgId) {
     window.location.href = "/pin";
+    return false;
   }
 
-  startSessionTimer(me.sessionExpiresInSeconds);
+  if (ME.sessionExpiresInSeconds) {
+    startSessionTimer(ME.sessionExpiresInSeconds);
+  }
+
+  return true;
 }
 
-/* ---------------------------
-   Session Timer
----------------------------- */
+/* =====================================================
+   SESSION TIMER (STABLE)
+===================================================== */
 function startSessionTimer(seconds){
-  if (!seconds) return;
+  if (!seconds || seconds <= 0) return;
 
   let remaining = seconds;
 
+  if (SESSION_TIMER) {
+    clearInterval(SESSION_TIMER);
+  }
+
   SESSION_TIMER = setInterval(() => {
     remaining--;
+
     if (remaining <= 0){
       clearInterval(SESSION_TIMER);
       window.location.href = "/pin";
@@ -327,21 +350,40 @@ function startSessionTimer(seconds){
   }, 1000);
 }
 
-/* ---------------------------
-   KPI Loaders
----------------------------- */
-async function loadLicenseHealth(){
-  const data = await api(`/api/licenses?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`);
-  if (!data) return;
+/* =====================================================
+   SAFE ORG PATH BUILDER
+   (Prevents orgId=null bug forever)
+===================================================== */
+function buildPath(base){
+  if (SELECTED_ORG_ID) {
+    return `${base}?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`;
+  }
+  return base;
+}
 
-  const deficit = data.summary.totalDeficit;
+/* =====================================================
+   KPI LOADERS
+===================================================== */
+
+async function loadLicenseHealth(){
+  const data = await api(buildPath("/api/licenses"));
+  if (!data || !data.summary){
+    $("licenseHealth").textContent = "Unavailable";
+    return;
+  }
+
+  const deficit = data.summary.totalDeficit || 0;
+
   $("licenseHealth").textContent =
     deficit > 0 ? `${deficit} Deficit` : "Healthy";
 }
 
 async function loadDeviceHealth(){
-  const data = await api(`/api/devices?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`);
-  if (!data) return;
+  const data = await api(buildPath("/api/devices"));
+  if (!data){
+    $("deviceHealth").textContent = "Unavailable";
+    return;
+  }
 
   const offline = (data.items || []).filter(d =>
     (d.connectionStatus || "").toLowerCase().includes("disconnected")
@@ -352,35 +394,50 @@ async function loadDeviceHealth(){
 }
 
 async function loadAnalytics(){
-  const data = await api(`/api/analytics?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`);
-  if (!data) return;
+  const data = await api(buildPath("/api/analytics"));
+  if (!data){
+    $("callVolume").textContent = "Unavailable";
+    return;
+  }
 
-  const total = data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
-  $("callVolume").textContent = total.toLocaleString();
+  const total =
+    data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
+
+  $("callVolume").textContent =
+    Number(total).toLocaleString();
 }
 
 async function loadIncidents(){
   const data = await api("/api/incidents");
-  if (!data) return;
+  if (!data){
+    $("openIncidents").textContent = "Unavailable";
+    return;
+  }
 
-  const open = (data.incidents || []).filter(i => i.status !== "resolved").length;
-  $("incidentCount").textContent = open;
+  const open = (data.incidents || []).filter(i =>
+    (i.status || "").toLowerCase() !== "resolved"
+  ).length;
+
+  $("openIncidents").textContent =
+    open > 0 ? `${open} Open` : "None";
 }
 
-/* ---------------------------
-   Logout
----------------------------- */
+/* =====================================================
+   LOGOUT
+===================================================== */
 async function logout(){
   await fetch("/api/pin/logout", { method:"POST" });
   window.location.href = "/pin";
 }
 
-/* ---------------------------
-   Init
----------------------------- */
+/* =====================================================
+   INIT
+===================================================== */
 async function init(){
-  await loadMe();
-  await Promise.all([
+  const ok = await loadMe();
+  if (!ok) return;
+
+  await Promise.allSettled([
     loadLicenseHealth(),
     loadDeviceHealth(),
     loadAnalytics(),
@@ -390,6 +447,7 @@ async function init(){
 
 init();
 </script>
+
 
 </body>
 </html>
