@@ -2027,6 +2027,25 @@ async function perOrg(org) {
   }
 }
 
+    // Execute per-org fanout with concurrency limit
+    const tenants = await mapLimit(orgs, CONCURRENCY, perOrg);
+
+    // Aggregate totals
+    const totalOrgs = tenants.length;
+    const totalDeficits = tenants.reduce((a, t) => a + (t.deficit || 0), 0);
+    const totalOffline = tenants.reduce((a, t) => a + (t.offlineDevices || 0), 0);
+    const totalCalls = tenants.reduce((a, t) => a + (t.callVolume || 0), 0);
+
+    return {
+      ok: true,
+      totalOrgs,
+      totalDeficits,
+      offlineDevices: totalOffline,
+      totalCalls,
+      tenants
+    };
+  });
+}
 
       /* -----------------------------
          /api/admin/pin/list (GET)
