@@ -235,13 +235,14 @@ input{
       <thead>
         <tr>
           <th>Organization</th>
-          <th>License Status</th>
-          <th>Offline Devices</th>
+          <th>License</th>
+          <th>Devices</th>
           <th>Call Volume</th>
+          <th>Health</th>
         </tr>
       </thead>
       <tbody id="tenantTable">
-        <tr><td colspan="4" class="loading">Loading tenants...</td></tr>
+        <tr><td colspan="5" class="loading">Loading tenants...</td></tr>
       </tbody>
     </table>
   </div>
@@ -604,16 +605,42 @@ async function loadAdminSummary(){
   $("offlineDevices").textContent = data.offlineDevices;
   $("totalCalls").textContent = data.totalCalls.toLocaleString();
 
-  const rows = data.tenants.map(t => `
+  const rows = data.tenants.map(t => {
+
+  const licenseText =
+    t.deficit > 0
+      ? `<span class="danger">${t.deficit} deficit</span>`
+      : `<span class="success">Healthy</span>`;
+
+  const deviceText =
+    t.offlineDevices > 0
+      ? `<span class="danger">${t.offlineDevices}</span>`
+      : `<span class="success">0</span>`;
+
+  const analyticsText =
+    t.status?.analyticsOk
+      ? `<span class="success">${t.callVolume}</span>`
+      : `<span class="danger">Unavailable</span>`;
+
+  const healthIndicator =
+    t.status?.failed
+      ? `<span class="danger">Partial Failure</span>`
+      : (
+          (t.deficit > 0 || t.offlineDevices > 0)
+            ? `<span class="danger">Attention</span>`
+            : `<span class="success">Healthy</span>`
+        );
+
+  return `
     <tr>
       <td>${t.orgName}</td>
-      <td class="${t.deficit > 0 ? 'danger':''}">
-        ${t.deficit > 0 ? t.deficit + ' deficit' : 'Healthy'}
-      </td>
-      <td>${t.offlineDevices}</td>
-      <td>${t.callVolume}</td>
+      <td>${licenseText}</td>
+      <td>${deviceText}</td>
+      <td>${analyticsText}</td>
+      <td>${healthIndicator}</td>
     </tr>
-  `).join("");
+  `;
+}).join("");
 
   $("tenantTable").innerHTML = rows;
 }
