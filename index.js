@@ -683,9 +683,7 @@ async function computeGlobalSummary(env) {
   });
 
   const orgData = await orgRes.json();
-  if (!licRes.ok) {
-  console.log("License failed for", orgName, licRes.status);
-}
+  if (!orgRes.ok) {
     throw new Error("org_list_failed");
   }
 
@@ -2380,8 +2378,9 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
     hasFrom: !!env.LICENSE_REPORT_FROM
   });
 }
-
- if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
+if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
+ // const user = getCurrentUser(request);
+ // if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const payload = await computeGlobalSummary(env);
   await putGlobalSummarySnapshot(env, payload);
@@ -2391,8 +2390,13 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
     message: "Snapshot refreshed",
     generatedAt: new Date().toISOString()
   }, 200);
-},
-
+}
+         return json({ error: "not_found", path: url.pathname }, 404);
+    } catch (err) {
+      console.error("🔥 Worker error:", err);
+      return json({ error: "internal_error", message: err?.message || String(err) }, 500);
+    }
+  },
 
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
