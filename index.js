@@ -550,6 +550,18 @@ async function renderCustomerIncidentsHTML() {
   return await res.text();
 }
 
+async function renderCustomerHubHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/index.html"
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to load customer hub UI");
+  }
+
+  return await res.text();
+}
+
 
 async function renderCustomerLicensesHTML() {
   const res = await fetch(
@@ -783,6 +795,17 @@ function formatDate(dateStr) {
 ----------------------------- */
 if (url.pathname === "/pin" && request.method === "GET") {
   return text(await renderPinHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+/* -----------------------------
+   Customer UI: Hub (Default)
+----------------------------- */
+if (
+  (url.pathname === "/customer" || url.pathname === "/customer/") &&
+  request.method === "GET"
+) {
+  return text(await renderCustomerHubHTML(), 200, {
     "content-type": "text/html; charset=utf-8",
   });
 }
