@@ -1252,6 +1252,66 @@ return json({
 
   return json({ ok:true, orgId, orgName, pin, emails: normEmails }, 200);
 }
+if (url.pathname === "/api/admin/orgs") {
+  const token = await getPartnerToken(env);
+
+  const res = await fetch("https://webexapis.com/v1/organizations", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!res.ok) {
+    return json({ error: "org_list_failed" }, 500);
+  }
+
+  const data = await res.json();
+
+  return json({
+    items: (data.items || []).map(o => ({
+      orgId: o.id,
+      orgName: o.displayName
+    }))
+  });
+}
+if (url.pathname === "/api/admin/org-health") {
+  const orgId = url.searchParams.get("orgId");
+  if (!orgId) return json({ error: "missing_orgId" }, 400);
+
+  const token = await getPartnerToken(env);
+
+  let deficit = 0;
+  let offline = 0;
+
+  const lic = await fetch(
+    `https://webexapis.com/v1/licenses?orgId=${orgId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  if (lic.ok) {
+    const l = await lic.json();
+    for (const x of l.items || []) {
+      if (x.totalUnits && x.consumedUnits)
+        deficit += Math.max(0, x.consumedUnits - x.totalUnits);
+    }
+  }
+
+  const dev = await fetch(
+    `https://webexapis.com/v1/devices?orgId=${orgId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  if (dev.ok) {
+    const d = await dev.json();
+    offline = (d.items || []).filter(x =>
+      x.connectionStatus !== "connected"
+    ).length;
+  }
+
+  return json({
+    orgId,
+    deficit,
+    offline
+  });
+}
 
       /* -----------------------------
          /api/org
