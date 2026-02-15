@@ -571,6 +571,60 @@ async function renderTenantResolutionHTML() {
   }
   return await res.text();
 }
+async function apiCallingAnalytics(env, request) {
+  const url = new URL(request.url);
+  const orgId = url.searchParams.get("orgId");
+
+  if (!orgId) {
+    return json({ error: "missing_orgId" }, 400);
+  }
+
+  const token = await getAccessToken(env);
+
+  const res = await fetch(
+    `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(orgId)}&interval=DAY&from=-7d`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    return json({ error: "webex_analytics_failed", details: data }, 500);
+  }
+
+  return json(data, 200);
+}
+async function apiCDR(env, request) {
+  const url = new URL(request.url);
+  const orgId = url.searchParams.get("orgId");
+
+  if (!orgId) {
+    return json({ error: "missing_orgId" }, 400);
+  }
+
+  const token = await getAccessToken(env);
+
+  const res = await fetch(
+    `https://webexapis.com/v1/cdr?orgId=${encodeURIComponent(orgId)}&max=200`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    return json({ error: "webex_cdr_failed", details: data }, 500);
+  }
+
+  return json(data, 200);
+}
 
     /* =====================================================
        Routes
@@ -1756,7 +1810,13 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
 
   return json(result);
 }
+if (path === "/api/analytics") {
+  return await apiCallingAnalytics(env, request);
+}
 
+if (path === "/api/cdr") {
+  return await apiCDR(env, request);
+}
       /* -----------------------------
          🔎 DEBUG: seed + read a PIN
          GET /api/debug/pin-test
