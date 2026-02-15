@@ -35,10 +35,34 @@ export default {
       "content-type": "application/json",
       "cache-control": "no-store",
     };
+async scheduled(event, env, ctx) {
+    ctx.waitUntil((async () => {
+      try {
+        const payload = await computeGlobalSummary(env);
+        await putGlobalSummarySnapshot(env, payload);
+      } catch (e) {
+        console.error("Scheduled snapshot failed:", e.message);
+      }
+    })());
+  }
 
+};
     /* =====================================================
        Helpers
     ===================================================== */
+    const GLOBAL_SUMMARY_KEY = "globalSummarySnapshotV1";
+
+async function putGlobalSummarySnapshot(env, payload) {
+  await env.WEBEX.put(GLOBAL_SUMMARY_KEY, JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    payload
+  }), { expirationTtl: 60 * 60 }); // keep 1 hour
+}
+
+async function getGlobalSummarySnapshot(env) {
+  return await env.WEBEX.get(GLOBAL_SUMMARY_KEY, { type: "json" });
+}
+
 async function auditLog(env, userEmail, path, metadata = {}) {
   try {
     await env.WEBEX.put(
@@ -127,97 +151,6 @@ const STATUS_CACHE_SECONDS = cfgIntAllowZero("STATUS_CACHE_SECONDS", 60); // 0 d
   return s;
 }
 
-async function fetchJsonStrict(urlStr, init = {}) {
-  const res = await fetch(urlStr, {
-    ...init,
-   headers: {
-  "Accept": "application/json",
-  "User-Agent": "USSignal-Webex-Portal/1.0",
-  ...(init.headers || {}),
-},
-  });
-
-  const ct = res.headers.get("content-type") || "";
-  const txt = await res.text();
-
-  // Must be JSON-ish AND parseable
-// Allow json OR javascript
-if (
-  !ct.toLowerCase().includes("application/json") &&
-  !ct.toLowerCase().includes("text/javascript")
-) {
-  return {
-    ok: false,
-    status: 500,
-    error: "status_not_json",
-    bodyPreview: txt.slice(0, 400),
-    contentType: ct,
-    upstreamStatus: res.status,
-    upstreamUrl: urlStr,
-  };
-}
-
-
-  let data = null;
-  try {
-    data = txt ? JSON.parse(txt) : null;
-  } catch (e) {
-    return {
-      ok: false,
-      status: 500,
-      error: "status_json_parse_failed",
-      bodyPreview: txt.slice(0, 400),
-      upstreamStatus: res.status,
-      upstreamUrl: urlStr,
-    };
-  }
-
-  if (!res.ok) {
-    return {
-      ok: false,
-      status: 502,
-      error: "status_upstream_failed",
-      upstreamStatus: res.status,
-      upstreamUrl: urlStr,
-      body: data,
-    };
-  }
-
-  return { ok: true, status: 200, data };
-}
-
-async function fetchJsonCached(request, urlStr) {
-  // cache key varies only by URL (no tenant-specific data inside)
-  const cache = caches.default;
-
-  if (STATUS_CACHE_SECONDS > 0) {
-    const cacheKey = new Request(urlStr, { method: "GET" });
-    const hit = await cache.match(cacheKey);
-    if (hit) return hit;
-
-    const r = await fetchJsonStrict(urlStr);
-    const payload = r.ok ? r.data : r;
-    const resp = new Response(JSON.stringify(payload), {
-      status: r.ok ? 200 : r.status,
-      headers: {
-        "content-type": "application/json",
-        "cache-control": `public, max-age=${STATUS_CACHE_SECONDS}`,
-      },
-    });
-
-    // store
-    await cache.put(cacheKey, resp.clone());
-    return resp;
-  }
-
-  // no cache
-  const r = await fetchJsonStrict(urlStr);
-  const payload = r.ok ? r.data : r;
-  return new Response(JSON.stringify(payload), {
-    status: r.ok ? 200 : r.status,
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
-  });
-}
 //End of Maintenance API
     function looksTooEasy(pin) {
       // reject obvious patterns
@@ -753,6 +686,88 @@ async function apiCDR(env, request) {
 
   return json(data, 200);
 }
+async function computeGlobalSummary(env) {
+  const token = await getAccessToken();
+
+  const orgRes = await fetch("https://webexapis.com/v1/organizations", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const orgData = await orgRes.json();
+  if (!orgRes.ok) {
+    throw new Error("org_list_failed");
+  }
+
+  const orgs = orgData.items || [];
+  const CONCURRENCY = 6;
+
+  async function perOrg(org) {
+    try {
+      const orgId = org.id;
+      const orgName = org.displayName || org.name || "Unknown";
+
+      let deficit = 0;
+      let offlineDevices = 0;
+      let callVolume = 0;
+
+      // Licenses
+      const licRes = await fetch(
+        `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(orgId)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (licRes.ok) {
+        const licData = await licRes.json();
+        for (const l of licData.items || []) {
+          const total = Number(l.totalUnits ?? 0);
+          const consumed = Number(l.consumedUnits ?? 0);
+          deficit += Math.max(0, consumed - total);
+        }
+      }
+
+      // Devices
+      const devRes = await fetch(
+        `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(orgId)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (devRes.ok) {
+        const devData = await devRes.json();
+        offlineDevices = (devData.items || []).filter(d =>
+          String(d.connectionStatus || "").toLowerCase() !== "connected"
+        ).length;
+      }
+
+      return {
+        orgId,
+        orgName,
+        deficit,
+        offlineDevices,
+        callVolume
+      };
+
+    } catch (e) {
+      return {
+        orgId: org.id,
+        orgName: org.displayName || "Unknown",
+        deficit: 0,
+        offlineDevices: 0,
+        callVolume: 0,
+        failed: true
+      };
+    }
+  }
+
+  const tenants = await mapLimit(orgs, CONCURRENCY, perOrg);
+
+  return {
+    totalOrgs: tenants.length,
+    totalDeficits: tenants.reduce((a,t)=>a+t.deficit,0),
+    offlineDevices: tenants.reduce((a,t)=>a+t.offlineDevices,0),
+    totalCalls: tenants.reduce((a,t)=>a+t.callVolume,0),
+    tenants
+  };
+}
 
     /* =====================================================
        Routes
@@ -894,35 +909,6 @@ await auditLog(env, email, url.pathname, {
    Filters for Calling / Control Hub only
 ----------------------------- */
 //TBD
-
-/* =====================================================
-   ENTERPRISE WEBEX STATUS ENGINE
-   Parent Group Matching Architecture
-===================================================== */
-
-const TARGET_PARENT_GROUPS = [
-  "Webex User Hub",
-  "Webex Cloud Registered Devices",
-  "Webex App",
-  "Webex Control Hub",
-  "Webex Calling",
-  "Gateway and Solutions",
-  "Dedicated Instance",
-  "UCM Cloud"
-];
-
-function normalize(str) {
-  return (str || "").toLowerCase().trim();
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return null;
-  return d.toLocaleString();
-}
-
-
 
       /* -----------------------------
    PIN UI
@@ -1489,6 +1475,7 @@ if (url.pathname === "/api/admin/orgs") {
     }))
   });
 }
+      
 if (url.pathname === "/api/admin/org-health") {
   const orgId = url.searchParams.get("orgId");
   if (!orgId) return json({ error: "missing_orgId" }, 400);
@@ -2165,171 +2152,19 @@ async function mapLimit(items, limit, fn) {
   await Promise.all(workers);
   return out;
 }
-// ===============================
-// ADMIN: Global Summary
-// GET /api/admin/global-summary
-// ===============================
-if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
+
+      if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
   const user = getCurrentUser(request);
-  if (env.ADMIN_GLOBAL_SUMMARY_DISABLED === "true") {
-  return json({ error: "disabled_in_production" }, 403);
-}
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
-await auditLog(env, user.email, url.pathname, {
-  action: "view_global_summary"
-});
 
-  const CACHE_SECONDS = cfgIntAllowZero("ADMIN_GLOBAL_SUMMARY_CACHE_SECONDS", 60);
+  // IMPORTANT: reuse your existing global-summary compute logic,
+  // but run it here ONCE, and store snapshot.
+  const payload = await computeGlobalSummary(env, url.origin); // you’ll create this function
+  await putGlobalSummarySnapshot(env, payload);
 
-  const keyUrl = `${url.origin}/api/admin/global-summary`; // stable cache key
-
-  return await cacheJson(CACHE_SECONDS, keyUrl, async () => {
-    const token = await getAccessToken();
-
-    // 1) All orgs
-    const orgRes = await fetch("https://webexapis.com/v1/organizations", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const orgSafe = await jsonSafe(orgRes);
-    if (!orgSafe.ok) {
-      return {
-        ok: false,
-        error: "org_list_failed",
-        upstreamStatus: orgSafe.status,
-        preview: orgSafe.preview
-      };
-    }
-
-    const orgs = orgSafe.data.items || [];
-
-    // 2) Fanout per org with concurrency limit
-    // Keep this sane: 6-10 concurrent calls is plenty
-    const CONCURRENCY = 8;
-
-async function perOrg(org) {
-  try {
-    const orgId = org.id;
-    const orgName = org.displayName || org.name || "Unknown";
-
-    let deficit = 0;
-    let offlineDevices = 0;
-    let callVolume = 0;
-    let analyticsOk = false;
-
-    // Licenses
-    try {
-      const licUrl = `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(orgId)}`;
-      const licRes = await fetch(licUrl, { headers: { Authorization: `Bearer ${token}` } });
-      const licSafe = await jsonSafe(licRes);
-
-      if (licSafe.ok) {
-        const items = licSafe.data.items || [];
-        for (const l of items) {
-          const total = (l.totalUnits === null || l.totalUnits === undefined)
-            ? null
-            : Number(l.totalUnits);
-          const consumed = Number(l.consumedUnits ?? 0);
-          const isUnlimited = total === -1;
-          const hasTotal = Number.isFinite(total);
-          const d = isUnlimited ? 0 : (hasTotal ? Math.max(0, consumed - total) : 0);
-          deficit += d;
-        }
-      }
-    } catch (e) {
-      console.error("License fetch failed:", orgId, e.message);
-    }
-
-    // Devices
-    try {
-      const devUrl = `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(orgId)}`;
-      const devRes = await fetch(devUrl, { headers: { Authorization: `Bearer ${token}` } });
-      const devSafe = await jsonSafe(devRes);
-
-      if (devSafe.ok) {
-        const items = devSafe.data.items || [];
-        offlineDevices = items.filter(d => {
-          const s = String(d.connectionStatus || "").toLowerCase();
-          return s.includes("disconnected") ||
-                 s.includes("offline") ||
-                 s.includes("not connected");
-        }).length;
-      }
-    } catch (e) {
-      console.error("Device fetch failed:", orgId, e.message);
-    }
-
-    // Analytics
-    try {
-      if (
-        env.ANALYTICS_CLIENT_ID &&
-        env.ANALYTICS_CLIENT_SECRET &&
-        env.ANALYTICS_REFRESH_TOKEN
-      ) {
-        const aTok = await getAnalyticsAccessToken();
-        const aUrl =
-          `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(orgId)}&interval=DAY&from=-7d`;
-
-        const aRes = await fetch(aUrl, {
-          headers: { Authorization: `Bearer ${aTok}` }
-        });
-
-        const aSafe = await jsonSafe(aRes);
-
-        if (aSafe.ok) {
-          callVolume =
-            aSafe.data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
-          analyticsOk = true;
-        }
-      }
-    } catch (e) {
-      console.error("Analytics failed:", orgId, e.message);
-    }
-
-    return {
-      orgId,
-      orgName,
-      deficit,
-      offlineDevices,
-      callVolume,
-      status: {
-        analyticsOk
-      }
-    };
-
-  } catch (e) {
-    console.error("perOrg hard failure:", e.message);
-    return {
-      orgId: org.id,
-      orgName: org.displayName || "Unknown",
-      deficit: 0,
-      offlineDevices: 0,
-      callVolume: 0,
-      status: { analyticsOk: false, failed: true }
-    };
-  }
+  return json({ ok: true, message: "Snapshot refreshed", generatedAt: new Date().toISOString() }, 200);
 }
 
-    // Execute per-org fanout with concurrency limit
-    const tenants = await mapLimit(orgs, CONCURRENCY, perOrg);
-
-    // Aggregate totals
-    const totalOrgs = tenants.length;
-    const totalDeficits = tenants.reduce((a, t) => a + (t.deficit || 0), 0);
-    const totalOffline = tenants.reduce((a, t) => a + (t.offlineDevices || 0), 0);
-    const totalCalls = tenants.reduce((a, t) => a + (t.callVolume || 0), 0);
-
-    return {
-  ok: true,
-  summary: {
-    totalOrgs,
-    totalDeficits,
-    offlineDevices: totalOffline,
-    totalCalls
-  },
-  tenants
-};
-  });
-}
 
       /* -----------------------------
          /api/admin/pin/list (GET)
