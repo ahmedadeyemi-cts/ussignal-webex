@@ -1,386 +1,1192 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>US Signal | Tenant Resolution</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>US Signal | Tenant Resolution</title>
 
-<style>
-:root{
-  --bg:#f6f8fb;
-  --card:#ffffff;
-  --text:#0f172a;
-  --muted:#64748b;
-  --line:rgba(15,23,42,.10);
-  --shadow:0 8px 24px rgba(15,23,42,.08);
-  --accent:#0f62fe;
-  --accent2:#0b4bd4;
-  --good:#16a34a;
-  --warn:#f59e0b;
-  --bad:#dc2626;
-}
+  <style>
+    :root{
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --line:rgba(15,23,42,.10);
+      --shadow:0 8px 24px rgba(15,23,42,.08);
 
-*{box-sizing:border-box;}
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
+      --accent:#0f62fe;
+      --accent2:#0b4bd4;
 
-.app{
-  display:grid;
-  grid-template-columns:270px 1fr;
-  min-height:100vh;
-}
+      --good:#16a34a;
+      --warn:#f59e0b;
+      --bad:#dc2626;
 
-/* Sidebar */
-.sidebar{
-  background:var(--card);
-  border-right:1px solid var(--line);
-  padding:18px 14px;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-}
+      --chip:#ffffff;
+      --chipLine:rgba(15,23,42,.14);
+      --chipBg:rgba(15,98,254,.06);
+    }
 
-.brand{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding-bottom:14px;
-  border-bottom:1px solid var(--line);
-}
-.brand img{height:34px;}
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
 
-.nav{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.nav a{
-  padding:10px;
-  border-radius:12px;
-  font-weight:800;
-  font-size:13px;
-  text-decoration:none;
-  color:var(--text);
-}
-.nav a.active{
-  background:rgba(15,98,254,.12);
-  border:1px solid rgba(15,98,254,.20);
-}
+    /* Layout */
+    .app{
+      display:grid;
+      grid-template-columns:270px 1fr;
+      min-height:100vh;
+    }
 
-.sidebar-bottom{
-  margin-top:auto;
-  border-top:1px solid var(--line);
-  padding-top:10px;
-}
+    /* Sidebar */
+    .sidebar{
+      background:var(--card);
+      border-right:1px solid var(--line);
+      padding:18px 14px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
 
-.main{padding:22px;}
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding-bottom:14px;
+      border-bottom:1px solid var(--line);
+    }
+    .brand img{ height:34px; }
+    .brand .title{ display:flex; flex-direction:column; }
+    .brand .title b{ font-size:14px; }
+    .brand .title span{ font-size:12px; color:var(--muted); }
 
-.header-card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  padding:16px;
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-}
+    .nav{ display:flex; flex-direction:column; gap:6px; }
+    .nav a{
+      padding:10px;
+      border-radius:12px;
+      font-weight:800;
+      font-size:13px;
+      text-decoration:none;
+      color:var(--text);
+    }
+    .nav a:hover{
+      background:rgba(15,98,254,.08);
+      color:var(--accent2);
+    }
+    .nav a.active{
+      background:rgba(15,98,254,.12);
+      border:1px solid rgba(15,98,254,.20);
+    }
 
-.h{
-  font-size:16px;
-  font-weight:1000;
-}
-.sub{
-  font-size:12px;
-  color:var(--muted);
-  max-width:900px;
-}
+    .sidebar-bottom{
+      margin-top:auto;
+      padding-top:10px;
+      border-top:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .userline{ font-size:12px; color:var(--muted); }
 
-.section{margin-top:18px;}
+    .btn{
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:900;
+      font-size:13px;
+      cursor:pointer;
+      border:none;
+    }
+    .btn-primary{ background:var(--accent); color:#fff; }
+    .btn-primary:hover{ background:var(--accent2); }
 
-.grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px;
-}
-@media(max-width:1100px){
-  .grid{grid-template-columns:1fr;}
-}
+    .btn-outline{
+      background:#fff;
+      border:1px solid rgba(15,23,42,.18);
+      color:var(--text);
+    }
+    .btn-outline:hover{
+      border-color:rgba(15,98,254,.35);
+      color:var(--accent2);
+    }
 
-.card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  padding:14px;
-}
+    .btn-danger{
+      background:#fff;
+      border:1px solid rgba(220,38,38,.35);
+      color:var(--bad);
+    }
+    .btn-danger:hover{ background:rgba(220,38,38,.06); }
 
-.card h3{
-  margin:0 0 8px 0;
-  font-size:13px;
-  font-weight:1000;
-}
+    /* Main */
+    .main{ padding:22px; }
 
-.kv{
-  display:grid;
-  grid-template-columns:180px 1fr;
-  gap:8px;
-  font-size:12px;
-}
-.k{color:var(--muted);font-weight:900;}
-.v{font-weight:800;}
+    /* Header */
+    .header-card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      padding:16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+    }
 
-.badge{
-  padding:6px 10px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:900;
-}
-.good{background:rgba(22,163,74,.1);color:var(--good);}
-.warn{background:rgba(245,158,11,.1);color:#b45309;}
-.bad{background:rgba(220,38,38,.1);color:var(--bad);}
+    .header-left{ display:flex; flex-direction:column; gap:4px; }
+    .header-left .h{ font-size:16px; font-weight:1000; }
+    .header-left .sub{
+      font-size:12px;
+      color:var(--muted);
+      max-width:980px;
+      line-height:1.45;
+    }
 
-.btn{
-  padding:8px 12px;
-  border-radius:12px;
-  font-weight:900;
-  font-size:12px;
-  cursor:pointer;
-  border:none;
-}
-.btn-outline{
-  border:1px solid rgba(15,23,42,.18);
-  background:#fff;
-}
-.btn-primary{
-  background:var(--accent);
-  color:#fff;
-}
+    .header-actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
 
-.table-wrap{
-  border:1px solid var(--line);
-  border-radius:12px;
-  overflow:auto;
-}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(15,23,42,.14);
+      background:#fff;
+      font-size:12px;
+      font-weight:900;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+    .pill b{ color:var(--text); }
 
-table{
-  width:100%;
-  border-collapse:collapse;
-}
-thead th{
-  padding:10px;
-  font-size:11px;
-  text-transform:uppercase;
-  color:var(--muted);
-}
-tbody td{
-  padding:10px;
-  border-top:1px solid rgba(15,23,42,.06);
-  font-size:13px;
-}
+    /* Sections */
+    .section{ margin-top:18px; }
 
-.audit-toggle{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  font-size:12px;
-}
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+    @media (max-width: 1100px){
+      .grid{ grid-template-columns:1fr; }
+    }
 
-.modal{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.35);
-  display:none;
-  align-items:center;
-  justify-content:center;
-}
-.modal-content{
-  background:#fff;
-  width:900px;
-  max-height:80vh;
-  overflow:auto;
-  border-radius:16px;
-  padding:20px;
-}
-.modal.show{display:flex;}
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      padding:14px;
+    }
+    .card h3{
+      margin:0 0 6px 0;
+      font-size:13px;
+      letter-spacing:.2px;
+      font-weight:1000;
+    }
+    .card p{
+      margin:0;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.45;
+    }
 
-</style>
+    .hr{ height:1px; background:rgba(15,23,42,.08); margin:12px 0; }
+
+    .kv{
+      display:grid;
+      grid-template-columns:180px 1fr;
+      gap:10px;
+      font-size:12px;
+    }
+    .kv .k{ color:var(--muted); font-weight:900; }
+    .kv .v{ color:var(--text); font-weight:800; }
+
+    .badge{
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:900;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid transparent;
+      background:#fff;
+    }
+    .badge.good{
+      background:rgba(22,163,74,.08);
+      border-color:rgba(22,163,74,.25);
+      color:var(--good);
+    }
+    .badge.warn{
+      background:rgba(245,158,11,.10);
+      border-color:rgba(245,158,11,.30);
+      color:#b45309;
+    }
+    .badge.bad{
+      background:rgba(220,38,38,.08);
+      border-color:rgba(220,38,38,.30);
+      color:var(--bad);
+    }
+
+    .small{ font-size:12px; color:var(--muted); line-height:1.45; }
+
+    .toolbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-top:10px;
+    }
+
+    .controls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    select, input[type="text"], input[type="number"]{
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(15,23,42,.16);
+      background:#fff;
+      font-size:13px;
+      font-weight:800;
+      outline:none;
+      min-height:40px;
+    }
+
+    .table-wrap{
+      margin-top:10px;
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      overflow:auto;
+      background:var(--card);
+    }
+    table{ width:100%; border-collapse:collapse; }
+    thead th{
+      padding:12px;
+      font-size:12px;
+      color:var(--muted);
+      text-align:left;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+    tbody td{
+      padding:12px;
+      border-top:1px solid rgba(15,23,42,.06);
+      font-size:13px;
+      vertical-align:top;
+    }
+    tbody tr:hover{ background:rgba(15,98,254,.04); }
+
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid var(--chipLine);
+      background:var(--chip);
+      font-size:12px;
+      font-weight:900;
+      color:var(--muted);
+    }
+    .chip b{ color:var(--text); }
+    .chip.live{ background:var(--chipBg); border-color:rgba(15,98,254,.25); }
+
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:12px;
+      line-height:1.45;
+      color:var(--text);
+      white-space:pre-wrap;
+    }
+
+    .mini-metric{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    .metric{
+      border:1px solid rgba(15,23,42,.10);
+      border-radius:14px;
+      padding:10px;
+      background:#fff;
+    }
+    .metric .label{ font-size:12px; color:var(--muted); font-weight:900; }
+    .metric .value{ font-size:18px; font-weight:1000; margin-top:4px; }
+
+    .spark{
+      height:44px;
+      margin-top:8px;
+      border-radius:10px;
+      border:1px solid rgba(15,23,42,.10);
+      background:linear-gradient(180deg, rgba(15,98,254,.08), rgba(15,98,254,.02));
+      position:relative;
+      overflow:hidden;
+    }
+    .spark svg{ width:100%; height:100%; display:block; }
+
+    .toast{
+      position:fixed;
+      right:14px;
+      bottom:14px;
+      padding:10px 12px;
+      background:#0f172a;
+      color:#fff;
+      border-radius:12px;
+      box-shadow:0 12px 30px rgba(0,0,0,.18);
+      font-size:12px;
+      font-weight:900;
+      opacity:0;
+      transform:translateY(10px);
+      transition:.18s ease;
+      pointer-events:none;
+      max-width:420px;
+    }
+    .toast.show{ opacity:1; transform:translateY(0); }
+
+    .note{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(15,23,42,.10);
+      background:#fff;
+      margin-top:10px;
+    }
+    .note b{ font-weight:1000; }
+    .note .small{ margin-top:6px; }
+
+    .dangerbox{
+      padding:12px;
+      border-radius:14px;
+      border:1px solid rgba(220,38,38,.28);
+      background:rgba(220,38,38,.06);
+      color:#7f1d1d;
+      font-size:12px;
+      font-weight:900;
+      line-height:1.45;
+    }
+
+    .okbox{
+      padding:12px;
+      border-radius:14px;
+      border:1px solid rgba(22,163,74,.22);
+      background:rgba(22,163,74,.06);
+      color:#14532d;
+      font-size:12px;
+      font-weight:900;
+      line-height:1.45;
+    }
+  </style>
 </head>
 
 <body>
 <div class="app">
 
-<!-- Sidebar -->
-<aside class="sidebar">
-  <div class="brand">
-    <img src="/assets/ussignal-logo.jpg"
-      onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
-    <div>
-      <b>Partner Portal</b><br>
-      <span style="font-size:12px;color:var(--muted);">Managed Services</span>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/assets/ussignal-logo.jpg" onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
+      <div class="title">
+        <b>Partner Portal</b>
+        <span>Managed Services</span>
+      </div>
     </div>
-  </div>
 
-  <nav class="nav">
-    <a href="/admin">Dashboard</a>
-    <a href="/admin/support">Support</a>
-    <a href="/admin/pstn">PSTN</a>
-    <a class="active" href="/admin/tenant-resolution">Resolution</a>
-  </nav>
+    <nav class="nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/customers">Customers</a>
+      <a href="/admin/analytics">Analytics</a>
+      <a href="/admin/licenses">Licenses</a>
+      <a href="/admin/devices">Devices</a>
+      <a href="/admin/alerts">Alerts</a>
+      <a href="/admin/pins">PIN Management</a>
 
-  <div class="sidebar-bottom">
-    <button class="btn btn-primary" onclick="logout()">Logout</button>
-  </div>
-</aside>
+      <div class="hr"></div>
 
-<!-- Main -->
-<main class="main">
+      <a href="/admin/support">Support</a>
+      <a href="/admin/implementation">Implementation</a>
+      <a href="/admin/pstn">PSTN</a>
+      <a class="active" href="/admin/tenant-resolution">Resolution</a>
+    </nav>
 
-<div class="header-card">
-  <div>
-    <div class="h">Resolution Intelligence Console</div>
-    <div class="sub">
-      Multi-tenant root cause analytics platform leveraging Webex CDR,
-      PSTN telemetry, trunk state, and call failure patterns to identify
-      anomalies, degradations, and systemic risks across managed tenants.
+    <div class="sidebar-bottom">
+      <div class="userline">
+        <b id="whoami"></b>
+        <div id="sessionLine"></div>
+      </div>
+      <button class="btn btn-primary" onclick="logout()">Logout</button>
     </div>
-  </div>
+  </aside>
 
-  <div class="audit-toggle">
-    <input type="checkbox" id="auditMode">
-    <label for="auditMode">Audit Mode</label>
-  </div>
-</div>
+  <!-- Main -->
+  <main class="main">
 
-<!-- Executive Summary -->
-<div class="section grid">
-  <div class="card">
-    <h3>Global Health Overview</h3>
-    <div class="kv">
-      <div class="k">Tenants Monitored</div>
-      <div class="v" id="tenantCount">--</div>
+    <div class="header-card">
+      <div class="header-left">
+        <div class="h">Tenant Resolution</div>
+        <div class="sub">
+          This console is designed for incident triage and fast, repeatable tenant resolution:
+          pull Webex Calling call detail records (CDR), score PSTN failures, detect anomalies, detect SLA breaches,
+          and (when applicable) correlate Dedicated Instance (DI) health signals. The goal is to turn “it’s down” into
+          a measurable problem statement with evidence, time boundaries, and escalation-ready artifacts.
+        </div>
+      </div>
 
-      <div class="k">Active Alerts</div>
-      <div class="v"><span class="badge warn" id="alertCount">--</span></div>
-
-      <div class="k">Critical Failures</div>
-      <div class="v"><span class="badge bad" id="criticalCount">--</span></div>
-
-      <div class="k">Average Call Success Rate</div>
-      <div class="v"><span class="badge good" id="successRate">--</span></div>
+      <div class="header-actions">
+        <span class="pill"><b>Data sources</b> Webex CDR, Trunks, DI, SLA</span>
+        <button class="btn btn-outline" onclick="refreshAll()">Refresh</button>
+        <button class="btn btn-outline" onclick="exportSnapshot()">Export Snapshot</button>
+      </div>
     </div>
-  </div>
 
-  <div class="card">
-    <h3>Failure Pattern Detection</h3>
-    <ul style="font-size:12px;color:var(--muted);line-height:1.5;">
-      <li>Repeated SIP 408 or 503 from single carrier</li>
-      <li>One-way audio spikes across region</li>
-      <li>Excessive call setup delays</li>
-      <li>High call failure rate per location</li>
-      <li>Trunk failover events</li>
-    </ul>
-  </div>
-</div>
+    <!-- Controls -->
+    <div class="section">
+      <div class="card">
+        <h3>Tenant selection and resolution window</h3>
+        <p>Select a tenant and a time window. The UI will pull live resolution signals from Worker endpoints (which in turn call Webex and health sources).</p>
+        <div class="hr"></div>
 
-<!-- Tenant Table -->
-<div class="section">
-  <div class="card">
-    <h3>Tenant Resolution View</h3>
+        <div class="toolbar">
+          <div class="controls">
+            <select id="tenantSelect"></select>
+            <select id="windowSelect">
+              <option value="60">Last 60 minutes</option>
+              <option value="180">Last 3 hours</option>
+              <option value="360">Last 6 hours</option>
+              <option value="720">Last 12 hours</option>
+              <option value="1440" selected>Last 24 hours</option>
+              <option value="10080">Last 7 days</option>
+            </select>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Tenant</th>
-            <th>Call Success</th>
-            <th>Failure %</th>
-            <th>PSTN Model</th>
-            <th>Trunk State</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="tenantTable">
-        </tbody>
-      </table>
+            <select id="baselineSelect" title="Baseline window used for anomaly detection (expected behavior).">
+              <option value="10080" selected>Baseline: last 7 days</option>
+              <option value="43200">Baseline: last 30 days</option>
+            </select>
+
+            <input id="slaTarget" type="number" min="90" max="100" step="0.1" value="99.9" title="SLA target for call success rate (percent)."/>
+          </div>
+
+          <div class="controls">
+            <button class="btn btn-outline" onclick="copyEvidence()">Copy Evidence</button>
+            <button class="btn btn-outline" onclick="copyEscalation()">Copy Escalation Text</button>
+          </div>
+        </div>
+
+        <div class="chips" id="statusChips">
+          <span class="chip live"><b>Status</b> Waiting for selection…</span>
+        </div>
+
+        <div class="note">
+          <b>How this is intended to be used</b>
+          <div class="small">
+            1) Pick tenant and window. 2) Identify if the issue is trunk/provider, Webex cloud, endpoint/network, or DI.
+            3) Use evidence export + escalation text to engage carrier, Webex TAC, or internal on-call.
+          </div>
+        </div>
+
+      </div>
     </div>
-  </div>
+
+    <!-- Summary + scoring -->
+    <div class="section grid">
+      <div class="card">
+        <h3>CDR summary</h3>
+        <p>Roll-up of calls in the selected window (pulled via Worker → Webex CDR source).</p>
+        <div class="hr"></div>
+
+        <div class="mini-metric">
+          <div class="metric">
+            <div class="label">Total calls</div>
+            <div class="value" id="mTotal">—</div>
+          </div>
+          <div class="metric">
+            <div class="label">Failed calls</div>
+            <div class="value" id="mFailed">—</div>
+          </div>
+          <div class="metric">
+            <div class="label">Failure rate</div>
+            <div class="value" id="mFailRate">—</div>
+          </div>
+          <div class="metric">
+            <div class="label">Top failure cause</div>
+            <div class="value" id="mTopCause" style="font-size:13px;">—</div>
+          </div>
+        </div>
+
+        <div class="spark" title="Failure rate trend (bucketed).">
+          <svg id="sparkSvg" viewBox="0 0 100 44" preserveAspectRatio="none"></svg>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="kv">
+          <div class="k">Window</div><div class="v" id="kWindow">—</div>
+          <div class="k">Evidence ID</div><div class="v" id="kEvidenceId">—</div>
+          <div class="k">CDR source</div><div class="v" id="kCdrSource">—</div>
+          <div class="k">Notes</div><div class="v" id="kNotes">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>PSTN failure scoring + anomaly detection</h3>
+        <p>Turns raw failures into a consistent score (0–100), flags anomalies against baseline, and detects SLA breaches.</p>
+        <div class="hr"></div>
+
+        <div class="mini-metric">
+          <div class="metric">
+            <div class="label">Failure score</div>
+            <div class="value" id="mScore">—</div>
+          </div>
+          <div class="metric">
+            <div class="label">Anomaly</div>
+            <div class="value" id="mAnomaly" style="font-size:13px;">—</div>
+          </div>
+          <div class="metric">
+            <div class="label">SLA status</div>
+            <div class="value" id="mSla" style="font-size:13px;">—</div>
+          </div>
+          <div class="metric">
+            <div class="label">Likely domain</div>
+            <div class="value" id="mDomain" style="font-size:13px;">—</div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div id="slaBox" class="okbox" style="display:none;"></div>
+        <div id="breachBox" class="dangerbox" style="display:none;"></div>
+
+        <div class="note">
+          <b>Scoring logic (auditable)</b>
+          <div class="small">
+            Score uses weighted failures: carrier/route errors and SIP timeouts increase severity more than user busy/no answer.
+            Anomaly triggers when current failure rate deviates significantly from baseline (z-score + minimum volume rules).
+            SLA breach triggers when success rate falls below target or when consecutive breach buckets exceed threshold.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trunks + DI -->
+    <div class="section grid">
+      <div class="card">
+        <h3>Trunk and PSTN edge signals</h3>
+        <p>Operational view of trunks (Local Gateway / Cloud Connect / provider) and live “edge” health pulled from Worker endpoints.</p>
+        <div class="hr"></div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Edge</th>
+                <th>Status</th>
+                <th>Provider</th>
+                <th>Details</th>
+                <th>Last change</th>
+              </tr>
+            </thead>
+            <tbody id="trunkRows">
+              <tr><td colspan="5" class="small">No data yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="note">
+          <b>Correlation guidance</b>
+          <div class="small">
+            If CDR failures spike and trunks show degradation (OPTIONS failures, TLS errors, registration drops, route changes),
+            prioritize PSTN edge triage. If trunks look healthy but failures spike across multiple tenants, consider Webex cloud events.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Dedicated Instance (DI) cluster health</h3>
+        <p>Optional: if the tenant uses DI, this panel can pull cluster health and correlate call failures to CUCM/IMP/Expressway signals.</p>
+        <div class="hr"></div>
+
+        <div id="diPanel" class="small">No DI data yet.</div>
+
+        <div class="note">
+          <b>DI integration options</b>
+          <div class="small">
+            This UI expects the Worker endpoint to return DI health signals. You can populate it from:
+            (1) your monitoring stack (Prometheus/Grafana/ThousandEyes/SolarWinds), (2) CUCM AXL/RTMT exports via a secured proxy,
+            or (3) vendor API feeds. The page is already wired—return JSON and it renders.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evidence tables -->
+    <div class="section">
+      <div class="card">
+        <h3>Evidence: top failures and suspicious patterns</h3>
+        <p>Use these tables to create an escalation-ready, time-bounded incident narrative.</p>
+        <div class="hr"></div>
+
+        <div class="grid">
+          <div class="card" style="box-shadow:none;">
+            <h3>Top failure causes</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Cause</th><th>Count</th><th>Percent</th></tr>
+                </thead>
+                <tbody id="causeRows">
+                  <tr><td colspan="3" class="small">No data yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card" style="box-shadow:none;">
+            <h3>Hotspots</h3>
+            <p class="small">Frequent offenders to check first: calling numbers, sites, trunks, destinations.</p>
+            <div class="hr"></div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Type</th><th>Value</th><th>Count</th></tr>
+                </thead>
+                <tbody id="hotRows">
+                  <tr><td colspan="3" class="small">No data yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <h3>Escalation-ready incident narrative (auto-generated)</h3>
+        <p class="small">This is the text you paste into carrier tickets, Webex TAC, or internal on-call escalation.</p>
+
+        <div class="hr"></div>
+        <div id="narrative" class="mono">Select a tenant and refresh to generate narrative.</div>
+      </div>
+    </div>
+
+  </main>
 </div>
 
-</main>
-</div>
-
-<!-- Drilldown Modal -->
-<div class="modal" id="drillModal">
-  <div class="modal-content">
-    <h3>Tenant Deep Dive</h3>
-    <div id="drillContent"></div>
-    <br>
-    <button class="btn btn-outline" onclick="closeModal()">Close</button>
-  </div>
-</div>
+<div id="toast" class="toast">Done</div>
 
 <script>
-async function api(path){
-  const r = await fetch(path);
-  if(!r.ok){
-    if(r.status===401) window.location="/pin";
-    throw new Error("API error");
+  const $ = id => document.getElementById(id);
+
+  async function api(path){
+    const r = await fetch(path, { headers: { "accept":"application/json" }});
+    if(!r.ok){
+      if(r.status===401) window.location="/pin";
+      const t = await r.text().catch(()=> "");
+      throw new Error("API failed: " + path + " ("+r.status+") " + t);
+    }
+    return await r.json();
   }
-  return await r.json();
-}
 
-async function loadResolution(){
-  const data = await api("/api/resolution-summary");
+  async function logout(){
+    await fetch("/api/pin/logout",{method:"POST"});
+    window.location="/pin";
+  }
 
-  document.getElementById("tenantCount").textContent = data.totalTenants;
-  document.getElementById("alertCount").textContent = data.alerts;
-  document.getElementById("criticalCount").textContent = data.critical;
-  document.getElementById("successRate").textContent = data.avgSuccess+"%";
+  function showToast(msg){
+    const t = $("toast");
+    t.textContent = msg || "Done";
+    t.classList.add("show");
+    setTimeout(()=>t.classList.remove("show"), 1400);
+  }
 
-  const tbody = document.getElementById("tenantTable");
-  tbody.innerHTML="";
+  function setChips(chips){
+    const wrap = $("statusChips");
+    wrap.innerHTML = "";
+    for(const c of chips){
+      const s = document.createElement("span");
+      s.className = "chip " + (c.live ? "live":"");
+      s.innerHTML = "<b>"+escapeHtml(c.k)+"</b> " + escapeHtml(c.v);
+      wrap.appendChild(s);
+    }
+  }
 
-  data.tenants.forEach(t=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${t.name}</td>
-      <td>${t.success}%</td>
-      <td>${t.failure}%</td>
-      <td>${t.pstn}</td>
-      <td>${t.trunkState}</td>
-      <td><button class="btn btn-outline" onclick="drill('${t.id}')">View</button></td>
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, m => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[m]));
+  }
+
+  function pct(n){
+    if(n === null || n === undefined || Number.isNaN(n)) return "—";
+    return (Math.round(n*10)/10).toFixed(1) + "%";
+  }
+
+  function fmtInt(n){
+    if(n === null || n === undefined || Number.isNaN(n)) return "—";
+    return String(n);
+  }
+
+  function fmtWindow(minutes){
+    if(minutes >= 10080) return "Last 7 days";
+    if(minutes >= 1440) return "Last 24 hours";
+    if(minutes >= 60) return "Last " + Math.round(minutes/60) + " hours";
+    return "Last " + minutes + " minutes";
+  }
+
+  function drawSpark(buckets){
+    const svg = $("sparkSvg");
+    if(!Array.isArray(buckets) || buckets.length < 2){
+      svg.innerHTML = "";
+      return;
+    }
+    const w = 100, h = 44;
+    const max = Math.max(...buckets.map(x => x.failRate || 0), 0.001);
+    const pts = buckets.map((b,i)=>{
+      const x = (i/(buckets.length-1))*w;
+      const y = h - ((b.failRate || 0)/max)* (h-6) - 3;
+      return [x,y];
+    });
+
+    const d = "M " + pts.map(p => p[0].toFixed(2)+" "+p[1].toFixed(2)).join(" L ");
+    svg.innerHTML = `
+      <path d="${d}" fill="none" stroke="rgba(15,98,254,.95)" stroke-width="2"/>
+      <path d="M 0 ${h-2} L ${w} ${h-2}" stroke="rgba(15,23,42,.12)" stroke-width="1"/>
     `;
-    tbody.appendChild(tr);
-  });
-}
+  }
 
-async function drill(id){
-  const data = await api("/api/resolution-tenant/"+id);
-  document.getElementById("drillContent").innerHTML = `
-    <b>Call Volume:</b> ${data.volume}<br>
-    <b>Top Failure Code:</b> ${data.topFailure}<br>
-    <b>Carrier:</b> ${data.carrier}<br>
-    <b>Media Issues:</b> ${data.mediaIssues}<br>
-    <b>Last HA Event:</b> ${data.haEvent}
-  `;
-  document.getElementById("drillModal").classList.add("show");
-}
+  function likelyDomainFromSignals(summary, trunks, di, score){
+    const fr = summary?.failRate ?? null;
+    const top = (summary?.topCause || "").toLowerCase();
 
-function closeModal(){
-  document.getElementById("drillModal").classList.remove("show");
-}
+    const trunkBad = Array.isArray(trunks) && trunks.some(t => (t.status||"").toLowerCase().includes("degrad") || (t.status||"").toLowerCase().includes("down"));
+    const diBad = !!di && (di.status || "").toLowerCase().includes("degrad");
 
-async function logout(){
-  await fetch("/api/pin/logout",{method:"POST"});
-  window.location="/pin";
-}
+    if(trunkBad) return "PSTN edge / trunk / carrier";
+    if(diBad) return "Dedicated Instance (DI) / cluster";
+    if(fr !== null && fr > 10) return "Calling path / provider / routing";
+    if(top.includes("timeout") || top.includes("408")) return "Carrier or SBC signaling timeout";
+    if(score !== null && score >= 80) return "High-severity PSTN outage pattern";
+    return "Needs deeper correlation";
+  }
 
-loadResolution();
+  function buildNarrative(tenant, windowMinutes, baselineMinutes, slaTarget, summary, score, anomaly, sla, trunks, causes, hotspots){
+    const lines = [];
+    lines.push("INCIDENT SUMMARY (Tenant Resolution Console)");
+    lines.push("");
+    lines.push("Tenant: " + (tenant?.orgName || "—"));
+    lines.push("Org ID: " + (tenant?.orgId || "—"));
+    lines.push("Window: " + fmtWindow(windowMinutes) + " | Baseline: " + fmtWindow(baselineMinutes));
+    lines.push("Evidence ID: " + (summary?.evidenceId || "—"));
+    lines.push("");
+
+    lines.push("CDR SUMMARY");
+    lines.push("- Total calls: " + fmtInt(summary?.totalCalls));
+    lines.push("- Failed calls: " + fmtInt(summary?.failedCalls));
+    lines.push("- Failure rate: " + pct(summary?.failRate));
+    lines.push("- Top failure cause: " + (summary?.topCause || "—"));
+    lines.push("");
+
+    lines.push("SCORING / DETECTION");
+    lines.push("- Failure score (0-100): " + (score?.score ?? "—"));
+    lines.push("- Anomaly: " + (anomaly?.label || "—"));
+    lines.push("- SLA target: " + slaTarget + "% | SLA status: " + (sla?.label || "—"));
+    lines.push("");
+
+    lines.push("TRUNK / EDGE SIGNALS");
+    if(Array.isArray(trunks) && trunks.length){
+      for(const t of trunks.slice(0,8)){
+        lines.push("- " + (t.edge||"Edge") + " | " + (t.status||"—") + " | " + (t.provider||"—") + " | " + (t.details||""));
+      }
+    } else {
+      lines.push("- No trunk signals returned by API yet.");
+    }
+    lines.push("");
+
+    lines.push("TOP FAILURE CAUSES");
+    if(Array.isArray(causes) && causes.length){
+      for(const c of causes.slice(0,6)){
+        lines.push("- " + (c.cause||"—") + ": " + fmtInt(c.count) + " (" + pct(c.percent) + ")");
+      }
+    } else {
+      lines.push("- No cause breakdown returned by API yet.");
+    }
+    lines.push("");
+
+    lines.push("HOTSPOTS");
+    if(Array.isArray(hotspots) && hotspots.length){
+      for(const h of hotspots.slice(0,8)){
+        lines.push("- " + (h.type||"—") + ": " + (h.value||"—") + " (" + fmtInt(h.count) + ")");
+      }
+    } else {
+      lines.push("- No hotspot breakdown returned by API yet.");
+    }
+    lines.push("");
+
+    lines.push("REQUESTED ACTION / NEXT STEP");
+    lines.push("- Please review provider-side signaling and routing for the above window, referencing the Evidence ID.");
+    lines.push("- Confirm any carrier incidents, trunk maintenance, routing changes, or SBC registration/TLS issues.");
+    lines.push("- If no provider-side issue is found, escalate with Webex TAC using the same time window + evidence bundle.");
+    return lines.join("\n");
+  }
+
+  function renderTableRows(tbodyId, rowsHtml){
+    const tb = $(tbodyId);
+    tb.innerHTML = rowsHtml || `<tr><td colspan="5" class="small">No data.</td></tr>`;
+  }
+
+  function setSlaBoxes(sla){
+    const ok = $("slaBox");
+    const bad = $("breachBox");
+    ok.style.display = "none";
+    bad.style.display = "none";
+
+    if(!sla) return;
+    if(sla.ok){
+      ok.style.display = "block";
+      ok.textContent = sla.label || "SLA OK";
+    } else {
+      bad.style.display = "block";
+      bad.textContent = sla.label || "SLA Breach";
+    }
+  }
+
+  function defaultTenantOption(){
+    return { key:"", orgName:"Select tenant…", orgId:"" };
+  }
+
+  let TENANTS = [];
+  let LAST_SNAPSHOT = null;
+
+  async function loadTenants(){
+    // Prefer your KV-backed customer list if present.
+    // Expected: [{ key, orgName, orgId, ... }]
+    const data = await api("/api/customers");
+    const list = Array.isArray(data?.customers) ? data.customers : (Array.isArray(data) ? data : []);
+    TENANTS = list.filter(x => x?.orgId && x?.orgName);
+    const sel = $("tenantSelect");
+    sel.innerHTML = "";
+
+    const d = defaultTenantOption();
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = d.orgName;
+    sel.appendChild(opt0);
+
+    for(const t of TENANTS){
+      const o = document.createElement("option");
+      o.value = t.key || t.orgId;
+      o.textContent = t.orgName;
+      sel.appendChild(o);
+    }
+  }
+
+  function getSelectedTenant(){
+    const v = $("tenantSelect").value;
+    if(!v) return null;
+    return TENANTS.find(t => (t.key === v) || (t.orgId === v)) || null;
+  }
+
+  function getMinutes(id){ return parseInt($(id).value, 10); }
+
+  async function refreshAll(){
+    const tenant = getSelectedTenant();
+    if(!tenant){
+      setChips([{k:"Status", v:"Select a tenant to load resolution signals.", live:true}]);
+      return;
+    }
+
+    const windowMinutes = getMinutes("windowSelect");
+    const baselineMinutes = getMinutes("baselineSelect");
+    const slaTarget = parseFloat($("slaTarget").value || "99.9");
+
+    setChips([
+      {k:"Tenant", v:tenant.orgName, live:true},
+      {k:"Window", v:fmtWindow(windowMinutes), live:true},
+      {k:"Baseline", v:fmtWindow(baselineMinutes), live:false},
+      {k:"SLA target", v:slaTarget.toFixed(1)+"%", live:false}
+    ]);
+
+    // UI expects Worker endpoints:
+    // - /api/admin/tenant-resolution/cdr?orgId=...&minutes=...
+    // - /api/admin/tenant-resolution/trunks?orgId=...
+    // - /api/admin/tenant-resolution/di-health?orgId=...
+    // - /api/admin/tenant-resolution/score?orgId=...&minutes=...&baselineMinutes=...
+    // - /api/admin/tenant-resolution/sla?orgId=...&minutes=...&baselineMinutes=...&target=...
+    //
+    // All endpoints are defined in the Worker snippet below.
+
+    try{
+      const [cdr, trunks, di, score, sla] = await Promise.all([
+        api(`/api/admin/tenant-resolution/cdr?orgId=${encodeURIComponent(tenant.orgId)}&minutes=${encodeURIComponent(windowMinutes)}&baselineMinutes=${encodeURIComponent(baselineMinutes)}`),
+        api(`/api/admin/tenant-resolution/trunks?orgId=${encodeURIComponent(tenant.orgId)}`),
+        api(`/api/admin/tenant-resolution/di-health?orgId=${encodeURIComponent(tenant.orgId)}`),
+        api(`/api/admin/tenant-resolution/score?orgId=${encodeURIComponent(tenant.orgId)}&minutes=${encodeURIComponent(windowMinutes)}&baselineMinutes=${encodeURIComponent(baselineMinutes)}`),
+        api(`/api/admin/tenant-resolution/sla?orgId=${encodeURIComponent(tenant.orgId)}&minutes=${encodeURIComponent(windowMinutes)}&baselineMinutes=${encodeURIComponent(baselineMinutes)}&target=${encodeURIComponent(slaTarget)}`)
+      ]);
+
+      const summary = cdr?.summary || null;
+      const causes = cdr?.topCauses || [];
+      const hotspots = cdr?.hotspots || [];
+      const buckets = cdr?.buckets || [];
+
+      $("mTotal").textContent = fmtInt(summary?.totalCalls);
+      $("mFailed").textContent = fmtInt(summary?.failedCalls);
+      $("mFailRate").textContent = pct(summary?.failRate);
+      $("mTopCause").textContent = summary?.topCause || "—";
+
+      drawSpark(buckets);
+
+      $("kWindow").textContent = fmtWindow(windowMinutes);
+      $("kEvidenceId").textContent = summary?.evidenceId || "—";
+      $("kCdrSource").textContent = summary?.source || "—";
+      $("kNotes").textContent = summary?.notes || "—";
+
+      $("mScore").textContent = (score?.score ?? "—");
+      $("mAnomaly").textContent = (score?.anomaly?.label || "—");
+      $("mSla").textContent = (sla?.label || "—");
+
+      const domain = likelyDomainFromSignals(summary, trunks?.trunks, di, parseInt(score?.score ?? "0",10));
+      $("mDomain").textContent = domain;
+
+      setSlaBoxes(sla);
+
+      // Trunks table
+      const tlist = Array.isArray(trunks?.trunks) ? trunks.trunks : [];
+      if(!tlist.length){
+        $("trunkRows").innerHTML = `<tr><td colspan="5" class="small">No trunk data returned. (Wire Worker endpoint to trunk / OPTIONS / edge health sources.)</td></tr>`;
+      } else {
+        $("trunkRows").innerHTML = tlist.map(t => `
+          <tr>
+            <td><b>${escapeHtml(t.edge || "Edge")}</b></td>
+            <td>${renderStatusBadge(t.status)}</td>
+            <td>${escapeHtml(t.provider || "—")}</td>
+            <td class="small">${escapeHtml(t.details || "")}</td>
+            <td class="small">${escapeHtml(t.lastChange || "—")}</td>
+          </tr>
+        `).join("");
+      }
+
+      // DI panel
+      if(di && (di.enabled || di.status || di.summary)){
+        $("diPanel").innerHTML = renderDiPanel(di);
+      } else {
+        $("diPanel").textContent = "No DI data returned for this tenant.";
+      }
+
+      // Causes table
+      if(!causes.length){
+        $("causeRows").innerHTML = `<tr><td colspan="3" class="small">No cause breakdown returned.</td></tr>`;
+      } else {
+        $("causeRows").innerHTML = causes.map(c => `
+          <tr>
+            <td><b>${escapeHtml(c.cause || "—")}</b></td>
+            <td>${fmtInt(c.count)}</td>
+            <td>${pct(c.percent)}</td>
+          </tr>
+        `).join("");
+      }
+
+      // Hotspots table
+      if(!hotspots.length){
+        $("hotRows").innerHTML = `<tr><td colspan="3" class="small">No hotspot breakdown returned.</td></tr>`;
+      } else {
+        $("hotRows").innerHTML = hotspots.map(h => `
+          <tr>
+            <td><b>${escapeHtml(h.type || "—")}</b></td>
+            <td>${escapeHtml(h.value || "—")}</td>
+            <td>${fmtInt(h.count)}</td>
+          </tr>
+        `).join("");
+      }
+
+      // Narrative
+      const narrative = buildNarrative(
+        tenant, windowMinutes, baselineMinutes, slaTarget,
+        summary,
+        { score: score?.score ?? null },
+        score?.anomaly || null,
+        sla,
+        tlist,
+        causes,
+        hotspots
+      );
+      $("narrative").textContent = narrative;
+
+      LAST_SNAPSHOT = {
+        generatedAt: new Date().toISOString(),
+        tenant,
+        windowMinutes,
+        baselineMinutes,
+        slaTarget,
+        cdr,
+        trunks,
+        di,
+        score,
+        sla,
+        narrative
+      };
+
+      showToast("Resolution signals updated");
+
+    } catch(e){
+      console.error(e);
+      setChips([
+        {k:"Tenant", v:tenant.orgName, live:true},
+        {k:"Error", v:(e.message || "Failed to load"), live:true}
+      ]);
+      showToast("Failed to load: " + (e.message || "error"));
+    }
+  }
+
+  function renderStatusBadge(status){
+    const s = String(status || "").toLowerCase();
+    if(s.includes("up") || s.includes("ok") || s.includes("healthy")) return `<span class="badge good">Healthy</span>`;
+    if(s.includes("degrad") || s.includes("warn")) return `<span class="badge warn">Degraded</span>`;
+    if(s.includes("down") || s.includes("fail") || s.includes("outage")) return `<span class="badge bad">Down</span>`;
+    return `<span class="badge warn">Unknown</span>`;
+  }
+
+  function renderDiPanel(di){
+    const status = di.status || (di.enabled ? "Enabled" : "Not enabled");
+    const badge = renderStatusBadge(status);
+
+    let html = `
+      <div class="kv">
+        <div class="k">DI status</div><div class="v">${badge} <span class="small">${escapeHtml(status)}</span></div>
+        <div class="k">Cluster</div><div class="v">${escapeHtml(di.cluster || "—")}</div>
+        <div class="k">Region</div><div class="v">${escapeHtml(di.region || "—")}</div>
+        <div class="k">Summary</div><div class="v">${escapeHtml(di.summary || "—")}</div>
+      </div>
+    `;
+
+    if(Array.isArray(di.nodes) && di.nodes.length){
+      html += `<div class="hr"></div><div class="table-wrap"><table>
+        <thead><tr><th>Node</th><th>Role</th><th>Status</th><th>Details</th></tr></thead>
+        <tbody>
+          ${di.nodes.map(n => `
+            <tr>
+              <td><b>${escapeHtml(n.name || "Node")}</b></td>
+              <td>${escapeHtml(n.role || "—")}</td>
+              <td>${renderStatusBadge(n.status)}</td>
+              <td class="small">${escapeHtml(n.details || "")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table></div>`;
+    }
+
+    if(di.raw){
+      html += `<div class="hr"></div><div class="small">Raw:</div><div class="mono">${escapeHtml(JSON.stringify(di.raw, null, 2))}</div>`;
+    }
+
+    return html;
+  }
+
+  async function exportSnapshot(){
+    if(!LAST_SNAPSHOT){
+      showToast("Nothing to export yet");
+      return;
+    }
+    const blob = new Blob([JSON.stringify(LAST_SNAPSHOT, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tenant-resolution-${(LAST_SNAPSHOT.tenant?.orgName||"tenant").replace(/\s+/g,"_")}-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast("Snapshot exported");
+  }
+
+  async function copyEvidence(){
+    if(!LAST_SNAPSHOT){
+      showToast("Nothing to copy yet");
+      return;
+    }
+    const text = LAST_SNAPSHOT.narrative || "";
+    await navigator.clipboard.writeText(text);
+    showToast("Evidence copied");
+  }
+
+  async function copyEscalation(){
+    if(!LAST_SNAPSHOT){
+      showToast("Nothing to copy yet");
+      return;
+    }
+    const tenant = LAST_SNAPSHOT.tenant || {};
+    const s = LAST_SNAPSHOT.cdr?.summary || {};
+    const t = (LAST_SNAPSHOT.trunks?.trunks || []).slice(0,6);
+
+    const lines = [];
+    lines.push("Subject: PSTN/Calling Incident - " + (tenant.orgName || "Tenant") + " - " + (s.evidenceId || "Evidence"));
+    lines.push("");
+    lines.push("Team,");
+    lines.push("");
+    lines.push("We are observing elevated call failures for the following tenant:");
+    lines.push("- Tenant: " + (tenant.orgName || "—"));
+    lines.push("- Org ID: " + (tenant.orgId || "—"));
+    lines.push("- Window: " + fmtWindow(LAST_SNAPSHOT.windowMinutes));
+    lines.push("- Evidence ID: " + (s.evidenceId || "—"));
+    lines.push("- Total calls: " + fmtInt(s.totalCalls) + " | Failed: " + fmtInt(s.failedCalls) + " | Failure rate: " + pct(s.failRate));
+    lines.push("- Top cause: " + (s.topCause || "—"));
+    lines.push("");
+    lines.push("Trunk / edge notes:");
+    if(t.length){
+      for(const x of t){
+        lines.push("- " + (x.edge||"Edge") + " | " + (x.status||"—") + " | " + (x.provider||"—") + " | " + (x.details||""));
+      }
+    } else {
+      lines.push("- No trunk signals returned yet.");
+    }
+    lines.push("");
+    lines.push("Request:");
+    lines.push("- Please confirm any carrier incidents, routing changes, SBC registration/TLS issues, or maintenance for the window above.");
+    lines.push("- If no provider-side issue is present, we will escalate with Webex TAC using the same evidence bundle.");
+    lines.push("");
+    lines.push("Thank you,");
+
+    await navigator.clipboard.writeText(lines.join("\n"));
+    showToast("Escalation text copied");
+  }
+
+  async function init(){
+    const me = await api("/api/me");
+    if(me.role !== "admin") window.location = "/pin";
+    $("whoami").textContent = me.email;
+    $("sessionLine").textContent = "Session: " + (me.sessionExpiresInSeconds || 0) + "s";
+
+    await loadTenants();
+
+    // Default status
+    setChips([{k:"Status", v:"Select a tenant and click Refresh.", live:true}]);
+
+    $("tenantSelect").addEventListener("change", ()=>{ refreshAll(); });
+    $("windowSelect").addEventListener("change", ()=>{ refreshAll(); });
+    $("baselineSelect").addEventListener("change", ()=>{ refreshAll(); });
+    $("slaTarget").addEventListener("change", ()=>{ refreshAll(); });
+
+    // Optional: auto-refresh every 2 minutes
+    setInterval(()=>{
+      const tenant = getSelectedTenant();
+      if(tenant) refreshAll();
+    }, 120000);
+  }
+
+  init();
 </script>
 
 </body>
