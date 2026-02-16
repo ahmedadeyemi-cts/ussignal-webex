@@ -30,7 +30,6 @@ body{
   color:var(--text);
 }
 
-/* Layout */
 .app{
   display:grid;
   grid-template-columns:270px 1fr;
@@ -57,10 +56,6 @@ body{
 
 .brand img{ height:34px; }
 
-.brand .title{
-  display:flex;
-  flex-direction:column;
-}
 .brand .title b{ font-size:14px; }
 .brand .title span{
   font-size:12px;
@@ -78,6 +73,8 @@ body{
   border-radius:12px;
   font-weight:800;
   font-size:13px;
+  text-decoration:none;
+  color:var(--text);
 }
 
 .nav a:hover{
@@ -112,11 +109,18 @@ body{
   cursor:pointer;
   border:none;
 }
+
 .btn-primary{
   background:var(--accent);
   color:#fff;
 }
+
 .btn-primary:hover{ background:var(--accent2); }
+
+.btn-outline{
+  background:#fff;
+  border:1px solid rgba(15,23,42,.18);
+}
 
 /* Main */
 .main{
@@ -133,40 +137,61 @@ body{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  gap:12px;
 }
 
-.header-left{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
 .header-left .h{
   font-size:16px;
   font-weight:1000;
 }
+
 .header-left .sub{
   font-size:12px;
   color:var(--muted);
 }
 
-select, input{
+.header-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+select{
   padding:10px 12px;
   border-radius:12px;
   border:1px solid rgba(15,23,42,.18);
   font-weight:700;
+  min-width:260px;
 }
 
-.controls{
-  display:flex;
-  gap:10px;
-  align-items:center;
+/* KPI */
+.kpi-grid{
+  margin-top:16px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:14px;
+}
+
+.kpi{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:16px;
+  box-shadow:var(--shadow);
+}
+
+.kpi .label{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.kpi .value{
+  font-size:22px;
+  font-weight:1000;
+  margin-top:6px;
 }
 
 /* Table */
-.section{
-  margin-top:18px;
-}
+.section{ margin-top:22px; }
 
 .table-wrap{
   margin-top:12px;
@@ -198,23 +223,44 @@ tbody td{
 
 tbody tr:hover{
   background:rgba(15,98,254,.04);
+  cursor:pointer;
 }
 
-.status{
-  font-weight:900;
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
   font-size:12px;
+  font-weight:900;
 }
 
-.status.connected{
+.badge.good{
+  background:rgba(22,163,74,.08);
+  border:1px solid rgba(22,163,74,.25);
   color:var(--good);
 }
 
-.status.offline{
+.badge.bad{
+  background:rgba(220,38,38,.08);
+  border:1px solid rgba(220,38,38,.30);
   color:var(--bad);
 }
 
-.status.unknown{
-  color:var(--warn);
+/* Modal */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+
+.modal-card{
+  background:#fff;
+  width:700px;
+  max-width:95vw;
+  border-radius:16px;
+  padding:20px;
 }
 </style>
 </head>
@@ -222,71 +268,98 @@ tbody tr:hover{
 <body>
 <div class="app">
 
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="brand">
-      <img src="/assets/ussignal-logo.jpg"
-           onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
-      <div class="title">
-        <b>Partner Portal</b>
-        <span>Managed Services</span>
-      </div>
+<aside class="sidebar">
+  <div class="brand">
+    <img src="/assets/ussignal-logo.jpg"
+         onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
+    <div class="title">
+      <b>Partner Portal</b>
+      <span>Managed Services</span>
     </div>
+  </div>
 
-    <nav class="nav">
-      <a href="/admin">Dashboard</a>
-      <a href="/admin/customers">Customers</a>
-      <a href="/admin/analytics">Analytics</a>
-      <a href="/admin/licenses">Licenses</a>
-      <a class="active" href="/admin/devices">Devices</a>
-      <a href="/admin/alerts">Alerts</a>
-      <a href="/admin/pins">PIN Management</a>
-    </nav>
+  <nav class="nav">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/customers">Customers</a>
+    <a href="/admin/analytics">Analytics</a>
+    <a href="/admin/licenses">Licenses</a>
+    <a class="active" href="/admin/devices">Devices</a>
+    <a href="/admin/alerts">Alerts</a>
+    <a href="/admin/pins">PIN Management</a>
+  </nav>
 
-    <div class="sidebar-bottom">
-      <div class="userline">
-        <b id="whoami"></b>
-        <div id="sessionLine"></div>
-      </div>
-      <button class="btn btn-primary" onclick="logout()">Logout</button>
+  <div class="sidebar-bottom">
+    <div class="userline">
+      <b id="whoami"></b>
+      <div id="sessionLine"></div>
     </div>
-  </aside>
+    <button class="btn btn-primary" onclick="logout()">Logout</button>
+  </div>
+</aside>
 
-  <!-- Main -->
-  <main class="main">
+<main class="main">
 
-    <div class="header-card">
-      <div class="header-left">
-        <div class="h">Device Monitoring</div>
-        <div class="sub">Real-time Webex device health across tenants</div>
-      </div>
+<div class="header-card">
+  <div class="header-left">
+    <div class="h">Device Management</div>
+    <div class="sub">Webex device connectivity and health monitoring</div>
+  </div>
 
-      <div class="controls">
-        <select id="orgSelect"></select>
-        <input id="searchBox" placeholder="Search device..." />
-      </div>
-    </div>
+  <div class="header-actions">
+    <label style="font-size:12px;">
+      <input type="checkbox" id="auditToggle"> Audit Mode
+    </label>
+    <select id="orgSelect"></select>
+  </div>
+</div>
 
-    <div class="section">
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Device</th>
-              <th>Type</th>
-              <th>Connection</th>
-              <th>MAC</th>
-              <th>Model</th>
-            </tr>
-          </thead>
-          <tbody id="deviceRows">
-            <tr><td colspan="5">Select an organization...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="label">Total Devices</div>
+    <div class="value" id="kpiTotal">—</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Online</div>
+    <div class="value" id="kpiOnline">—</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Offline</div>
+    <div class="value" id="kpiOffline">—</div>
+  </div>
+  <div class="kpi">
+    <div class="label">SLA Health</div>
+    <div class="value" id="kpiSLA">—</div>
+  </div>
+</div>
 
-  </main>
+<div class="section">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Model</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>IP Address</th>
+        </tr>
+      </thead>
+      <tbody id="deviceRows">
+        <tr><td colspan="5">Select an organization...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</main>
+</div>
+
+<div class="modal" id="deviceModal">
+  <div class="modal-card">
+    <h3 id="modalTitle"></h3>
+    <pre id="modalContent"></pre>
+    <button class="btn btn-primary" onclick="closeModal()">Close</button>
+  </div>
 </div>
 
 <script>
@@ -301,11 +374,10 @@ async function api(path){
   return await r.json();
 }
 
-function statusClass(status){
-  const s = (status||"").toLowerCase();
-  if(s==="connected") return "connected";
-  if(s==="offline" || s==="disconnected") return "offline";
-  return "unknown";
+function badge(status){
+  if(status==="connected")
+    return `<span class="badge good">Online</span>`;
+  return `<span class="badge bad">Offline</span>`;
 }
 
 async function loadOrgs(){
@@ -316,15 +388,9 @@ async function loadOrgs(){
     `<option value="${o.orgId}">${o.orgName}</option>`
   ).join("");
 
-  const saved = localStorage.getItem("adminSelectedOrgId");
-  if(saved) select.value = saved;
-
   loadDevices(select.value);
 
-  select.onchange = e=>{
-    localStorage.setItem("adminSelectedOrgId", e.target.value);
-    loadDevices(e.target.value);
-  };
+  select.onchange = e=> loadDevices(e.target.value);
 }
 
 async function loadDevices(orgId){
@@ -332,29 +398,40 @@ async function loadDevices(orgId){
 
   const devices = data.items || [];
 
-  render(devices);
+  const total = devices.length;
+  const online = devices.filter(d =>
+    String(d.connectionStatus).toLowerCase()==="connected").length;
+  const offline = total - online;
 
-  $("searchBox").oninput = e=>{
-    const q = e.target.value.toLowerCase();
-    render(devices.filter(d =>
-      (d.displayName||"").toLowerCase().includes(q) ||
-      (d.mac||"").toLowerCase().includes(q)
-    ));
-  };
+  $("kpiTotal").textContent = total;
+  $("kpiOnline").textContent = online;
+  $("kpiOffline").textContent = offline;
+  $("kpiSLA").textContent =
+    offline > 0 ? "At Risk" : "Healthy";
+
+  const rows = devices.map(d => `
+    <tr onclick='openModal(${JSON.stringify(d)})'>
+      <td>${d.displayName || "—"}</td>
+      <td>${d.model || "—"}</td>
+      <td>${d.type || "—"}</td>
+      <td>${badge(String(d.connectionStatus).toLowerCase())}</td>
+      <td>${d.ip || "—"}</td>
+    </tr>
+  `).join("");
+
+  $("deviceRows").innerHTML =
+    rows || `<tr><td colspan="5">No devices found.</td></tr>`;
 }
 
-function render(list){
-  $("deviceRows").innerHTML = list.map(d => `
-    <tr>
-      <td><b>${d.displayName || "—"}</b></td>
-      <td>${d.type || "—"}</td>
-      <td class="status ${statusClass(d.connectionStatus)}">
-        ${d.connectionStatus || "Unknown"}
-      </td>
-      <td>${d.mac || "—"}</td>
-      <td>${d.model || "—"}</td>
-    </tr>
-  `).join("") || `<tr><td colspan="5">No devices found.</td></tr>`;
+function openModal(data){
+  $("modalTitle").textContent = data.displayName || "Device";
+  $("modalContent").textContent =
+    JSON.stringify(data,null,2);
+  $("deviceModal").style.display="flex";
+}
+
+function closeModal(){
+  $("deviceModal").style.display="none";
 }
 
 async function logout(){
@@ -366,7 +443,8 @@ async function init(){
   const me = await api("/api/me");
   if(me.role!=="admin") window.location="/pin";
   $("whoami").textContent = me.email;
-  $("sessionLine").textContent = "Session: "+(me.sessionExpiresInSeconds||0)+"s";
+  $("sessionLine").textContent =
+    "Session: "+(me.sessionExpiresInSeconds||0)+"s";
   loadOrgs();
 }
 
