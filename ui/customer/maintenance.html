@@ -6,599 +6,1057 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
+/* ======================================================
+   US Signal - Webex-style Maintenance UI
+   - Nearly identical interaction model to status.webex.com
+   - Expand row w/ light-blue highlight + animated chevron
+   - Sector (Commercial/Government)
+   - Impacted Region column
+   - Location parsing
+   - Product filter for full Commercial product list
+   - Email notification button per maintenance
+====================================================== */
+
 :root{
-  --bg:#f8fafc;
+  --bg:#f6f8fb;
   --card:#ffffff;
-  --border:#e2e8f0;
+  --border:#e6edf6;
   --text:#0f172a;
   --muted:#64748b;
   --accent:#2563eb;
+  --accent2:#1d4ed8;
+
+  --pill:#e8f1ff;
+  --pillText:#1d4ed8;
+
+  --rowHover:#f2f7ff;
+  --rowExpanded:#e9f2ff; /* light-blue highlight when expanded */
+  --detailBg:#f7fbff;
+
   --success:#16a34a;
   --warning:#f59e0b;
   --danger:#dc2626;
-  --shadow:0 10px 30px rgba(0,0,0,.06);
+
+  --shadow:0 10px 26px rgba(15,23,42,.08);
 }
 
 html[data-theme="dark"]{
   --bg:#0b1220;
   --card:#0f172a;
-  --border:#1e293b;
+  --border:#1f2a3a;
   --text:#e5e7eb;
   --muted:#94a3b8;
   --accent:#3b82f6;
-  --shadow:0 10px 30px rgba(0,0,0,.35);
+  --accent2:#60a5fa;
+
+  --pill:rgba(59,130,246,.18);
+  --pillText:#bfdbfe;
+
+  --rowHover:rgba(59,130,246,.10);
+  --rowExpanded:rgba(59,130,246,.16);
+  --detailBg:rgba(2,6,23,.25);
+
+  --shadow:0 14px 40px rgba(0,0,0,.35);
 }
 
-*{ box-sizing:border-box; font-family:system-ui; }
-
+*{ box-sizing:border-box; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
 body{
   margin:0;
   background:var(--bg);
   color:var(--text);
-  display:flex;
-  height:100vh;
+  min-height:100vh;
 }
 
-/* Sidebar */
+/* ======================================================
+   Layout (simple portal frame)
+====================================================== */
+.shell{
+  display:flex;
+  min-height:100vh;
+}
+
 .sidebar{
-  width:250px;
+  width:260px;
   background:var(--card);
   border-right:1px solid var(--border);
-  padding:20px;
+  padding:18px 18px 20px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.brand{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding:10px 10px 14px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:8px;
+}
+.brand .title{
+  font-weight:850;
+  letter-spacing:.2px;
+}
+.brand .sub{
+  color:var(--muted);
+  font-size:12px;
+}
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding-top:6px;
+}
+.nav a{
+  text-decoration:none;
+  color:var(--text);
+  font-size:14px;
+  padding:10px 12px;
+  border-radius:10px;
+}
+.nav a:hover{ background:var(--rowHover); }
+.nav a.active{
+  background:var(--pill);
+  color:var(--pillText);
+  font-weight:700;
+}
+
+.main{
+  flex:1;
   display:flex;
   flex-direction:column;
 }
 
-.nav-link{
-  padding:10px 12px;
-  border-radius:8px;
-  text-decoration:none;
-  color:var(--text);
-  margin-bottom:6px;
-  font-size:14px;
-}
-
-.nav-link.active{
-  background:rgba(37,99,235,.1);
-}
-
-/* Main */
-.main{ flex:1; display:flex; flex-direction:column; }
-
-.header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:18px 28px;
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:5;
   background:var(--card);
   border-bottom:1px solid var(--border);
+  padding:16px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
 }
 
-.header button{
-  padding:8px 10px;
-  border-radius:8px;
+.pageTitle{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.pageTitle h1{
+  margin:0;
+  font-size:18px;
+  font-weight:850;
+  letter-spacing:.2px;
+}
+.pageTitle p{
+  margin:0;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.btn{
   border:1px solid var(--border);
-  background:var(--card);
+  background:transparent;
   color:var(--text);
+  padding:9px 12px;
+  border-radius:12px;
   cursor:pointer;
+  font-weight:700;
+  font-size:13px;
 }
-
-.header button:hover{ opacity:.9; }
+.btn:hover{ background:var(--rowHover); }
+.btn.primary{
+  background:var(--accent);
+  color:#fff;
+  border-color:transparent;
+}
+.btn.primary:hover{ opacity:.92; }
+.btn:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
 
 .content{
-  padding:32px;
-  overflow:auto;
+  padding:22px 20px 40px;
+  max-width:1200px;
+  width:100%;
 }
 
-/* KPI */
-.kpi-grid{
+/* ======================================================
+   KPI (Webex-ish tiles)
+====================================================== */
+.kpis{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-  gap:20px;
-  margin-bottom:30px;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+  margin:0 0 14px;
+}
+@media (max-width: 980px){
+  .kpis{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 520px){
+  .kpis{ grid-template-columns:1fr; }
 }
 
 .kpi{
   background:var(--card);
   border:1px solid var(--border);
-  border-radius:14px;
-  padding:20px;
+  border-radius:16px;
   box-shadow:var(--shadow);
+  padding:14px 14px 12px;
 }
-
-.kpi h3{
-  margin:0 0 6px;
+.kpi .label{
+  color:var(--muted);
   font-size:12px;
   text-transform:uppercase;
-  color:var(--muted);
-}
-
-.kpi-value{
-  font-size:26px;
+  letter-spacing:.08em;
   font-weight:800;
 }
+.kpi .value{
+  font-size:26px;
+  font-weight:900;
+  margin-top:6px;
+}
+.kpi .hint{
+  color:var(--muted);
+  font-size:12px;
+  margin-top:6px;
+}
 
-/* Table */
-table{
-  width:100%;
-  border-collapse:collapse;
+/* ======================================================
+   Filters (Webex-style chip bar)
+====================================================== */
+.filterRow{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin:14px 0 14px;
+}
+
+.select,
+.search{
   background:var(--card);
   border:1px solid var(--border);
   border-radius:14px;
-  overflow:hidden;
-  box-shadow:var(--shadow);
+  padding:10px 12px;
+  font-size:13px;
+  color:var(--text);
+  outline:none;
+}
+.search{
+  min-width:260px;
+}
+.select{
+  min-width:220px;
+}
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border-radius:999px;
+  background:var(--pill);
+  color:var(--pillText);
+  font-size:12px;
+  font-weight:800;
+  border:1px solid rgba(0,0,0,0);
+}
+.chip .dot{
+  width:7px; height:7px; border-radius:99px;
+  background:currentColor;
+  opacity:.65;
 }
 
-th, td{
-  padding:12px;
-  border-bottom:1px solid var(--border);
-  text-align:left;
-  vertical-align:top;
+/* ======================================================
+   Table (Webex-like)
+====================================================== */
+.panel{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+
+.tableWrap{ overflow:auto; }
+
+table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  min-width:980px;
 }
 
 thead th{
+  text-align:left;
   font-size:12px;
+  color:var(--muted);
   text-transform:uppercase;
-  color:var(--muted);
-  background:rgba(148,163,184,.08);
+  letter-spacing:.08em;
+  font-weight:900;
+  padding:14px 14px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(to bottom, rgba(0,0,0,0.02), rgba(0,0,0,0));
 }
-
-tbody tr:hover{
-  background:rgba(37,99,235,.05);
+tbody td{
+  padding:14px 14px;
+  border-bottom:1px solid var(--border);
+  vertical-align:top;
+  font-size:13px;
+}
+tbody tr.dataRow{
   cursor:pointer;
+  transition:background .18s ease;
+}
+tbody tr.dataRow:hover{
+  background:var(--rowHover);
+}
+tbody tr.dataRow.expanded{
+  background:var(--rowExpanded);
 }
 
-/* Badges */
+.col-narrow{ width:120px; }
+.col-mid{ width:170px; }
+.col-wide{ width:440px; }
+
 .badge{
-  padding:4px 10px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:600;
-  display:inline-block;
-  line-height:1.4;
-}
-
-.badge.scheduled{ background:#dbeafe; color:#1d4ed8; }
-.badge.inprogress{ background:#fef3c7; color:#b45309; }
-.badge.completed{ background:#dcfce7; color:#166534; }
-
-/* Detail */
-.detail-row{
-  background:rgba(37,99,235,.04);
-}
-
-.detail-box{
-  padding:18px;
-  font-size:14px;
-  color:var(--text);
-}
-
-.detail-box strong{
-  display:inline-block;
-  margin-bottom:6px;
-}
-
-.detail-box .meta{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  margin:0 0 14px;
-  color:var(--muted);
-  font-size:12px;
-}
-
-.pill{
   display:inline-flex;
   align-items:center;
-  gap:6px;
-  padding:4px 10px;
+  gap:8px;
+  padding:6px 10px;
   border-radius:999px;
-  border:1px solid var(--border);
-  background:rgba(148,163,184,.08);
+  font-weight:900;
+  font-size:12px;
+  letter-spacing:.01em;
+}
+.badge .bDot{
+  width:7px; height:7px; border-radius:99px;
+  background:currentColor;
+  opacity:.8;
 }
 
-.detail-content{
-  padding:14px 16px;
+.badge.scheduled{ background:rgba(37,99,235,.12); color:var(--accent2); }
+.badge.inprogress{ background:rgba(245,158,11,.18); color:#b45309; }
+.badge.completed{ background:rgba(22,163,74,.18); color:#166534; }
+.badge.unknown{ background:rgba(100,116,139,.18); color:var(--muted); }
+
+.muted{ color:var(--muted); }
+
+.rowHead{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+/* Animated expand arrow */
+.chev{
+  width:18px;
+  height:18px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:8px;
   border:1px solid var(--border);
-  background:var(--card);
+  background:rgba(255,255,255,0.0);
+  transition:transform .18s ease, background .18s ease;
+  flex:0 0 auto;
+}
+html[data-theme="dark"] .chev{ background:rgba(255,255,255,0.03); }
+.chev svg{ width:14px; height:14px; opacity:.85; }
+.dataRow.expanded .chev{ transform:rotate(90deg); background:rgba(37,99,235,.10); }
+
+.titleLine{
+  font-weight:850;
+  line-height:1.25;
+}
+.subLine{
+  margin-top:4px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+/* Email button */
+.btnEmail{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 10px;
   border-radius:12px;
-  overflow:auto;
+  border:1px solid rgba(0,0,0,0);
+  background:var(--accent);
+  color:#fff;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+.btnEmail:hover{ opacity:.9; }
+
+/* ======================================================
+   Detail row
+====================================================== */
+.detailRow td{
+  padding:0;
+  border-bottom:1px solid var(--border);
+}
+.detailCard{
+  background:var(--detailBg);
+  border-top:1px solid var(--border);
+  padding:16px 16px 18px;
+  display:grid;
+  grid-template-columns: 1.3fr .7fr;
+  gap:14px;
+}
+@media (max-width: 980px){
+  .detailCard{ grid-template-columns:1fr; }
 }
 
-.detail-content a{
+.detailBlock{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px 14px 12px;
+}
+.detailBlock h3{
+  margin:0 0 10px;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--muted);
+  font-weight:950;
+}
+.detailBlock .body{
+  font-size:13px;
+  line-height:1.55;
+}
+.detailBlock .body b{
+  font-weight:950;
+}
+.detailBlock .body a{
   color:var(--accent);
+  font-weight:850;
   text-decoration:none;
 }
-.detail-content a:hover{ text-decoration:underline; }
+.detailBlock .body a:hover{ text-decoration:underline; }
 
-/* Buttons */
-.btn-email{
-  padding:6px 10px;
-  border-radius:8px;
-  border:none;
-  background:var(--accent);
-  color:white;
-  font-size:12px;
-  cursor:pointer;
-  white-space:nowrap;
-}
-
-.btn-email:hover{ opacity:.88; }
-
-/* Empty */
-.empty{
-  padding:40px;
-  text-align:center;
-  color:var(--muted);
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:14px;
-  box-shadow:var(--shadow);
-}
-
-.filter-bar{
-  margin-bottom:20px;
+.kv{
   display:flex;
-  gap:12px;
-  align-items:center;
+  flex-direction:column;
+  gap:10px;
+}
+.kvItem{
+  display:flex;
+  gap:10px;
+  justify-content:space-between;
+  border-bottom:1px dashed var(--border);
+  padding-bottom:10px;
+}
+.kvItem:last-child{
+  border-bottom:none;
+  padding-bottom:0;
+}
+.kvItem .k{
+  color:var(--muted);
+  font-weight:900;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.kvItem .v{
+  text-align:right;
+  font-weight:850;
+  font-size:13px;
 }
 
-select{
-  padding:8px 10px;
-  border-radius:10px;
-  border:1px solid var(--border);
+/* Empty / errors */
+.notice{
   background:var(--card);
-  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:18px;
+  box-shadow:var(--shadow);
+  color:var(--muted);
+  font-size:13px;
 }
+
+/* Small helper */
+.sep{
+  height:1px;
+  background:var(--border);
+  margin:10px 0;
+}
+
 </style>
 </head>
 
 <body>
 
-<div class="sidebar">
-  <h2>Customer Portal</h2>
-  <a href="/customer" class="nav-link">Dashboard</a>
-  <a href="/customer/maintenance" class="nav-link active">Maintenance</a>
-</div>
+<div class="shell">
 
-<div class="main">
-
-  <div class="header">
-    <h1 style="margin:0;font-size:18px;">Webex Platform Maintenance</h1>
-    <div style="display:flex;gap:10px;">
-      <button id="btnTheme" type="button">Toggle Theme</button>
-      <button type="button" onclick="loadMaintenance(true)">Refresh</button>
-    </div>
-  </div>
-
-  <div class="content">
-
-    <div class="kpi-grid">
-      <div class="kpi">
-        <h3>Upcoming</h3>
-        <div class="kpi-value" id="kUpcoming">—</div>
-      </div>
-      <div class="kpi">
-        <h3>Active</h3>
-        <div class="kpi-value" id="kActive">—</div>
-      </div>
-      <div class="kpi">
-        <h3>Completed</h3>
-        <div class="kpi-value" id="kCompleted">—</div>
-      </div>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="title">US Signal</div>
+      <div class="sub">Webex Partner Portal</div>
     </div>
 
-    <div class="filter-bar">
-      <select id="productFilter">
-        <option value="">All Products</option>
-      </select>
+    <nav class="nav">
+      <a href="/customer">Dashboard</a>
+      <a href="/customer/maintenance" class="active">Maintenance</a>
+      <a href="/customer/status">Status</a>
+      <a href="/customer/incidents">Incidents</a>
+    </nav>
+
+    <div style="margin-top:auto; padding-top:10px; border-top:1px solid var(--border);">
+      <div class="muted" style="font-size:12px; line-height:1.4;">
+        Data source: status.webex.com<br/>
+        Cached locally for 5 minutes
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="pageTitle">
+        <h1>Webex Maintenance</h1>
+        <p>Commercial and Government maintenance windows, filtered by product and region.</p>
+      </div>
+
+      <div class="actions">
+        <button id="btnTheme" class="btn" type="button">Toggle Theme</button>
+        <button id="btnRefresh" class="btn primary" type="button">Refresh</button>
+      </div>
     </div>
 
-    <div id="maintenanceContainer"></div>
+    <div class="content">
 
-  </div>
+      <div class="kpis">
+        <div class="kpi">
+          <div class="label">Upcoming</div>
+          <div class="value" id="kUpcoming">—</div>
+          <div class="hint">Scheduled windows</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Active</div>
+          <div class="value" id="kActive">—</div>
+          <div class="hint">In progress</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Completed</div>
+          <div class="value" id="kCompleted">—</div>
+          <div class="hint">Completed</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Total</div>
+          <div class="value" id="kTotal">—</div>
+          <div class="hint">All results</div>
+        </div>
+      </div>
+
+      <div class="filterRow">
+        <span class="chip"><span class="dot"></span>US Signal view</span>
+
+        <select id="sectorFilter" class="select" aria-label="Sector filter">
+          <option value="">All Sectors</option>
+          <option value="Commercial">Commercial</option>
+          <option value="Government">Government</option>
+        </select>
+
+        <select id="productFilter" class="select" aria-label="Product filter">
+          <option value="">All Products</option>
+          <option value="Webex Meetings">Webex Meetings</option>
+          <option value="Webex App">Webex App</option>
+          <option value="Webex User Hub">Webex User Hub</option>
+          <option value="Webex Control Hub">Webex Control Hub</option>
+          <option value="Webex Cloud Registered Device">Webex Cloud Registered Device</option>
+          <option value="Webex Calling">Webex Calling</option>
+          <option value="Developer API">Developer API</option>
+          <option value="Cisco BroadCloud">Cisco BroadCloud</option>
+          <option value="Webex Hybrid Services">Webex Hybrid Services</option>
+          <option value="Dedicated Instance/UCM Cloud">Dedicated Instance/UCM Cloud</option>
+          <option value="Webex for BroadWorks">Webex for BroadWorks</option>
+          <option value="Webex Contact Center">Webex Contact Center</option>
+          <option value="Gateway and Solutions">Gateway and Solutions</option>
+          <option value="Webex Contact Center Enterprise">Webex Contact Center Enterprise</option>
+          <option value="Webex Events (formerly Socio)">Webex Events (formerly Socio)</option>
+          <option value="Slido">Slido</option>
+        </select>
+
+        <select id="regionFilter" class="select" aria-label="Region filter">
+          <option value="">All Regions</option>
+          <option value="Americas">Americas</option>
+          <option value="EMEA">EMEA</option>
+          <option value="APJC">APJC</option>
+          <option value="Global">Global</option>
+          <option value="Unknown">Unknown</option>
+        </select>
+
+        <input id="searchBox" class="search" type="search" placeholder="Search change #, title, location, or body…" />
+
+      </div>
+
+      <div id="maintenancePanel" class="panel">
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="col-narrow">Change #</th>
+                <th class="col-mid">Date</th>
+                <th class="col-narrow">Status</th>
+                <th class="col-mid">Sector</th>
+                <th class="col-mid">Region</th>
+                <th class="col-mid">Location</th>
+                <th class="col-wide">Maintenance</th>
+                <th class="col-narrow"></th>
+              </tr>
+            </thead>
+            <tbody id="tbody">
+              <tr><td colspan="8" style="padding:18px;"><span class="muted">Loading…</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="notice" style="display:none; margin-top:14px;" class="notice"></div>
+
+    </div>
+  </main>
 </div>
 
 <script>
-const CACHE_KEY = "maintenanceCacheV3";
-const CACHE_TTL = 5 * 60 * 1000;
+/* ======================================================
+   CONFIG
+====================================================== */
+const CACHE_KEY = "maintenanceCacheWebexStyleV1";
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
-/* =========================
+/* ======================================================
    THEME
-========================= */
+====================================================== */
 function loadTheme(){
   const saved = localStorage.getItem("uiTheme") || "light";
   document.documentElement.setAttribute("data-theme", saved);
 }
-
-document.getElementById("btnTheme").onclick = function(){
+function toggleTheme(){
   const cur = document.documentElement.getAttribute("data-theme");
   const next = cur === "dark" ? "light" : "dark";
   localStorage.setItem("uiTheme", next);
   loadTheme();
-};
-
+}
 loadTheme();
+document.getElementById("btnTheme").addEventListener("click", toggleTheme);
 
-/* =========================
-   HELPERS
-========================= */
-function escapeHtml(s){
-  return String(s ?? "")
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;")
-    .replace(/'/g,"&#39;");
-}
-
-/**
- * Webex "updates.body" often includes HTML such as <strong> and <a>.
- * We allow a small safe subset:
- * - <strong>, <b>, <em>, <i>, <br>, <p>, <ul>, <ol>, <li>, <a href=...>
- * Everything else is stripped.
- */
-function sanitizeLimitedHtml(html){
-  const raw = String(html || "").trim();
-  if(!raw) return "";
-
-  const tpl = document.createElement("template");
-  tpl.innerHTML = raw;
-
-  const allowedTags = new Set(["STRONG","B","EM","I","BR","P","UL","OL","LI","A","DIV","SPAN"]);
-  const allowedAttrs = {
-    "A": new Set(["href","target","rel"])
-  };
-
-  function cleanNode(node){
-    const children = Array.from(node.childNodes);
-    for(const child of children){
-      if(child.nodeType === Node.ELEMENT_NODE){
-        const tag = child.tagName;
-
-        if(!allowedTags.has(tag)){
-          // unwrap the element but keep its children text
-          const frag = document.createDocumentFragment();
-          while(child.firstChild) frag.appendChild(child.firstChild);
-          child.replaceWith(frag);
-          continue;
-        }
-
-        // strip attributes not allowed
-        const attrs = Array.from(child.attributes || []);
-        for(const a of attrs){
-          const name = a.name.toLowerCase();
-          const ok = (allowedAttrs[tag] && allowedAttrs[tag].has(name)) || false;
-          if(!ok) child.removeAttribute(a.name);
-        }
-
-        // harden links
-        if(tag === "A"){
-          const href = child.getAttribute("href") || "";
-          const safeHref = href.startsWith("http://") || href.startsWith("https://");
-          if(!safeHref){
-            child.removeAttribute("href");
-          } else {
-            child.setAttribute("target","_blank");
-            child.setAttribute("rel","noopener noreferrer");
-          }
-        }
-
-        cleanNode(child);
-      }
-      else if(child.nodeType === Node.COMMENT_NODE){
-        child.remove();
-      }
-      else{
-        // text nodes are fine
-      }
-    }
-  }
-
-  cleanNode(tpl.content);
-
-  // Convert bare newlines to <br> if there's no block structure
-  let out = tpl.innerHTML;
-  if(!/<(p|ul|ol|li|br|div|span|strong|b|em|i|a)\b/i.test(out)){
-    out = escapeHtml(raw).replace(/\n/g,"<br>");
-  }
-
-  return out;
-}
-
-function fmtDate(iso){
-  if(!iso) return "—";
-  try { return new Date(iso).toLocaleString(); }
-  catch { return "—"; }
-}
-
-function badgeClass(status){
-  const s=(status||"").toLowerCase();
-  if(s.includes("progress")) return "inprogress";
-  if(s==="completed") return "completed";
-  return "scheduled";
-}
-
-/* =========================
+/* ======================================================
    FETCH
-========================= */
+====================================================== */
 async function fetchMaintenance(){
   try{
     const res = await fetch("/api/maintenance", { cache:"no-store" });
-    if(!res.ok) return null;
-    return await res.json();
-  }catch(e){
-    console.error("Maintenance fetch failed", e);
-    return null;
-  }
-}
-
-async function loadProductFilter(){
-  try{
-    const res = await fetch("/api/components", { cache:"no-store" });
-    if(!res.ok) return;
-
+    if(!res.ok) return { ok:false, status:res.status };
     const data = await res.json();
-    const select = document.getElementById("productFilter");
-
-    const groups = Object.keys(data.grouped || {});
-    groups.sort((a,b)=>a.localeCompare(b));
-
-    for(const group of groups){
-      const opt = document.createElement("option");
-      opt.value = group;
-      opt.textContent = group;
-      select.appendChild(opt);
-    }
+    return { ok:true, data };
   }catch(e){
-    console.error("Component load failed", e);
+    return { ok:false, error:e };
   }
 }
 
-/* =========================
-   LOAD
-========================= */
-async function loadMaintenance(force){
-
-  if(!force){
-    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-    if(cached && (Date.now() - cached.timestamp) < CACHE_TTL){
-      render(cached.data);
-      return;
-    }
-  }
-
-  const data = await fetchMaintenance();
-  if(!data) return;
-
-  localStorage.setItem(CACHE_KEY, JSON.stringify({
-    timestamp: Date.now(),
-    data
-  }));
-
-  render(data);
+/* ======================================================
+   HELPERS: status badge
+====================================================== */
+function badgeClass(status){
+  const s = String(status || "").toLowerCase();
+  if(s.includes("progress")) return "inprogress";
+  if(s === "completed") return "completed";
+  if(s === "scheduled") return "scheduled";
+  return "unknown";
 }
 
-/* =========================
-   RENDER
-========================= */
-function render(data){
+/* ======================================================
+   HELPERS: Change number extraction
+   - Prefer externalId
+   - Otherwise parse CHG\d+ from title/body
+====================================================== */
+function extractChangeNumber(m){
+  if(m?.externalId) return String(m.externalId);
 
-  const container = document.getElementById("maintenanceContainer");
-  container.innerHTML = "";
+  const title = String(m?.name || "");
+  const body = String(m?.updates?.[0]?.body || m?.body || "");
+  const match = (title + " " + body).match(/CHG\d{6,}/);
+  return match ? match[0] : "—";
+}
 
-  const items = data.maintenance || [];
+/* ======================================================
+   HELPERS: Sector parsing (Commercial/Government)
+   - Best-effort:
+     - Use m.sector if API provides it
+     - Use m.audience / m.type if present
+     - Infer from body text keywords (gov / government)
+====================================================== */
+function parseSector(m){
+  const direct =
+    m?.sector ||
+    m?.audience ||
+    m?.type ||
+    m?.environment ||
+    null;
 
-  const upcoming = items.filter(m => (m.status||"").toLowerCase()==="scheduled");
-  const active = items.filter(m => (m.status||"").toLowerCase().includes("progress"));
-  const completed = items.filter(m => (m.status||"").toLowerCase()==="completed");
+  if(direct){
+    const s = String(direct);
+    if(/gov/i.test(s)) return "Government";
+    if(/comm/i.test(s)) return "Commercial";
+  }
+
+  const body = String(m?.updates?.[0]?.body || m?.body || "").toLowerCase();
+  const name = String(m?.name || "").toLowerCase();
+
+  if(body.includes("government") || name.includes("government")) return "Government";
+  if(body.includes("commercial") || name.includes("commercial")) return "Commercial";
+
+  return "Commercial"; // default per your request (show all commercial products)
+}
+
+/* ======================================================
+   HELPERS: Location parsing
+   - Webex UI shows things like "Canada Data Center"
+   - Try:
+     1) m.location / m.region / m.impacted_region
+     2) Title patterns: "Canada Data Center", "US Data Center", etc
+     3) Body patterns: lines containing "Data Center" or obvious place tokens
+====================================================== */
+function parseLocation(m){
+  const direct =
+    m?.location ||
+    m?.site ||
+    m?.impacted_location ||
+    m?.data_center ||
+    null;
+  if(direct) return String(direct);
+
+  const title = String(m?.name || "");
+  // common pattern: "<Place> Data Center"
+  const titleMatch = title.match(/([A-Za-z][A-Za-z\s]+Data Center)/);
+  if(titleMatch) return titleMatch[1].trim();
+
+  const body = String(m?.updates?.[0]?.body || m?.body || "");
+  const bodyMatch = body.match(/([A-Za-z][A-Za-z\s]+Data Center)/);
+  if(bodyMatch) return bodyMatch[1].trim();
+
+  return "—";
+}
+
+/* ======================================================
+   HELPERS: Region parsing (Americas / EMEA / APJC / Global)
+   - Best-effort mapping from location/body keywords
+====================================================== */
+function parseRegion(m){
+  const direct =
+    m?.impacted_region ||
+    m?.region ||
+    m?.geo ||
+    null;
+  if(direct) return String(direct);
+
+  const loc = (parseLocation(m) || "").toLowerCase();
+  const body = String(m?.updates?.[0]?.body || m?.body || "").toLowerCase();
+  const blob = (loc + " " + body);
+
+  if(blob.includes("emea") || blob.includes("europe") || blob.includes("africa") || blob.includes("middle east")) return "EMEA";
+  if(blob.includes("apjc") || blob.includes("apac") || blob.includes("asia") || blob.includes("japan") || blob.includes("australia")) return "APJC";
+  if(blob.includes("americas") || blob.includes("canada") || blob.includes("united states") || blob.includes("u.s.") || blob.includes("us ")) return "Americas";
+  if(blob.includes("global") || blob.includes("worldwide")) return "Global";
+
+  return "Unknown";
+}
+
+/* ======================================================
+   HELPERS: Body formatting to resemble Webex UI
+   - Convert \n to <br>
+   - Convert <strong> to <b> safely
+   - Linkify https://... text if present
+====================================================== */
+function escapeHtml(s){
+  return String(s || "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function linkifyText(htmlEscaped){
+  // htmlEscaped is already escaped; URLs have no < > in them
+  return htmlEscaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+}
+
+function formatBody(m){
+  // Use update body if present; otherwise description/body
+  let raw = m?.updates?.[0]?.body || m?.body || m?.description || "";
+  if(!raw) return "No details available.";
+
+  // Some APIs might already include <strong> and \n sequences
+  // We will render HTML-like emphasis but keep everything safe:
+  // - escape first
+  // - then re-inject known tags from escaped equivalents
+  let safe = escapeHtml(raw);
+
+  // Re-enable emphasis tags that appeared in the original body
+  safe = safe.replaceAll("&lt;strong&gt;","<b>").replaceAll("&lt;/strong&gt;","</b>");
+
+  // Normalize common "— Section —" style lines:
+  // Keep them readable as bold-ish headings when possible
+  safe = safe.replace(/--\s*([^-\n\r]+)\s*--/g, "<br><br><b>$1</b>");
+
+  // Newlines to breaks (note: raw may contain literal \n OR escaped \\n)
+  safe = safe.replaceAll("\\n","<br>").replace(/\r?\n/g,"<br>");
+
+  // Linkify URLs
+  safe = linkifyText(safe);
+
+  return safe;
+}
+
+/* ======================================================
+   Filtering + state
+====================================================== */
+let ALL_ITEMS = [];
+let EXPANDED_ID = null;
+
+function getFilters(){
+  return {
+    sector: document.getElementById("sectorFilter").value,
+    product: document.getElementById("productFilter").value,
+    region: document.getElementById("regionFilter").value,
+    q: document.getElementById("searchBox").value.trim().toLowerCase()
+  };
+}
+
+function matchesFilters(m, f){
+  const sector = parseSector(m);
+  const region = parseRegion(m);
+  const location = parseLocation(m);
+  const changeNo = extractChangeNumber(m);
+  const title = String(m?.name || "");
+  const body = String(m?.updates?.[0]?.body || m?.body || "");
+
+  if(f.sector && sector !== f.sector) return false;
+  if(f.region && region !== f.region) return false;
+
+  if(f.product){
+    // Filter by component PRODUCT name (not group)
+    const has = (m.components || []).some(c => String(c?.name || "") === f.product);
+    if(!has) return false;
+  }
+
+  if(f.q){
+    const hay = (changeNo + " " + title + " " + location + " " + sector + " " + region + " " + body).toLowerCase();
+    if(!hay.includes(f.q)) return false;
+  }
+
+  return true;
+}
+
+/* ======================================================
+   Rendering
+====================================================== */
+function setNotice(msg){
+  const el = document.getElementById("notice");
+  if(!msg){
+    el.style.display = "none";
+    el.textContent = "";
+    return;
+  }
+  el.style.display = "block";
+  el.textContent = msg;
+}
+
+function render(){
+  const tbody = document.getElementById("tbody");
+  const f = getFilters();
+
+  const items = (ALL_ITEMS || []).filter(m => matchesFilters(m, f));
+
+  // KPI updates (based on filtered set)
+  const upcoming = items.filter(m => String(m.status||"").toLowerCase()==="scheduled");
+  const active = items.filter(m => String(m.status||"").toLowerCase().includes("progress"));
+  const completed = items.filter(m => String(m.status||"").toLowerCase()==="completed");
 
   document.getElementById("kUpcoming").textContent = upcoming.length;
   document.getElementById("kActive").textContent = active.length;
   document.getElementById("kCompleted").textContent = completed.length;
+  document.getElementById("kTotal").textContent = items.length;
 
-  const filterValue = document.getElementById("productFilter").value;
-
-  let filtered = items;
-
-  if(filterValue){
-    filtered = items.filter(m =>
-      (m.components || []).some(c => (c.group || c.product_group) === filterValue)
-    );
-  }
-
-  if(filtered.length === 0){
-    container.innerHTML = `<div class="empty">No maintenance events found.</div>`;
+  if(items.length === 0){
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" style="padding:18px;">
+          <span class="muted">No maintenance events found for the current filters.</span>
+        </td>
+      </tr>
+    `;
     return;
   }
 
-  // sort newest first by created_at
-  filtered.sort((a,b)=>{
-    const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
-    const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
-    return tb - ta;
+  // Sort: scheduled/active first, then by created_at desc
+  const order = { scheduled: 0, inprogress: 1, completed: 2, unknown: 3 };
+  items.sort((a,b) => {
+    const ac = badgeClass(a.status);
+    const bc = badgeClass(b.status);
+    if(order[ac] !== order[bc]) return order[ac] - order[bc];
+
+    const at = a?.created_at ? new Date(a.created_at).getTime() : 0;
+    const bt = b?.created_at ? new Date(b.created_at).getTime() : 0;
+    return bt - at;
   });
 
-  const table = document.createElement("table");
-  let rows = "";
+  let html = "";
 
-  filtered.forEach((m,index)=>{
+  for(const m of items){
+    const changeNo = extractChangeNumber(m);
+    const dateStr = m?.created_at ? new Date(m.created_at).toLocaleString() : "—";
+    const status = String(m?.status || "—");
+    const bClass = badgeClass(status);
+    const sector = parseSector(m);
+    const region = parseRegion(m);
+    const location = parseLocation(m);
 
-    const id = `detail-${index}`;
-    const dateStr = fmtDate(m.created_at);
+    // product list summary
+    const products = (m.components || []).map(c => c?.name).filter(Boolean);
+    const productSummary = products.length ? products.join(", ") : "—";
 
-    const compNames = (m.components || []).map(c => c.name).filter(Boolean);
-    const productsAffected = compNames.length ? compNames.join(", ") : "—";
+    const isExpanded = EXPANDED_ID === String(m.id);
 
-    // ✅ This is the key: Worker provides detailsHtml (full body)
-    const detailsHtml = sanitizeLimitedHtml(m.detailsHtml || m.body || m.description || "");
+    const rowId = `row-${m.id}`;
+    const detailId = `detail-${m.id}`;
 
-    rows += `
-      <tr onclick="toggleDetail('${id}')">
-        <td>${escapeHtml(dateStr)}</td>
-        <td><span class="badge ${badgeClass(m.status)}">${escapeHtml(m.status||"—")}</span></td>
-        <td>${escapeHtml(m.impact||"—")}</td>
-        <td>${escapeHtml(m.name||"—")}</td>
-        <td style="text-align:right;">
-          <button class="btn-email"
-            type="button"
-            onclick="event.stopPropagation(); notify('${escapeHtml(m.id)}')">
-            Email
-          </button>
+    html += `
+      <tr class="dataRow ${isExpanded ? "expanded" : ""}" id="${rowId}" data-id="${String(m.id)}">
+        <td class="col-narrow"><b>${escapeHtml(changeNo)}</b></td>
+        <td class="col-mid">${escapeHtml(dateStr)}</td>
+        <td class="col-narrow">
+          <span class="badge ${bClass}">
+            <span class="bDot"></span>${escapeHtml(status)}
+          </span>
+        </td>
+        <td class="col-mid">${escapeHtml(sector)}</td>
+        <td class="col-mid">${escapeHtml(region)}</td>
+        <td class="col-mid">${escapeHtml(location)}</td>
+        <td class="col-wide">
+          <div class="rowHead">
+            <span class="chev" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <div>
+              <div class="titleLine">${escapeHtml(m?.name || "—")}</div>
+              <div class="subLine">Products: ${escapeHtml(productSummary)}</div>
+            </div>
+          </div>
+        </td>
+        <td class="col-narrow" style="text-align:right;">
+          <button class="btnEmail" type="button" data-email-btn="1" data-mid="${escapeHtml(String(m.id))}">Email</button>
         </td>
       </tr>
 
-      <tr id="${id}" class="detail-row" style="display:none;">
-        <td colspan="5">
-          <div class="detail-box">
-            <div class="meta">
-              <span class="pill">Created: ${escapeHtml(fmtDate(m.created_at))}</span>
-              <span class="pill">Updated: ${escapeHtml(fmtDate(m.updated_at))}</span>
-              <span class="pill">ID: ${escapeHtml(m.id || "—")}</span>
+      <tr class="detailRow" id="${detailId}" style="display:${isExpanded ? "table-row" : "none"};">
+        <td colspan="8">
+          <div class="detailCard">
+            <div class="detailBlock">
+              <h3>Details</h3>
+              <div class="body">${formatBody(m)}</div>
             </div>
+            <div class="detailBlock">
+              <h3>Summary</h3>
+              <div class="kv">
+                <div class="kvItem">
+                  <div class="k">Change #</div>
+                  <div class="v">${escapeHtml(changeNo)}</div>
+                </div>
+                <div class="kvItem">
+                  <div class="k">Status</div>
+                  <div class="v">${escapeHtml(status)}</div>
+                </div>
+                <div class="kvItem">
+                  <div class="k">Sector</div>
+                  <div class="v">${escapeHtml(sector)}</div>
+                </div>
+                <div class="kvItem">
+                  <div class="k">Region</div>
+                  <div class="v">${escapeHtml(region)}</div>
+                </div>
+                <div class="kvItem">
+                  <div class="k">Location</div>
+                  <div class="v">${escapeHtml(location)}</div>
+                </div>
+                <div class="kvItem">
+                  <div class="k">Created</div>
+                  <div class="v">${escapeHtml(dateStr)}</div>
+                </div>
+              </div>
 
-            <strong>Maintenance details:</strong>
-            <div class="detail-content">
-              ${detailsHtml || "No details available."}
+              <div class="sep"></div>
+
+              <div class="muted" style="font-size:12px; line-height:1.5;">
+                This view mirrors Webex Status detail formatting where available.
+              </div>
             </div>
-
-            <div style="height:12px;"></div>
-
-            <strong>Products Affected:</strong><br/>
-            ${escapeHtml(productsAffected)}
           </div>
         </td>
       </tr>
     `;
+  }
+
+  tbody.innerHTML = html;
+
+  // Wire row click + email buttons
+  tbody.querySelectorAll("tr.dataRow").forEach(tr => {
+    tr.addEventListener("click", (e) => {
+      // Ignore if clicking email button
+      const target = e.target;
+      if(target && target.closest && target.closest("[data-email-btn='1']")) return;
+
+      const id = tr.getAttribute("data-id");
+      toggleExpanded(id);
+    });
   });
 
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th style="width:210px;">Date</th>
-        <th style="width:120px;">Status</th>
-        <th style="width:140px;">Impact</th>
-        <th>Name</th>
-        <th style="width:90px;"></th>
-      </tr>
-    </thead>
-    <tbody>${rows}</tbody>
-  `;
-
-  container.appendChild(table);
+  tbody.querySelectorAll("[data-email-btn='1']").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const mid = btn.getAttribute("data-mid");
+      notify(mid);
+    });
+  });
 }
 
-function toggleDetail(id){
-  const row = document.getElementById(id);
-  if(!row) return;
-  row.style.display = row.style.display==="none" ? "table-row" : "none";
+function toggleExpanded(id){
+  const same = EXPANDED_ID === id;
+  EXPANDED_ID = same ? null : id;
+
+  // Update rows without full re-render for snappy UX
+  document.querySelectorAll("tr.dataRow").forEach(r => {
+    const rid = r.getAttribute("data-id");
+    r.classList.toggle("expanded", EXPANDED_ID === rid);
+  });
+  document.querySelectorAll("tr.detailRow").forEach(dr => {
+    const did = dr.id.replace("detail-","");
+    dr.style.display = (EXPANDED_ID === did) ? "table-row" : "none";
+  });
 }
 
-/* =========================
-   EMAIL NOTIFY
-========================= */
+/* ======================================================
+   Email notify (per maintenance)
+   - Uses your existing endpoint: /api/maintenance/notify
+====================================================== */
 async function notify(maintenanceId){
-
   const email = prompt("Enter email address to notify:");
   if(!email) return;
 
@@ -606,38 +1064,88 @@ async function notify(maintenanceId){
     const res = await fetch("/api/maintenance/notify",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        maintenanceId,
-        email
-      })
+      body: JSON.stringify({ maintenanceId, email })
     });
 
-    const text = await res.text();
-    let payload = null;
-    try{ payload = JSON.parse(text); }catch{}
+    const txt = await res.text();
 
     if(!res.ok){
-      console.error("Notify failed", res.status, text);
-      alert(payload?.error ? `Failed: ${payload.error}` : "Failed to send notification.");
+      alert("Failed to send notification.\n\n" + txt.slice(0,300));
       return;
     }
 
     alert("Notification sent successfully.");
-  }
-  catch(e){
-    console.error("Notification error", e);
+  }catch(e){
     alert("Notification error.");
   }
 }
 
-/* =========================
-   INIT
-========================= */
-document.getElementById("productFilter")
-  .addEventListener("change",()=>loadMaintenance(true));
+/* ======================================================
+   Load / Cache
+====================================================== */
+async function loadMaintenance(force){
+  setNotice("");
 
-loadProductFilter();
+  if(!force){
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+    if(cached && (Date.now() - cached.ts) < CACHE_TTL_MS){
+      ALL_ITEMS = cached.items || [];
+      EXPANDED_ID = null;
+      render();
+      return;
+    }
+  }
+
+  const r = await fetchMaintenance();
+  if(!r.ok){
+    setNotice("Maintenance API is unavailable. Confirm /api/maintenance is implemented in the worker and returning JSON.");
+    document.getElementById("tbody").innerHTML = `
+      <tr><td colspan="8" style="padding:18px;"><span class="muted">Unable to load maintenance.</span></td></tr>
+    `;
+    return;
+  }
+
+  const items = r.data?.maintenance || [];
+  ALL_ITEMS = items;
+
+  localStorage.setItem(CACHE_KEY, JSON.stringify({
+    ts: Date.now(),
+    items
+  }));
+
+  EXPANDED_ID = null;
+  render();
+}
+
+/* ======================================================
+   Filters events
+====================================================== */
+["sectorFilter","productFilter","regionFilter"].forEach(id => {
+  document.getElementById(id).addEventListener("change", () => {
+    EXPANDED_ID = null;
+    render();
+  });
+});
+
+let searchTimer = null;
+document.getElementById("searchBox").addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    EXPANDED_ID = null;
+    render();
+  }, 140);
+});
+
+/* ======================================================
+   Refresh
+====================================================== */
+document.getElementById("btnRefresh").addEventListener("click", () => loadMaintenance(true));
+
+/* ======================================================
+   Init
+====================================================== */
 loadMaintenance(false);
+
 </script>
 
 </body>
