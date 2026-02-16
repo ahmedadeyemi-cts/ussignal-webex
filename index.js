@@ -1165,9 +1165,13 @@ if (url.pathname === "/api/status" && request.method === "GET") {
     }
 
     if (session.expiresAt && session.expiresAt <= nowMs()) {
-      await clearSession(env, user.email);
-      return json({ error: "pin_expired" }, 401);
-    }
+  await clearSession(env, user.email);
+  return json({
+    error: "pin_expired",
+    redirect: "/pin"
+  }, 401);
+}
+
   }
 
   try {
@@ -1219,10 +1223,14 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
       return json({ error: "pin_required" }, 401);
     }
 
-    if (session.expiresAt && session.expiresAt <= nowMs()) {
-      await clearSession(env, user.email);
-      return json({ error: "pin_expired" }, 401);
-    }
+   if (session.expiresAt && session.expiresAt <= nowMs()) {
+  await clearSession(env, user.email);
+  return json({
+    error: "pin_expired",
+    redirect: "/pin"
+  }, 401);
+}
+
   }
 
   try {
@@ -1264,9 +1272,13 @@ if (!user.isAdmin) {
   }
 
   if (session.expiresAt && session.expiresAt <= nowMs()) {
-    await clearSession(env, user.email);
-    return json({ error: "pin_expired" }, 401);
-  }
+  await clearSession(env, user.email);
+  return json({
+    error: "pin_expired",
+    redirect: "/pin"
+  }, 401);
+}
+
 }
 
   try {
@@ -1914,10 +1926,13 @@ if (url.pathname.startsWith("/api/customer/")) {
       return json({ ok: false, error: "pin_required" }, 401);
     }
 
-    if (session.expiresAt && session.expiresAt <= nowMs()) {
-      await clearSession(env, user.email);
-      return json({ ok: false, error: "pin_expired" }, 401);
-    }
+   if (session.expiresAt && session.expiresAt <= nowMs()) {
+  await clearSession(env, user.email);
+  return json({
+    error: "pin_expired",
+    redirect: "/pin"
+  }, 401);
+}
   }
 
   const parts = url.pathname.split("/");
