@@ -412,7 +412,7 @@ async function loadDevices(orgId){
   const rows = devices.map(d => `
     <tr onclick='openModal(${JSON.stringify(d)})'>
       <td>${d.displayName || "—"}</td>
-      <td>${d.model || "—"}</td>
+      <td>${d.product || "—"}</td>
       <td>${d.type || "—"}</td>
       <td>${badge(String(d.connectionStatus).toLowerCase())}</td>
       <td>${d.ip || "—"}</td>
