@@ -1,1 +1,387 @@
-Test
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Signal | Tenant Resolution</title>
+
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.app{
+  display:grid;
+  grid-template-columns:270px 1fr;
+  min-height:100vh;
+}
+
+/* Sidebar */
+.sidebar{
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+.brand img{height:34px;}
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
+}
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+.sidebar-bottom{
+  margin-top:auto;
+  border-top:1px solid var(--line);
+  padding-top:10px;
+}
+
+.main{padding:22px;}
+
+.header-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+}
+
+.h{
+  font-size:16px;
+  font-weight:1000;
+}
+.sub{
+  font-size:12px;
+  color:var(--muted);
+  max-width:900px;
+}
+
+.section{margin-top:18px;}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+@media(max-width:1100px){
+  .grid{grid-template-columns:1fr;}
+}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:14px;
+}
+
+.card h3{
+  margin:0 0 8px 0;
+  font-size:13px;
+  font-weight:1000;
+}
+
+.kv{
+  display:grid;
+  grid-template-columns:180px 1fr;
+  gap:8px;
+  font-size:12px;
+}
+.k{color:var(--muted);font-weight:900;}
+.v{font-weight:800;}
+
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+}
+.good{background:rgba(22,163,74,.1);color:var(--good);}
+.warn{background:rgba(245,158,11,.1);color:#b45309;}
+.bad{background:rgba(220,38,38,.1);color:var(--bad);}
+
+.btn{
+  padding:8px 12px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:12px;
+  cursor:pointer;
+  border:none;
+}
+.btn-outline{
+  border:1px solid rgba(15,23,42,.18);
+  background:#fff;
+}
+.btn-primary{
+  background:var(--accent);
+  color:#fff;
+}
+
+.table-wrap{
+  border:1px solid var(--line);
+  border-radius:12px;
+  overflow:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+thead th{
+  padding:10px;
+  font-size:11px;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+tbody td{
+  padding:10px;
+  border-top:1px solid rgba(15,23,42,.06);
+  font-size:13px;
+}
+
+.audit-toggle{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+}
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.35);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+.modal-content{
+  background:#fff;
+  width:900px;
+  max-height:80vh;
+  overflow:auto;
+  border-radius:16px;
+  padding:20px;
+}
+.modal.show{display:flex;}
+
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="brand">
+    <img src="/assets/ussignal-logo.jpg"
+      onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
+    <div>
+      <b>Partner Portal</b><br>
+      <span style="font-size:12px;color:var(--muted);">Managed Services</span>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/support">Support</a>
+    <a href="/admin/pstn">PSTN</a>
+    <a class="active" href="/admin/tenant-resolution">Resolution</a>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <button class="btn btn-primary" onclick="logout()">Logout</button>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+
+<div class="header-card">
+  <div>
+    <div class="h">Resolution Intelligence Console</div>
+    <div class="sub">
+      Multi-tenant root cause analytics platform leveraging Webex CDR,
+      PSTN telemetry, trunk state, and call failure patterns to identify
+      anomalies, degradations, and systemic risks across managed tenants.
+    </div>
+  </div>
+
+  <div class="audit-toggle">
+    <input type="checkbox" id="auditMode">
+    <label for="auditMode">Audit Mode</label>
+  </div>
+</div>
+
+<!-- Executive Summary -->
+<div class="section grid">
+  <div class="card">
+    <h3>Global Health Overview</h3>
+    <div class="kv">
+      <div class="k">Tenants Monitored</div>
+      <div class="v" id="tenantCount">--</div>
+
+      <div class="k">Active Alerts</div>
+      <div class="v"><span class="badge warn" id="alertCount">--</span></div>
+
+      <div class="k">Critical Failures</div>
+      <div class="v"><span class="badge bad" id="criticalCount">--</span></div>
+
+      <div class="k">Average Call Success Rate</div>
+      <div class="v"><span class="badge good" id="successRate">--</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Failure Pattern Detection</h3>
+    <ul style="font-size:12px;color:var(--muted);line-height:1.5;">
+      <li>Repeated SIP 408 or 503 from single carrier</li>
+      <li>One-way audio spikes across region</li>
+      <li>Excessive call setup delays</li>
+      <li>High call failure rate per location</li>
+      <li>Trunk failover events</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Tenant Table -->
+<div class="section">
+  <div class="card">
+    <h3>Tenant Resolution View</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tenant</th>
+            <th>Call Success</th>
+            <th>Failure %</th>
+            <th>PSTN Model</th>
+            <th>Trunk State</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tenantTable">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- Drilldown Modal -->
+<div class="modal" id="drillModal">
+  <div class="modal-content">
+    <h3>Tenant Deep Dive</h3>
+    <div id="drillContent"></div>
+    <br>
+    <button class="btn btn-outline" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<script>
+async function api(path){
+  const r = await fetch(path);
+  if(!r.ok){
+    if(r.status===401) window.location="/pin";
+    throw new Error("API error");
+  }
+  return await r.json();
+}
+
+async function loadResolution(){
+  const data = await api("/api/resolution-summary");
+
+  document.getElementById("tenantCount").textContent = data.totalTenants;
+  document.getElementById("alertCount").textContent = data.alerts;
+  document.getElementById("criticalCount").textContent = data.critical;
+  document.getElementById("successRate").textContent = data.avgSuccess+"%";
+
+  const tbody = document.getElementById("tenantTable");
+  tbody.innerHTML="";
+
+  data.tenants.forEach(t=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${t.name}</td>
+      <td>${t.success}%</td>
+      <td>${t.failure}%</td>
+      <td>${t.pstn}</td>
+      <td>${t.trunkState}</td>
+      <td><button class="btn btn-outline" onclick="drill('${t.id}')">View</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function drill(id){
+  const data = await api("/api/resolution-tenant/"+id);
+  document.getElementById("drillContent").innerHTML = `
+    <b>Call Volume:</b> ${data.volume}<br>
+    <b>Top Failure Code:</b> ${data.topFailure}<br>
+    <b>Carrier:</b> ${data.carrier}<br>
+    <b>Media Issues:</b> ${data.mediaIssues}<br>
+    <b>Last HA Event:</b> ${data.haEvent}
+  `;
+  document.getElementById("drillModal").classList.add("show");
+}
+
+function closeModal(){
+  document.getElementById("drillModal").classList.remove("show");
+}
+
+async function logout(){
+  await fetch("/api/pin/logout",{method:"POST"});
+  window.location="/pin";
+}
+
+loadResolution();
+</script>
+
+</body>
+</html>
