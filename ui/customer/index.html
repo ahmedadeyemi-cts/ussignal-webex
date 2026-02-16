@@ -179,98 +179,137 @@ main {
 }
 
 .activity li:last-child { border-bottom:none; }
+   body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  display:flex;
+  height:100vh;
+}
+
+.sidebar{
+  width:250px;
+  background:#0f172a;
+  color:#e2e8f0;
+  display:flex;
+  flex-direction:column;
+  padding:20px;
+}
+
+.main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:18px 28px;
+  background:var(--card);
+  border-bottom:1px solid var(--border);
+}
+
+.content{
+  padding:32px;
+  overflow:auto;
+}
+
 </style>
 </head>
 
 <body>
 
-<header>
-   <nav style="
-  background:var(--card);
-  padding:12px 30px;
-  border-bottom:1px solid rgba(0,0,0,.08);
-  display:flex;
-  gap:18px;
-  flex-wrap:wrap;
-">
-  <a href="/customer">Dashboard</a>
-  <a href="/customer/licenses">Licenses</a>
-  <a href="/customer/devices">Devices</a>
-  <a href="/customer/analytics">Analytics</a>
-  <a href="/customer/cdr">CDR</a>
-  <a href="/customer/maintenance">Maintenance</a>
-  <a href="/customer/status">Status</a>
-  <a href="/customer/incidents">Incidents</a>
-</nav>
+<div class="sidebar">
+  <h2>Customer Portal</h2>
 
-  <div class="brand">
-    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
-    <h1>Customer Hub</h1>
-  </div>
-
-  <div class="header-actions">
-    <button id="btnTheme">Dark Mode</button>
-    <button onclick="location.href='/customer/licenses'">Go to Portal</button>
-  </div>
-</header>
-
-<main>
-
-<!-- KPI SECTION -->
-<div class="kpi-grid">
-  <div class="kpi">
-    <h3>License Health</h3>
-    <div class="kpi-value" id="licenseHealth">Loading…</div>
-  </div>
-
-  <div class="kpi">
-    <h3>Device Health</h3>
-    <div class="kpi-value" id="deviceHealth">Loading…</div>
-  </div>
-
-  <div class="kpi">
-    <h3>Total Calls (7d)</h3>
-    <div class="kpi-value" id="callVolume">Loading…</div>
-  </div>
-
-  <div class="kpi">
-    <h3>Open Incidents</h3>
-    <div class="kpi-value" id="incidentCount">Loading…</div>
-  </div>
+  <a href="/customer" class="nav-link active">Dashboard</a>
+  <a href="/customer/licenses" class="nav-link">Licenses</a>
+  <a href="/customer/devices" class="nav-link">Devices</a>
+  <a href="/customer/analytics" class="nav-link">Analytics</a>
+  <a href="/customer/cdr" class="nav-link">CDR</a>
+  <a href="/customer/maintenance" class="nav-link">Maintenance</a>
+  <a href="/customer/status" class="nav-link">Status</a>
+  <a href="/customer/incidents" class="nav-link">Incidents</a>
 </div>
 
-<!-- NAVIGATION GRID -->
-<div class="nav-grid">
-  <div class="nav-card" onclick="location.href='/customer/licenses'">
-    <h3>License Management</h3>
-    <p>Monitor usage, deficits, and allocation.</p>
+<div class="main">
+
+  <!-- HEADER (Converted from <header>) -->
+  <div class="header">
+
+    <div class="brand">
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
+      <h1>Customer Hub</h1>
+    </div>
+
+    <div class="header-actions">
+      <button id="btnTheme">Dark Mode</button>
+      <button onclick="location.href='/customer/licenses'">Go to Portal</button>
+    </div>
+
   </div>
 
-  <div class="nav-card" onclick="location.href='/customer/status'">
-    <h3>System Status</h3>
-    <p>Live Webex service health overview.</p>
-  </div>
+  <!-- CONTENT (Converted from <main>) -->
+  <div class="content">
 
-  <div class="nav-card" onclick="location.href='/customer/maintenance'">
-    <h3>Maintenance</h3>
-    <p>Upcoming and active maintenance windows.</p>
-  </div>
+    <!-- KPI SECTION -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <h3>License Health</h3>
+        <div class="kpi-value" id="licenseHealth">Loading…</div>
+      </div>
 
-  <div class="nav-card" onclick="location.href='/customer/incidents'">
-    <h3>Incident History</h3>
-    <p>Review current and past service incidents.</p>
+      <div class="kpi">
+        <h3>Device Health</h3>
+        <div class="kpi-value" id="deviceHealth">Loading…</div>
+      </div>
+
+      <div class="kpi">
+        <h3>Total Calls (7d)</h3>
+        <div class="kpi-value" id="callVolume">Loading…</div>
+      </div>
+
+      <div class="kpi">
+        <h3>Open Incidents</h3>
+        <div class="kpi-value" id="incidentCount">Loading…</div>
+      </div>
+    </div>
+
+    <!-- NAVIGATION GRID -->
+    <div class="nav-grid">
+      <div class="nav-card" onclick="location.href='/customer/licenses'">
+        <h3>License Management</h3>
+        <p>Monitor usage, deficits, and allocation.</p>
+      </div>
+
+      <div class="nav-card" onclick="location.href='/customer/status'">
+        <h3>System Status</h3>
+        <p>Live Webex service health overview.</p>
+      </div>
+
+      <div class="nav-card" onclick="location.href='/customer/maintenance'">
+        <h3>Maintenance</h3>
+        <p>Upcoming and active maintenance windows.</p>
+      </div>
+
+      <div class="nav-card" onclick="location.href='/customer/incidents'">
+        <h3>Incident History</h3>
+        <p>Review current and past service incidents.</p>
+      </div>
+    </div>
+
+    <!-- ACTIVITY FEED -->
+    <div class="activity">
+      <h2>Recent Activity</h2>
+      <ul id="activityFeed">
+        <li>Loading recent activity…</li>
+      </ul>
+    </div>
+
   </div>
 </div>
-
-<!-- ACTIVITY FEED -->
-<div class="activity">
-  <h2>Recent Activity</h2>
-  <ul id="activityFeed">
-    <li>Loading recent activity…</li>
-  </ul>
-</div>
-
-</main>
 <script>
 const $ = (id) => document.getElementById(id);
 
