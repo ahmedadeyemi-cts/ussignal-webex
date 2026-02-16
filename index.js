@@ -608,10 +608,13 @@ async function renderAdminAlertsHTML() {
 }
 
 async function renderAdminPinsHTML() {
-  const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/pins.html");
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/pins.html"
+  );
   if (!res.ok) throw new Error("Failed to load admin pins UI");
   return await res.text();
 }
+
 
 async function renderCustomerLicensesHTML() {
   const res = await fetch(
@@ -1041,7 +1044,9 @@ if (url.pathname === "/admin/alerts" && request.method === "GET") {
 }
 
 if (url.pathname === "/admin/pins" && request.method === "GET") {
-  return fetch(new URL("/ui/admin/pins.html", request.url));
+  return text(await renderAdminPinsHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
 }
 
 /* -----------------------------
