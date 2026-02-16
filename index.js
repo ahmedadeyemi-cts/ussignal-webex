@@ -1398,9 +1398,20 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
 }
 
       ///api/maintenance block
-if (url.pathname === "/api/maintenance" && request.method === "GET") {
+/* -----------------------------
+   /api/components
+   - Returns all Webex Status components
+   - Normalized for filtering
+----------------------------- */
+if (url.pathname === "/api/components" && request.method === "GET") {
 
-  const user = getCurrentUser(request);
+  let user;
+  try {
+    user = getCurrentUser(request);
+  } catch (e) {
+    return json({ error: "auth_failed" }, 401);
+  }
+
   const session = await getSession(env, user.email);
 
   if (!user.isAdmin) {
@@ -1423,44 +1434,49 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
   try {
 
     const cache = caches.default;
-    const cacheKey = new Request("https://internal-cache/webex-maintenance-json");
+    const cacheKey = new Request("https://internal-cache/webex-components");
 
     const cached = await cache.match(cacheKey);
     if (cached) return cached;
 
-    async function fetchJson(endpoint) {
-      const res = await fetch(`https://status.webex.com/${endpoint}`, {
-        headers: {
-          "Accept": "application/json"
-        }
-      });
+    const upstream = await fetch(
+      "https://status.webex.com/components.json",
+      { headers: { Accept: "application/json" } }
+    );
 
-      if (!res.ok) {
-        throw new Error(`${endpoint} failed: ${res.status}`);
-      }
-
-      return await res.json();
+    if (!upstream.ok) {
+      return json({
+        error: "components_upstream_failed",
+        status: upstream.status
+      }, 502);
     }
 
-    const [upcomingData, activeData, allData] = await Promise.all([
-      fetchJson("upcoming-scheduled-maintenances.json"),
-      fetchJson("active-scheduled-maintenances.json"),
-      fetchJson("all-scheduled-maintenances.json")
-    ]);
+    const data = await upstream.json();
 
-    const upcoming = upcomingData.scheduled_maintenances || [];
-    const active = activeData.scheduled_maintenances || [];
-    const all = allData.scheduled_maintenances || [];
+    const components = (data.components || []).map(c => ({
+      id: c.id,
+      name: c.name,
+      status: c.status,
+      group: c.group || null,
+      description: c.description || null,
+      updated_at: c.updated_at || null
+    }));
+
+    // Group by product group
+    const grouped = {};
+
+    for (const comp of components) {
+      const groupName = comp.group || "Other";
+      if (!grouped[groupName]) {
+        grouped[groupName] = [];
+      }
+      grouped[groupName].push(comp);
+    }
 
     const payload = {
-      maintenance: all,
-      upcoming,
-      active,
-      counts: {
-        upcoming: upcoming.length,
-        active: active.length,
-        total: all.length
-      },
+      total: components.length,
+      components,
+      grouped,
       lastUpdated: new Date().toISOString()
     };
 
@@ -1477,7 +1493,7 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
 
   } catch (e) {
     return json({
-      error: "maintenance_engine_failed",
+      error: "components_engine_failed",
       message: e.message
     }, 500);
   }
