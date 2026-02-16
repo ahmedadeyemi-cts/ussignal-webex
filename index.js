@@ -1422,124 +1422,67 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
 
   try {
 
-    const FEEDS = [
-      { group: "Webex Meetings", url: "https://status.webex.com/history/rss/webex-meetings" },
-      { group: "Webex App", url: "https://status.webex.com/history/rss/webex-app" },
-      { group: "Webex Messaging", url: "https://status.webex.com/history/rss/webex-messaging" },
-      { group: "Webex User Hub", url: "https://status.webex.com/history/rss/webex-user-hub" },
-      { group: "Webex Control Hub", url: "https://status.webex.com/history/rss/webex-control-hub" },
-      { group: "Webex Cloud Registered Device", url: "https://status.webex.com/history/rss/webex-cloud-registered-device" },
-      { group: "Webex Hybrid Services", url: "https://status.webex.com/history/rss/webex-hybrid-services" },
-      { group: "Webex Events", url: "https://status.webex.com/history/rss/webex-events" },
-      { group: "Slido", url: "https://status.webex.com/history/rss/slido" },
-
-      { group: "Webex Calling", url: "https://status.webex.com/history/rss/webex-calling" },
-      { group: "Cisco BroadCloud", url: "https://status.webex.com/history/rss/cisco-broadcloud" },
-      { group: "Dedicated Instance/UCM Cloud", url: "https://status.webex.com/history/rss/dedicated-instance-ucm-cloud" },
-      { group: "Webex for BroadWorks", url: "https://status.webex.com/history/rss/webex-for-broadworks" },
-      { group: "Gateway and Solutions", url: "https://status.webex.com/history/rss/gateway-and-solutions" },
-
-      { group: "Webex Contact Center", url: "https://status.webex.com/history/rss/webex-contact-center" },
-      { group: "Webex Contact Center Enterprise", url: "https://status.webex.com/history/rss/webex-contact-center-enterprise" },
-      { group: "Developer API", url: "https://status.webex.com/history/rss/developer-api" }
-    ];
-
     const cache = caches.default;
-    const cacheKey = new Request("https://internal-cache/webex-maintenance-multi");
+    const cacheKey = new Request("https://internal-cache/webex-maintenance-v2");
 
     const cached = await cache.match(cacheKey);
     if (cached) return cached;
 
-    async function fetchFeed(feed) {
-
-      const res = await fetch(feed.url, {
-        headers: { "Accept": "application/rss+xml, application/xml" }
-      });
-
-      if (!res.ok) return [];
+    async function fetchJson(endpoint) {
+      const res = await fetch(
+        `https://status.webex.com/api/${endpoint}`,
+        {
+          headers: {
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0"
+          },
+          cf: {
+            cacheTtl: 300
+          }
+        }
+      );
 
       const text = await res.text();
 
-      // robust <item> matcher (handles attributes)
-      const items = [...text.matchAll(/<item[\s\S]*?<\/item>/g)];
-
-      return items.map(match => {
-
-        const block = match[0];
-
-        const title =
-          (block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || "Maintenance";
-
-        const pubDate =
-          (block.match(/<pubDate>(.*?)<\/pubDate>/) || [])[1] || null;
-
-        const guid =
-          (block.match(/<guid>(.*?)<\/guid>/) || [])[1] || title;
-
-        const descriptionRaw =
-          (block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || "";
-
-        const clean = descriptionRaw
-          .replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1")
-          .replace(/<[^>]+>/g, "")
-          .replace(/\s+/g, " ")
-          .trim();
-
-        const lower = clean.toLowerCase();
-
-        let status = "scheduled";
-
-        if (lower.includes("completed")) {
-          status = "completed";
-        }
-        else if (lower.includes("in progress")) {
-          status = "in progress";
-        }
-
-        return {
-          id: guid,
-          name: title,
-          scheduledFor: pubDate,
-          status,
-          productGroup: feed.group,
-          impact: "maintenance",
-          updates: [
-            {
-              status,
-              updated: pubDate,
-              body: clean.slice(0, 1500)
-            }
-          ]
-        };
-      });
-    }
-
-    const results = await Promise.all(FEEDS.map(fetchFeed));
-
-    // Flatten + dedupe
-    const allMaintenance = [];
-    const seen = new Set();
-
-    for (const groupItems of results) {
-      for (const item of groupItems) {
-        if (!seen.has(item.id)) {
-          seen.add(item.id);
-          allMaintenance.push(item);
-        }
+      if (!res.ok) {
+        throw new Error(`${endpoint} failed: ${res.status}`);
       }
+
+      return JSON.parse(text);
     }
 
-    const upcoming = allMaintenance.filter(m => m.status === "scheduled");
-    const active = allMaintenance.filter(m => m.status === "in progress");
+    const [upcomingData, activeData, allData] = await Promise.all([
+      fetchJson("upcoming-scheduled-maintenances.json"),
+      fetchJson("active-scheduled-maintenances.json"),
+      fetchJson("all-scheduled-maintenances.json")
+    ]);
+
+    const normalize = (items) =>
+      (items || []).map(m => ({
+        id: m.incidentId,
+        name: m.incidentName,
+        status: m.status,
+        impact: m.impact,
+        productGroup: m.serviceId,
+        locations: m.locations,
+        startTime: m.startTime,
+        endTime: m.endTime,
+        changeId: m.changeId,
+        messages: m.messages || []
+      }));
+
+    const upcoming = normalize(upcomingData);
+    const active = normalize(activeData);
+    const all = normalize(allData);
 
     const responsePayload = {
-      maintenance: allMaintenance,
+      maintenance: all,
       upcoming,
       active,
       counts: {
         upcoming: upcoming.length,
         active: active.length,
-        total: allMaintenance.length
+        total: all.length
       },
       lastUpdated: new Date().toISOString()
     };
@@ -1556,14 +1499,12 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
     return response;
 
   } catch (e) {
-
     return json({
       error: "maintenance_engine_failed",
       message: e.message
     }, 500);
   }
 }
-
       /* -----------------------------
          /api/me
          - returns role
