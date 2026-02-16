@@ -1293,6 +1293,7 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
       ///api/maintenance block
       
 if (url.pathname === "/api/maintenance" && request.method === "GET") {
+
   const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
 
@@ -1314,55 +1315,50 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
   }
 
   try {
-    const endpoints = {
-      upcoming: "https://status.webex.com/api/upcoming-scheduled-maintenances.json",
-      active: "https://status.webex.com/api/active-scheduled-maintenances.json",
-      recent: "https://status.webex.com/api/scheduled-maintenances.json"
-    };
+    const token = await getAccessToken(env);
 
-    const results = {};
-
-    for (const [key, endpoint] of Object.entries(endpoints)) {
-      const res = await fetch(endpoint, {
-        headers: { Accept: "application/json" }
-      });
-
-      const textBody = await res.text();
-
-      if (!res.ok) {
-        return json({
-          error: "maintenance_upstream_failed",
-          source: key,
-          status: res.status,
-          bodyPreview: textBody.slice(0, 400)
-        }, 502);
+    const res = await fetch(
+      "https://webexapis.com/v1/status/maintenances?max=50",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json"
+        }
       }
+    );
 
-      try {
-        const parsed = JSON.parse(textBody);
-        results[key] = parsed.scheduled_maintenances || [];
-      } catch {
-        return json({
-          error: "maintenance_not_json",
-          source: key,
-          bodyPreview: textBody.slice(0, 400)
-        }, 500);
-      }
+    const textBody = await res.text();
+
+    if (!res.ok) {
+      return json({
+        error: "webex_status_failed",
+        status: res.status,
+        bodyPreview: textBody.slice(0, 400)
+      }, 502);
     }
 
-    const combined = [
-      ...results.upcoming,
-      ...results.active,
-      ...(results.recent || []).slice(0, 50)
-    ];
+    let data;
+    try {
+      data = JSON.parse(textBody);
+    } catch {
+      return json({
+        error: "webex_status_not_json",
+        bodyPreview: textBody.slice(0, 400)
+      }, 500);
+    }
+
+    const items = data.items || [];
+
+    const upcoming = items.filter(m => m.status?.toLowerCase() === "scheduled");
+    const active = items.filter(m => m.status?.toLowerCase() === "in progress");
+    const recent = items;
 
     return json({
-      maintenance: combined,
-      upcomingCount: results.upcoming.length,
-      activeCount: results.active.length,
-      recentCount: (results.recent || []).length,
+      upcoming,
+      active,
+      recent,
       lastUpdated: new Date().toISOString()
-    }, 200);
+    });
 
   } catch (e) {
     return json({
