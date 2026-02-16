@@ -199,10 +199,10 @@ function render(){
 
   let items=allIncidents;
 
-  if(activeOnly){
-    items=items.filter(i=>["investigating","identified","monitoring"]
-      .includes((i.status||"").toLowerCase()));
-  }
+//  if(activeOnly){
+ //   items=items.filter(i=>["investigating","identified","monitoring"]
+ //     .includes((i.status||"").toLowerCase()));
+//  }
 
   if(search){
     items=items.filter(i=>
