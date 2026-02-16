@@ -412,7 +412,6 @@ textarea.template{
   opacity:1;
   transform:translateY(0);
 }
-
 </style>
 </head>
 
@@ -476,8 +475,37 @@ textarea.template{
       </div>
     </div>
 
-    <!-- At a glance -->
+    <!-- At a glance (FIXED STRUCTURE) -->
     <div class="section grid">
+
+      <!-- ENGINEERING LIFECYCLE GOVERNANCE -->
+      <div class="card">
+        <h3>Engineering lifecycle governance</h3>
+        <p>
+          Beyond project execution, each deployment follows a governance lifecycle.
+          This ensures design integrity, operational resilience, and continuous improvement
+          across all tenants.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="kv">
+          <div class="k">Design authority</div>
+          <div class="v">Solution Architect signs off on architecture before build begins</div>
+
+          <div class="k">Configuration control</div>
+          <div class="v">All major design decisions documented before implementation</div>
+
+          <div class="k">Operational baseline</div>
+          <div class="v">Post go-live metrics captured for call quality and performance</div>
+
+          <div class="k">Change management</div>
+          <div class="v">All material changes follow structured review and approval</div>
+
+          <div class="k">Continuous improvement</div>
+          <div class="v">Lessons learned documented and fed back into presales and delivery</div>
+        </div>
+      </div>
 
       <div class="card">
         <h3>How we run implementations</h3>
@@ -682,7 +710,78 @@ textarea.template{
       </div>
     </div>
 
-    <!-- IMPLEMENTATION WORKFLOW -->
+    <!-- PSTN LIFECYCLE -->
+    <div class="section">
+      <div class="card">
+        <h3>PSTN and number port lifecycle management</h3>
+
+        <div class="hr"></div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="n">1</div>
+            <div class="c">
+              <div class="t">Carrier documentation</div>
+              <div class="d">CSR acquisition, LOA validation, and account reconciliation.</div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">2</div>
+            <div class="c">
+              <div class="t">FOC scheduling</div>
+              <div class="d">Confirm port window aligns with change window and stakeholder availability.</div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">3</div>
+            <div class="c">
+              <div class="t">Cutover validation</div>
+              <div class="d">Immediate inbound/outbound validation during port activation window.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- IDENTITY INTEGRATION -->
+    <div class="section">
+      <div class="card">
+        <h3>Azure AD / Entra ID & SSO integration</h3>
+        <p>
+          Identity integration reduces operational overhead and ensures secure, centralized access control.
+          This phase must be validated prior to large-scale user provisioning.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="grid">
+          <div class="card" style="box-shadow:none;">
+            <h3>Azure synchronization</h3>
+            <ul>
+              <li>Directory connector or SCIM validation</li>
+              <li>User attribute mapping</li>
+              <li>License assignment automation</li>
+              <li>Deprovisioning workflow validation</li>
+            </ul>
+          </div>
+
+          <div class="card" style="box-shadow:none;">
+            <h3>Single Sign-On</h3>
+            <ul>
+              <li>SAML trust establishment</li>
+              <li>Certificate validation and renewal planning</li>
+              <li>Conditional access policies</li>
+              <li>MFA enforcement alignment</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMPLEMENTATION WORKFLOW (FIXED NESTING) -->
     <div class="section">
       <div class="card">
         <h3>Implementation workflow</h3>
@@ -747,6 +846,17 @@ textarea.template{
           </div>
 
           <div class="step">
+            <div class="n">5a</div>
+            <div class="c">
+              <div class="t">Common Area and Shared Workspace Design</div>
+              <div class="d">
+                Conference rooms, lobbies, shared workspaces, and analog adapters must follow a
+                standardized naming and number assignment model to prevent routing ambiguity.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
             <div class="n">6</div>
             <div class="c">
               <div class="t">Configure calling features and call flows</div>
@@ -777,6 +887,53 @@ textarea.template{
                 and monitoring baselines.
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <h3>Control Hub deep configuration areas</h3>
+
+        <div class="grid">
+          <div class="card" style="box-shadow:none;">
+            <h3>Common area governance</h3>
+            <ul>
+              <li>Room naming conventions</li>
+              <li>Shared device licensing model</li>
+              <li>Paging integration strategy</li>
+              <li>Analog device documentation</li>
+            </ul>
+          </div>
+
+          <div class="card" style="box-shadow:none;">
+            <h3>Organization level controls</h3>
+            <p>
+              These settings impact all users and locations and must be validated before production.
+            </p>
+            <div class="hr"></div>
+            <ul>
+              <li>Calling behavior defaults</li>
+              <li>External call routing policies</li>
+              <li>Voice messaging policies</li>
+              <li>Call recording configuration</li>
+              <li>Compliance settings</li>
+              <li>Role-based admin access model</li>
+            </ul>
+          </div>
+
+          <div class="card" style="box-shadow:none;">
+            <h3>Location level configuration</h3>
+            <p>
+              Each location must be reviewed independently for emergency routing and number assignment.
+            </p>
+            <div class="hr"></div>
+            <ul>
+              <li>Emergency calling address validation</li>
+              <li>Outbound caller ID per location</li>
+              <li>Location routing prefix</li>
+              <li>Number pool management</li>
+              <li>Survivability configuration (if applicable)</li>
+            </ul>
           </div>
         </div>
 
@@ -937,6 +1094,81 @@ WEBEX CALLING IMPLEMENTATION HANDOFF
 - US Signal support lead:
 </textarea>
 
+      </div>
+    </div>
+
+    <!-- SUPPORT OPS COMMAND CENTER -->
+    <div class="section">
+      <div class="card">
+        <h3>A) Support Ops Command Center</h3>
+        <p>
+          The Support Ops Command Center provides centralized operational oversight
+          across all tenants under managed services.
+        </p>
+
+        <div class="hr"></div>
+
+        <ul>
+          <li>Live tenant health monitoring</li>
+          <li>License utilization tracking</li>
+          <li>Device offline alerting</li>
+          <li>Call quality anomaly detection</li>
+          <li>Carrier outage visibility</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PSTN DASHBOARD -->
+    <div class="section">
+      <div class="card">
+        <h3>B) PSTN Operational Dashboard</h3>
+        <ul>
+          <li>Inbound trunk status monitoring</li>
+          <li>Carrier SLA tracking</li>
+          <li>Porting lifecycle tracker</li>
+          <li>E911 compliance verification</li>
+          <li>Failover routing validation</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- RESOLUTION INTELLIGENCE -->
+    <div class="section">
+      <div class="card">
+        <h3>C) Resolution Intelligence Console</h3>
+        <ul>
+          <li>Call Detail Record analysis</li>
+          <li>Quality metric trending</li>
+          <li>Root cause pattern recognition</li>
+          <li>Firmware compliance monitoring</li>
+          <li>Configuration drift detection</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PROJECT TRACKER -->
+    <div class="section">
+      <div class="card">
+        <h3>D) Implementation Project Tracker</h3>
+
+        <div class="hr"></div>
+
+        <div class="kv">
+          <div class="k">Presales gate</div>
+          <div class="v">Scope approved and CSAN validated</div>
+
+          <div class="k">Build complete</div>
+          <div class="v">Control Hub configuration finalized</div>
+
+          <div class="k">Validation complete</div>
+          <div class="v">Acceptance checklist signed</div>
+
+          <div class="k">Cutover executed</div>
+          <div class="v">Change plan completed without rollback</div>
+
+          <div class="k">Handoff delivered</div>
+          <div class="v">Support acknowledged ownership</div>
+        </div>
       </div>
     </div>
 
