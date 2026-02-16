@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <title>Tenant Verification</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <style>
     body {
       font-family: system-ui;
@@ -14,6 +15,7 @@
       height: 100vh;
       margin: 0;
     }
+
     .card {
       background: white;
       padding: 40px;
@@ -22,6 +24,11 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
       text-align: center;
     }
+
+    h2 {
+      margin: 0 0 10px 0;
+    }
+
     input {
       width: 100%;
       padding: 12px;
@@ -32,6 +39,7 @@
       text-align: center;
       letter-spacing: 4px;
     }
+
     button {
       width: 100%;
       margin-top: 16px;
@@ -42,54 +50,142 @@
       color: white;
       font-weight: bold;
       cursor: pointer;
+      transition: background 0.2s ease;
     }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
     .error {
-      margin-top: 12px;
+      margin-top: 14px;
       color: #dc2626;
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    .info {
+      margin-top: 14px;
+      color: #2563eb;
       font-size: 14px;
       min-height: 20px;
     }
   </style>
 </head>
+
 <body>
 
 <div class="card">
   <h2>Enter Tenant PIN</h2>
-  <input id="pin"
-         maxlength="5"
-         inputmode="numeric"
-         pattern="\d{5}"
-         placeholder="12345" />
-  <button onclick="verify()">Verify</button>
+
+  <input
+    id="pin"
+    maxlength="5"
+    inputmode="numeric"
+    pattern="\d{5}"
+    placeholder="12345"
+  />
+
+  <button id="verifyBtn" onclick="verify()">Verify</button>
+
   <div id="error" class="error"></div>
+  <div id="info" class="info"></div>
 </div>
 
 <script>
+
+/* ----------------------------------------------------
+   Show session expiration message if redirected
+----------------------------------------------------- */
+
+const params = new URLSearchParams(window.location.search);
+
+if (params.get("expired")) {
+  document.getElementById("error").textContent =
+    "Your session expired. Please re-enter your PIN.";
+}
+
+/* ----------------------------------------------------
+   PIN Verify Logic
+----------------------------------------------------- */
+
 async function verify() {
-  const pin = document.getElementById("pin").value.trim();
+  const pinInput = document.getElementById("pin");
+  const pin = pinInput.value.trim();
   const errorBox = document.getElementById("error");
+  const infoBox = document.getElementById("info");
+  const btn = document.getElementById("verifyBtn");
+
   errorBox.textContent = "";
+  infoBox.textContent = "";
 
   if (!/^\d{5}$/.test(pin)) {
     errorBox.textContent = "PIN must be exactly 5 digits.";
     return;
   }
 
-  const r = await fetch("/api/pin/verify", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ pin })
-  });
+  btn.disabled = true;
+  btn.textContent = "Verifying...";
 
-  const data = await r.json();
+  try {
+    const r = await fetch("/api/pin/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pin })
+    });
 
-  if (!r.ok) {
-    errorBox.textContent = data?.message || "Invalid PIN.";
-    return;
+    let data = {};
+    try { data = await r.json(); } catch {}
+
+    if (!r.ok) {
+
+      if (data.error === "too_many_attempts") {
+        errorBox.textContent =
+          data.message || "Too many attempts. Please wait.";
+      }
+
+      else if (data.error === "access_required") {
+        // Access expired, reload to trigger CF login
+        window.location.reload();
+        return;
+      }
+
+      else {
+        errorBox.textContent =
+          data?.message || "Invalid PIN.";
+      }
+
+      btn.disabled = false;
+      btn.textContent = "Verify";
+      return;
+    }
+
+    // Success
+    infoBox.textContent = "Verification successful.";
+    window.location.href = "/customer/licenses";
+
+  } catch (e) {
+    errorBox.textContent = "Verification failed. Try again.";
+    btn.disabled = false;
+    btn.textContent = "Verify";
   }
-
-  window.location.href = "/customer/licenses";
 }
+
+/* ----------------------------------------------------
+   Enter key support
+----------------------------------------------------- */
+
+document.getElementById("pin").addEventListener("keypress", function (e) {
+  if (e.key === "Enter") {
+    verify();
+  }
+});
+
 </script>
 
 </body>
