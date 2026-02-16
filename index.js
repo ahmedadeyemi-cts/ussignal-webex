@@ -1240,49 +1240,163 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
       return json({ error: "pin_required" }, 401);
     }
 
-  if (session.expiresAt && session.expiresAt <= nowMs()) {
-  await clearSession(env, user.email);
-
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: "/pin?expired=1",
-      "cache-control": "no-store"
+    if (session.expiresAt && session.expiresAt <= nowMs()) {
+      await clearSession(env, user.email);
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: "/pin?expired=1",
+          "cache-control": "no-store"
+        }
+      });
     }
-  });
-}
-
-
   }
 
   try {
-    const upstream = await fetch(
-      "https://status.webex.com/api/all-incidents.json",
-      { headers: { Accept: "application/json" } }
+
+    const FEEDS = [
+      { group: "Webex Meetings", url: "https://status.webex.com/history/rss/webex-meetings" },
+      { group: "Webex App", url: "https://status.webex.com/history/rss/webex-app" },
+      { group: "Webex Messaging", url: "https://status.webex.com/history/rss/webex-messaging" },
+      { group: "Webex User Hub", url: "https://status.webex.com/history/rss/webex-user-hub" },
+      { group: "Webex Control Hub", url: "https://status.webex.com/history/rss/webex-control-hub" },
+      { group: "Webex Cloud Registered Device", url: "https://status.webex.com/history/rss/webex-cloud-registered-device" },
+      { group: "Webex Hybrid Services", url: "https://status.webex.com/history/rss/webex-hybrid-services" },
+      { group: "Webex Events", url: "https://status.webex.com/history/rss/webex-events" },
+      { group: "Slido", url: "https://status.webex.com/history/rss/slido" },
+
+      { group: "Webex Calling", url: "https://status.webex.com/history/rss/webex-calling" },
+      { group: "Cisco BroadCloud", url: "https://status.webex.com/history/rss/cisco-broadcloud" },
+      { group: "Dedicated Instance/UCM Cloud", url: "https://status.webex.com/history/rss/dedicated-instance-ucm-cloud" },
+      { group: "Webex for BroadWorks", url: "https://status.webex.com/history/rss/webex-for-broadworks" },
+      { group: "Gateway and Solutions", url: "https://status.webex.com/history/rss/gateway-and-solutions" },
+
+      { group: "Webex Contact Center", url: "https://status.webex.com/history/rss/webex-contact-center" },
+      { group: "Webex Contact Center Enterprise", url: "https://status.webex.com/history/rss/webex-contact-center-enterprise" },
+      { group: "Developer API", url: "https://status.webex.com/history/rss/developer-api" }
+    ];
+
+    const cache = caches.default;
+    const cacheKey = new Request("https://internal-cache/webex-incidents-multi");
+
+    const cached = await cache.match(cacheKey);
+    if (cached) return cached;
+
+    async function fetchFeed(feed) {
+
+      const res = await fetch(feed.url, {
+        headers: { "Accept": "application/rss+xml, application/xml" }
+      });
+
+      if (!res.ok) return [];
+
+      const text = await res.text();
+
+      const items = [...text.matchAll(/<item[\s\S]*?<\/item>/g)];
+
+      return items.map(match => {
+
+        const block = match[0];
+
+        const title =
+          (block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || "Incident";
+
+        const pubDate =
+          (block.match(/<pubDate>(.*?)<\/pubDate>/) || [])[1] || null;
+
+        const guid =
+          (block.match(/<guid>(.*?)<\/guid>/) || [])[1] || title;
+
+        const descriptionRaw =
+          (block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || "";
+
+        const clean = descriptionRaw
+          .replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1")
+          .replace(/<[^>]+>/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        const lower = clean.toLowerCase();
+
+        let status = "investigating";
+
+        if (lower.includes("resolved") || lower.includes("completed")) {
+          status = "resolved";
+        }
+        else if (lower.includes("monitoring")) {
+          status = "monitoring";
+        }
+        else if (lower.includes("identified")) {
+          status = "identified";
+        }
+
+        return {
+          id: guid,
+          name: title,
+          created: pubDate,
+          status,
+          productGroup: feed.group,
+          impact: "incident",
+          updates: [
+            {
+              status,
+              updated: pubDate,
+              body: clean.slice(0, 1500)
+            }
+          ]
+        };
+      });
+    }
+
+    const results = await Promise.all(FEEDS.map(fetchFeed));
+
+    const allIncidents = [];
+    const seen = new Set();
+
+    for (const groupItems of results) {
+      for (const item of groupItems) {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          allIncidents.push(item);
+        }
+      }
+    }
+
+    const active = allIncidents.filter(i =>
+      ["investigating", "identified", "monitoring"].includes(i.status)
     );
 
-    const textBody = await upstream.text();
-
-    let data;
-    try {
-      data = JSON.parse(textBody);
-    } catch {
-      return json({ error: "incident_not_json" }, 500);
-    }
-
-    if (!upstream.ok) {
-      return json({ error: "incident_upstream_failed" }, 502);
-    }
-
-    return json({
-      incidents: data.incidents || [],
+    const responsePayload = {
+      incidents: allIncidents,
+      active,
+      counts: {
+        active: active.length,
+        total: allIncidents.length
+      },
       lastUpdated: new Date().toISOString()
+    };
+
+    const response = new Response(JSON.stringify(responsePayload), {
+      headers: {
+        "content-type": "application/json",
+        "cache-control": "public, max-age=300"
+      }
     });
 
+    await cache.put(cacheKey, response.clone());
+
+    return response;
+
   } catch (e) {
-    return json({ error: "incident_engine_failed", message: e.message }, 500);
+
+    return json({
+      error: "incident_engine_failed",
+      message: e.message
+    }, 500);
+
   }
 }
+
       ///api/maintenance block
 if (url.pathname === "/api/maintenance" && request.method === "GET") {
 
@@ -1337,26 +1451,33 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
     if (cached) return cached;
 
     async function fetchFeed(feed) {
+
       const res = await fetch(feed.url, {
         headers: { "Accept": "application/rss+xml, application/xml" }
       });
 
+      if (!res.ok) return [];
+
       const text = await res.text();
 
-      if (!res.ok || !text.includes("<item>")) {
-        return [];
-      }
-
-      const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)];
+      // robust <item> matcher (handles attributes)
+      const items = [...text.matchAll(/<item[\s\S]*?<\/item>/g)];
 
       return items.map(match => {
 
-        const block = match[1];
+        const block = match[0];
 
-        const title = (block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || "Maintenance";
-        const pubDate = (block.match(/<pubDate>(.*?)<\/pubDate>/) || [])[1] || null;
-        const guid = (block.match(/<guid>(.*?)<\/guid>/) || [])[1] || null;
-        const descriptionRaw = (block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || "";
+        const title =
+          (block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || "Maintenance";
+
+        const pubDate =
+          (block.match(/<pubDate>(.*?)<\/pubDate>/) || [])[1] || null;
+
+        const guid =
+          (block.match(/<guid>(.*?)<\/guid>/) || [])[1] || title;
+
+        const descriptionRaw =
+          (block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || "";
 
         const clean = descriptionRaw
           .replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1")
@@ -1364,14 +1485,19 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
           .replace(/\s+/g, " ")
           .trim();
 
-        let status = "scheduled";
         const lower = clean.toLowerCase();
 
-        if (lower.includes("completed")) status = "completed";
-        else if (lower.includes("in progress")) status = "in progress";
+        let status = "scheduled";
+
+        if (lower.includes("completed")) {
+          status = "completed";
+        }
+        else if (lower.includes("in progress")) {
+          status = "in progress";
+        }
 
         return {
-          id: guid || title,
+          id: guid,
           name: title,
           scheduledFor: pubDate,
           status,
@@ -1381,7 +1507,7 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
             {
               status,
               updated: pubDate,
-              body: clean.slice(0, 1200)
+              body: clean.slice(0, 1500)
             }
           ]
         };
