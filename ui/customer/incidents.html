@@ -1,354 +1,351 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" data-theme="light">
 <head>
-<meta charset="utf-8"/>
-<title>Webex Incident History</title>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta charset="UTF-8" />
+<title>US Signal | Webex Incidents</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
-:root {
-  --bg: #f3f4f6;
-  --card: #ffffff;
-  --text: #111827;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --green: #16a34a;
-  --yellow: #f59e0b;
-  --red: #dc2626;
+/* =========================================================
+   US SIGNAL – WEBEX STYLE INCIDENT VIEW
+   Matches Maintenance UI
+========================================================= */
+
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --border:#e6edf6;
+  --text:#0f172a;
+  --muted:#64748b;
+  --accent:#2563eb;
+  --greenRow:#e6f3df;
+  --rowHover:#f2f7ff;
+  --shadow:0 10px 26px rgba(15,23,42,.08);
 }
 
-body.dark {
-  --bg: #111827;
-  --card: #1f2937;
-  --text: #f9fafb;
-  --muted: #9ca3af;
-  --border: #374151;
-  --green: #22c55e;
-  --yellow: #fbbf24;
-  --red: #ef4444;
+html[data-theme="dark"]{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --border:#1f2a3a;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --accent:#3b82f6;
+  --greenRow:rgba(40,80,40,.4);
+  --rowHover:rgba(59,130,246,.10);
 }
 
-body {
-  margin: 0;
-  font-family: system-ui;
-  background: var(--bg);
-  color: var(--text);
+*{ box-sizing:border-box; font-family:system-ui,-apple-system,Segoe UI,Roboto; }
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
 }
 
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
+/* ================= HEADER ================= */
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:18px 24px;
+  background:var(--card);
+  border-bottom:1px solid var(--border);
 }
 
-button {
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  font-weight: 600;
+.logo{
+  display:flex;
+  align-items:center;
+  gap:12px;
 }
 
-.container {
-  max-width: 1100px;
-  margin: 40px auto;
-  padding: 0 20px;
+.logo img{
+  height:38px;
 }
 
-.card {
-  background: var(--card);
-  border-radius: 14px;
-  padding: 24px;
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-  margin-bottom: 20px;
+.header h1{
+  margin:0;
+  font-size:18px;
+  font-weight:800;
 }
 
-.meta {
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 20px;
+.actions{
+  display:flex;
+  gap:10px;
 }
 
-.incident {
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  margin-bottom: 14px;
-  cursor: pointer;
+.btn{
+  padding:9px 14px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:transparent;
+  font-weight:700;
+  cursor:pointer;
 }
 
-.incident:hover {
-  background: rgba(0,0,0,0.03);
+.btn.primary{
+  background:var(--accent);
+  color:#fff;
+  border:none;
 }
 
-.incident-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* ================= TABLE ================= */
+
+.panel{
+  margin:20px;
+  background:var(--card);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  border:1px solid var(--border);
+  overflow:hidden;
 }
 
-.impact {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
+table{
+  width:100%;
+  border-collapse:collapse;
 }
 
-.impact.minor { background: rgba(245,158,11,0.15); color: var(--yellow); }
-.impact.major,
-.impact.critical { background: rgba(220,38,38,0.15); color: var(--red); }
-
-.updates {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-  display: none;
+thead th{
+  text-align:left;
+  font-size:12px;
+  text-transform:uppercase;
+  color:var(--muted);
+  padding:14px;
+  border-bottom:1px solid var(--border);
 }
 
-.update-item {
-  margin-bottom: 12px;
+tbody td{
+  padding:14px;
+  border-bottom:1px solid var(--border);
+  vertical-align:top;
 }
 
-.update-status {
-  font-weight: 600;
+.dataRow{
+  cursor:pointer;
+  transition:.2s;
 }
 
-.alert-banner {
-  background: var(--red);
-  color: white;
-  padding: 14px 20px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  font-weight: 600;
+.dataRow:hover{
+  background:var(--rowHover);
 }
 
-.badge {
-  background: #dbeafe;
-  color: #1d4ed8;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
+.dataRow.expanded{
+  background:var(--greenRow);
 }
 
-.section-title {
-  margin: 30px 0 14px;
-  font-weight: 700;
-  font-size: 18px;
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
 }
+
+.badge.investigating{ background:#fef3c7; color:#92400e; }
+.badge.identified{ background:#dbeafe; color:#1e3a8a; }
+.badge.monitoring{ background:#e0f2fe; color:#075985; }
+.badge.resolved{ background:#dcfce7; color:#166534; }
+
+.expandArrow{
+  transition:transform .2s;
+  display:inline-block;
+}
+
+.dataRow.expanded .expandArrow{
+  transform:rotate(90deg);
+}
+
+/* ================= DETAIL ================= */
+
+.detailRow{
+  display:none;
+}
+
+.detailCard{
+  padding:20px;
+  background:#fafcff;
+}
+
+.timelineItem{
+  margin-bottom:16px;
+}
+
+.timelineItem strong{
+  display:block;
+  margin-bottom:6px;
+}
+
+.emailBtn{
+  padding:6px 10px;
+  border-radius:8px;
+  background:var(--accent);
+  color:#fff;
+  font-size:12px;
+  border:none;
+  cursor:pointer;
+}
+
+.redirectBtn{
+  margin-top:14px;
+  padding:8px 14px;
+  border-radius:10px;
+  background:#111;
+  color:#fff;
+  font-weight:600;
+  border:none;
+  cursor:pointer;
+}
+
 </style>
 </head>
 
 <body>
 
-<header>
-  <nav style="
-  background:var(--card);
-  padding:12px 30px;
-  border-bottom:1px solid rgba(0,0,0,.08);
-  display:flex;
-  gap:18px;
-  flex-wrap:wrap;
-">
-  <a href="/customer">Dashboard</a>
-  <a href="/customer/licenses">Licenses</a>
-  <a href="/customer/devices">Devices</a>
-  <a href="/customer/analytics">Analytics</a>
-  <a href="/customer/cdr">CDR</a>
-  <a href="/customer/maintenance">Maintenance</a>
-  <a href="/customer/status">Status</a>
-  <a href="/customer/incidents">Incidents</a>
-</nav>
-
-  <div>
-    <strong>Webex Incident History</strong>
-    <div id="tenantBadge" style="margin-top:4px;font-size:13px;color:var(--muted);"></div>
+<div class="header">
+  <div class="logo">
+    <img src="https://www.ussignal.com/wp-content/uploads/2021/09/us-signal-logo.png">
+    <h1>Webex Incidents</h1>
   </div>
 
-  <div>
-    <button onclick="toggleDark()">Dark Mode</button>
-    <button onclick="loadData()">Refresh</button>
+  <div class="actions">
+    <button class="btn" onclick="toggleTheme()">Toggle Theme</button>
+    <button class="btn primary" onclick="loadIncidents(true)">Refresh</button>
   </div>
-</header>
+</div>
 
-<div class="container">
-
-  <div id="alertBanner" class="alert-banner" style="display:none;">
-    ⚠ Active Major Incident Detected
-  </div>
-
-  <div class="card">
-    <div class="meta">
-      Last updated: <span id="lastUpdated">Loading...</span>
-    </div>
-
-    <div class="section-title">Active / Unresolved Incidents</div>
-    <div id="unresolved"></div>
-
-    <div class="section-title">Resolved Incidents</div>
-    <div id="resolved"></div>
-  </div>
-
+<div class="panel">
+  <table>
+    <thead>
+      <tr>
+        <th>Reference #</th>
+        <th>Occur Date</th>
+        <th>Location</th>
+        <th>Sector</th>
+        <th>Webex Service</th>
+        <th>Description</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="incidentBody">
+      <tr><td colspan="7">Loading...</td></tr>
+    </tbody>
+  </table>
 </div>
 
 <script>
 
-/* ============================
-   GLOBAL API FETCH WITH PIN FIX
-============================ */
+/* ================= THEME ================= */
+function toggleTheme(){
+  const html=document.documentElement;
+  const cur=html.getAttribute("data-theme");
+  html.setAttribute("data-theme",cur==="dark"?"light":"dark");
+}
 
-async function apiFetch(url) {
-  const res = await fetch(url, { credentials: "include" });
+/* ================= FETCH ================= */
 
-  if (res.status === 401) {
-    window.location.href = "/pin";
-    return null;
+async function fetchIncidents(){
+  const res=await fetch("/api/incidents",{cache:"no-store"});
+  if(!res.ok) return null;
+  return await res.json();
+}
+
+/* ================= RENDER ================= */
+
+async function loadIncidents(force){
+
+  const data=await fetchIncidents();
+  if(!data){
+    document.getElementById("incidentBody").innerHTML=
+      `<tr><td colspan="7">Unable to load incidents.</td></tr>`;
+    return;
   }
 
-  let data;
-  try {
-    data = await res.json();
-  } catch {
-    window.location.href = "/pin";
-    return null;
-  }
+  const items=data.incidents||[];
 
-  if (data?.error === "pin_required" || data?.error === "pin_required_or_expired") {
-    window.location.href = "/pin";
-    return null;
-  }
+  let html="";
 
-  return data;
-}
+  items.forEach((i,index)=>{
 
-/* ============================
-   UI Helpers
-============================ */
+    const id=`detail-${index}`;
+    const ref=i.externalId||"—";
+    const date=i.created_at?new Date(i.created_at).toLocaleString():"—";
+    const location=i.location||"—";
+    const sector=i.sector||"Commercial";
+    const service=(i.components||[]).map(c=>c.name).join(", ");
+    const desc=i.name||"—";
 
-function toggleDark() {
-  document.body.classList.toggle("dark");
-  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
-}
+    html+=`
+      <tr class="dataRow" onclick="toggleDetail('${id}',this)">
+        <td>${ref}</td>
+        <td>${date}</td>
+        <td>${location}</td>
+        <td>${sector}</td>
+        <td>${service}</td>
+        <td>${desc}</td>
+        <td><span class="expandArrow">▶</span></td>
+      </tr>
 
-if (localStorage.getItem("darkMode") === "true") {
-  document.body.classList.add("dark");
-}
+      <tr id="${id}" class="detailRow">
+        <td colspan="7">
+          <div class="detailCard">
 
-function formatDate(dateStr) {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleString();
-}
+            ${(i.updates||[]).map(u=>`
+              <div class="timelineItem">
+                <strong>${u.status}</strong>
+                ${u.body||""}
+                <div style="font-size:12px;color:#64748b;margin-top:6px;">
+                  ${u.created_at?new Date(u.created_at).toLocaleString():""}
+                </div>
+              </div>
+            `).join("")}
 
-/* ============================
-   Tenant Info
-============================ */
+            <button class="emailBtn"
+              onclick="event.stopPropagation();notify('${i.id}')">
+              Email Update
+            </button>
 
-async function loadTenant() {
-  const me = await apiFetch("/api/me");
-  if (!me) return;
+            <button class="redirectBtn"
+              onclick="window.open('https://status.webex.com/incident/history?lang=en_US','_blank')">
+              View on Webex Status
+            </button>
 
-  if (me.orgName) {
-    document.getElementById("tenantBadge").innerHTML =
-      `<span class="badge">Tenant: ${me.orgName}</span>`;
-  }
-}
-
-/* ============================
-   Incident Rendering
-============================ */
-
-function createIncidentCard(incident) {
-  const div = document.createElement("div");
-  div.className = "incident";
-
-  div.innerHTML = `
-    <div class="incident-header">
-      <div>
-        <strong>${incident.name}</strong>
-        <div style="font-size:13px;color:var(--muted);margin-top:4px;">
-          Created: ${formatDate(incident.created)}
-        </div>
-      </div>
-      <div class="impact ${incident.impact}">
-        ${incident.impact?.toUpperCase() || ""}
-      </div>
-    </div>
-    <div class="updates"></div>
-  `;
-
-  const updatesDiv = div.querySelector(".updates");
-
-  (incident.updates || []).forEach(update => {
-    const u = document.createElement("div");
-    u.className = "update-item";
-    u.innerHTML = `
-      <div class="update-status">${update.status?.toUpperCase()}</div>
-      <div style="font-size:12px;color:var(--muted);">
-        ${formatDate(update.updated)}
-      </div>
-      <div style="margin-top:6px;">${update.body}</div>
+          </div>
+        </td>
+      </tr>
     `;
-    updatesDiv.appendChild(u);
   });
 
-  div.addEventListener("click", () => {
-    updatesDiv.style.display =
-      updatesDiv.style.display === "block" ? "none" : "block";
-  });
-
-  return div;
+  document.getElementById("incidentBody").innerHTML=html;
 }
 
-/* ============================
-   Load Incidents
-============================ */
+/* ================= TOGGLE ================= */
 
-async function loadData() {
-  const data = await apiFetch("/api/incidents");
-  if (!data) return;
+function toggleDetail(id,row){
+  const detail=document.getElementById(id);
+  const isOpen=detail.style.display==="table-row";
 
-document.getElementById("lastUpdated").textContent =
-  formatDate(data.lastUpdated || new Date().toISOString());
+  document.querySelectorAll(".detailRow").forEach(d=>d.style.display="none");
+  document.querySelectorAll(".dataRow").forEach(r=>r.classList.remove("expanded"));
 
-  const unresolvedContainer = document.getElementById("unresolved");
-  const resolvedContainer = document.getElementById("resolved");
-
-  unresolvedContainer.innerHTML = "";
-  resolvedContainer.innerHTML = "";
-
-  let hasMajor = false;
-
-  (data.incidents || []).forEach(i => {
-    const card = createIncidentCard(i);
-
-    if (i.status !== "resolved") {
-      unresolvedContainer.appendChild(card);
-      if (i.impact === "major" || i.impact === "critical") {
-        hasMajor = true;
-      }
-    } else {
-      resolvedContainer.appendChild(card);
-    }
-  });
-
-  document.getElementById("alertBanner").style.display =
-    hasMajor ? "block" : "none";
+  if(!isOpen){
+    detail.style.display="table-row";
+    row.classList.add("expanded");
+  }
 }
 
-/* ============================
-   Init
-============================ */
+/* ================= EMAIL ================= */
 
-loadTenant();
-loadData();
+async function notify(id){
+  const email=prompt("Enter your email address:");
+  if(!email) return;
+
+  await fetch("/api/incidents/notify",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({incidentId:id,email})
+  });
+
+  alert("Notification request sent.");
+}
+
+loadIncidents(false);
 
 </script>
 
