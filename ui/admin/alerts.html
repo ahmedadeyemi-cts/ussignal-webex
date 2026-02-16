@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Signal | Alerts</title>
+
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
+
+  --critical:#dc2626;
+  --warning:#f59e0b;
+  --info:#0ea5e9;
+  --resolved:#16a34a;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* Layout */
+.app{
+  display:grid;
+  grid-template-columns:270px 1fr;
+  min-height:100vh;
+}
+
+/* Sidebar */
+.sidebar{
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+
+.brand img{ height:34px; }
+
+.brand .title{
+  display:flex;
+  flex-direction:column;
+}
+.brand .title b{ font-size:14px; }
+.brand .title span{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+}
+
+.nav a:hover{
+  background:rgba(15,98,254,.08);
+  color:var(--accent2);
+}
+
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+.sidebar-bottom{
+  margin-top:auto;
+  padding-top:10px;
+  border-top:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.userline{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.btn{
+  padding:10px 12px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:13px;
+  cursor:pointer;
+  border:none;
+}
+.btn-primary{
+  background:var(--accent);
+  color:#fff;
+}
+.btn-primary:hover{ background:var(--accent2); }
+
+/* Main */
+.main{
+  padding:22px;
+}
+
+/* Header */
+.header-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+
+.header-left{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.header-left .h{
+  font-size:16px;
+  font-weight:1000;
+}
+.header-left .sub{
+  font-size:12px;
+  color:var(--muted);
+}
+
+select{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(15,23,42,.18);
+  font-weight:700;
+  min-width:240px;
+}
+
+/* Alert Table */
+.table-card{
+  margin-top:18px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+th, td{
+  padding:14px;
+  border-bottom:1px solid var(--line);
+  text-align:left;
+  font-size:13px;
+}
+
+th{
+  background:#f1f5f9;
+  font-weight:900;
+  font-size:12px;
+  text-transform:uppercase;
+}
+
+.sev{
+  font-weight:900;
+  font-size:12px;
+  padding:4px 8px;
+  border-radius:8px;
+  display:inline-block;
+}
+
+.critical{ background:rgba(220,38,38,.12); color:var(--critical); }
+.warning{ background:rgba(245,158,11,.12); color:var(--warning); }
+.info{ background:rgba(14,165,233,.12); color:var(--info); }
+.resolved{ background:rgba(22,163,74,.12); color:var(--resolved); }
+
+.empty{
+  padding:40px;
+  text-align:center;
+  color:var(--muted);
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/assets/ussignal-logo.jpg"
+           onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
+      <div class="title">
+        <b>Partner Portal</b>
+        <span>Managed Services</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/customers">Customers</a>
+      <a href="/admin/analytics">Analytics</a>
+      <a href="/admin/licenses">Licenses</a>
+      <a href="/admin/devices">Devices</a>
+      <a class="active" href="/admin/alerts">Alerts</a>
+      <a href="/admin/pins">PIN Management</a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="userline">
+        <b id="whoami"></b>
+        <div id="sessionLine"></div>
+      </div>
+      <button class="btn btn-primary" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <div class="header-card">
+      <div class="header-left">
+        <div class="h">Alert Monitoring</div>
+        <div class="sub">Active and historical tenant alerts</div>
+      </div>
+
+      <select id="orgSelect"></select>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Last Updated</th>
+          </tr>
+        </thead>
+        <tbody id="alertTable">
+          <tr><td colspan="5" class="empty">Loading alerts...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+async function api(path){
+  const r = await fetch(path);
+  if(!r.ok){
+    if(r.status===401) window.location="/pin";
+    throw new Error("API failed");
+  }
+  return await r.json();
+}
+
+async function loadOrgs(){
+  const orgs = await api("/api/admin/orgs");
+  const select = $("orgSelect");
+
+  select.innerHTML = orgs.items.map(o =>
+    `<option value="${o.orgId}">${o.orgName}</option>`
+  ).join("");
+
+  const saved = localStorage.getItem("adminSelectedOrgId");
+  if(saved) select.value = saved;
+
+  loadAlerts(select.value);
+
+  select.onchange = e=>{
+    localStorage.setItem("adminSelectedOrgId", e.target.value);
+    loadAlerts(e.target.value);
+  };
+}
+
+async function loadAlerts(orgId){
+  const data = await api(`/api/alerts?orgId=${orgId}`);
+
+  const table = $("alertTable");
+
+  if(!data.items || !data.items.length){
+    table.innerHTML = `<tr><td colspan="5" class="empty">No active alerts.</td></tr>`;
+    return;
+  }
+
+  table.innerHTML = data.items.map(a => `
+    <tr>
+      <td><span class="sev ${a.severity}">${a.severity.toUpperCase()}</span></td>
+      <td>${a.title}</td>
+      <td>${a.description}</td>
+      <td>${a.status}</td>
+      <td>${new Date(a.updatedAt).toLocaleString()}</td>
+    </tr>
+  `).join("");
+}
+
+async function logout(){
+  await fetch("/api/pin/logout",{method:"POST"});
+  window.location="/pin";
+}
+
+async function init(){
+  const me = await api("/api/me");
+  if(me.role!=="admin") window.location="/pin";
+  $("whoami").textContent = me.email;
+  $("sessionLine").textContent = "Session: "+(me.sessionExpiresInSeconds||0)+"s";
+  loadOrgs();
+}
+
+init();
+</script>
+
+</body>
+</html>
