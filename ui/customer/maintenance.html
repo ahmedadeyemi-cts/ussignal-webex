@@ -74,6 +74,17 @@ body{
   border-bottom:1px solid var(--border);
 }
 
+.header button{
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:var(--card);
+  color:var(--text);
+  cursor:pointer;
+}
+
+.header button:hover{ opacity:.9; }
+
 .content{
   padding:32px;
   overflow:auto;
@@ -107,24 +118,32 @@ body{
   font-weight:800;
 }
 
-/* Section */
-.section{
-  margin-bottom:40px;
-}
-
 /* Table */
 table{
   width:100%;
   border-collapse:collapse;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
 }
 
 th, td{
   padding:12px;
   border-bottom:1px solid var(--border);
   text-align:left;
+  vertical-align:top;
 }
 
-tr:hover{
+thead th{
+  font-size:12px;
+  text-transform:uppercase;
+  color:var(--muted);
+  background:rgba(148,163,184,.08);
+}
+
+tbody tr:hover{
   background:rgba(37,99,235,.05);
   cursor:pointer;
 }
@@ -135,6 +154,8 @@ tr:hover{
   border-radius:999px;
   font-size:12px;
   font-weight:600;
+  display:inline-block;
+  line-height:1.4;
 }
 
 .badge.scheduled{ background:#dbeafe; color:#1d4ed8; }
@@ -149,22 +170,60 @@ tr:hover{
 .detail-box{
   padding:18px;
   font-size:14px;
+  color:var(--text);
 }
+
+.detail-box strong{
+  display:inline-block;
+  margin-bottom:6px;
+}
+
+.detail-box .meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin:0 0 14px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:rgba(148,163,184,.08);
+}
+
+.detail-content{
+  padding:14px 16px;
+  border:1px solid var(--border);
+  background:var(--card);
+  border-radius:12px;
+  overflow:auto;
+}
+
+.detail-content a{
+  color:var(--accent);
+  text-decoration:none;
+}
+.detail-content a:hover{ text-decoration:underline; }
 
 /* Buttons */
 .btn-email{
   padding:6px 10px;
-  border-radius:6px;
+  border-radius:8px;
   border:none;
   background:var(--accent);
   color:white;
   font-size:12px;
   cursor:pointer;
+  white-space:nowrap;
 }
 
-.btn-email:hover{
-  opacity:.85;
-}
+.btn-email:hover{ opacity:.88; }
 
 /* Empty */
 .empty{
@@ -174,18 +233,22 @@ tr:hover{
   background:var(--card);
   border:1px solid var(--border);
   border-radius:14px;
+  box-shadow:var(--shadow);
 }
 
 .filter-bar{
   margin-bottom:20px;
   display:flex;
   gap:12px;
+  align-items:center;
 }
 
 select{
-  padding:8px;
-  border-radius:6px;
+  padding:8px 10px;
+  border-radius:10px;
   border:1px solid var(--border);
+  background:var(--card);
+  color:var(--text);
 }
 </style>
 </head>
@@ -200,44 +263,44 @@ select{
 
 <div class="main">
 
-<div class="header">
-  <h1>Webex Platform Maintenance</h1>
-  <div>
-    <button id="btnTheme">Toggle Theme</button>
-    <button onclick="loadMaintenance(true)">Refresh</button>
-  </div>
-</div>
-
-<div class="content">
-
-  <div class="kpi-grid">
-    <div class="kpi">
-      <h3>Upcoming</h3>
-      <div class="kpi-value" id="kUpcoming">—</div>
-    </div>
-    <div class="kpi">
-      <h3>Active</h3>
-      <div class="kpi-value" id="kActive">—</div>
-    </div>
-    <div class="kpi">
-      <h3>Completed</h3>
-      <div class="kpi-value" id="kCompleted">—</div>
+  <div class="header">
+    <h1 style="margin:0;font-size:18px;">Webex Platform Maintenance</h1>
+    <div style="display:flex;gap:10px;">
+      <button id="btnTheme" type="button">Toggle Theme</button>
+      <button type="button" onclick="loadMaintenance(true)">Refresh</button>
     </div>
   </div>
 
-  <div class="filter-bar">
-    <select id="productFilter">
-      <option value="">All Products</option>
-    </select>
+  <div class="content">
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <h3>Upcoming</h3>
+        <div class="kpi-value" id="kUpcoming">—</div>
+      </div>
+      <div class="kpi">
+        <h3>Active</h3>
+        <div class="kpi-value" id="kActive">—</div>
+      </div>
+      <div class="kpi">
+        <h3>Completed</h3>
+        <div class="kpi-value" id="kCompleted">—</div>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <select id="productFilter">
+        <option value="">All Products</option>
+      </select>
+    </div>
+
+    <div id="maintenanceContainer"></div>
+
   </div>
-
-  <div id="maintenanceContainer"></div>
-
-</div>
 </div>
 
 <script>
-const CACHE_KEY = "maintenanceCacheV2";
+const CACHE_KEY = "maintenanceCacheV3";
 const CACHE_TTL = 5 * 60 * 1000;
 
 /* =========================
@@ -258,30 +321,137 @@ document.getElementById("btnTheme").onclick = function(){
 loadTheme();
 
 /* =========================
+   HELPERS
+========================= */
+function escapeHtml(s){
+  return String(s ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#39;");
+}
+
+/**
+ * Webex "updates.body" often includes HTML such as <strong> and <a>.
+ * We allow a small safe subset:
+ * - <strong>, <b>, <em>, <i>, <br>, <p>, <ul>, <ol>, <li>, <a href=...>
+ * Everything else is stripped.
+ */
+function sanitizeLimitedHtml(html){
+  const raw = String(html || "").trim();
+  if(!raw) return "";
+
+  const tpl = document.createElement("template");
+  tpl.innerHTML = raw;
+
+  const allowedTags = new Set(["STRONG","B","EM","I","BR","P","UL","OL","LI","A","DIV","SPAN"]);
+  const allowedAttrs = {
+    "A": new Set(["href","target","rel"])
+  };
+
+  function cleanNode(node){
+    const children = Array.from(node.childNodes);
+    for(const child of children){
+      if(child.nodeType === Node.ELEMENT_NODE){
+        const tag = child.tagName;
+
+        if(!allowedTags.has(tag)){
+          // unwrap the element but keep its children text
+          const frag = document.createDocumentFragment();
+          while(child.firstChild) frag.appendChild(child.firstChild);
+          child.replaceWith(frag);
+          continue;
+        }
+
+        // strip attributes not allowed
+        const attrs = Array.from(child.attributes || []);
+        for(const a of attrs){
+          const name = a.name.toLowerCase();
+          const ok = (allowedAttrs[tag] && allowedAttrs[tag].has(name)) || false;
+          if(!ok) child.removeAttribute(a.name);
+        }
+
+        // harden links
+        if(tag === "A"){
+          const href = child.getAttribute("href") || "";
+          const safeHref = href.startsWith("http://") || href.startsWith("https://");
+          if(!safeHref){
+            child.removeAttribute("href");
+          } else {
+            child.setAttribute("target","_blank");
+            child.setAttribute("rel","noopener noreferrer");
+          }
+        }
+
+        cleanNode(child);
+      }
+      else if(child.nodeType === Node.COMMENT_NODE){
+        child.remove();
+      }
+      else{
+        // text nodes are fine
+      }
+    }
+  }
+
+  cleanNode(tpl.content);
+
+  // Convert bare newlines to <br> if there's no block structure
+  let out = tpl.innerHTML;
+  if(!/<(p|ul|ol|li|br|div|span|strong|b|em|i|a)\b/i.test(out)){
+    out = escapeHtml(raw).replace(/\n/g,"<br>");
+  }
+
+  return out;
+}
+
+function fmtDate(iso){
+  if(!iso) return "—";
+  try { return new Date(iso).toLocaleString(); }
+  catch { return "—"; }
+}
+
+function badgeClass(status){
+  const s=(status||"").toLowerCase();
+  if(s.includes("progress")) return "inprogress";
+  if(s==="completed") return "completed";
+  return "scheduled";
+}
+
+/* =========================
    FETCH
 ========================= */
 async function fetchMaintenance(){
-  const res = await fetch("/api/maintenance", { cache:"no-store" });
-  if(!res.ok) return null;
-  return await res.json();
+  try{
+    const res = await fetch("/api/maintenance", { cache:"no-store" });
+    if(!res.ok) return null;
+    return await res.json();
+  }catch(e){
+    console.error("Maintenance fetch failed", e);
+    return null;
+  }
 }
 
 async function loadProductFilter(){
   try{
-    const res = await fetch("/api/components");
+    const res = await fetch("/api/components", { cache:"no-store" });
     if(!res.ok) return;
 
     const data = await res.json();
     const select = document.getElementById("productFilter");
 
-    Object.keys(data.grouped || {}).forEach(group=>{
+    const groups = Object.keys(data.grouped || {});
+    groups.sort((a,b)=>a.localeCompare(b));
+
+    for(const group of groups){
       const opt = document.createElement("option");
       opt.value = group;
       opt.textContent = group;
       select.appendChild(opt);
-    });
+    }
   }catch(e){
-    console.error("Component load failed");
+    console.error("Component load failed", e);
   }
 }
 
@@ -333,7 +503,7 @@ function render(data){
 
   if(filterValue){
     filtered = items.filter(m =>
-      (m.components || []).some(c => c.group === filterValue)
+      (m.components || []).some(c => (c.group || c.product_group) === filterValue)
     );
   }
 
@@ -342,25 +512,37 @@ function render(data){
     return;
   }
 
+  // sort newest first by created_at
+  filtered.sort((a,b)=>{
+    const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return tb - ta;
+  });
+
   const table = document.createElement("table");
   let rows = "";
 
   filtered.forEach((m,index)=>{
 
     const id = `detail-${index}`;
-    const dateStr = m.created_at
-      ? new Date(m.created_at).toLocaleString()
-      : "—";
+    const dateStr = fmtDate(m.created_at);
+
+    const compNames = (m.components || []).map(c => c.name).filter(Boolean);
+    const productsAffected = compNames.length ? compNames.join(", ") : "—";
+
+    // ✅ This is the key: Worker provides detailsHtml (full body)
+    const detailsHtml = sanitizeLimitedHtml(m.detailsHtml || m.body || m.description || "");
 
     rows += `
       <tr onclick="toggleDetail('${id}')">
-        <td>${dateStr}</td>
-        <td><span class="badge ${badgeClass(m.status)}">${m.status||"—"}</span></td>
-        <td>${m.impact||"—"}</td>
-        <td>${m.name||"—"}</td>
-        <td>
+        <td>${escapeHtml(dateStr)}</td>
+        <td><span class="badge ${badgeClass(m.status)}">${escapeHtml(m.status||"—")}</span></td>
+        <td>${escapeHtml(m.impact||"—")}</td>
+        <td>${escapeHtml(m.name||"—")}</td>
+        <td style="text-align:right;">
           <button class="btn-email"
-            onclick="event.stopPropagation(); notify('${m.id}')">
+            type="button"
+            onclick="event.stopPropagation(); notify('${escapeHtml(m.id)}')">
             Email
           </button>
         </td>
@@ -369,11 +551,21 @@ function render(data){
       <tr id="${id}" class="detail-row" style="display:none;">
         <td colspan="5">
           <div class="detail-box">
-            <strong>Description:</strong><br/>
-            ${(m.body || m.description || "No details available.")}
-            <br/><br/>
+            <div class="meta">
+              <span class="pill">Created: ${escapeHtml(fmtDate(m.created_at))}</span>
+              <span class="pill">Updated: ${escapeHtml(fmtDate(m.updated_at))}</span>
+              <span class="pill">ID: ${escapeHtml(m.id || "—")}</span>
+            </div>
+
+            <strong>Maintenance details:</strong>
+            <div class="detail-content">
+              ${detailsHtml || "No details available."}
+            </div>
+
+            <div style="height:12px;"></div>
+
             <strong>Products Affected:</strong><br/>
-            ${(m.components||[]).map(c=>c.name).join(", ") || "—"}
+            ${escapeHtml(productsAffected)}
           </div>
         </td>
       </tr>
@@ -383,11 +575,11 @@ function render(data){
   table.innerHTML = `
     <thead>
       <tr>
-        <th>Date</th>
-        <th>Status</th>
-        <th>Impact</th>
+        <th style="width:210px;">Date</th>
+        <th style="width:120px;">Status</th>
+        <th style="width:140px;">Impact</th>
         <th>Name</th>
-        <th></th>
+        <th style="width:90px;"></th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
@@ -400,13 +592,6 @@ function toggleDetail(id){
   const row = document.getElementById(id);
   if(!row) return;
   row.style.display = row.style.display==="none" ? "table-row" : "none";
-}
-
-function badgeClass(status){
-  const s=(status||"").toLowerCase();
-  if(s.includes("progress")) return "inprogress";
-  if(s==="completed") return "completed";
-  return "scheduled";
 }
 
 /* =========================
@@ -427,14 +612,20 @@ async function notify(maintenanceId){
       })
     });
 
+    const text = await res.text();
+    let payload = null;
+    try{ payload = JSON.parse(text); }catch{}
+
     if(!res.ok){
-      alert("Failed to send notification.");
+      console.error("Notify failed", res.status, text);
+      alert(payload?.error ? `Failed: ${payload.error}` : "Failed to send notification.");
       return;
     }
 
     alert("Notification sent successfully.");
   }
   catch(e){
+    console.error("Notification error", e);
     alert("Notification error.");
   }
 }
@@ -447,7 +638,6 @@ document.getElementById("productFilter")
 
 loadProductFilter();
 loadMaintenance(false);
-
 </script>
 
 </body>
