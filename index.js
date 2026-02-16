@@ -1345,140 +1345,46 @@ if (url.pathname === "/api/status" && request.method === "GET") {
 // /api/incidents (GET) — maintenance-style with upstream fallback
 if (url.pathname === "/api/incidents" && request.method === "GET") {
 
-  let user;
-  try {
-    user = getCurrentUser(request);
-  } catch (e) {
-    return json({ error: "auth_failed", message: e.message }, 401);
-  }
-
+  const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
 
   if (!user.isAdmin) {
-    if (!session || !session.orgId) return json({ error: "pin_required" }, 401);
-
-    if (session.expiresAt && session.expiresAt <= nowMs()) {
-      await clearSession(env, user.email);
-      return new Response(null, {
-        status: 302,
-        headers: { Location: "/pin?expired=1", "cache-control": "no-store" }
-      });
+    if (!session || !session.orgId) {
+      return json({ error: "pin_required" }, 401);
     }
   }
 
   try {
-    const cacheSeconds = 300;
 
     return await cacheJson(
-      cacheSeconds,
-      "https://internal-cache/webex-incidents-v3",
+      300,
+      "https://internal-cache/webex-incidents-v1",
       async () => {
 
-        // Try “unresolved/active” first (fast + relevant), then full list.
-        const upstreamTry = await fetchJsonFirstOk([
-          "https://status.webex.com/unresolved-incidents.json",
-          "https://status.webex.com/active-incidents.json",
-          "https://status.webex.com/incidents.json",
-          "https://status.webex.com/api/v2/incidents/unresolved.json",
-          "https://status.webex.com/api/v2/incidents.json"
-        ]);
-
-        if (!upstreamTry.ok) {
-          return {
-            ok: false,
-            error: "incidents_upstream_not_json",
-            debug: upstreamTry.debug,
-            lastUpdated: new Date().toISOString()
-          };
-        }
-
-        const data = upstreamTry.json;
-
-        // Accept multiple shapes:
-        // - Statuspage: { incidents: [...] }
-        // - Some custom feeds: { items: [...] } or { incidents: { ... } }
-        const rawIncidents =
-          data?.incidents ||
-          data?.items ||
-          data?.data ||
-          [];
-
-        const incidents = (rawIncidents || []).map(i => {
-
-          const name = i.name || i.title || "Incident";
-          const status = String(i.status || i.state || "unknown").toLowerCase();
-
-          // Updates can be: incident_updates OR updates OR history arrays
-          const rawUpdates =
-            i.incident_updates ||
-            i.updates ||
-            i.messages ||
-            [];
-
-          const updates = (rawUpdates || []).map(u => ({
-            id: u.id || u.message_id || u.guid || null,
-            status: (u.status || u.state || status || "unknown"),
-            created_at: u.created_at || u.created || u.pubDate || null,
-            updated_at: u.updated_at || u.updated || u.created_at || u.created || null,
-            body: (u.body || u.text || u.description || "").trim()
-          }));
-
-          const location =
-            i.impact_area_name ||
-            i.impact_area ||
-            i.region ||
-            guessLocationFromText(name) ||
-            "Global";
-
-          const sector =
-            i.sector ||
-            normalizeSectorFromText(name);
-
-          // Components / products
-          const rawComponents = i.components || i.services || [];
-          const components = (rawComponents || []).map(c => ({
-            id: c.id || null,
-            name: c.name || c.service || c.component || "Unknown",
-            group: c.group || c.group_name || c.product_group || null,
-            product_group: c.product_group || c.group || c.group_name || null
-          }));
-
-          const reference = pickReference(i);
-
-          // “body” convenience like your maintenance endpoint
-          const body = updates[0]?.body || (i.body || i.description || "");
-
-          return {
-            id: i.id || reference || name,
-            reference,                 // ✅ Reference #
-            name,
-            status,
-            impact: i.impact || "incident",
-            created_at: i.created_at || i.created || null,
-            updated_at: i.updated_at || i.updated || null,
-            location,                  // ✅ Location / Region column
-            sector,                    // ✅ Commercial / Government column
-            components,
-            updates,
-            body
-          };
-        });
-
-        // “active” like Webex site: investigating/identified/monitoring
-        const active = incidents.filter(x =>
-          ["investigating", "identified", "monitoring"].includes(String(x.status || "").toLowerCase())
+        const unresolvedRes = await fetch(
+          "https://status.webex.com/unresolved-incidents.json"
         );
 
+        const allRes = await fetch(
+          "https://status.webex.com/all-incidents.json"
+        );
+
+        const unresolved = unresolvedRes.ok
+          ? (await unresolvedRes.json()).incidents || []
+          : [];
+
+        const all = allRes.ok
+          ? (await allRes.json()).incidents || []
+          : [];
+
         return {
-          ok: true,
-          incidents,
-          active,
+          incidents: all,
+          active: unresolved,
           counts: {
-            active: active.length,
-            total: incidents.length
+            active: unresolved.length,
+            total: all.length
           },
-          lastUpdated: new Date().toISOString(),
-          debug: { upstreamUrl: upstreamTry.url }
+          lastUpdated: new Date().toISOString()
         };
       }
     );
