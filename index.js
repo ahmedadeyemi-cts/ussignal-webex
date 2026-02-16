@@ -1428,61 +1428,49 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
     const cached = await cache.match(cacheKey);
     if (cached) return cached;
 
-    async function fetchJson(endpoint) {
-      const res = await fetch(
-        `https://status.webex.com/api/${endpoint}`,
-        {
-          headers: {
-            "Accept": "application/json",
-            "User-Agent": "Mozilla/5.0"
-          },
-          cf: {
-            cacheTtl: 300
-          }
-        }
-      );
+    const res = await fetch(
+      "https://status-api.webex.com/v2/scheduled-maintenances.json"
+    );
 
+    if (!res.ok) {
       const text = await res.text();
-
-      if (!res.ok) {
-        throw new Error(`${endpoint} failed: ${res.status}`);
-      }
-
-      return JSON.parse(text);
+      return json({
+        error: "status_api_failed",
+        status: res.status,
+        bodyPreview: text.slice(0, 300)
+      }, 502);
     }
 
-    const [upcomingData, activeData, allData] = await Promise.all([
-      fetchJson("upcoming-scheduled-maintenances.json"),
-      fetchJson("active-scheduled-maintenances.json"),
-      fetchJson("all-scheduled-maintenances.json")
-    ]);
+    const data = await res.json();
 
-    const normalize = (items) =>
-      (items || []).map(m => ({
-        id: m.incidentId,
-        name: m.incidentName,
-        status: m.status,
-        impact: m.impact,
-        productGroup: m.serviceId,
-        locations: m.locations,
-        startTime: m.startTime,
-        endTime: m.endTime,
-        changeId: m.changeId,
-        messages: m.messages || []
-      }));
+    const maint = data.scheduled_maintenances || [];
 
-    const upcoming = normalize(upcomingData);
-    const active = normalize(activeData);
-    const all = normalize(allData);
+    const maintenance = maint.map(m => ({
+      id: m.id,
+      name: m.name,
+      status: m.status,
+      scheduledFor: m.scheduled_for,
+      impact: m.impact,
+      productGroup: "Webex",
+      updates: m.incident_updates || []
+    }));
+
+    const upcoming = maintenance.filter(m =>
+      m.status === "scheduled"
+    );
+
+    const active = maintenance.filter(m =>
+      m.status === "in_progress"
+    );
 
     const responsePayload = {
-      maintenance: all,
+      maintenance,
       upcoming,
       active,
       counts: {
         upcoming: upcoming.length,
         active: active.length,
-        total: all.length
+        total: maintenance.length
       },
       lastUpdated: new Date().toISOString()
     };
@@ -1499,10 +1487,12 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
     return response;
 
   } catch (e) {
+
     return json({
       error: "maintenance_engine_failed",
       message: e.message
     }, 500);
+
   }
 }
       /* -----------------------------
