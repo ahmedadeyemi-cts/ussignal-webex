@@ -1010,19 +1010,19 @@ textarea.template{
 
         <div class="grid">
           <div class="card" style="box-shadow:none;">
-            <h3>How to explain the model to customers (script)</h3>
+            <h3>Customer Support Model</h3>
             <p class="small">
               During business hours (8:00 AM to 5:00 PM CST), customers should contact US Signal Customer Support using the standard support
               channels. Support will create the ticket, triage the issue, and coordinate resolution through the appropriate escalation path.
               After hours, customers must use OneAssist and provide their authorized PIN so the on-call engineer can be engaged.
-              If a customer does not have a PIN, they will be asked to contact US Signal during business hours to establish authorized after-hours access.
+              If a customer does not have a PIN, the call will be redirected to the US Signal Service Desk who will provide escalation to the Solution Provider team.
             </p>
 
             <div class="hr"></div>
 
             <div class="small">
               Internal handling note: If OneAssist receives a call without a valid PIN, the event should be documented and the customer should be directed to business-hours support
-              for PIN registration and access validation.
+              for PIN registration and access validation. Account/Sales Team can be contacted to escalate any tickets or issues.
             </div>
           </div>
 
@@ -1031,13 +1031,13 @@ textarea.template{
             <p class="small">
               The on-call engineer prioritizes restoration of core calling service and mitigation of business impact.
               Customers should be asked for: impacted site, affected numbers, time of onset, and one or more call examples (calling/called number and timestamps).
-              The on-call engineer will decide whether the issue can be mitigated immediately (reroute, failover, configuration rollback) or requires vendor escalation.
+              The on-call engineer will decide whether the issue can be mitigated immediately (reroute, failover, configuration rollback) or requires vendor escalation. Once a PIN is triggered, the On-Call Engineer will receive an email with the customers phone number for call back purposes.
             </p>
 
             <div class="hr"></div>
 
             <ul class="small">
-              <li>Capture call examples (numbers + timestamps) whenever possible</li>
+              <li>Capture call examples (numbers (Calling and Called Number) + timestamps) whenever possible</li>
               <li>Confirm whether impact is isolated or widespread</li>
               <li>Identify if the issue aligns to recent changes (ports, dial plan, device pushes)</li>
               <li>Use controlled communication cadence until stabilized</li>
