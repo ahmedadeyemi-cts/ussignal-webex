@@ -265,51 +265,55 @@ async function loadData() {
   const tbody = document.getElementById("tableBody");
   tbody.innerHTML = "";
 
-  const maintenance = data.maintenance || [];
+ const maintenance =
+  data.maintenance ||
+  data.scheduled_maintenances ||
+  data.upcoming ||
+  [];
+
 
   if (maintenance.some(m => m.impact === "major" || m.impact === "critical")) {
     banner.classList.remove("hidden");
   }
 
-  maintenance.forEach(item => {
+maintenance.forEach(item => {
 
-    const tr = document.createElement("tr");
+  const tr = document.createElement("tr");
 
-    tr.innerHTML = `
-      <td>${formatDate(item.scheduledFor)}</td>
-      <td>${item.status}</td>
-      <td>${item.impact || "—"}</td>
-      <td>${item.name}</td>
-    `;
+  tr.innerHTML = `
+    <td>${formatDate(item.created_at || item.updated_at)}</td>
+    <td>${item.status || "—"}</td>
+    <td>${item.impact || "—"}</td>
+    <td>${item.name || "—"}</td>
+  `;
 
-    const detailRow = document.createElement("tr");
-    detailRow.classList.add("hidden");
+  const detailRow = document.createElement("tr");
+  detailRow.classList.add("hidden");
 
-    const detailCell = document.createElement("td");
-    detailCell.colSpan = 4;
+  const detailCell = document.createElement("td");
+  detailCell.colSpan = 4;
 
-    const updates = (item.updates || [])
-      .map(u => `
-        <div style="margin-bottom:10px;">
-          <strong>${u.status}</strong> — ${formatDate(u.updated)}
-          <div style="margin-top:6px;">${u.body}</div>
-        </div>
-      `)
-      .join("");
+  const updates = (item.incident_updates || [])
+    .map(u => `
+      <div style="margin-bottom:10px;">
+        <strong>${u.status}</strong> — ${formatDate(u.updated_at)}
+        <div style="margin-top:6px;">${u.body}</div>
+      </div>
+    `)
+    .join("");
 
-    detailCell.innerHTML =
-      `<div class="details">${updates || "No details available."}</div>`;
+  detailCell.innerHTML =
+    `<div class="details">${updates || "No details available."}</div>`;
 
-    detailRow.appendChild(detailCell);
+  detailRow.appendChild(detailCell);
 
-    tr.onclick = () => {
-      detailRow.classList.toggle("hidden");
-    };
+  tr.onclick = () => {
+    detailRow.classList.toggle("hidden");
+  };
 
-    tbody.appendChild(tr);
-    tbody.appendChild(detailRow);
-  });
-}
+  tbody.appendChild(tr);
+  tbody.appendChild(detailRow);
+});
 
 /* ============================
    Init
