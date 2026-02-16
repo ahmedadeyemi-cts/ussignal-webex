@@ -1,81 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>US Signal | Admin Hub</title>
-
 <style>
-:root{
-  --bg:#f4f6f9;
-  --card:#ffffff;
-  --text:#1e293b;
-  --muted:#64748b;
-  --accent:#0f62fe;
-  --danger:#dc2626;
-  --success:#16a34a;
-}
-
-[data-theme="dark"]{
-  --bg:#0f172a;
-  --card:#1e293b;
-  --text:#e2e8f0;
-  --muted:#94a3b8;
-  --accent:#3b82f6;
-  --danger:#ef4444;
-  --success:#22c55e;
-}
-
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
-
-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:18px 32px;
-  background:var(--card);
-  box-shadow:0 2px 8px rgba(0,0,0,0.06);
-}
-
-.logo{
-  font-weight:700;
-  font-size:20px;
-}
-
-.header-actions button{
-  margin-left:10px;
-}
-
-button{
-  padding:8px 14px;
-  border-radius:6px;
-  border:none;
-  cursor:pointer;
-  font-weight:500;
-}
-
-.btn-primary{
-  background:var(--accent);
-  color:white;
-}
-
-.btn-outline{
-  background:none;
-  border:1px solid var(--muted);
-  color:var(--text);
-}
-
-.container{
-  padding:30px;
-  max-width:1400px;
-  margin:auto;
-}
-
 .section-title{
   font-size:18px;
   font-weight:600;
@@ -129,194 +52,153 @@ button{
   color:var(--muted);
 }
 
-.session{
-  font-size:13px;
-  color:var(--muted);
-}
-  .logo {
-  display:flex;
-  align-items:center;
-  gap:16px;
+input{
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(0,0,0,.18);
+  background:var(--card);
+  color:var(--text);
+  font-size:14px;
+  outline:none;
 }
 
-.logo img { height:34px; }
+.btn-primary{
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  border-radius:10px;
+  padding:10px 12px;
+  cursor:pointer;
+  font-weight:800;
+}
 
-.logo h1 {
-  margin:0;
-  font-size:18px;
+.btn-outline{
+  background:transparent;
+  color:var(--text);
+  border:1px solid rgba(0,0,0,.22);
+  border-radius:10px;
+  padding:10px 12px;
+  cursor:pointer;
   font-weight:700;
 }
-input{
-    padding:10px 12px;
-    border-radius:10px;
-    border:1px solid rgba(0,0,0,.18);
-    background:var(--card);
-    color:var(--text);
-    font-size:14px;
-    outline:none;
-  }
-  .btn-primary{
-    background:var(--accent);
-    color:#fff;
-    border:none;
-    border-radius:10px;
-    padding:10px 12px;
-    cursor:pointer;
-    font-weight:800;
-  }
-  .btn-outline{
-    background:transparent;
-    color:var(--text);
-    border:1px solid rgba(0,0,0,.22);
-    border-radius:10px;
-    padding:10px 12px;
-    cursor:pointer;
-    font-weight:700;
-  }
-  [data-theme="dark"] input{ border-color: rgba(255,255,255,.14); }
-  [data-theme="dark"] .btn-outline{ border-color: rgba(255,255,255,.16); }
-  nav a{
-  text-decoration:none;
-  color:var(--text);
-  font-weight:600;
-  font-size:14px;
+
+[data-theme="dark"] input{
+  border-color: rgba(255,255,255,.14);
 }
 
-nav a:hover{
-  color:var(--accent);
+[data-theme="dark"] .btn-outline{
+  border-color: rgba(255,255,255,.16);
 }
-
 </style>
-</head>
-<body>
 
-<header>
 
-  <!-- <div class="brand">
-    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
-    <h1>Partner Admin Hub</h1>
-  </div>
-  -->
-  
-  <div class="logo">
-     <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
-     <h1>US Signal | Partner Admin Hub </h1>
-  </div>
-  <nav style="
-  background:var(--card);
-  padding:12px 30px;
-  border-bottom:1px solid rgba(0,0,0,.08);
-  display:flex;
-  gap:18px;
-  flex-wrap:wrap;
-">
-  <a href="/admin">Dashboard</a>
-  <a href="/admin/customers">Customers</a>
-  <a href="/admin/analytics">Analytics</a>
-  <a href="/admin/licenses">Licenses</a>
-  <a href="/admin/devices">Devices</a>
-  <a href="/admin/alerts">Alerts</a>
-  <a href="/admin/pins">PIN Management</a>
-  <a href="/admin/support">Support</a>
-  <a href="/admin/implementation">Implementation</a>
-  <a href="/admin/pstn">PSTN</a>
-  <a href="/admin/tenant-resolution">Resolution</a>
-</nav>
-  <div class="header-actions">
-    <span class="session" id="sessionTimer"></span>
-    <button class="btn-outline" id="btnTheme">Dark Mode</button>
-    <button class="btn-primary" onclick="logout()">Logout</button>
-  </div>
-</header>
+<!-- ===============================
+     EXECUTIVE SUMMARY
+================================ -->
 
-<div class="container">
+<div class="section-title">Executive Summary</div>
 
-  <!-- Executive Overview -->
-  <div class="section-title">Executive Summary</div>
-  <div class="grid grid-4">
+<div class="grid grid-4">
 
-    <div class="card">
-      <h3>Total Partner Orgs</h3>
-      <div class="metric" id="totalOrgs">—</div>
-    </div>
-
-    <div class="card">
-      <h3>License Deficits</h3>
-      <div class="metric danger" id="totalDeficits">—</div>
-    </div>
-
-    <div class="card">
-      <h3>Offline Devices</h3>
-      <div class="metric danger" id="offlineDevices">—</div>
-    </div>
-
-    <div class="card">
-      <h3>Total Call Volume (7d)</h3>
-      <div class="metric success" id="totalCalls">—</div>
-    </div>
-    
-    <div class="card">
-  <h3>Total Customers</h3>
-  <div class="metric success" id="totalCustomers">—</div>
-</div>
-
-  </div>
-
-  <br><br>
-
-  <!-- Multi-Tenant Health -->
-  <div class="section-title">Multi-Tenant Health Dashboard</div>
   <div class="card">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Organization</th>
-          <th>License</th>
-          <th>Devices</th>
-          <th>Call Volume</th>
-          <th>Health</th>
-        </tr>
-      </thead>
-      <tbody id="tenantTable">
-        <tr><td colspan="5" class="loading">Loading tenants...</td></tr>
-      </tbody>
-    </table>
+    <h3>Total Partner Orgs</h3>
+    <div class="metric" id="totalOrgs">—</div>
   </div>
 
-  <br><br>
-
-  <!-- PIN Management -->
-  <div class="section-title">PIN Management</div>
   <div class="card">
-    <button class="btn-primary" onclick="openPinManager()">Manage Tenant PINs</button>
+    <h3>License Deficits</h3>
+    <div class="metric danger" id="totalDeficits">—</div>
   </div>
 
-  <br><br>
-
-  <!-- Tenant Resolution Inspector -->
-  <div class="section-title">Tenant Resolution Inspector</div>
   <div class="card">
-    <input id="inspectEmail" placeholder="Enter email" />
-    <button class="btn-outline" onclick="resolveTenant()">Inspect</button>
-    <pre id="inspectResult"></pre>
+    <h3>Offline Devices</h3>
+    <div class="metric danger" id="offlineDevices">—</div>
+  </div>
+
+  <div class="card">
+    <h3>Total Call Volume (7d)</h3>
+    <div class="metric success" id="totalCalls">—</div>
+  </div>
+
+  <div class="card">
+    <h3>Total Customers</h3>
+    <div class="metric success" id="totalCustomers">—</div>
   </div>
 
 </div>
-<!-- =========================
-     Admin PIN Manager Modal
-========================== -->
+
+<br><br>
+
+
+<!-- ===============================
+     MULTI TENANT DASHBOARD
+================================ -->
+
+<div class="section-title">Multi-Tenant Health Dashboard</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Organization</th>
+        <th>License</th>
+        <th>Devices</th>
+        <th>Call Volume</th>
+        <th>Health</th>
+      </tr>
+    </thead>
+    <tbody id="tenantTable">
+      <tr>
+        <td colspan="5" class="loading">Loading tenants...</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<br><br>
+
+
+<!-- ===============================
+     PIN MANAGEMENT
+================================ -->
+
+<div class="section-title">PIN Management</div>
+
+<div class="card">
+  <button class="btn-primary" onclick="openPinManager()">
+    Manage Tenant PINs
+  </button>
+</div>
+
+<br><br>
+
+
+<!-- ===============================
+     TENANT RESOLUTION
+================================ -->
+
+<div class="section-title">Tenant Resolution Inspector</div>
+
+<div class="card">
+  <input id="inspectEmail" placeholder="Enter email" />
+  <button class="btn-outline" onclick="resolveTenant()">Inspect</button>
+  <pre id="inspectResult"></pre>
+</div>
+
+
+<!-- ===============================
+     PIN MODAL
+================================ -->
+
 <div id="pinModal" style="
   position:fixed; inset:0;
   background:rgba(0,0,0,.55);
   display:none;
   align-items:center; justify-content:center;
   z-index:9999;
-  align-items:center;
-  justify-content:center;
   padding:40px;
-  
-
 ">
+
   <div style="
     width:920px; max-width:95vw;
     background:var(--card);
@@ -338,14 +220,14 @@ nav a:hover{
         </div>
       </div>
 
-      <div style="display:flex; gap:10px; align-items:center;">
+      <div style="display:flex; gap:10px;">
         <button class="btn-outline" onclick="refreshPinManager()">Refresh</button>
         <button class="btn-primary" onclick="closePinManager()">Close</button>
       </div>
     </div>
 
     <div style="padding:18px 20px;">
-      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <input id="pinSearch" placeholder="Search org name..." style="flex:1; min-width:280px;" />
         <button class="btn-outline" onclick="refreshPinManager()">Search</button>
       </div>
@@ -354,7 +236,6 @@ nav a:hover{
         margin-top:12px; padding:10px 12px; border-radius:12px;
         border:1px solid rgba(0,0,0,.10);
         background:rgba(239,68,68,.10);
-        color:var(--text);
         display:none;
         white-space:pre-wrap;
         font-size:13px;
@@ -362,291 +243,61 @@ nav a:hover{
 
       <div style="height:12px"></div>
 
-    <div style="
-  overflow:auto;
-  max-height:60vh;
-  border-radius:12px;
-  border:1px solid rgba(0,0,0,.08);
-">
+      <div style="
+        overflow:auto;
+        max-height:60vh;
+        border-radius:12px;
+        border:1px solid rgba(0,0,0,.08);
+      ">
         <table style="width:100%; border-collapse:collapse;">
           <thead>
             <tr style="background:rgba(0,0,0,.03);">
-              <th style="text-align:left; padding:12px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;">Org</th>
-              <th style="text-align:left; padding:12px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;">Org ID</th>
-              <th style="text-align:left; padding:12px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;">PIN</th>
-              <th style="text-align:left; padding:12px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;">Allowlisted Emails</th>
-              <th style="text-align:right; padding:12px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;">Actions</th>
+              <th style="padding:12px;">Org</th>
+              <th style="padding:12px;">Org ID</th>
+              <th style="padding:12px;">PIN</th>
+              <th style="padding:12px;">Allowlisted Emails</th>
+              <th style="padding:12px; text-align:right;">Actions</th>
             </tr>
           </thead>
           <tbody id="pinMgrRows">
-            <tr><td colspan="5" style="padding:18px; color:var(--muted);">Loading…</td></tr>
+            <tr><td colspan="5" style="padding:18px;">Loading…</td></tr>
           </tbody>
         </table>
-      </div>
-
-      <div style="height:14px"></div>
-
-      <!-- Inline editor -->
-      <div id="pinEditor" style="
-        display:none;
-        padding:14px; border-radius:14px;
-        border:1px solid rgba(0,0,0,.08);
-        background:rgba(0,0,0,.02);
-      ">
-        <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-          <div>
-            <div style="font-weight:800;" id="pinEditorTitle">Tenant</div>
-            <div style="font-size:13px; color:var(--muted);" id="pinEditorSubtitle">—</div>
-          </div>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <button class="btn-outline" onclick="closePinEditor()">Cancel</button>
-            <button class="btn-primary" onclick="saveAllowlist()">Save Allowlist</button>
-          </div>
-        </div>
-
-        <div style="height:12px"></div>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <input id="allowlistInput" placeholder="comma-separated emails (e.g. a@x.com,b@y.com)" style="flex:1; min-width:300px;" />
-          <button class="btn-outline" onclick="rotatePinFromEditor()">Rotate PIN</button>
-        </div>
-
-        <div style="margin-top:10px; font-size:13px; color:var(--muted);">
-          Rotating a PIN keeps the org mapping intact and updates the PIN → org mapping in KV.
-        </div>
       </div>
 
     </div>
   </div>
 </div>
 
+
 <script>
-const $ = (id) => document.getElementById(id);
 
-let SESSION_TIMER;
-  // -----------------------------
-// PIN Manager Modal UI
-// Requires Worker endpoints:
-//  - GET  /api/admin/pins (list pins + allowlist)
-//  - POST /api/admin/pin/rotate { orgId, orgName }
-//  - POST /api/admin/pin/allowlist { orgId, orgName, emails[] }
-// -----------------------------
-let PIN_MGR_CACHE = [];
-let PIN_EDITOR = { orgId:null, orgName:null, pin:null, emails:[] };
-
-function openPinManager(){
-  document.getElementById("pinModal").style.display = "flex";
-  refreshPinManager();
-}
-
-function closePinManager(){
-  document.getElementById("pinModal").style.display = "none";
-  closePinEditor();
-}
-
-function setPinMgrError(msg){
-  const el = document.getElementById("pinMgrError");
-  if(!msg){
-    el.style.display = "none";
-    el.textContent = "";
-    return;
-  }
-  el.style.display = "block";
-  el.textContent = msg;
-}
-
-async function api2(path, opts){
-  const res = await fetch(path, opts);
-  const txt = await res.text();
-  let data = null;
-  try { data = txt ? JSON.parse(txt) : null; } catch { data = { raw: txt }; }
-  if (!res.ok) {
-    if (res.status === 401) { window.location.href = "/pin"; return null; }
-    throw new Error((data && (data.message || data.error)) || `API failed ${res.status}: ${path}`);
-  }
-  return data;
-}
-
-async function refreshPinManager(){
-  try{
-    setPinMgrError(null);
-    const list = await api2("/api/admin/pins");
-    if(!list) return;
-
-    PIN_MGR_CACHE = Array.isArray(list.items) ? list.items : [];
-
-    const q = (document.getElementById("pinSearch").value || "").toLowerCase().trim();
-    const filtered = !q ? PIN_MGR_CACHE : PIN_MGR_CACHE.filter(x =>
-      (x.orgName || "").toLowerCase().includes(q)
-    );
-
-    renderPinMgrRows(filtered);
-  } catch(e){
-    setPinMgrError(e?.message || String(e));
-  }
-}
-
-function renderPinMgrRows(items){
-  const tbody = document.getElementById("pinMgrRows");
-  if(!items.length){
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:18px; color:var(--muted);">No tenants found.</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = items.map(t => {
-    const emails = Array.isArray(t.emails) ? t.emails : [];
-    const emailText = emails.length ? emails.join(", ") : "—";
-
-    return `
-      <tr>
-        <td style="padding:12px; font-weight:800;">${escapeHtml(t.orgName || "Unknown")}</td>
-        <td style="padding:12px; color:var(--muted); font-size:13px;">${escapeHtml(t.orgId || "—")}</td>
-        <td style="padding:12px;">
-          <span style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-weight:900;">
-            ${escapeHtml(t.pin || "—")}
-          </span>
-        </td>
-        <td style="padding:12px; color:var(--muted); font-size:13px;">${escapeHtml(emailText)}</td>
-        <td style="padding:12px; text-align:right;">
-          <button class="btn-outline" onclick='editAllowlist(${JSON.stringify(t).replaceAll("'", "\\'")})'>Edit</button>
-          <button class="btn-primary" onclick="rotatePin('${escapeJs(t.orgId)}','${escapeJs(t.orgName)}')">Rotate PIN</button>
-        </td>
-      </tr>
-    `;
-  }).join("");
-}
-
-function editAllowlist(t){
-  PIN_EDITOR = {
-    orgId: t.orgId,
-    orgName: t.orgName,
-    pin: t.pin,
-    emails: Array.isArray(t.emails) ? t.emails : []
-  };
-
-  document.getElementById("pinEditorTitle").textContent = t.orgName || "Tenant";
-  document.getElementById("pinEditorSubtitle").textContent = t.orgId || "—";
-  document.getElementById("allowlistInput").value = (PIN_EDITOR.emails || []).join(", ");
-  document.getElementById("pinEditor").style.display = "block";
-}
-
-function closePinEditor(){
-  document.getElementById("pinEditor").style.display = "none";
-  PIN_EDITOR = { orgId:null, orgName:null, pin:null, emails:[] };
-}
-
-async function rotatePin(orgId, orgName){
-  try{
-    setPinMgrError(null);
-    const r = await api2("/api/admin/pin/rotate", {
-      method:"POST",
-      headers:{ "content-type":"application/json" },
-      body: JSON.stringify({ orgId, orgName })
-    });
-    if(!r) return;
-    await refreshPinManager();
-  } catch(e){
-    setPinMgrError(e?.message || String(e));
-  }
-}
-
-async function rotatePinFromEditor(){
-  if(!PIN_EDITOR.orgId) return;
-  await rotatePin(PIN_EDITOR.orgId, PIN_EDITOR.orgName);
-}
-
-async function saveAllowlist(){
-  try{
-    setPinMgrError(null);
-    if(!PIN_EDITOR.orgId) return;
-
-    const raw = (document.getElementById("allowlistInput").value || "")
-      .split(",")
-      .map(x => x.trim().toLowerCase())
-      .filter(Boolean);
-
-    const emails = Array.from(new Set(raw));
-
-    const r = await api2("/api/admin/pin/allowlist", {
-      method:"POST",
-      headers:{ "content-type":"application/json" },
-      body: JSON.stringify({
-        orgId: PIN_EDITOR.orgId,
-        orgName: PIN_EDITOR.orgName,
-        emails
-      })
-    });
-    if(!r) return;
-
-    await refreshPinManager();
-    closePinEditor();
-  } catch(e){
-    setPinMgrError(e?.message || String(e));
-  }
-}
-
-function escapeHtml(str){
-  return String(str ?? "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
-function escapeJs(str){
-  return String(str ?? "").replaceAll("\\","\\\\").replaceAll("'","\\'");
-}
-
-// Hook your existing button
-function openPinManager(){
-  document.getElementById("pinModal").style.display="flex";
-  refreshPinManager();
-}
-
-
-/* -----------------------------
-   Theme
------------------------------- */
-function loadTheme(){
-  const saved = localStorage.getItem("uiTheme") || "light";
-  document.documentElement.setAttribute("data-theme", saved);
-  $("btnTheme").textContent =
-    saved === "dark" ? "Light Mode" : "Dark Mode";
-}
-
-$("btnTheme").onclick = () => {
-  const cur = document.documentElement.getAttribute("data-theme");
-  const next = cur === "dark" ? "light" : "dark";
-  localStorage.setItem("uiTheme", next);
-  loadTheme();
-};
-
-loadTheme();
-
-/* -----------------------------
+/* ===============================
    API Helper
------------------------------- */
+================================ */
+
 async function api(path){
   const res = await fetch(path);
-  if (!res.ok) {
-    if (res.status === 401) {
-      window.location.href = "/pin";
+  if (!res.ok){
+    if (res.status === 401){
+      window.location.href="/pin";
       return null;
     }
-    throw new Error("API failed: " + path);
+    throw new Error("API failed: "+path);
   }
   return await res.json();
 }
 
-/* -----------------------------
-   Load Global Summary
------------------------------- */
-async function loadAdminSummary() {
+/* ===============================
+   Load Org List
+================================ */
+
+async function loadAdminSummary(){
   const data = await api("/api/admin/orgs");
   if (!data) return;
 
-  $("totalOrgs").textContent = data.items.length;
-  $("totalCustomers").textContent = data.items.length;
+  document.getElementById("totalOrgs").textContent = data.items.length;
+  document.getElementById("totalCustomers").textContent = data.items.length;
 
   const rows = data.items.map(o => `
     <tr id="row-${o.orgId}">
@@ -655,14 +306,18 @@ async function loadAdminSummary() {
     </tr>
   `).join("");
 
-  $("tenantTable").innerHTML = rows;
+  document.getElementById("tenantTable").innerHTML = rows;
 
-  for (const o of data.items) {
+  for (const o of data.items){
     loadOrgHealth(o.orgId, o.orgName);
   }
 }
 
-async function loadOrgHealth(orgId, orgName) {
+/* ===============================
+   Load Per Org Health
+================================ */
+
+async function loadOrgHealth(orgId, orgName){
   const r = await api(`/api/admin/org-health?orgId=${orgId}`);
   if (!r) return;
 
@@ -678,68 +333,10 @@ async function loadOrgHealth(orgId, orgName) {
   `;
 }
 
-
-/* -----------------------------
-   Tenant Inspector
------------------------------- */
-async function resolveTenant(){
-  const email = $("inspectEmail").value;
-
-  const res = await fetch("/api/admin/resolve", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email })
-  });
-
-  if (!res.ok) {
-    throw new Error("Resolve failed");
-  }
-
-  const result = await res.json();
-  $("inspectResult").textContent = JSON.stringify(result, null, 2);
-}
-
-
-/* -----------------------------
-   Session Timer
------------------------------- */
-function startSessionTimer(seconds){
-  if (!seconds) return;
-  let remaining = seconds;
-  SESSION_TIMER = setInterval(()=>{
-    remaining--;
-    $("sessionTimer").textContent =
-      "Session: " + remaining + "s";
-    if (remaining <= 0){
-      clearInterval(SESSION_TIMER);
-      window.location.href="/pin";
-    }
-  },1000);
-}
-
-/* -----------------------------
-   Logout
------------------------------- */
-async function logout(){
-  await fetch("/api/pin/logout",{ method:"POST" });
-  window.location.href="/pin";
-}
-
-/* -----------------------------
+/* ===============================
    Init
------------------------------- */
-async function init(){
-  const me = await api("/api/me");
-  if (!me || me.role !== "admin"){
-    window.location.href="/pin";
-    return;
-  }
-  startSessionTimer(me.sessionExpiresInSeconds);
-  loadAdminSummary();
-}
+================================ */
 
-init();
+loadAdminSummary();
+
 </script>
-
-</body>
-</html>
