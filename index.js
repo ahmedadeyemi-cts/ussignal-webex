@@ -531,6 +531,18 @@ async function renderAdminCustomersHTML() {
   if (!res.ok) throw new Error("Failed to load admin customers UI");
   return await res.text();
 }
+async function renderAdminLayout(pageContent) {
+  const layoutRes = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/layout.html"
+  );
+
+  if (!layoutRes.ok) {
+    throw new Error("Failed to load admin layout");
+  }
+
+  const layoutHtml = await layoutRes.text();
+  return layoutHtml.replace("{{CONTENT}}", pageContent);
+}
 
 async function renderAdminMonitoringHTML() {
   const res = await fetch(
@@ -967,10 +979,14 @@ if (
   (url.pathname === "/admin" || url.pathname === "/admin/") &&
   request.method === "GET"
 ) {
-  return text(await renderAdminHubHTML(), 200, {
+  const page = await renderAdminHubHTML();
+  const wrapped = await renderAdminLayout(page);
+
+  return text(wrapped, 200, {
     "content-type": "text/html; charset=utf-8",
   });
 }
+
 if (url.pathname === "/admin/customers" && request.method === "GET") {
   return text(await renderAdminCustomersHTML(), 200, {
     "content-type": "text/html; charset=utf-8",
