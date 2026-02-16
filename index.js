@@ -1425,7 +1425,7 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
       }
     });
 
-    ctx.waitUntil(cache.put(cacheKey, response.clone()));
+    await cache.put(cacheKey, response.clone());
 
     return response;
 
