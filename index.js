@@ -1254,129 +1254,81 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
 
   try {
 
-    const FEEDS = [
-      { group: "Webex Meetings", url: "https://status.webex.com/history/rss/webex-meetings" },
-      { group: "Webex App", url: "https://status.webex.com/history/rss/webex-app" },
-      { group: "Webex Messaging", url: "https://status.webex.com/history/rss/webex-messaging" },
-      { group: "Webex User Hub", url: "https://status.webex.com/history/rss/webex-user-hub" },
-      { group: "Webex Control Hub", url: "https://status.webex.com/history/rss/webex-control-hub" },
-      { group: "Webex Cloud Registered Device", url: "https://status.webex.com/history/rss/webex-cloud-registered-device" },
-      { group: "Webex Hybrid Services", url: "https://status.webex.com/history/rss/webex-hybrid-services" },
-      { group: "Webex Events", url: "https://status.webex.com/history/rss/webex-events" },
-      { group: "Slido", url: "https://status.webex.com/history/rss/slido" },
-
-      { group: "Webex Calling", url: "https://status.webex.com/history/rss/webex-calling" },
-      { group: "Cisco BroadCloud", url: "https://status.webex.com/history/rss/cisco-broadcloud" },
-      { group: "Dedicated Instance/UCM Cloud", url: "https://status.webex.com/history/rss/dedicated-instance-ucm-cloud" },
-      { group: "Webex for BroadWorks", url: "https://status.webex.com/history/rss/webex-for-broadworks" },
-      { group: "Gateway and Solutions", url: "https://status.webex.com/history/rss/gateway-and-solutions" },
-
-      { group: "Webex Contact Center", url: "https://status.webex.com/history/rss/webex-contact-center" },
-      { group: "Webex Contact Center Enterprise", url: "https://status.webex.com/history/rss/webex-contact-center-enterprise" },
-      { group: "Developer API", url: "https://status.webex.com/history/rss/developer-api" }
-    ];
-
     const cache = caches.default;
-    const cacheKey = new Request("https://internal-cache/webex-incidents-multi");
+    const cacheKey = new Request("https://internal-cache/webex-incidents-json");
 
     const cached = await cache.match(cacheKey);
     if (cached) return cached;
 
-    async function fetchFeed(feed) {
+    const upstream = await fetch(
+      "https://status.webex.com/api/v2/incidents.json",
+      { headers: { Accept: "application/json" } }
+    );
 
-      const res = await fetch(feed.url, {
-        headers: { "Accept": "application/rss+xml, application/xml" }
-      });
-
-      if (!res.ok) return [];
-
-      const text = await res.text();
-
-      const items = [...text.matchAll(/<item[\s\S]*?<\/item>/g)];
-
-      return items.map(match => {
-
-        const block = match[0];
-
-        const title =
-          (block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || "Incident";
-
-        const pubDate =
-          (block.match(/<pubDate>(.*?)<\/pubDate>/) || [])[1] || null;
-
-        const guid =
-          (block.match(/<guid>(.*?)<\/guid>/) || [])[1] || title;
-
-        const descriptionRaw =
-          (block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || "";
-
-        const clean = descriptionRaw
-          .replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1")
-          .replace(/<[^>]+>/g, "")
-          .replace(/\s+/g, " ")
-          .trim();
-
-        const lower = clean.toLowerCase();
-
-        let status = "investigating";
-
-        if (lower.includes("resolved") || lower.includes("completed")) {
-          status = "resolved";
-        }
-        else if (lower.includes("monitoring")) {
-          status = "monitoring";
-        }
-        else if (lower.includes("identified")) {
-          status = "identified";
-        }
-
-        return {
-          id: guid,
-          name: title,
-          created: pubDate,
-          status,
-          productGroup: feed.group,
-          impact: "incident",
-          updates: [
-            {
-              status,
-              updated: pubDate,
-              body: clean.slice(0, 1500)
-            }
-          ]
-        };
-      });
+    if (!upstream.ok) {
+      return json({
+        error: "incident_upstream_failed",
+        status: upstream.status
+      }, 502);
     }
 
-    const results = await Promise.all(FEEDS.map(fetchFeed));
+    const data = await upstream.json();
 
-    const allIncidents = [];
-    const seen = new Set();
+    const incidents = (data.incidents || []).map(i => {
 
-    for (const groupItems of results) {
-      for (const item of groupItems) {
-        if (!seen.has(item.id)) {
-          seen.add(item.id);
-          allIncidents.push(item);
-        }
-      }
-    }
+      // Extract region from name if possible
+      let location = "Global";
+      if (i.name?.match(/US Region/i)) location = "US Region";
+      else if (i.name?.match(/Canada/i)) location = "Canada";
+      else if (i.name?.match(/EMEA/i)) location = "EMEA";
+      else if (i.name?.match(/APAC/i)) location = "APAC";
 
-    const active = allIncidents.filter(i =>
+      // Sector
+      let sector = "Commercial";
+      if (i.name?.match(/Government/i)) sector = "Government";
+
+      return {
+        id: i.id,
+        externalId: i.external_id || i.id,   // 🔥 Reference number
+        name: i.name,
+        status: i.status,
+        created_at: i.created_at,
+        updated_at: i.updated_at,
+        impact: i.impact,
+
+        location,
+        sector,
+
+        components: (i.components || []).map(c => ({
+          id: c.id,
+          name: c.name,
+          group: c.group
+        })),
+
+        updates: (i.incident_updates || []).map(u => ({
+          id: u.id,
+          status: u.status,
+          created_at: u.created_at,
+          body: u.body
+        }))
+      };
+    });
+
+    const active = incidents.filter(i =>
       ["investigating", "identified", "monitoring"].includes(i.status)
     );
 
-    const responsePayload = {
-      incidents: allIncidents,
+    const payload = {
+      incidents,
       active,
       counts: {
         active: active.length,
-        total: allIncidents.length
+        total: incidents.length
       },
       lastUpdated: new Date().toISOString()
     };
 
-    const response = new Response(JSON.stringify(responsePayload), {
+    const response = new Response(JSON.stringify(payload), {
       headers: {
         "content-type": "application/json",
         "cache-control": "public, max-age=300"
@@ -1388,12 +1340,10 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
     return response;
 
   } catch (e) {
-
     return json({
       error: "incident_engine_failed",
       message: e.message
     }, 500);
-
   }
 }
 
