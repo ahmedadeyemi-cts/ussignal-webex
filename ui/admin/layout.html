@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Signal | Admin Portal</title>
+
+<style>
+:root{
+  --bg:#f4f6f9;
+  --sidebar:#0f172a;
+  --sidebar-text:#e2e8f0;
+  --card:#ffffff;
+  --text:#1e293b;
+  --muted:#64748b;
+  --accent:#0f62fe;
+  --danger:#dc2626;
+  --success:#16a34a;
+}
+
+[data-theme="dark"]{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --text:#e2e8f0;
+}
+
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  height:100vh;
+}
+
+/* Sidebar */
+.sidebar{
+  width:250px;
+  background:var(--sidebar);
+  color:var(--sidebar-text);
+  display:flex;
+  flex-direction:column;
+  padding:20px;
+}
+
+.sidebar h2{
+  font-size:16px;
+  margin-bottom:30px;
+}
+
+.nav-link{
+  padding:10px 12px;
+  border-radius:8px;
+  text-decoration:none;
+  color:var(--sidebar-text);
+  margin-bottom:6px;
+  font-size:14px;
+}
+
+.nav-link:hover{
+  background:rgba(255,255,255,.08);
+}
+
+.nav-link.active{
+  background:var(--accent);
+}
+
+/* Main */
+.main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:18px 24px;
+  background:var(--card);
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+.content{
+  padding:30px;
+  overflow:auto;
+}
+
+button{
+  padding:8px 14px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+}
+
+.btn-primary{
+  background:var(--accent);
+  color:white;
+}
+
+.btn-outline{
+  background:none;
+  border:1px solid var(--muted);
+}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h2>Partner Admin</h2>
+
+  <a href="/admin" class="nav-link">Executive</a>
+  <a href="/admin/customers" class="nav-link">Customers</a>
+  <a href="/admin/analytics" class="nav-link">Analytics</a>
+  <a href="/admin/licenses" class="nav-link">Licenses</a>
+  <a href="/admin/devices" class="nav-link">Devices</a>
+  <a href="/admin/alerts" class="nav-link">Alerts</a>
+  <a href="/admin/support" class="nav-link">Support Model</a>
+  <a href="/admin/implementation" class="nav-link">Implementation</a>
+  <a href="/admin/pstn" class="nav-link">PSTN Models</a>
+  <a href="/admin/tenant-resolution" class="nav-link">Tenant Debug</a>
+</div>
+
+<div class="main">
+
+  <div class="header">
+    <div><strong>US Signal Webex Managed Service</strong></div>
+    <div>
+      <button class="btn-outline" onclick="toggleTheme()">Theme</button>
+      <button class="btn-primary" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- PAGE CONTENT INJECTS HERE -->
+    {{CONTENT}}
+  </div>
+
+</div>
+
+<script>
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme");
+  document.documentElement.setAttribute("data-theme",
+    cur === "dark" ? "light" : "dark");
+}
+
+async function logout(){
+  await fetch("/api/pin/logout",{method:"POST"});
+  window.location.href="/pin";
+}
+</script>
+
+</body>
+</html>
