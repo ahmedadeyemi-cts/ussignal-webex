@@ -1023,7 +1023,7 @@ if (url.pathname === "/admin/analytics" && request.method === "GET") {
 }
 
 if (url.pathname === "/admin/licenses" && request.method === "GET") {
-  return text(await renderAdminLicensesHTML(), 200, {
+  return text(await renderAdminLayoutHTML(), 200, {
     "content-type": "text/html; charset=utf-8",
   });
 }
