@@ -122,13 +122,25 @@ button{
 
 <div class="main">
 
-  <div class="header">
-    <div><strong>US Signal Webex Managed Service</strong></div>
-    <div>
-      <button class="btn-outline" onclick="toggleTheme()">Theme</button>
-      <button class="btn-primary" onclick="logout()">Logout</button>
+  <div class="header" style="display:flex; justify-content:space-between; align-items:center;">
+
+  <div style="display:flex; align-items:center; gap:14px;">
+    <img 
+      src="https://webex.onenecklab.com/assets/ussignal-logo.jpg"
+      style="height:32px;"
+    />
+    <div style="font-weight:700; font-size:15px;">
+      Webex Managed Service Platform
     </div>
   </div>
+
+  <div style="display:flex; gap:12px;">
+    <button class="btn-outline" onclick="toggleTheme()">Theme</button>
+    <button class="btn-primary" onclick="logout()">Logout</button>
+  </div>
+
+</div>
+
 
   <div class="content">
     {{CONTENT}}
