@@ -457,13 +457,42 @@
 </head>
 
 <body>
-<div class="header">
-  <div class="logo">
-    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
-    <h1>Webex Status</h1>
-  </div>
+<div class="app">
 
-      <div class="nav">
+  <!-- =========================
+       SIDEBAR
+  ========================== -->
+  <aside class="sidebar">
+
+    <div class="brand">
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" style="height:38px;width:auto;" />
+      <div>
+        <h1>US Signal</h1>
+        <span class="sub">Webex Partner Portal</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="/customer">Dashboard</a>
+      <a href="/customer/maintenance">Maintenance</a>
+      <a class="active" href="/customer/status">Status</a>
+      <a href="/customer/incidents">Incidents</a>
+
+      <div class="hint">
+        Status is global (Webex). Tenant context is shown for visibility.
+      </div>
+    </nav>
+
+    <div style="margin-top:16px;">
+      <div id="tenantBadge" class="badge" style="display:none;"></div>
+    </div>
+
+  </aside>
+
+  <!-- =========================
+       MAIN
+  ========================== -->
+  <main class="main">
         <a href="/customer">Dashboard</a>
         <a href="/customer/maintenance">Maintenance</a>
         <a class="active" href="/customer/status">Status</a>
@@ -475,7 +504,7 @@
       <div style="margin-top:16px;">
         <div id="tenantBadge" class="badge" style="display:none;"></div>
       </div>
-    </aside>
+    </side>
 
     <!-- =========================
          MAIN
