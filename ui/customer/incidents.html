@@ -1,69 +1,102 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <title>US Signal | Webex Incidents</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 
 <style>
-/* =========================================================
-   US SIGNAL – WEBEX STYLE INCIDENT VIEW
-   Matches Maintenance UI
-========================================================= */
+/* =======================================================
+   US SIGNAL – ENTERPRISE INCIDENT DASHBOARD
+======================================================= */
 
 :root{
-  --bg:#f6f8fb;
+  --bg:#f4f7fb;
+  --sidebar:#ffffff;
   --card:#ffffff;
-  --border:#e6edf6;
+  --border:#e5edf6;
   --text:#0f172a;
   --muted:#64748b;
   --accent:#2563eb;
-  --greenRow:#e6f3df;
+  --green:#16a34a;
+  --yellow:#f59e0b;
+  --red:#dc2626;
   --rowHover:#f2f7ff;
-  --shadow:0 10px 26px rgba(15,23,42,.08);
+  --expanded:#eaf3ff;
+  --shadow:0 12px 28px rgba(15,23,42,.08);
 }
 
 html[data-theme="dark"]{
   --bg:#0b1220;
-  --card:#0f172a;
+  --sidebar:#0f172a;
+  --card:#111827;
   --border:#1f2a3a;
   --text:#e5e7eb;
   --muted:#94a3b8;
-  --accent:#3b82f6;
-  --greenRow:rgba(40,80,40,.4);
-  --rowHover:rgba(59,130,246,.10);
+  --rowHover:rgba(59,130,246,.12);
+  --expanded:rgba(59,130,246,.18);
 }
 
-*{ box-sizing:border-box; font-family:system-ui,-apple-system,Segoe UI,Roboto; }
+*{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto;}
+
 body{
   margin:0;
   background:var(--bg);
   color:var(--text);
+  display:flex;
+  min-height:100vh;
 }
 
-/* ================= HEADER ================= */
-.header{
+/* ================= SIDEBAR ================= */
+
+.sidebar{
+  width:220px;
+  background:var(--sidebar);
+  border-right:1px solid var(--border);
+  padding:24px 16px;
+}
+
+.sidebar img{
+  width:150px;
+  margin-bottom:30px;
+}
+
+.nav-link{
+  display:block;
+  padding:10px 12px;
+  border-radius:8px;
+  text-decoration:none;
+  color:var(--text);
+  font-weight:600;
+  margin-bottom:8px;
+}
+
+.nav-link:hover{
+  background:var(--rowHover);
+}
+
+/* ================= MAIN ================= */
+
+.main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+
+/* Header */
+
+.topbar{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  padding:18px 24px;
+  padding:20px 28px;
   background:var(--card);
   border-bottom:1px solid var(--border);
 }
 
-.logo{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.logo img{
-  height:38px;
-}
-
-.header h1{
+.topbar h1{
   margin:0;
-  font-size:18px;
+  font-size:20px;
   font-weight:800;
 }
 
@@ -73,11 +106,11 @@ body{
 }
 
 .btn{
-  padding:9px 14px;
-  border-radius:12px;
+  padding:8px 14px;
+  border-radius:10px;
   border:1px solid var(--border);
   background:transparent;
-  font-weight:700;
+  font-weight:600;
   cursor:pointer;
 }
 
@@ -87,14 +120,42 @@ body{
   border:none;
 }
 
+/* ================= DASHBOARD SUMMARY ================= */
+
+.summary{
+  display:flex;
+  gap:20px;
+  padding:20px 28px;
+}
+
+.summaryCard{
+  flex:1;
+  background:var(--card);
+  border-radius:16px;
+  padding:20px;
+  border:1px solid var(--border);
+  box-shadow:var(--shadow);
+}
+
+.summaryCard h3{
+  margin:0 0 8px;
+  font-size:14px;
+  color:var(--muted);
+}
+
+.summaryCard .value{
+  font-size:28px;
+  font-weight:800;
+}
+
 /* ================= TABLE ================= */
 
 .panel{
-  margin:20px;
+  margin:0 28px 28px;
   background:var(--card);
   border-radius:16px;
-  box-shadow:var(--shadow);
   border:1px solid var(--border);
+  box-shadow:var(--shadow);
   overflow:hidden;
 }
 
@@ -128,7 +189,7 @@ tbody td{
 }
 
 .dataRow.expanded{
-  background:var(--greenRow);
+  background:var(--expanded);
 }
 
 .badge{
@@ -138,21 +199,19 @@ tbody td{
   font-weight:700;
 }
 
-.badge.investigating{ background:#fef3c7; color:#92400e; }
-.badge.identified{ background:#dbeafe; color:#1e3a8a; }
-.badge.monitoring{ background:#e0f2fe; color:#075985; }
-.badge.resolved{ background:#dcfce7; color:#166534; }
+.active{ background:#fee2e2;color:#991b1b; }
+.resolved{ background:#dcfce7;color:#166534; }
 
 .expandArrow{
-  transition:transform .2s;
   display:inline-block;
+  transition:.2s;
 }
 
 .dataRow.expanded .expandArrow{
   transform:rotate(90deg);
 }
 
-/* ================= DETAIL ================= */
+/* Detail Row */
 
 .detailRow{
   display:none;
@@ -172,61 +231,65 @@ tbody td{
   margin-bottom:6px;
 }
 
-.emailBtn{
-  padding:6px 10px;
-  border-radius:8px;
-  background:var(--accent);
-  color:#fff;
-  font-size:12px;
-  border:none;
-  cursor:pointer;
-}
-
-.redirectBtn{
-  margin-top:14px;
-  padding:8px 14px;
-  border-radius:10px;
-  background:#111;
-  color:#fff;
-  font-weight:600;
-  border:none;
-  cursor:pointer;
-}
-
 </style>
 </head>
-
 <body>
 
-<div class="header">
-  <div class="logo">
-    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
-    <h1>Webex Incidents</h1>
-  </div>
-
-  <div class="actions">
-    <button class="btn" onclick="toggleTheme()">Toggle Theme</button>
-    <button class="btn primary" onclick="loadIncidents(true)">Refresh</button>
-  </div>
+<!-- ================= SIDEBAR ================= -->
+<div class="sidebar">
+  <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg"/>
+  <a class="nav-link" href="/customer">Dashboard</a>
+  <a class="nav-link" href="/customer/status">Status</a>
+  <a class="nav-link" href="/customer/maintenance">Maintenance</a>
+  <a class="nav-link" href="/customer/incidents">Incidents</a>
 </div>
 
-<div class="panel">
-  <table>
-    <thead>
-      <tr>
-        <th>Reference #</th>
-        <th>Occur Date</th>
-        <th>Location</th>
-        <th>Sector</th>
-        <th>Webex Service</th>
-        <th>Description</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="incidentBody">
-      <tr><td colspan="7">Loading...</td></tr>
-    </tbody>
-  </table>
+<!-- ================= MAIN ================= -->
+<div class="main">
+
+  <div class="topbar">
+    <h1>Webex Incidents</h1>
+    <div class="actions">
+      <button class="btn" onclick="toggleTheme()">Toggle Theme</button>
+      <button class="btn primary" onclick="loadIncidents()">Refresh</button>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary">
+    <div class="summaryCard">
+      <h3>Active Incidents</h3>
+      <div class="value" id="activeCount">0</div>
+    </div>
+    <div class="summaryCard">
+      <h3>Resolved Incidents</h3>
+      <div class="value" id="resolvedCount">0</div>
+    </div>
+    <div class="summaryCard">
+      <h3>Total Incidents</h3>
+      <div class="value" id="totalCount">0</div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="panel">
+    <table>
+      <thead>
+        <tr>
+          <th>Reference</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Services</th>
+          <th>Description</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="incidentBody">
+        <tr><td colspan="6">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
 </div>
 
 <script>
@@ -246,66 +309,62 @@ async function fetchIncidents(){
   return await res.json();
 }
 
-/* ================= RENDER ================= */
+/* ================= LOAD ================= */
 
-async function loadIncidents(force){
+async function loadIncidents(){
 
   const data=await fetchIncidents();
-  if(!data){
-    document.getElementById("incidentBody").innerHTML=
-      `<tr><td colspan="7">Unable to load incidents.</td></tr>`;
-    return;
-  }
+  if(!data) return;
 
   const items=data.incidents||[];
+
+  const activeStatuses=["investigating","identified","monitoring"];
+  const active=items.filter(i=>activeStatuses.includes((i.status||"").toLowerCase()));
+  const resolved=items.filter(i=>(i.status||"").toLowerCase()==="resolved");
+
+  document.getElementById("activeCount").textContent=active.length;
+  document.getElementById("resolvedCount").textContent=resolved.length;
+  document.getElementById("totalCount").textContent=items.length;
 
   let html="";
 
   items.forEach((i,index)=>{
 
     const id=`detail-${index}`;
-    const ref=i.externalId||"—";
-    const date=i.created_at?new Date(i.created_at).toLocaleString():"—";
-    const location=i.location||"—";
-    const sector=i.sector||"Commercial";
-    const service=(i.components||[]).map(c=>c.name).join(", ");
-    const desc=i.name||"—";
+    const status=(i.status||"").toLowerCase();
+    const isActive=activeStatuses.includes(status);
 
     html+=`
       <tr class="dataRow" onclick="toggleDetail('${id}',this)">
-        <td>${ref}</td>
-        <td>${date}</td>
-        <td>${location}</td>
-        <td>${sector}</td>
-        <td>${service}</td>
-        <td>${desc}</td>
+        <td>${i.external_id||i.id||"—"}</td>
+        <td>
+          <span class="badge ${isActive?"active":"resolved"}">
+            ${isActive?"Active":"Resolved"}
+          </span>
+        </td>
+        <td>${i.created_at?new Date(i.created_at).toLocaleString():"—"}</td>
+        <td>${(i.components||[]).map(c=>c.name).join(", ")}</td>
+        <td>${i.name||"—"}</td>
         <td><span class="expandArrow">▶</span></td>
       </tr>
 
       <tr id="${id}" class="detailRow">
-        <td colspan="7">
+        <td colspan="6">
           <div class="detailCard">
-
-            ${(i.updates||[]).map(u=>`
+            ${(i.incident_updates||i.updates||[]).map(u=>`
               <div class="timelineItem">
                 <strong>${u.status}</strong>
                 ${u.body||""}
-                <div style="font-size:12px;color:#64748b;margin-top:6px;">
+                <div style="font-size:12px;color:#64748b;">
                   ${u.created_at?new Date(u.created_at).toLocaleString():""}
                 </div>
               </div>
             `).join("")}
 
-            <button class="emailBtn"
-              onclick="event.stopPropagation();notify('${i.id}')">
-              Email Update
-            </button>
-
-            <button class="redirectBtn"
-              onclick="window.open('https://status.webex.com/incident/history?lang=en_US','_blank')">
+            <button class="btn primary"
+              onclick="event.stopPropagation();window.open('https://status.webex.com/incident/history?lang=en_US','_blank')">
               View on Webex Status
             </button>
-
           </div>
         </td>
       </tr>
@@ -330,22 +389,7 @@ function toggleDetail(id,row){
   }
 }
 
-/* ================= EMAIL ================= */
-
-async function notify(id){
-  const email=prompt("Enter your email address:");
-  if(!email) return;
-
-  await fetch("/api/incidents/notify",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({incidentId:id,email})
-  });
-
-  alert("Notification request sent.");
-}
-
-loadIncidents(false);
+loadIncidents();
 
 </script>
 
