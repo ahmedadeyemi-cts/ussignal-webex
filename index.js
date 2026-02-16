@@ -1239,107 +1239,84 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
 // /api/status (GET) — maintenance-style with upstream fallback
 if (url.pathname === "/api/status" && request.method === "GET") {
 
-  let user;
-  try {
-    user = getCurrentUser(request);
-  } catch (e) {
-    return json({ error: "auth_failed", message: e.message }, 401);
-  }
-
+  const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
 
   if (!user.isAdmin) {
-    if (!session || !session.orgId) return json({ error: "pin_required" }, 401);
-
-    if (session.expiresAt && session.expiresAt <= nowMs()) {
-      await clearSession(env, user.email);
-      return new Response(null, {
-        status: 302,
-        headers: { Location: "/pin?expired=1", "cache-control": "no-store" }
-      });
+    if (!session || !session.orgId) {
+      return json({ error: "pin_required" }, 401);
     }
   }
 
   try {
-    const cacheSeconds = 60;
 
-    return await cacheJson(
-      cacheSeconds,
-      "https://internal-cache/webex-status-v3",
-      async () => {
+    const res = await fetch("https://status.webex.com/components.json");
+    if (!res.ok) {
+      return json({ error: "status_fetch_failed" }, 500);
+    }
 
-        // Try multiple known patterns (Webex has changed these before)
-        const summaryTry = await fetchJsonFirstOk([
-          "https://status.webex.com/summary.json",
-          "https://status.webex.com/api/v2/summary.json",
-          "https://status.webex.com/api/v2/summary.json?lang=en_US",
-          "https://status.webex.com/api/v2/summary.json?locale=en-US"
-        ]);
+    const raw = await res.json();
 
-        // Components endpoint you already use successfully
-        const compsTry = await fetchJsonFirstOk([
-          "https://status.webex.com/components.json",
-          "https://status.webex.com/api/v2/components.json",
-          "https://status.webex.com/api/v2/components.json?lang=en_US"
-        ]);
+    const groups = {};
 
-        if (!summaryTry.ok && !compsTry.ok) {
-          return {
-            ok: false,
-            error: "status_upstream_not_json",
-            summaryDebug: summaryTry.debug,
-            componentsDebug: compsTry.debug,
-            lastUpdated: new Date().toISOString()
-          };
-        }
+    (raw.components || []).forEach(c => {
 
-        const summaryJson = summaryTry.ok ? summaryTry.json : null;
-        const compsJson = compsTry.ok ? compsTry.json : null;
+      const groupName = c.group || c.name;
 
-        // Statuspage-like shapes:
-        // summaryJson.status / summaryJson.page / compsJson.components
-        const status = summaryJson?.status || summaryJson?.page?.status || {};
-
-        const rawComponents =
-          compsJson?.components ||
-          summaryJson?.components ||
-          [];
-
-        const components = (rawComponents || []).map(c => ({
-          id: c.id,
-          name: c.name,
-          status: c.status || c.state || "unknown",
-          group: c.group || c.group_name || c?.group?.name || null,
-          updated_at: c.updated_at || c.updatedAt || null
-        }));
-
-        const grouped = {};
-        for (const c of components) {
-          const g = c.group || "Other";
-          if (!grouped[g]) grouped[g] = [];
-          grouped[g].push(c);
-        }
-
-        return {
-          ok: true,
-          globalIndicator: status.indicator || status.indicator_name || "unknown",
-          globalDescription: status.description || null,
-          components,
-          grouped,
-          lastUpdated: new Date().toISOString(),
-          debug: {
-            summaryUrl: summaryTry.ok ? summaryTry.url : null,
-            componentsUrl: compsTry.ok ? compsTry.url : null
-          }
+      if (!groups[groupName]) {
+        groups[groupName] = {
+          name: groupName,
+          status: "operational",
+          children: []
         };
       }
-    );
+
+      groups[groupName].children.push({
+        name: c.name,
+        status: c.status
+      });
+    });
+
+    /* ===== Calculate Parent Status ===== */
+
+    Object.values(groups).forEach(group => {
+
+      if (group.children.some(c => c.status === "major_outage" || c.status === "critical")) {
+        group.status = "major_outage";
+      }
+      else if (group.children.some(c => c.status !== "operational")) {
+        group.status = "degraded_performance";
+      }
+      else {
+        group.status = "operational";
+      }
+
+    });
+
+    const components = Object.values(groups);
+
+    const overall =
+      components.some(c => c.status === "major_outage")
+        ? "major_outage"
+        : components.some(c => c.status !== "operational")
+          ? "degraded_performance"
+          : "operational";
+
+    return json({
+      lastUpdated: new Date().toISOString(),
+      overall,
+      components
+    });
 
   } catch (e) {
-    return json({ error: "status_engine_failed", message: e.message }, 500);
+
+    return json({
+      error: "status_engine_failed",
+      message: e.message
+    }, 500);
+
   }
 }
-
       
 //api/incidents block
 // /api/incidents (GET) — maintenance-style with upstream fallback
