@@ -6,10 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
 <style>
-/* =======================================================
-   US SIGNAL – ENTERPRISE INCIDENT DASHBOARD
-======================================================= */
-
 :root{
   --bg:#f4f7fb;
   --sidebar:#ffffff;
@@ -25,7 +21,6 @@
   --expanded:#eaf3ff;
   --shadow:0 12px 28px rgba(15,23,42,.08);
 }
-
 html[data-theme="dark"]{
   --bg:#0b1220;
   --sidebar:#0f172a;
@@ -36,206 +31,51 @@ html[data-theme="dark"]{
   --rowHover:rgba(59,130,246,.12);
   --expanded:rgba(59,130,246,.18);
 }
-
-*{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto;}
-
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  display:flex;
-  min-height:100vh;
-}
-
-/* ================= SIDEBAR ================= */
-
-.sidebar{
-  width:220px;
-  background:var(--sidebar);
-  border-right:1px solid var(--border);
-  padding:24px 16px;
-}
-
-.sidebar img{
-  width:150px;
-  margin-bottom:30px;
-}
-
-.nav-link{
-  display:block;
-  padding:10px 12px;
-  border-radius:8px;
-  text-decoration:none;
-  color:var(--text);
-  font-weight:600;
-  margin-bottom:8px;
-}
-
-.nav-link:hover{
-  background:var(--rowHover);
-}
-
-/* ================= MAIN ================= */
-
-.main{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-}
-
-/* Header */
-
-.topbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:20px 28px;
-  background:var(--card);
-  border-bottom:1px solid var(--border);
-}
-
-.topbar h1{
-  margin:0;
-  font-size:20px;
-  font-weight:800;
-}
-
-.actions{
-  display:flex;
-  gap:10px;
-}
-
-.btn{
-  padding:8px 14px;
-  border-radius:10px;
-  border:1px solid var(--border);
-  background:transparent;
-  font-weight:600;
-  cursor:pointer;
-}
-
-.btn.primary{
-  background:var(--accent);
-  color:#fff;
-  border:none;
-}
-
-/* ================= DASHBOARD SUMMARY ================= */
-
-.summary{
-  display:flex;
-  gap:20px;
-  padding:20px 28px;
-}
-
-.summaryCard{
-  flex:1;
-  background:var(--card);
-  border-radius:16px;
-  padding:20px;
-  border:1px solid var(--border);
-  box-shadow:var(--shadow);
-}
-
-.summaryCard h3{
-  margin:0 0 8px;
-  font-size:14px;
-  color:var(--muted);
-}
-
-.summaryCard .value{
-  font-size:28px;
-  font-weight:800;
-}
-
-/* ================= TABLE ================= */
-
-.panel{
-  margin:0 28px 28px;
-  background:var(--card);
-  border-radius:16px;
-  border:1px solid var(--border);
-  box-shadow:var(--shadow);
-  overflow:hidden;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-}
-
-thead th{
-  text-align:left;
-  font-size:12px;
-  text-transform:uppercase;
-  color:var(--muted);
-  padding:14px;
-  border-bottom:1px solid var(--border);
-}
-
-tbody td{
-  padding:14px;
-  border-bottom:1px solid var(--border);
-  vertical-align:top;
-}
-
-.dataRow{
-  cursor:pointer;
-  transition:.2s;
-}
-
-.dataRow:hover{
-  background:var(--rowHover);
-}
-
-.dataRow.expanded{
-  background:var(--expanded);
-}
-
-.badge{
-  padding:6px 10px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:700;
-}
-
-.active{ background:#fee2e2;color:#991b1b; }
-.resolved{ background:#dcfce7;color:#166534; }
-
-.expandArrow{
-  display:inline-block;
-  transition:.2s;
-}
-
-.dataRow.expanded .expandArrow{
-  transform:rotate(90deg);
-}
-
-/* Detail Row */
-
-.detailRow{
-  display:none;
-}
-
-.detailCard{
-  padding:20px;
-  background:#fafcff;
-}
-
-.timelineItem{
-  margin-bottom:16px;
-}
-
-.timelineItem strong{
-  display:block;
-  margin-bottom:6px;
-}
-
+*{box-sizing:border-box;font-family:system-ui;}
+body{margin:0;background:var(--bg);color:var(--text);display:flex;min-height:100vh;}
+.sidebar{width:230px;background:var(--sidebar);border-right:1px solid var(--border);padding:24px;}
+.sidebar img{width:160px;margin-bottom:30px;}
+.nav-link{display:block;padding:10px 12px;border-radius:8px;text-decoration:none;color:var(--text);font-weight:600;margin-bottom:8px;}
+.nav-link:hover{background:var(--rowHover);}
+.main{flex:1;display:flex;flex-direction:column;}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:20px 28px;background:var(--card);border-bottom:1px solid var(--border);}
+.topbar h1{margin:0;font-size:20px;font-weight:800;}
+.actions{display:flex;gap:10px;align-items:center;}
+.btn{padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;font-weight:600;cursor:pointer;}
+.btn.primary{background:var(--accent);color:#fff;border:none;}
+.controls{display:flex;gap:15px;padding:15px 28px;align-items:center;}
+input[type="text"]{padding:8px 12px;border-radius:8px;border:1px solid var(--border);width:250px;}
+select{padding:8px;border-radius:8px;border:1px solid var(--border);}
+.summary{display:flex;gap:20px;padding:0 28px 20px;}
+.summaryCard{flex:1;background:var(--card);border-radius:16px;padding:20px;border:1px solid var(--border);box-shadow:var(--shadow);}
+.summaryCard h3{margin:0 0 8px;font-size:14px;color:var(--muted);}
+.summaryCard .value{font-size:26px;font-weight:800;}
+.panel{margin:0 28px 28px;background:var(--card);border-radius:16px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;}
+table{width:100%;border-collapse:collapse;}
+thead th{text-align:left;font-size:12px;text-transform:uppercase;color:var(--muted);padding:14px;border-bottom:1px solid var(--border);}
+tbody td{padding:14px;border-bottom:1px solid var(--border);}
+.dataRow{cursor:pointer;transition:.2s;}
+.dataRow:hover{background:var(--rowHover);}
+.dataRow.expanded{background:var(--expanded);}
+.badge{padding:5px 9px;border-radius:999px;font-size:11px;font-weight:700;}
+.active{background:#fee2e2;color:#991b1b;}
+.resolved{background:#dcfce7;color:#166534;}
+.major{background:#fecaca;color:#7f1d1d;}
+.partial{background:#fde68a;color:#92400e;}
+.expandArrow{display:inline-block;transition:.2s;}
+.dataRow.expanded .expandArrow{transform:rotate(90deg);}
+.detailRow{display:none;}
+.detailCard{padding:20px;background:#fafcff;}
+.timelineItem{margin-bottom:15px;}
+.modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;}
+.modal{background:var(--card);padding:25px;border-radius:12px;width:400px;}
+.modal input{width:100%;margin-top:10px;}
+.autoTimer{font-size:12px;color:var(--muted);}
 </style>
 </head>
+
 <body>
 
-<!-- ================= SIDEBAR ================= -->
 <div class="sidebar">
   <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg"/>
   <a class="nav-link" href="/customer">Dashboard</a>
@@ -244,64 +84,86 @@ tbody td{
   <a class="nav-link" href="/customer/incidents">Incidents</a>
 </div>
 
-<!-- ================= MAIN ================= -->
 <div class="main">
 
-  <div class="topbar">
-    <h1>Webex Incidents</h1>
-    <div class="actions">
-      <button class="btn" onclick="toggleTheme()">Toggle Theme</button>
-      <button class="btn primary" onclick="loadIncidents()">Refresh</button>
-    </div>
-  </div>
+<main class="main">
+    <div class="topbar">
+      <div class="pageTitle">
+        <h1>Webex Incidents</h1>
+        <p>US Signal</p>
+      </div>
 
-  <!-- Summary -->
-  <div class="summary">
-    <div class="summaryCard">
-      <h3>Active Incidents</h3>
-      <div class="value" id="activeCount">0</div>
-    </div>
-    <div class="summaryCard">
-      <h3>Resolved Incidents</h3>
-      <div class="value" id="resolvedCount">0</div>
-    </div>
-    <div class="summaryCard">
-      <h3>Total Incidents</h3>
-      <div class="value" id="totalCount">0</div>
-    </div>
-  </div>
+      <div class="actions">
+  <a 
+    href="https://status.webex.com/incident/history?lang=en_US" 
+    target="_blank" 
+    rel="noopener noreferrer"
+    class="btn"
+    style="text-decoration:none; display:inline-flex; align-items:center;"
+  >
+    Webex Maintenance
+  </a>
 
-  <!-- Table -->
-  <div class="panel">
-    <table>
-      <thead>
-        <tr>
-          <th>Reference</th>
-          <th>Status</th>
-          <th>Date</th>
-          <th>Services</th>
-          <th>Description</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="incidentBody">
-        <tr><td colspan="6">Loading...</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <button id="btnTheme" class="btn" type="button">Toggle Theme</button>
+  <button id="btnRefresh" class="btn primary" type="button">Refresh</button>
+</div>
+</div>
 
+<div class="controls">
+  <label><input type="checkbox" id="activeOnly"/> Active Only</label>
+  <input type="text" id="searchInput" placeholder="Search incidents..."/>
+  <select id="productFilter">
+    <option value="">All Products</option>
+  </select>
+</div>
+
+<div class="summary">
+  <div class="summaryCard"><h3>Active</h3><div class="value" id="activeCount">0</div></div>
+  <div class="summaryCard"><h3>Resolved</h3><div class="value" id="resolvedCount">0</div></div>
+  <div class="summaryCard"><h3>Total</h3><div class="value" id="totalCount">0</div></div>
+</div>
+
+<div class="panel">
+<table>
+<thead>
+<tr>
+<th>Reference</th>
+<th>Status</th>
+<th>Severity</th>
+<th>Date</th>
+<th>Products</th>
+<th>Description</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="incidentBody"></tbody>
+</table>
+</div>
+
+</div>
+
+<div class="modalOverlay" id="emailModal">
+<div class="modal">
+<h3>Email Notification</h3>
+<p>Enter your email to receive updates:</p>
+<input type="email" id="notifyEmail"/>
+<br><br>
+<button class="btn primary" onclick="submitNotify()">Submit</button>
+<button class="btn" onclick="closeModal()">Cancel</button>
+</div>
 </div>
 
 <script>
 
-/* ================= THEME ================= */
+let allIncidents=[];
+let refreshInterval=60;
+let timer;
+
 function toggleTheme(){
   const html=document.documentElement;
-  const cur=html.getAttribute("data-theme");
-  html.setAttribute("data-theme",cur==="dark"?"light":"dark");
+  html.setAttribute("data-theme",
+    html.getAttribute("data-theme")==="dark"?"light":"dark");
 }
-
-/* ================= FETCH ================= */
 
 async function fetchIncidents(){
   const res=await fetch("/api/incidents",{cache:"no-store"});
@@ -309,89 +171,152 @@ async function fetchIncidents(){
   return await res.json();
 }
 
-/* ================= LOAD ================= */
-
-async function loadIncidents(){
-
-  const data=await fetchIncidents();
-  if(!data) return;
-
-  const items=data.incidents||[];
-
-  const activeStatuses=["investigating","identified","monitoring"];
-  const active=items.filter(i=>activeStatuses.includes((i.status||"").toLowerCase()));
-  const resolved=items.filter(i=>(i.status||"").toLowerCase()==="resolved");
-
-  document.getElementById("activeCount").textContent=active.length;
-  document.getElementById("resolvedCount").textContent=resolved.length;
-  document.getElementById("totalCount").textContent=items.length;
-
-  let html="";
-
-  items.forEach((i,index)=>{
-
-    const id=`detail-${index}`;
-    const status=(i.status||"").toLowerCase();
-    const isActive=activeStatuses.includes(status);
-
-    html+=`
-      <tr class="dataRow" onclick="toggleDetail('${id}',this)">
-        <td>${i.external_id||i.id||"—"}</td>
-        <td>
-          <span class="badge ${isActive?"active":"resolved"}">
-            ${isActive?"Active":"Resolved"}
-          </span>
-        </td>
-        <td>${i.created_at?new Date(i.created_at).toLocaleString():"—"}</td>
-        <td>${(i.components||[]).map(c=>c.name).join(", ")}</td>
-        <td>${i.name||"—"}</td>
-        <td><span class="expandArrow">▶</span></td>
-      </tr>
-
-      <tr id="${id}" class="detailRow">
-        <td colspan="6">
-          <div class="detailCard">
-            ${(i.incident_updates||i.updates||[]).map(u=>`
-              <div class="timelineItem">
-                <strong>${u.status}</strong>
-                ${u.body||""}
-                <div style="font-size:12px;color:#64748b;">
-                  ${u.created_at?new Date(u.created_at).toLocaleString():""}
-                </div>
-              </div>
-            `).join("")}
-
-            <button class="btn primary"
-              onclick="event.stopPropagation();window.open('https://status.webex.com/incident/history?lang=en_US','_blank')">
-              View on Webex Status
-            </button>
-          </div>
-        </td>
-      </tr>
-    `;
-  });
-
-  document.getElementById("incidentBody").innerHTML=html;
+function classifySeverity(i){
+  const impact=(i.impact||"").toLowerCase();
+  if(impact.includes("major")) return "major";
+  if(impact.includes("partial")) return "partial";
+  return "resolved";
 }
 
-/* ================= TOGGLE ================= */
+function groupProducts(items){
+  const set=new Set();
+  items.forEach(i=>{
+    (i.components||[]).forEach(c=>set.add(c.group||c.name));
+  });
+  const select=document.getElementById("productFilter");
+  set.forEach(p=>{
+    const opt=document.createElement("option");
+    opt.value=p;
+    opt.textContent=p;
+    select.appendChild(opt);
+  });
+}
+
+function render(){
+  const activeOnly=document.getElementById("activeOnly").checked;
+  const search=document.getElementById("searchInput").value.toLowerCase();
+  const filter=document.getElementById("productFilter").value;
+
+  let items=allIncidents;
+
+  if(activeOnly){
+    items=items.filter(i=>["investigating","identified","monitoring"]
+      .includes((i.status||"").toLowerCase()));
+  }
+
+  if(search){
+    items=items.filter(i=>
+      (i.name||"").toLowerCase().includes(search) ||
+      (i.external_id||"").toLowerCase().includes(search)
+    );
+  }
+
+  if(filter){
+    items=items.filter(i=>
+      (i.components||[]).some(c=>(c.group||c.name)===filter)
+    );
+  }
+
+  document.getElementById("activeCount").textContent=
+    allIncidents.filter(i=>["investigating","identified","monitoring"]
+    .includes((i.status||"").toLowerCase())).length;
+
+  document.getElementById("resolvedCount").textContent=
+    allIncidents.filter(i=>(i.status||"").toLowerCase()==="resolved").length;
+
+  document.getElementById("totalCount").textContent=allIncidents.length;
+
+  const tbody=document.getElementById("incidentBody");
+  tbody.innerHTML="";
+
+  items.forEach((i,index)=>{
+    const id=`detail-${index}`;
+    const severity=classifySeverity(i);
+    const active=["investigating","identified","monitoring"]
+      .includes((i.status||"").toLowerCase());
+
+    tbody.innerHTML+=`
+    <tr class="dataRow" onclick="toggleDetail('${id}',this)">
+      <td>${i.external_id||i.id}</td>
+      <td><span class="badge ${active?"active":"resolved"}">
+        ${active?"Active":"Resolved"}</span></td>
+      <td><span class="badge ${severity}">${severity.toUpperCase()}</span></td>
+      <td>${i.created_at?new Date(i.created_at).toLocaleString():"—"}</td>
+      <td>${(i.components||[]).map(c=>c.name).join(", ")}</td>
+      <td>${i.name}</td>
+      <td><span class="expandArrow">▶</span></td>
+    </tr>
+    <tr id="${id}" class="detailRow">
+      <td colspan="7">
+        <div class="detailCard">
+          ${(i.updates||[]).map(u=>`
+            <div class="timelineItem">
+              <strong>${u.status}</strong>
+              ${u.body}
+            </div>`).join("")}
+          <button class="btn primary" onclick="openModal(event)">Email Update</button>
+        </div>
+      </td>
+    </tr>`;
+  });
+}
 
 function toggleDetail(id,row){
   const detail=document.getElementById(id);
   const isOpen=detail.style.display==="table-row";
-
   document.querySelectorAll(".detailRow").forEach(d=>d.style.display="none");
   document.querySelectorAll(".dataRow").forEach(r=>r.classList.remove("expanded"));
-
   if(!isOpen){
     detail.style.display="table-row";
     row.classList.add("expanded");
   }
 }
 
-loadIncidents();
+function openModal(e){
+  e.stopPropagation();
+  document.getElementById("emailModal").style.display="flex";
+}
+function closeModal(){
+  document.getElementById("emailModal").style.display="none";
+}
+function submitNotify(){
+  const email=document.getElementById("notifyEmail").value;
+  alert("Notification registered for "+email);
+  closeModal();
+}
+
+function startAutoRefresh(){
+  updateTimer();
+  timer=setInterval(()=>{
+    refreshInterval--;
+    updateTimer();
+    if(refreshInterval===0){
+      refreshInterval=60;
+      loadIncidents();
+    }
+  },1000);
+}
+function updateTimer(){
+  document.getElementById("timerLabel")
+    .textContent="Auto refresh in "+refreshInterval+"s";
+}
+
+async function loadIncidents(){
+  const data=await fetchIncidents();
+  if(!data) return;
+  allIncidents=data.incidents||[];
+  render();
+}
+
+document.getElementById("activeOnly").addEventListener("change",render);
+document.getElementById("searchInput").addEventListener("input",render);
+document.getElementById("productFilter").addEventListener("change",render);
+
+loadIncidents().then(()=>{
+  groupProducts(allIncidents);
+  startAutoRefresh();
+});
 
 </script>
-
 </body>
 </html>
