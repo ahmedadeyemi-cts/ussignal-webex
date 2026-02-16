@@ -1316,64 +1316,63 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
 
   try {
 
-    const headers = {
-      "Accept": "application/json",
-      "User-Agent": "USSignal-Webex-Portal"
-    };
+  const headers = {
+    "Accept": "application/json, text/plain, */*",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36"
+  };
 
-    // Fetch all 3 views
-    const [upcomingRes, activeRes, allRes] = await Promise.all([
-      fetch("https://status.webex.com/api/upcoming-scheduled-maintenances.json", { headers }),
-      fetch("https://status.webex.com/api/active-scheduled-maintenances.json", { headers }),
-      fetch("https://status.webex.com/api/all-scheduled-maintenances.json", { headers })
-    ]);
-
-    async function safeParse(res, label) {
-      const text = await res.text();
-
-      if (!res.ok) {
-        throw new Error(`${label} failed: ${res.status} ${text.slice(0,200)}`);
+  async function fetchJson(url, label) {
+    const res = await fetch(url, {
+      headers,
+      cf: {
+        cacheTtl: 300,
+        cacheEverything: false
       }
-
-      try {
-        return JSON.parse(text);
-      } catch {
-        throw new Error(`${label} returned non-JSON`);
-      }
-    }
-
-    const upcomingData = await safeParse(upcomingRes, "upcoming");
-    const activeData = await safeParse(activeRes, "active");
-    const allData = await safeParse(allRes, "all");
-
-    const upcoming = upcomingData.scheduled_maintenances || [];
-    const active = activeData.scheduled_maintenances || [];
-    const all = allData.scheduled_maintenances || [];
-
-    // Normalize combined list
-    const combined = [...all];
-
-    return json({
-      maintenance: combined,
-      upcoming,
-      active,
-      recent: all,
-      counts: {
-        upcoming: upcoming.length,
-        active: active.length,
-        total: all.length
-      },
-      lastUpdated: new Date().toISOString()
     });
 
-  } catch (e) {
+    const text = await res.text();
 
-    return json({
-      error: "status_api_failed",
-      message: e.message
-    }, 502);
+    if (!res.ok) {
+      throw new Error(`${label} failed: ${res.status} ${text.slice(0,200)}`);
+    }
 
+    if (!text.trim().startsWith("{")) {
+      throw new Error(`${label} returned non-JSON`);
+    }
+
+    return JSON.parse(text);
   }
+
+  const [upcomingData, activeData, allData] = await Promise.all([
+    fetchJson("https://status.webex.com/api/upcoming-scheduled-maintenances.json", "upcoming"),
+    fetchJson("https://status.webex.com/api/active-scheduled-maintenances.json", "active"),
+    fetchJson("https://status.webex.com/api/all-scheduled-maintenances.json", "all")
+  ]);
+
+  const upcoming = upcomingData.scheduled_maintenances || [];
+  const active = activeData.scheduled_maintenances || [];
+  const all = allData.scheduled_maintenances || [];
+
+  return json({
+    maintenance: all,
+    upcoming,
+    active,
+    recent: all,
+    counts: {
+      upcoming: upcoming.length,
+      active: active.length,
+      total: all.length
+    },
+    lastUpdated: new Date().toISOString()
+  });
+
+} catch (e) {
+
+  return json({
+    error: "status_api_failed",
+    message: e.message
+  }, 502);
+
 }
       /* -----------------------------
          /api/me
