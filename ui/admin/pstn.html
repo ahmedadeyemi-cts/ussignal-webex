@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Signal | PSTN Architecture</title>
+
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.app{
+  display:grid;
+  grid-template-columns:270px 1fr;
+  min-height:100vh;
+}
+
+.sidebar{
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+
+.brand img{height:34px;}
+
+.nav{
+  margin-top:14px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
+}
+
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+.main{padding:22px;}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:18px;
+  margin-bottom:18px;
+}
+
+.card h3{
+  margin-top:0;
+  font-size:15px;
+  font-weight:900;
+}
+
+.card p{
+  font-size:13px;
+  color:var(--muted);
+  line-height:1.6;
+}
+
+.hr{
+  height:1px;
+  background:rgba(15,23,42,.08);
+  margin:16px 0;
+}
+
+.kv{
+  display:grid;
+  grid-template-columns:240px 1fr;
+  gap:10px;
+  font-size:13px;
+}
+
+.kv .k{
+  font-weight:900;
+  color:var(--muted);
+}
+
+.kv .v{
+  font-weight:800;
+}
+
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+  display:inline-block;
+  margin-right:6px;
+}
+
+.badge.good{
+  background:rgba(22,163,74,.10);
+  border:1px solid rgba(22,163,74,.25);
+  color:var(--good);
+}
+
+.badge.warn{
+  background:rgba(245,158,11,.10);
+  border:1px solid rgba(245,158,11,.30);
+  color:#b45309;
+}
+
+.badge.bad{
+  background:rgba(220,38,38,.10);
+  border:1px solid rgba(220,38,38,.30);
+  color:var(--bad);
+}
+
+pre{
+  background:#0f172a;
+  color:#e2e8f0;
+  padding:16px;
+  border-radius:14px;
+  overflow:auto;
+  font-size:12px;
+  line-height:1.55;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<aside class="sidebar">
+  <div class="brand">
+    <img src="/assets/ussignal-logo.jpg"
+         onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
+    <div>
+      <b>Partner Portal</b><br>
+      <span style="font-size:12px;color:#64748b;">Managed Services</span>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/support">Support</a>
+    <a href="/admin/implementation">Implementation</a>
+    <a class="active" href="/admin/pstn">PSTN</a>
+    <a href="/admin/tenant-resolution">Resolution</a>
+  </nav>
+</aside>
+
+<main class="main">
+
+<div class="card">
+<h3>PSTN Architecture & Deployment Models</h3>
+<p>
+US Signal supports all Webex Calling PSTN connectivity models defined in Cisco's PSTN Options framework.
+Our primary architecture leverages Cisco CUBE Local Gateway for enterprise flexibility,
+while also supporting Cisco Calling Plans and Cloud Connected PSTN (CCP) models.
+</p>
+</div>
+
+<!-- Carrier Comparison Matrix -->
+<div class="card">
+<h3>PSTN Model Comparison Matrix</h3>
+
+<div class="kv">
+<div class="k">Cisco Calling Plans</div>
+<div class="v">Cloud-native PSTN provided by Cisco. Porting handled via Control Hub.</div>
+
+<div class="k">Cloud Connected PSTN (CCP)</div>
+<div class="v">Carrier integrated via Cisco cloud. Preferred vendors: CallTower & IntelePeer.</div>
+
+<div class="k">Local Gateway (CUBE)</div>
+<div class="v">On-prem SBC integration with existing carrier SIP or PRI circuits.</div>
+
+<div class="k">Dedicated Instance</div>
+<div class="v">Hosted CUCM with PSTN integration via CUBE or SIP trunk.</div>
+
+<div class="k">Porting Model</div>
+<div class="v">
+Cisco PSTN → Port via Control Hub.<br>
+CCP → Port through carrier.<br>
+Local Gateway → Customer retains current PSTN provider.
+</div>
+
+<div class="k">Redundancy</div>
+<div class="v">
+Cisco PSTN → Cloud redundancy.<br>
+CCP → Carrier redundancy.<br>
+CUBE → Dual router HA supported.
+</div>
+</div>
+</div>
+
+<!-- Cloud Connect -->
+<div class="card">
+<h3>Cloud Connected PSTN (CCP)</h3>
+<span class="badge good">Primary Model</span>
+
+<p>
+US Signal primarily leverages CallTower and IntelePeer for Cloud Connected PSTN.
+If a customer already has a certified CCP provider, we support that provider as well.
+</p>
+
+<div class="hr"></div>
+
+<div class="kv">
+<div class="k">Architecture</div>
+<div class="v">Carrier SIP directly integrated into Webex cloud</div>
+
+<div class="k">Advantages</div>
+<div class="v">No SBC required, simplified compliance, carrier-managed SLA</div>
+
+<div class="k">E911</div>
+<div class="v">Carrier-managed dynamic E911 support</div>
+</div>
+</div>
+
+<!-- Local Gateway -->
+<div class="card">
+<h3>Local Gateway – Cisco CUBE (Primary Competency)</h3>
+<span class="badge good">Core Engineering Focus</span>
+
+<p>
+Cisco CUBE enables advanced dial plan control, hybrid integration,
+legacy analog support, and enterprise survivability models.
+</p>
+
+<div class="kv">
+<div class="k">HA Model</div>
+<div class="v">Active/Standby CUBE HA</div>
+
+<div class="k">SRST</div>
+<div class="v">WAN outage survivability</div>
+
+<div class="k">SBC Interop</div>
+<div class="v">Best-effort support for AudioCodes, Ribbon</div>
+</div>
+</div>
+
+<!-- CUBE HA Dual Router -->
+<div class="card">
+<h3>CUBE HA Dual Router Sample Configuration</h3>
+
+<pre>
+interface GigabitEthernet0/0
+ description WAN
+ ip address 203.0.113.10 255.255.255.248
+ no shut
+
+redundancy
+ mode sso
+ main-cpu
+  standby console enable
+
+voice service voip
+ sip
+  registrar server dns:webex.com
+  bind control source-interface GigabitEthernet0/0
+  bind media source-interface GigabitEthernet0/0
+
+dial-peer voice 100 voip
+ destination-pattern +T
+ session target dns:webex.com
+ codec g711ulaw
+ dtmf-relay rtp-nte
+ no vad
+</pre>
+</div>
+
+<!-- Full CUBE Config -->
+<div class="card">
+<h3>Full CUBE Configuration Sample</h3>
+
+<pre>
+voice service voip
+ ip address trusted list
+  ipv4 0.0.0.0 0.0.0.0
+ sip
+  registrar server dns:webex.com expires 3600
+  authentication username cube password 0 securepassword
+  tls trustpoint Webex-TP
+  bind control source-interface GigabitEthernet0/0
+  bind media source-interface GigabitEthernet0/0
+
+dial-peer voice 101 voip
+ description To Webex
+ destination-pattern +T
+ session protocol sipv2
+ session target dns:webex.com
+ voice-class codec 1
+ dtmf-relay rtp-nte
+ srtp
+ no vad
+
+dial-peer voice 201 voip
+ description To Carrier
+ destination-pattern 9T
+ session protocol sipv2
+ session target ipv4:198.51.100.20
+ voice-class codec 1
+ dtmf-relay rtp-nte
+ no vad
+</pre>
+</div>
+
+<!-- RedSky -->
+<div class="card">
+<h3>RedSky E911 Integration Example</h3>
+
+<pre>
+location corporate
+ network ip-range 10.10.10.0/24
+ address 123 Main St, Des Moines, IA
+
+voice service voip
+ emergency response redsky enable
+</pre>
+
+<p>
+Dynamic E911 routing ensures soft clients and remote devices
+report accurate dispatchable location.
+</p>
+</div>
+
+<!-- PSTN Operational Dashboard -->
+<div class="card">
+<h3>PSTN Operational Dashboard</h3>
+
+<div class="kv">
+<div class="k">Trunk Status</div>
+<div class="v"><span class="badge good">UP</span></div>
+
+<div class="k">SIP OPTIONS Keepalive</div>
+<div class="v">200 OK</div>
+
+<div class="k">Packet Loss</div>
+<div class="v">0.2%</div>
+
+<div class="k">MOS Average</div>
+<div class="v">4.3</div>
+
+<div class="k">Failover Status</div>
+<div class="v"><span class="badge good">Primary Active</span></div>
+</div>
+</div>
+
+</main>
+</div>
+</body>
+</html>
