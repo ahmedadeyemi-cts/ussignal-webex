@@ -1176,49 +1176,88 @@ if (url.pathname === "/api/status" && request.method === "GET") {
       return json({ error: "pin_required" }, 401);
     }
 
-  if (session.expiresAt && session.expiresAt <= nowMs()) {
-  await clearSession(env, user.email);
-
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: "/pin?expired=1",
-      "cache-control": "no-store"
+    if (session.expiresAt && session.expiresAt <= nowMs()) {
+      await clearSession(env, user.email);
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: "/pin?expired=1",
+          "cache-control": "no-store"
+        }
+      });
     }
-  });
-}
-
-
   }
 
   try {
+
+    const cache = caches.default;
+    const cacheKey = new Request("https://internal-cache/webex-status-summary-v2");
+
+    const cached = await cache.match(cacheKey);
+    if (cached) return cached;
+
+    // ✅ v2 summary endpoint (structured)
     const upstream = await fetch(
-      "https://status.webex.com/api/status.json",
-      { headers: { Accept: "application/json" } }
+      "https://status.webex.com/api/v2/summary.json",
+      { headers: { "Accept": "application/json" } }
     );
 
-    const textBody = await upstream.text();
-
-    let data;
-    try {
-      data = JSON.parse(textBody);
-    } catch {
-      return json({ error: "status_not_json" }, 500);
-    }
+    const rawText = await upstream.text();
 
     if (!upstream.ok) {
       return json({
         error: "status_upstream_failed",
-        upstreamStatus: upstream.status
+        upstreamStatus: upstream.status,
+        bodyPreview: rawText.slice(0, 500)
       }, 502);
     }
 
-    return json({
-      globalIndicator: data.status?.indicator || "unknown",
-      globalDescription: data.status?.description || null,
-      components: data.components || [],
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      return json({
+        error: "status_upstream_not_json",
+        bodyPreview: rawText.slice(0, 500)
+      }, 502);
+    }
+
+    const status = data.status || {};
+
+    // components normalized (optional but useful)
+    const components = (data.components || []).map(c => ({
+      id: c.id,
+      name: c.name,
+      status: c.status,
+      group: c.group || null,
+      updated_at: c.updated_at || null
+    }));
+
+    // Group by group name (matches your /api/components style)
+    const grouped = {};
+    for (const c of components) {
+      const g = c.group || "Other";
+      if (!grouped[g]) grouped[g] = [];
+      grouped[g].push(c);
+    }
+
+    const payload = {
+      globalIndicator: status.indicator || "unknown",
+      globalDescription: status.description || null,
+      components,
+      grouped,
       lastUpdated: new Date().toISOString()
+    };
+
+    const response = new Response(JSON.stringify(payload), {
+      headers: {
+        "content-type": "application/json",
+        "cache-control": "public, max-age=60"
+      }
     });
+
+    await cache.put(cacheKey, response.clone());
+    return response;
 
   } catch (e) {
     return json({
@@ -1227,12 +1266,17 @@ if (url.pathname === "/api/status" && request.method === "GET") {
     }, 500);
   }
 }
-
       
 //api/incidents block
 if (url.pathname === "/api/incidents" && request.method === "GET") {
 
-  const user = getCurrentUser(request);
+  let user;
+  try {
+    user = getCurrentUser(request);
+  } catch (e) {
+    return json({ error: "auth_failed", message: e.message }, 401);
+  }
+
   const session = await getSession(env, user.email);
 
   if (!user.isAdmin) {
@@ -1255,75 +1299,113 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
   try {
 
     const cache = caches.default;
-    const cacheKey = new Request("https://internal-cache/webex-incidents-json");
+    const cacheKey = new Request("https://internal-cache/webex-incidents-v2");
 
     const cached = await cache.match(cacheKey);
     if (cached) return cached;
 
+    // ✅ JSON endpoint (NO RSS)
     const upstream = await fetch(
       "https://status.webex.com/api/v2/incidents.json",
-      { headers: { Accept: "application/json" } }
+      { headers: { "Accept": "application/json" } }
     );
+
+    const rawText = await upstream.text();
 
     if (!upstream.ok) {
       return json({
-        error: "incident_upstream_failed",
-        status: upstream.status
+        error: "incidents_upstream_failed",
+        upstreamStatus: upstream.status,
+        bodyPreview: rawText.slice(0, 500)
       }, 502);
     }
 
-    const data = await upstream.json();
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch (e) {
+      return json({
+        error: "incidents_upstream_not_json",
+        bodyPreview: rawText.slice(0, 500)
+      }, 502);
+    }
 
-    const incidents = (data.incidents || []).map(i => {
+    const items = (data.incidents || []).map((i) => {
 
-      // Extract region from name if possible
-      let location = "Global";
-      if (i.name?.match(/US Region/i)) location = "US Region";
-      else if (i.name?.match(/Canada/i)) location = "Canada";
-      else if (i.name?.match(/EMEA/i)) location = "EMEA";
-      else if (i.name?.match(/APAC/i)) location = "APAC";
+      // ----------------------------
+      // Location / Sector parsing (Webex-style)
+      // ----------------------------
+      const name = String(i.name || "");
 
-      // Sector
+      let location = i.impact_area_name || i.impact_area || "Global";
+      // fallback heuristics (optional)
+      if (!location || location === "Global") {
+        if (/us region/i.test(name)) location = "US Region";
+        else if (/canada/i.test(name)) location = "Canada Data Center";
+        else if (/emea/i.test(name)) location = "EMEA";
+        else if (/apac/i.test(name)) location = "APAC";
+      }
+
+      // Sector is not always explicit in v2 incident payloads
+      // If Webex includes it later, we’ll pick it up; otherwise default Commercial.
       let sector = "Commercial";
-      if (i.name?.match(/Government/i)) sector = "Government";
+      if (/(gov|government)/i.test(name)) sector = "Government";
+
+      const components = (i.components || []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        group: c.group || null,
+        // some payloads include product_group; keep both
+        product_group: c.product_group || c.group || null
+      }));
+
+      const updates = (i.incident_updates || []).map((u) => ({
+        id: u.id,
+        status: u.status,
+        created_at: u.created_at,
+        updated_at: u.updated_at || u.created_at,
+        body: u.body || ""
+      }));
+
+      // Webex "Reference #" on the website is typically external_id
+      const reference =
+        i.external_id ||
+        i.shortlink ||
+        i.id;
 
       return {
         id: i.id,
-        externalId: i.external_id || i.id,   // 🔥 Reference number
-        name: i.name,
-        status: i.status,
-        created_at: i.created_at,
-        updated_at: i.updated_at,
-        impact: i.impact,
+        reference,                     // ✅ Reference #
+        name: i.name || "Incident",
+        status: i.status || "unknown",
+        impact: i.impact || "incident",
+        created_at: i.created_at || null,
+        updated_at: i.updated_at || null,
 
+        // extra columns for your UI
         location,
         sector,
 
-        components: (i.components || []).map(c => ({
-          id: c.id,
-          name: c.name,
-          group: c.group
-        })),
+        // detail render support
+        components,
+        updates,
 
-        updates: (i.incident_updates || []).map(u => ({
-          id: u.id,
-          status: u.status,
-          created_at: u.created_at,
-          body: u.body
-        }))
+        // summary body convenience (like maintenance)
+        body: updates[0]?.body || ""
       };
     });
 
-    const active = incidents.filter(i =>
-      ["investigating", "identified", "monitoring"].includes(i.status)
+    // active definition (Webex-style)
+    const active = items.filter(i =>
+      ["investigating", "identified", "monitoring"].includes(String(i.status || "").toLowerCase())
     );
 
     const payload = {
-      incidents,
+      incidents: items,
       active,
       counts: {
         active: active.length,
-        total: incidents.length
+        total: items.length
       },
       lastUpdated: new Date().toISOString()
     };
@@ -1336,7 +1418,6 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
     });
 
     await cache.put(cacheKey, response.clone());
-
     return response;
 
   } catch (e) {
@@ -1346,7 +1427,6 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
     }, 500);
   }
 }
-
       ///api/maintenance block
      /* -----------------------------
    /api/maintenance
