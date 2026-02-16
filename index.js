@@ -1315,59 +1315,66 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
   }
 
   try {
-    const token = await getAccessToken(env);
 
-    const res = await fetch(
-      "https://webexapis.com/v1/status/maintenances?max=50",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json"
-        }
+    const headers = {
+      "Accept": "application/json",
+      "User-Agent": "USSignal-Webex-Portal"
+    };
+
+    // Fetch all 3 views
+    const [upcomingRes, activeRes, allRes] = await Promise.all([
+      fetch("https://status.webex.com/api/upcoming-scheduled-maintenances.json", { headers }),
+      fetch("https://status.webex.com/api/active-scheduled-maintenances.json", { headers }),
+      fetch("https://status.webex.com/api/all-scheduled-maintenances.json", { headers })
+    ]);
+
+    async function safeParse(res, label) {
+      const text = await res.text();
+
+      if (!res.ok) {
+        throw new Error(`${label} failed: ${res.status} ${text.slice(0,200)}`);
       }
-    );
 
-    const textBody = await res.text();
-
-    if (!res.ok) {
-      return json({
-        error: "webex_status_failed",
-        status: res.status,
-        bodyPreview: textBody.slice(0, 400)
-      }, 502);
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error(`${label} returned non-JSON`);
+      }
     }
 
-    let data;
-    try {
-      data = JSON.parse(textBody);
-    } catch {
-      return json({
-        error: "webex_status_not_json",
-        bodyPreview: textBody.slice(0, 400)
-      }, 500);
-    }
+    const upcomingData = await safeParse(upcomingRes, "upcoming");
+    const activeData = await safeParse(activeRes, "active");
+    const allData = await safeParse(allRes, "all");
 
-    const items = data.items || [];
+    const upcoming = upcomingData.scheduled_maintenances || [];
+    const active = activeData.scheduled_maintenances || [];
+    const all = allData.scheduled_maintenances || [];
 
-    const upcoming = items.filter(m => m.status?.toLowerCase() === "scheduled");
-    const active = items.filter(m => m.status?.toLowerCase() === "in progress");
-    const recent = items;
+    // Normalize combined list
+    const combined = [...all];
 
     return json({
+      maintenance: combined,
       upcoming,
       active,
-      recent,
+      recent: all,
+      counts: {
+        upcoming: upcoming.length,
+        active: active.length,
+        total: all.length
+      },
       lastUpdated: new Date().toISOString()
     });
 
   } catch (e) {
+
     return json({
-      error: "maintenance_engine_failed",
+      error: "status_api_failed",
       message: e.message
-    }, 500);
+    }, 502);
+
   }
 }
-
       /* -----------------------------
          /api/me
          - returns role
