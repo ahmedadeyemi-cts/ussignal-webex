@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Signal | Devices</title>
+
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
+
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+}
+
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* Layout */
+.app{
+  display:grid;
+  grid-template-columns:270px 1fr;
+  min-height:100vh;
+}
+
+/* Sidebar */
+.sidebar{
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+
+.brand img{ height:34px; }
+
+.brand .title{
+  display:flex;
+  flex-direction:column;
+}
+.brand .title b{ font-size:14px; }
+.brand .title span{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+}
+
+.nav a:hover{
+  background:rgba(15,98,254,.08);
+  color:var(--accent2);
+}
+
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+.sidebar-bottom{
+  margin-top:auto;
+  padding-top:10px;
+  border-top:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.userline{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.btn{
+  padding:10px 12px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:13px;
+  cursor:pointer;
+  border:none;
+}
+.btn-primary{
+  background:var(--accent);
+  color:#fff;
+}
+.btn-primary:hover{ background:var(--accent2); }
+
+/* Main */
+.main{
+  padding:22px;
+}
+
+/* Header */
+.header-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+
+.header-left{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.header-left .h{
+  font-size:16px;
+  font-weight:1000;
+}
+.header-left .sub{
+  font-size:12px;
+  color:var(--muted);
+}
+
+select, input{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(15,23,42,.18);
+  font-weight:700;
+}
+
+.controls{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+/* Table */
+.section{
+  margin-top:18px;
+}
+
+.table-wrap{
+  margin-top:12px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  overflow:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+thead th{
+  padding:12px;
+  font-size:12px;
+  color:var(--muted);
+  text-align:left;
+  text-transform:uppercase;
+}
+
+tbody td{
+  padding:12px;
+  border-top:1px solid rgba(15,23,42,.06);
+  font-size:13px;
+}
+
+tbody tr:hover{
+  background:rgba(15,98,254,.04);
+}
+
+.status{
+  font-weight:900;
+  font-size:12px;
+}
+
+.status.connected{
+  color:var(--good);
+}
+
+.status.offline{
+  color:var(--bad);
+}
+
+.status.unknown{
+  color:var(--warn);
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/assets/ussignal-logo.jpg"
+           onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
+      <div class="title">
+        <b>Partner Portal</b>
+        <span>Managed Services</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/customers">Customers</a>
+      <a href="/admin/analytics">Analytics</a>
+      <a href="/admin/licenses">Licenses</a>
+      <a class="active" href="/admin/devices">Devices</a>
+      <a href="/admin/alerts">Alerts</a>
+      <a href="/admin/pins">PIN Management</a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="userline">
+        <b id="whoami"></b>
+        <div id="sessionLine"></div>
+      </div>
+      <button class="btn btn-primary" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <div class="header-card">
+      <div class="header-left">
+        <div class="h">Device Monitoring</div>
+        <div class="sub">Real-time Webex device health across tenants</div>
+      </div>
+
+      <div class="controls">
+        <select id="orgSelect"></select>
+        <input id="searchBox" placeholder="Search device..." />
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Device</th>
+              <th>Type</th>
+              <th>Connection</th>
+              <th>MAC</th>
+              <th>Model</th>
+            </tr>
+          </thead>
+          <tbody id="deviceRows">
+            <tr><td colspan="5">Select an organization...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+async function api(path){
+  const r = await fetch(path);
+  if(!r.ok){
+    if(r.status===401) window.location="/pin";
+    throw new Error("API failed");
+  }
+  return await r.json();
+}
+
+function statusClass(status){
+  const s = (status||"").toLowerCase();
+  if(s==="connected") return "connected";
+  if(s==="offline" || s==="disconnected") return "offline";
+  return "unknown";
+}
+
+async function loadOrgs(){
+  const orgs = await api("/api/admin/orgs");
+  const select = $("orgSelect");
+
+  select.innerHTML = orgs.items.map(o =>
+    `<option value="${o.orgId}">${o.orgName}</option>`
+  ).join("");
+
+  const saved = localStorage.getItem("adminSelectedOrgId");
+  if(saved) select.value = saved;
+
+  loadDevices(select.value);
+
+  select.onchange = e=>{
+    localStorage.setItem("adminSelectedOrgId", e.target.value);
+    loadDevices(e.target.value);
+  };
+}
+
+async function loadDevices(orgId){
+  const data = await api(`/api/devices?orgId=${orgId}`);
+
+  const devices = data.items || [];
+
+  render(devices);
+
+  $("searchBox").oninput = e=>{
+    const q = e.target.value.toLowerCase();
+    render(devices.filter(d =>
+      (d.displayName||"").toLowerCase().includes(q) ||
+      (d.mac||"").toLowerCase().includes(q)
+    ));
+  };
+}
+
+function render(list){
+  $("deviceRows").innerHTML = list.map(d => `
+    <tr>
+      <td><b>${d.displayName || "—"}</b></td>
+      <td>${d.type || "—"}</td>
+      <td class="status ${statusClass(d.connectionStatus)}">
+        ${d.connectionStatus || "Unknown"}
+      </td>
+      <td>${d.mac || "—"}</td>
+      <td>${d.model || "—"}</td>
+    </tr>
+  `).join("") || `<tr><td colspan="5">No devices found.</td></tr>`;
+}
+
+async function logout(){
+  await fetch("/api/pin/logout",{method:"POST"});
+  window.location="/pin";
+}
+
+async function init(){
+  const me = await api("/api/me");
+  if(me.role!=="admin") window.location="/pin";
+  $("whoami").textContent = me.email;
+  $("sessionLine").textContent = "Session: "+(me.sessionExpiresInSeconds||0)+"s";
+  loadOrgs();
+}
+
+init();
+</script>
+
+</body>
+</html>
