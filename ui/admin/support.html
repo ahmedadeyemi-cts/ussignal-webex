@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>US Signal | Support Operations</title>
+<title>US Signal | Support</title>
 
 <style>
 :root{
@@ -30,12 +30,14 @@ body{
   color:var(--text);
 }
 
+/* Layout */
 .app{
   display:grid;
   grid-template-columns:270px 1fr;
   min-height:100vh;
 }
 
+/* Sidebar */
 .sidebar{
   background:var(--card);
   border-right:1px solid var(--line);
@@ -127,10 +129,28 @@ body{
   color:var(--accent2);
 }
 
+.btn-danger{
+  background:#fff;
+  border:1px solid rgba(220,38,38,.35);
+  color:var(--bad);
+}
+.btn-danger:hover{
+  background:rgba(220,38,38,.06);
+}
+
+a.link{
+  color:var(--accent2);
+  text-decoration:none;
+  font-weight:800;
+}
+a.link:hover{ text-decoration:underline; }
+
+/* Main */
 .main{
   padding:22px;
 }
 
+/* Header */
 .header-card{
   background:var(--card);
   border:1px solid var(--line);
@@ -140,8 +160,14 @@ body{
   display:flex;
   justify-content:space-between;
   align-items:flex-start;
+  gap:12px;
 }
 
+.header-left{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
 .header-left .h{
   font-size:16px;
   font-weight:1000;
@@ -149,10 +175,43 @@ body{
 .header-left .sub{
   font-size:12px;
   color:var(--muted);
-  max-width:860px;
+  max-width:900px;
 }
 
+.header-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.14);
+  background:#fff;
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+}
+
+.pill b{ color:var(--text); }
+
+/* Sections */
 .section{ margin-top:18px; }
+
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:14px;
+}
+@media (max-width: 1100px){
+  .grid{ grid-template-columns: 1fr; }
+}
 
 .card{
   background:var(--card);
@@ -165,7 +224,14 @@ body{
 .card h3{
   margin:0 0 6px 0;
   font-size:13px;
+  letter-spacing:.2px;
   font-weight:1000;
+}
+.card p{
+  margin:0;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.55;
 }
 
 .hr{
@@ -174,30 +240,23 @@ body{
   margin:12px 0;
 }
 
-.grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px;
-}
-
-@media (max-width:1100px){
-  .grid{ grid-template-columns:1fr; }
-}
-
 .kv{
   display:grid;
-  grid-template-columns:200px 1fr;
+  grid-template-columns: 220px 1fr;
   gap:10px;
   font-size:12px;
 }
 .kv .k{ color:var(--muted); font-weight:900; }
-.kv .v{ font-weight:800; }
+.kv .v{ color:var(--text); font-weight:800; }
 
 .badge{
   padding:6px 10px;
   border-radius:999px;
   font-size:12px;
   font-weight:900;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
 }
 .badge.good{
   background:rgba(22,163,74,.08);
@@ -214,166 +273,885 @@ body{
   border:1px solid rgba(220,38,38,.30);
   color:var(--bad);
 }
+.badge.neutral{
+  background:rgba(15,98,254,.08);
+  border:1px solid rgba(15,98,254,.20);
+  color:var(--accent2);
+}
 
+.small{
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.55;
+}
+
+.steps{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:10px;
+}
+
+.step{
+  display:flex;
+  gap:10px;
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.10);
+  background:rgba(15,98,254,.02);
+}
+.step .n{
+  width:28px;
+  height:28px;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+  font-weight:1000;
+  color:var(--accent2);
+  flex:0 0 auto;
+}
+.step .c{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.step .t{
+  font-size:13px;
+  font-weight:1000;
+}
+.step .d{
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.55;
+}
+
+.table-wrap{
+  margin-top:10px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  overflow:auto;
+  background:var(--card);
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+thead th{
+  padding:12px;
+  font-size:12px;
+  color:var(--muted);
+  text-align:left;
+  text-transform:uppercase;
+}
+tbody td{
+  padding:12px;
+  border-top:1px solid rgba(15,23,42,.06);
+  font-size:13px;
+  vertical-align:top;
+}
+tbody tr:hover{
+  background:rgba(15,98,254,.04);
+}
+
+.check{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.10);
+  background:#fff;
+}
+.check input{ margin-top:2px; }
+.check .label{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.check .label b{ font-size:13px; }
+.check .label span{ font-size:12px; color:var(--muted); line-height:1.55; }
+
+.toolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+
+textarea.template{
+  width:100%;
+  min-height:420px;
+  resize:vertical;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.16);
+  padding:12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size:12px;
+  line-height:1.55;
+  outline:none;
+}
+
+.mini-grid{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:10px;
+}
+@media (max-width: 1100px){
+  .mini-grid{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 720px){
+  .mini-grid{ grid-template-columns: 1fr; }
+}
+
+.tile{
+  background:#fff;
+  border:1px solid rgba(15,23,42,.10);
+  border-radius:16px;
+  padding:12px;
+  box-shadow:none;
+}
+.tile .label{
+  font-size:11px;
+  color:var(--muted);
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+}
+.tile .value{
+  margin-top:6px;
+  font-size:18px;
+  font-weight:1000;
+}
+.tile .hint{
+  margin-top:6px;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.5;
+}
+
+.notice{
+  padding:12px;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.10);
+  background:rgba(245,158,11,.08);
+}
+.notice b{ color:#92400e; }
+.notice .small{ color:#92400e; }
+
+.callout{
+  padding:12px;
+  border-radius:14px;
+  border:1px solid rgba(15,98,254,.18);
+  background:rgba(15,98,254,.06);
+}
+.callout b{ color:var(--accent2); }
+
+.toast{
+  position:fixed;
+  right:14px;
+  bottom:14px;
+  padding:10px 12px;
+  background:#0f172a;
+  color:#fff;
+  border-radius:12px;
+  box-shadow:0 12px 30px rgba(0,0,0,.18);
+  font-size:12px;
+  font-weight:900;
+  opacity:0;
+  transform:translateY(10px);
+  transition:.18s ease;
+  pointer-events:none;
+}
+.toast.show{
+  opacity:1;
+  transform:translateY(0);
+}
+
+.muted{
+  color:var(--muted);
+  font-weight:800;
+}
+
+.hidden{ display:none !important; }
 </style>
 </head>
 
 <body>
 <div class="app">
 
-<aside class="sidebar">
-  <div class="brand">
-    <img src="/assets/ussignal-logo.jpg">
-    <div class="title">
-      <b>Partner Portal</b>
-      <span>Managed Services</span>
-    </div>
-  </div>
-
-  <nav class="nav">
-    <a href="/admin">Dashboard</a>
-    <a href="/admin/customers">Customers</a>
-    <a href="/admin/licenses">Licenses</a>
-    <a href="/admin/devices">Devices</a>
-    <a class="active" href="/admin/support">Support</a>
-    <a href="/admin/implementation">Implementation</a>
-    <a href="/admin/pstn">PSTN</a>
-    <a href="/admin/tenant-resolution">Resolution</a>
-  </nav>
-
-  <div class="sidebar-bottom">
-    <div class="userline">
-      <b id="whoami"></b>
-      <div id="sessionLine"></div>
-    </div>
-    <button class="btn btn-primary" onclick="logout()">Logout</button>
-  </div>
-</aside>
-
-<main class="main">
-
-<div class="header-card">
-  <div class="header-left">
-    <div class="h">Support Operations Command Center</div>
-    <div class="sub">
-      Centralized operational visibility across all managed Webex Calling tenants.
-      Includes live health posture, escalation governance, PSTN integrity monitoring,
-      SLA tracking, and structured support engagement workflows.
-    </div>
-  </div>
-</div>
-
-<!-- Operational Health -->
-<div class="section grid">
-
-  <div class="card">
-    <h3>Tenant Health Summary</h3>
-    <div class="hr"></div>
-    <div class="kv">
-      <div class="k">Active Tenants</div>
-      <div class="v" id="tenantCount">--</div>
-
-      <div class="k">Open Incidents</div>
-      <div class="v" id="incidentCount">--</div>
-
-      <div class="k">Critical (P1)</div>
-      <div class="v"><span class="badge bad">0</span></div>
-
-      <div class="k">Major (P2)</div>
-      <div class="v"><span class="badge warn">0</span></div>
-
-      <div class="k">Healthy</div>
-      <div class="v"><span class="badge good">Operational</span></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>PSTN Operational Integrity</h3>
-    <div class="hr"></div>
-    <div class="kv">
-      <div class="k">Carrier Status</div>
-      <div class="v"><span class="badge good">Stable</span></div>
-
-      <div class="k">Porting Events</div>
-      <div class="v">No active port windows</div>
-
-      <div class="k">E911 Posture</div>
-      <div class="v"><span class="badge good">Validated</span></div>
-
-      <div class="k">Failover Readiness</div>
-      <div class="v">Confirmed</div>
-    </div>
-  </div>
-
-</div>
-
-<!-- Escalation Model -->
-<div class="section">
-  <div class="card">
-    <h3>Escalation Governance Model</h3>
-    <div class="hr"></div>
-    <div class="kv">
-      <div class="k">Level 1</div>
-      <div class="v">Service Desk Intake and Issue Validation</div>
-
-      <div class="k">Level 2</div>
-      <div class="v">Collaboration Engineering Routing & Device Analysis</div>
-
-      <div class="k">Level 3</div>
-      <div class="v">Architectural Authority Review</div>
-
-      <div class="k">External</div>
-      <div class="v">Carrier or Cisco TAC Engagement</div>
-    </div>
-  </div>
-</div>
-
-<!-- US SIGNAL ONLY BLOCK -->
-<div id="ussignalBlock" class="section" style="display:none;">
-  <div class="card">
-    <h3>US Signal Customer Support & Escalation Structure</h3>
-
-    <div class="hr"></div>
-
-    <p>
-      US Signal provides structured managed services support for Webex Calling environments.
-      Engagement method depends on business hours versus after-hours support windows.
-    </p>
-
-    <div class="hr"></div>
-
-    <div class="kv">
-      <div class="k">Business Hours</div>
-      <div class="v">
-        Customers may contact US Signal Customer Support directly.
-      </div>
-
-      <div class="k">Phone</div>
-      <div class="v">515-334-5755</div>
-
-      <div class="k">Email</div>
-      <div class="v">DLD-customercare@ussignal.com</div>
-
-      <div class="k">After Hours</div>
-      <div class="v">
-        Customers must provide tenant PIN and contact OneAssist at 844-462-3828.
-      </div>
-
-      <div class="k">Escalation Authority</div>
-      <div class="v">
-        Engineering retains architectural oversight. Carrier or Cisco TAC escalation
-        is initiated when PSTN or platform-layer anomalies are confirmed.
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/assets/ussignal-logo.jpg" onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
+      <div class="title">
+        <b>Partner Portal</b>
+        <span>Managed Services</span>
       </div>
     </div>
 
-    <div class="hr"></div>
-    <span class="badge good">24/7 Structured Coverage</span>
-    <span class="badge warn">PIN Required After Hours</span>
-  </div>
+    <nav class="nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/customers">Customers</a>
+      <a href="/admin/analytics">Analytics</a>
+      <a href="/admin/licenses">Licenses</a>
+      <a href="/admin/devices">Devices</a>
+      <a href="/admin/alerts">Alerts</a>
+      <a href="/admin/pins">PIN Management</a>
+
+      <div class="hr"></div>
+
+      <a class="active" href="/admin/support">Support</a>
+      <a href="/admin/implementation">Implementation</a>
+      <a href="/admin/pstn">PSTN</a>
+      <a href="/admin/tenant-resolution">Resolution</a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="userline">
+        <b id="whoami"></b>
+        <div id="sessionLine"></div>
+        <div id="orgLine" class="muted"></div>
+      </div>
+      <button class="btn btn-primary" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <div class="header-card">
+      <div class="header-left">
+        <div class="h">Support Operations Dashboard</div>
+        <div class="sub">
+          Live operational view plus audit-ready documentation of Support Service, Escalation, Proactive Monitoring, License Oversight,
+          PSTN operational handling, and evidence expectations. This page is designed to demonstrate “single point of first line support”
+          and “proactive monitoring” for cloud calling managed services, while also functioning as the day-to-day operational console.
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <span class="pill"><b>Audience</b> Support, NOC, Engineering, PM, SA</span>
+        <button class="btn btn-outline" onclick="window.print()">Print</button>
+        <button class="btn btn-outline" onclick="copySupportRunbook()">Copy Runbook</button>
+      </div>
+    </div>
+
+    <!-- LIVE TILES (best-effort) -->
+    <div class="section">
+      <div class="card">
+        <h3>Live operational signals</h3>
+        <p>
+          These indicators populate from available APIs when present. If an API is not available in your deployment, the tile will show “N/A”.
+          The purpose is to present a consistent operational posture across tenants from a single pane of glass.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="mini-grid">
+          <div class="tile">
+            <div class="label">Portal status</div>
+            <div class="value" id="tilePortal">Checking…</div>
+            <div class="hint" id="tilePortalHint">Worker / API reachability and session validity.</div>
+          </div>
+
+          <div class="tile">
+            <div class="label">Active alerts</div>
+            <div class="value" id="tileAlerts">N/A</div>
+            <div class="hint" id="tileAlertsHint">Device offline, quality anomalies, trunk issues (when integrated).</div>
+          </div>
+
+          <div class="tile">
+            <div class="label">Devices monitored</div>
+            <div class="value" id="tileDevices">N/A</div>
+            <div class="hint" id="tileDevicesHint">Count of endpoints / gateways under proactive monitoring.</div>
+          </div>
+
+          <div class="tile">
+            <div class="label">PSTN health</div>
+            <div class="value" id="tilePstn">N/A</div>
+            <div class="hint" id="tilePstnHint">Trunk reachability and routing confidence (when integrated).</div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="small">
+          Operational note: This portal is intended to represent the “secure service portal” requirement by centralizing operational visibility.
+          Where Cisco Control Hub partner view is used, it remains the authoritative source for tenant configuration and calling service state.
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPPORT SERVICE (AUDIT) -->
+    <div class="section grid">
+
+      <div class="card">
+        <h3>Support service model</h3>
+        <p>
+          US Signal acts as the single point of first line support for managed cloud calling services. The objective is to ensure that customers
+          do not have to coordinate multiple vendors during an incident. Intake, triage, customer communications, troubleshooting, escalation,
+          and closure are managed under one support workflow, with US Signal owning coordination with underlying vendors (carrier and Cisco) when required.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="n">1</div>
+            <div class="c">
+              <div class="t">Intake and ticket creation</div>
+              <div class="d">
+                Issues are received via phone, email, or portal. A ticket is created with the customer’s organization, impacted site(s),
+                impacted services, time of onset, symptoms, and business impact. Intake ensures the customer’s call flows are clearly understood
+                (inbound/outbound/internal, E911, AA/queues, devices, paging/analog, integrations).
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">2</div>
+            <div class="c">
+              <div class="t">Triage and severity classification</div>
+              <div class="d">
+                Support validates whether the issue is isolated or widespread, identifies affected users and locations, and classifies severity.
+                This step determines whether immediate escalation is required and sets expectations for communications cadence.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">3</div>
+            <div class="c">
+              <div class="t">Diagnosis and containment</div>
+              <div class="d">
+                Support gathers evidence (symptom reproduction, timestamps, call examples, user/device IDs, trunk identifiers, and recent changes).
+                Where appropriate, containment actions are applied to reduce impact while deeper troubleshooting continues, such as rerouting,
+                failing over, isolating a misbehaving device, or adjusting known-safe configuration baselines.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">4</div>
+            <div class="c">
+              <div class="t">Resolution, validation, and closure</div>
+              <div class="d">
+                Once corrected, Support validates core call flows with the customer, documents root cause and corrective actions, and closes the ticket.
+                Post-incident actions are captured as follow-ups when a permanent fix, monitoring adjustment, or design change is required.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="small">
+          Deliverable expectation: Support processes must be documented, consistently executed, and capable of demonstrating proactive detection
+          and controlled escalation.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Escalation model</h3>
+        <p>
+          Escalation ensures the right expertise engages at the right time. US Signal maintains ownership of customer communication and vendor coordination.
+          Escalation does not replace Tier 1 troubleshooting. Instead, it is a controlled step-up when symptoms, severity, or evidence indicate engineering
+          involvement, vendor engagement, or structured change is needed.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="kv">
+          <div class="k">Tier 1 – Customer Support</div>
+          <div class="v">
+            Intake, triage, basic troubleshooting, call examples, user impact validation, and known-issue checks. Tier 1 maintains the ticket and sets communications cadence.
+          </div>
+
+          <div class="k">Tier 2 – Advanced Support / NOC</div>
+          <div class="v">
+            Deeper diagnostics: device registration state, SIP signaling patterns, trunk reachability checks, user and location configuration review, and correlation across incidents.
+          </div>
+
+          <div class="k">Tier 3 – Engineering</div>
+          <div class="v">
+            Architecture-level troubleshooting: dial plan normalization, routing policies, complex call flow configuration, survivability, advanced endpoint issues, and fix validation.
+          </div>
+
+          <div class="k">Vendor escalation – Cisco TAC</div>
+          <div class="v">
+            Engaged when evidence indicates platform-side issue, persistent defect, feature malfunction, or service impairment requiring Cisco investigation. US Signal supplies evidence and remains customer-facing.
+          </div>
+
+          <div class="k">Vendor escalation – Carrier / PSTN</div>
+          <div class="v">
+            Engaged for porting problems, trunk impairment, carrier routing anomalies, or E911 routing issues outside tenant configuration. US Signal manages coordination and customer updates.
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="notice">
+          <b>Customer communications rule:</b>
+          <div class="small">
+            Even when escalated, US Signal remains the single point of contact. Customers should not be instructed to open separate vendor tickets.
+            All evidence and coordination is driven by US Signal support operations.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SEVERITY / SLA STYLE (non-contractual language) -->
+    <div class="section">
+      <div class="card">
+        <h3>Severity classification and response expectations</h3>
+        <p>
+          Severity is classified by business impact, not by technical complexity. Support uses severity to drive prioritization,
+          escalation decisions, and communications cadence. If your commercial SLA defines different commitments, the contracted SLA takes precedence.
+          This table documents the operational model used for consistent managed services execution.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Severity</th>
+                <th>Impact definition</th>
+                <th>Typical examples</th>
+                <th>Support posture</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>S1 – Critical</b></td>
+                <td>Service down or business-critical call flows unavailable for a site or tenant. Broad user impact.</td>
+                <td>Inbound/outbound calling failure, trunk outage, E911 failure, widespread registration failure.</td>
+                <td>Immediate triage, rapid escalation to Tier 2/3 as needed, frequent updates, bridge coordination.</td>
+              </tr>
+              <tr>
+                <td><b>S2 – High</b></td>
+                <td>Major degradation with significant user impact but partial service remains available.</td>
+                <td>Severe call quality issues, intermittent one-way audio, routing misbehavior for core queues.</td>
+                <td>Priority handling, evidence collection, targeted escalation, structured validation plan.</td>
+              </tr>
+              <tr>
+                <td><b>S3 – Medium</b></td>
+                <td>Limited impact to a subset of users or a non-critical feature, with workarounds available.</td>
+                <td>Specific user voicemail issue, device provisioning errors for a small group, minor routing adjustments.</td>
+                <td>Standard queue handling, scheduled troubleshooting as needed, documented corrective actions.</td>
+              </tr>
+              <tr>
+                <td><b>S4 – Low</b></td>
+                <td>Informational, request-based, or cosmetic issues with no service impact.</td>
+                <td>How-to requests, minor configuration questions, reporting requests, portal assistance.</td>
+                <td>Handled as service request; may be scheduled or batched with other planned work.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="small">
+          Evidence requirements for higher severity: timestamps, impacted numbers, sample call records, affected users/devices, location(s),
+          recent changes, and confirmation of whether the issue reproduces on alternative networks or devices.
+        </div>
+      </div>
+    </div>
+
+    <!-- PROACTIVE MONITORING / PORTAL REQUIREMENT -->
+    <div class="section grid">
+      <div class="card">
+        <h3>Proactive monitoring (managed service expectation)</h3>
+        <p>
+          Managed cloud calling support includes proactive monitoring. The goal is to detect service impairment trends and device state anomalies
+          from the operations center, rather than waiting for customers to report an issue. Monitoring is implemented as an operational loop:
+          signal detection, alert triage, correlation, customer impact validation, and controlled response.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="kv">
+          <div class="k">What is monitored</div>
+          <div class="v">
+            Device registration state, endpoint reachability, firmware compliance, trunk health (when applicable), call quality indicators,
+            and service signals available via platform telemetry.
+          </div>
+
+          <div class="k">How alerts are handled</div>
+          <div class="v">
+            Alerts are reviewed by support operations. If the alert correlates to customer impact, a ticket is created (or linked), severity is assigned,
+            and escalation is initiated when thresholds indicate a broader impairment or when customer workflows are at risk.
+          </div>
+
+          <div class="k">Monitoring outcomes</div>
+          <div class="v">
+            Reduced mean time to detection, faster triage, and improved quality through early identification of recurring issues and configuration drift.
+          </div>
+
+          <div class="k">Evidence expectation</div>
+          <div class="v">
+            Alert history, impacted device lists, call quality snapshots, and documentation of actions taken to resolve or prevent recurrence.
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="callout">
+          <b>Audit posture:</b>
+          <div class="small">
+            This portal is intentionally structured to demonstrate proactive operational visibility. If you integrate device/quality/PSTN alert feeds,
+            this page becomes the “demonstration of network management system” and can be used as operational evidence.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Secure service portal and single pane of glass</h3>
+        <p>
+          A secure web portal is provided to present an operational view of the managed service. The portal supports multi-tenant administration,
+          ensures role-based access, and centralizes operational workflows (support, alerts, devices, analytics, PSTN operational context).
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="kv">
+          <div class="k">Security model</div>
+          <div class="v">
+            PIN-based session access with role verification. After-hours access can require additional PIN validation for on-call workflows.
+          </div>
+
+          <div class="k">Operational views</div>
+          <div class="v">
+            Customer drill-down, analytics, licensing, devices, alerts, PSTN, implementation handoff documentation, and resolution intelligence.
+          </div>
+
+          <div class="k">Authoritative configuration source</div>
+          <div class="v">
+            Cisco Control Hub partner view remains the authoritative configuration layer. The portal complements Control Hub by providing consolidated operational workflows and standardized runbooks.
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="small">
+          Practical expectation: this portal should allow Support to quickly identify the tenant, confirm the affected location, validate device states,
+          review licensing posture, and confirm whether a known incident or outage exists.
+        </div>
+      </div>
+    </div>
+
+    <!-- PSTN OPERATIONS -->
+    <div class="section">
+      <div class="card">
+        <h3>PSTN operations and carrier escalation handling</h3>
+        <p>
+          PSTN issues are frequently multi-domain. US Signal’s support model ensures customers do not have to determine whether a symptom is caused by carrier routing,
+          local network behavior, tenant configuration, endpoint state, or platform service conditions. Support performs controlled isolation first, then escalates
+          with evidence to the responsible domain (carrier or Cisco) when needed.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="grid">
+          <div class="card" style="box-shadow:none;">
+            <h3>PSTN incident workflow</h3>
+            <div class="steps">
+              <div class="step">
+                <div class="n">1</div>
+                <div class="c">
+                  <div class="t">Confirm symptoms and scope</div>
+                  <div class="d">Inbound vs outbound vs both, which DIDs, which sites, which carriers, which time window, and whether inter-site calls are unaffected.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="n">2</div>
+                <div class="c">
+                  <div class="t">Validate routing and trunk posture</div>
+                  <div class="d">Check known trunk health, recent routing changes, number assignment state, and whether alternate routes or failover are available.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="n">3</div>
+                <div class="c">
+                  <div class="t">Execute controlled tests</div>
+                  <div class="d">Place test calls, capture failing call examples, timestamps, called/calling numbers, and any SIP signaling evidence available.</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="n">4</div>
+                <div class="c">
+                  <div class="t">Escalate with evidence</div>
+                  <div class="d">If carrier impairment is suspected, open carrier case with call examples and symptoms. If platform impairment suspected, open Cisco case with supporting evidence.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+            <div class="small">
+              PSTN issues must be documented with call examples (numbers and timestamps) whenever possible. This significantly reduces time to resolution.
+            </div>
+          </div>
+
+          <div class="card" style="box-shadow:none;">
+            <h3>Porting and number lifecycle (support posture)</h3>
+            <p>
+              Porting is treated as a controlled change activity. Support tracks lifecycle states and ensures the customer has a clear “go/no-go”
+              decision gate before any port window. If a port slips or fails, Support executes the backout communication plan and coordinates with the carrier.
+            </p>
+
+            <div class="hr"></div>
+
+            <div class="kv">
+              <div class="k">Pre-FOC</div>
+              <div class="v">CSR validation, LOA details, account reconciliation, number inventory mapping, and dependency confirmation.</div>
+
+              <div class="k">FOC scheduled</div>
+              <div class="v">Confirm port window aligns with change window; ensure bridge participants and validation plan are ready.</div>
+
+              <div class="k">Port activation</div>
+              <div class="v">Validate inbound and outbound calling immediately; confirm routing and caller ID behavior; document results.</div>
+
+              <div class="k">Post-port</div>
+              <div class="v">Monitor for intermittent routing issues; confirm E911 address behavior; ensure any legacy routes are retired.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- LICENSE MANAGEMENT -->
+    <div class="section">
+      <div class="card">
+        <h3>License management oversight</h3>
+        <p>
+          License management is part of operational continuity. Support monitors license consumption and helps prevent service disruption caused by
+          exhausted allocations, misassigned licenses, or provisioning drift. License posture is validated during onboarding, during major change events,
+          and when incident symptoms suggest entitlement or feature availability issues.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="grid">
+          <div class="card" style="box-shadow:none;">
+            <h3>What Support monitors</h3>
+            <ul class="small">
+              <li><b>Consumption trends:</b> growth patterns that may require additional entitlements</li>
+              <li><b>License exhaustion signals:</b> inability to provision or enable required calling features</li>
+              <li><b>Provisioning anomalies:</b> users missing calling capability, devices failing activation due to entitlement</li>
+              <li><b>Deprovisioning drift:</b> departed users not removed, stale devices still consuming assignments</li>
+            </ul>
+          </div>
+
+          <div class="card" style="box-shadow:none;">
+            <h3>How Support responds</h3>
+            <ul class="small">
+              <li>Validate current license inventory and assignments</li>
+              <li>Identify impacted users and the exact entitlement gap</li>
+              <li>Coordinate add-on or procurement actions as required</li>
+              <li>Document changes and confirm customer validation</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="small">
+          Operational note: license issues are frequently misinterpreted as “platform outages.” A quick entitlement check is a standard triage step.
+        </div>
+      </div>
+    </div>
+
+    <!-- US SIGNAL ONLY: DETAILED CONTACT + AFTER HOURS MODEL -->
+    <div class="section" id="ussignalOnlyBlock" class="hidden">
+      <div class="card">
+        <h3>US Signal support hours, contact methods, and after-hours on-call escalation</h3>
+        <p>
+          This section is intentionally displayed only on the US Signal internal/admin view to prevent customer confusion and to preserve the controlled after-hours access model.
+          It provides the exact messaging Support uses when explaining support intake and escalation boundaries.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="kv">
+          <div class="k">Business hours (CST)</div>
+          <div class="v"><span class="badge good">8:00 AM – 5:00 PM CST</span> Standard intake through US Signal Customer Support.</div>
+
+          <div class="k">Business hours contact</div>
+          <div class="v">
+            Customers can call or email US Signal Customer Support:
+            <br><b>Phone:</b> 515-334-5755
+            <br><b>Email:</b> DLD-customercare@ussignal.com
+          </div>
+
+          <div class="k">After-hours model</div>
+          <div class="v">
+            After business hours, on-call support is delivered through <b>OneAssist</b>, which routes to the on-call engineer.
+            Customers must have a valid <b>PIN</b> to use after-hours phone support.
+          </div>
+
+          <div class="k">After-hours contact</div>
+          <div class="v">
+            <b>OneAssist:</b> 844-462-3828 (PIN required)
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid">
+          <div class="card" style="box-shadow:none;">
+            <h3>How to explain the model to customers (script)</h3>
+            <p class="small">
+              During business hours (8:00 AM to 5:00 PM CST), customers should contact US Signal Customer Support using the standard support
+              channels. Support will create the ticket, triage the issue, and coordinate resolution through the appropriate escalation path.
+              After hours, customers must use OneAssist and provide their authorized PIN so the on-call engineer can be engaged.
+              If a customer does not have a PIN, they will be asked to contact US Signal during business hours to establish authorized after-hours access.
+            </p>
+
+            <div class="hr"></div>
+
+            <div class="small">
+              Internal handling note: If OneAssist receives a call without a valid PIN, the event should be documented and the customer should be directed to business-hours support
+              for PIN registration and access validation.
+            </div>
+          </div>
+
+          <div class="card" style="box-shadow:none;">
+            <h3>After-hours escalation and evidence expectations</h3>
+            <p class="small">
+              The on-call engineer prioritizes restoration of core calling service and mitigation of business impact.
+              Customers should be asked for: impacted site, affected numbers, time of onset, and one or more call examples (calling/called number and timestamps).
+              The on-call engineer will decide whether the issue can be mitigated immediately (reroute, failover, configuration rollback) or requires vendor escalation.
+            </p>
+
+            <div class="hr"></div>
+
+            <ul class="small">
+              <li>Capture call examples (numbers + timestamps) whenever possible</li>
+              <li>Confirm whether impact is isolated or widespread</li>
+              <li>Identify if the issue aligns to recent changes (ports, dial plan, device pushes)</li>
+              <li>Use controlled communication cadence until stabilized</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CUSTOMER-SAFE CONTACT LANGUAGE (always visible) -->
+    <div class="section">
+      <div class="card">
+        <h3>Customer-facing support guidance</h3>
+        <p>
+          Customers should use the standard portal and published support channels for incident intake and service requests.
+          Support will validate impact, open and manage the ticket, provide status updates, and coordinate escalation as needed.
+          After-hours support may require authorized access controls (such as a PIN) depending on the customer’s managed services agreement and support configuration.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="small">
+          Operational intent: keep customer experience consistent, avoid vendor runaround, and ensure controlled escalation with evidence.
+        </div>
+      </div>
+    </div>
+
+    <!-- RUNBOOK TEMPLATE -->
+    <div class="section">
+      <div class="card">
+        <h3>Support runbook template (audit and operations)</h3>
+        <p>
+          This template is designed to be copied into a ticket, an internal runbook, or a customer-facing service description as appropriate.
+          It provides a consistent documentation structure for demonstrating support service, escalation, monitoring, and operational ownership.
+        </p>
+
+        <div class="toolbar">
+          <button class="btn btn-outline" onclick="copySupportRunbook()">Copy to clipboard</button>
+          <button class="btn btn-outline" onclick="resetRunbook()">Reset template</button>
+        </div>
+
+        <div class="hr"></div>
+
+<textarea id="supportRunbook" class="template" spellcheck="false">
+US SIGNAL MANAGED CLOUD CALLING – SUPPORT RUNBOOK
+
+1) Support service overview
+- US Signal is the single point of first line support for managed cloud calling services.
+- Support owns intake, triage, troubleshooting, customer communications, escalation coordination, and closure.
+
+2) Intake channels
+- Portal request:
+- Email request:
+- Phone request:
+- Required intake fields: Tenant/org, impacted site(s), impacted services, time of onset, symptoms, business impact, key contacts.
+
+3) Severity classification
+- S1 (Critical): service down or business-critical flows unavailable, broad impact.
+- S2 (High): major degradation with significant impact, partial service available.
+- S3 (Medium): limited impact to subset, workaround exists.
+- S4 (Low): informational or service request.
+
+4) Triage checklist (initial)
+- Identify inbound/outbound/internal symptom scope.
+- Collect call examples (calling/called + timestamps).
+- Confirm whether issue is isolated to a site, user group, or device model.
+- Check for recent changes (ports, dial plan, routing, device changes).
+- Validate licensing posture if entitlement is suspected.
+- Validate trunk/PSTN posture if symptoms indicate carrier routing impairment.
+
+5) Escalation path
+- Tier 1: Support intake, triage, known issue checks, evidence capture.
+- Tier 2: Advanced diagnostics and correlation.
+- Tier 3: Engineering for architecture/configuration-level changes.
+- Vendor escalation: Cisco TAC or carrier, coordinated by US Signal with evidence.
+
+6) Proactive monitoring posture
+- Monitor device registration state, endpoint reachability, trunk health (where applicable), quality indicators, and platform telemetry.
+- Create or link ticket when alert correlates to customer impact.
+- Document detection source, alert details, and actions taken.
+
+7) PSTN operations
+- Confirm scope and affected numbers.
+- Validate trunk health and routing posture.
+- Execute controlled tests and capture evidence.
+- Escalate to carrier with call examples when carrier impairment suspected.
+- Escalate to Cisco with evidence when platform impairment suspected.
+
+8) Communications cadence
+- Establish expected update interval based on severity.
+- Maintain US Signal as the single customer-facing point of contact even during vendor escalations.
+- Document every significant status change or corrective action.
+
+9) Closure criteria
+- Customer validates core call flows restored.
+- Root cause and corrective actions documented.
+- Follow-ups created for permanent fixes, monitoring improvements, or design changes.
+
+10) Evidence checklist (attach where available)
+- Call examples (numbers + timestamps)
+- Affected user/device list
+- Location(s) affected
+- Screenshots of configuration state (as permitted)
+- Monitoring alerts / logs / quality snapshots
+- Vendor case IDs (if escalated)
+</textarea>
+
+      </div>
+    </div>
+
+  </main>
 </div>
 
-</main>
-</div>
+<div id="toast" class="toast">Done</div>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -382,7 +1160,7 @@ async function api(path){
   const r = await fetch(path);
   if(!r.ok){
     if(r.status===401) window.location="/pin";
-    throw new Error("API failed");
+    throw new Error("API failed: " + r.status);
   }
   return await r.json();
 }
@@ -392,21 +1170,102 @@ async function logout(){
   window.location="/pin";
 }
 
-async function init(){
-  const me = await api("/api/me");
-  if(me.role!=="admin") window.location="/pin";
+function showToast(msg){
+  const t = $("toast");
+  t.textContent = msg || "Done";
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 1300);
+}
 
-  $("whoami").textContent = me.email;
-  $("sessionLine").textContent = "Session: "+(me.sessionExpiresInSeconds||0)+"s";
+function isUSSignalOrg(me){
+  // Prefer explicit orgName if your /api/me includes it
+  const name = (me && (me.orgName || me.org || me.tenantName)) ? String(me.orgName || me.org || me.tenantName) : "";
+  if(name.trim().toLowerCase() === "us signal") return true;
 
-  // Only show US Signal support explanation for US Signal org
-  if(me.orgName === "US Signal"){
-    $("ussignalBlock").style.display = "block";
+  // Fallbacks: admin role or corporate email domain (keep conservative)
+  const email = (me && me.email) ? String(me.email) : "";
+  if((me && me.role === "admin") && email.toLowerCase().endsWith("@ussignal.com")) return true;
+
+  return false;
+}
+
+async function bestEffortTile(path, parser){
+  try{
+    const data = await api(path);
+    return parser ? parser(data) : data;
+  }catch(e){
+    return null;
   }
+}
 
-  // Demo values (replace with real API calls later)
-  $("tenantCount").textContent = "24";
-  $("incidentCount").textContent = "0";
+function setTile(idValue, idHint, value, hint){
+  const v = $(idValue);
+  const h = $(idHint);
+  if(value === null || value === undefined){
+    v.textContent = "N/A";
+    if(hint) h.textContent = hint;
+    return;
+  }
+  v.textContent = String(value);
+  if(hint) h.textContent = hint;
+}
+
+function copySupportRunbook(){
+  const el = $("supportRunbook");
+  el.select();
+  el.setSelectionRange(0, el.value.length);
+  navigator.clipboard.writeText(el.value).then(()=>{
+    showToast("Runbook copied");
+  }).catch(()=>{
+    showToast("Copy failed");
+  });
+}
+
+function resetRunbook(){
+  window.location.reload();
+}
+
+async function init(){
+  // Session / identity
+  const me = await api("/api/me");
+  if(me.role !== "admin") window.location="/pin";
+
+  $("whoami").textContent = me.email || "";
+  $("sessionLine").textContent = "Session: " + (me.sessionExpiresInSeconds || 0) + "s";
+  $("orgLine").textContent = (me.orgName ? "Org: " + me.orgName : "");
+
+  // US Signal-only support + escalation explanation block
+  const showUS = isUSSignalOrg(me);
+  const usBlock = document.getElementById("ussignalOnlyBlock");
+  if(showUS) usBlock.classList.remove("hidden");
+  else usBlock.classList.add("hidden");
+
+  // Portal status tile
+  setTile("tilePortal","tilePortalHint","OK","Session validated and API reachable.");
+
+  // Best-effort tiles (safe if endpoints exist; otherwise N/A)
+  // NOTE: Update these API paths to match your Worker routes if you have them.
+  const alerts = await bestEffortTile("/api/alerts/summary", (d)=>{
+    if(typeof d === "number") return d;
+    if(d && typeof d.total === "number") return d.total;
+    if(d && Array.isArray(d.items)) return d.items.length;
+    return null;
+  });
+  setTile("tileAlerts","tileAlertsHint", alerts, "Not integrated (endpoint missing).");
+
+  const devices = await bestEffortTile("/api/devices/summary", (d)=>{
+    if(d && typeof d.total === "number") return d.total;
+    if(d && Array.isArray(d.devices)) return d.devices.length;
+    return null;
+  });
+  setTile("tileDevices","tileDevicesHint", devices, "Not integrated (endpoint missing).");
+
+  const pstn = await bestEffortTile("/api/pstn/health", (d)=>{
+    if(d && (d.status || d.state)) return (d.status || d.state);
+    if(typeof d === "string") return d;
+    return null;
+  });
+  setTile("tilePstn","tilePstnHint", pstn, "Not integrated (endpoint missing).");
 }
 
 init();
