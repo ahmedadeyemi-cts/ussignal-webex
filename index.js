@@ -1663,9 +1663,10 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   let resolvedOrgId = null;
 
-  if (user.isAdmin) {
-    resolvedOrgId = requestedOrgId || null;
-  } else {
+if (user.isAdmin) {
+  resolvedOrgId = requestedOrgId ? requestedOrgId : null;
+} 
+else {
     if (!session || !session.orgId) {
       return json({ error: "pin_required", message: "PIN required." }, 401);
     }
