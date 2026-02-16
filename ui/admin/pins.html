@@ -13,10 +13,13 @@
   --muted:#64748b;
   --line:rgba(15,23,42,.10);
   --shadow:0 8px 24px rgba(15,23,42,.08);
+
   --accent:#0f62fe;
   --accent2:#0b4bd4;
-  --bad:#dc2626;
+
   --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
 }
 
 *{ box-sizing:border-box; }
@@ -27,12 +30,14 @@ body{
   color:var(--text);
 }
 
+/* Layout */
 .app{
   display:grid;
   grid-template-columns:270px 1fr;
   min-height:100vh;
 }
 
+/* Sidebar */
 .sidebar{
   background:var(--card);
   border-right:1px solid var(--line);
@@ -52,6 +57,16 @@ body{
 
 .brand img{ height:34px; }
 
+.brand .title{
+  display:flex;
+  flex-direction:column;
+}
+.brand .title b{ font-size:14px; }
+.brand .title span{
+  font-size:12px;
+  color:var(--muted);
+}
+
 .nav{
   display:flex;
   flex-direction:column;
@@ -67,6 +82,7 @@ body{
 
 .nav a:hover{
   background:rgba(15,98,254,.08);
+  color:var(--accent2);
 }
 
 .nav a.active{
@@ -76,8 +92,43 @@ body{
 
 .sidebar-bottom{
   margin-top:auto;
+  padding-top:10px;
+  border-top:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
 
+.userline{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.btn{
+  padding:10px 12px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:13px;
+  cursor:pointer;
+  border:none;
+}
+
+.btn-primary{
+  background:var(--accent);
+  color:#fff;
+}
+.btn-primary:hover{ background:var(--accent2); }
+
+.btn-outline{
+  background:#fff;
+  border:1px solid rgba(15,23,42,.18);
+}
+.btn-outline:hover{
+  border-color:rgba(15,98,254,.35);
+  color:var(--accent2);
+}
+
+/* Main */
 .main{
   padding:22px;
 }
@@ -88,12 +139,26 @@ body{
   border-radius:16px;
   box-shadow:var(--shadow);
   padding:16px;
-  font-weight:1000;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.header-left .h{
   font-size:16px;
+  font-weight:1000;
+}
+.header-left .sub{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.section{
+  margin-top:18px;
 }
 
 .table-wrap{
-  margin-top:16px;
+  margin-top:12px;
   background:var(--card);
   border:1px solid var(--line);
   border-radius:16px;
@@ -111,6 +176,7 @@ thead th{
   font-size:12px;
   color:var(--muted);
   text-transform:uppercase;
+  text-align:left;
 }
 
 tbody td{
@@ -122,165 +188,131 @@ tbody td{
 tbody tr:hover{
   background:rgba(15,98,254,.04);
 }
-
-button{
-  padding:6px 10px;
-  border-radius:10px;
-  border:none;
-  cursor:pointer;
-  font-weight:800;
-}
-
-.btn-primary{
-  background:var(--accent);
-  color:white;
-}
-
-.btn-outline{
-  background:white;
-  border:1px solid rgba(15,23,42,.18);
-}
-
-.modal{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.5);
-  display:none;
-  align-items:center;
-  justify-content:center;
-}
-
-.modal-card{
-  background:white;
-  padding:20px;
-  border-radius:16px;
-  width:420px;
-}
 </style>
 </head>
 
 <body>
 <div class="app">
 
-<aside class="sidebar">
-  <div class="brand">
-    <img src="/assets/ussignal-logo.jpg"
-         onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
-    <b>Partner Portal</b>
-  </div>
-
-  <nav class="nav">
-    <a href="/admin">Dashboard</a>
-    <a href="/admin/customers">Customers</a>
-    <a href="/admin/analytics">Analytics</a>
-    <a href="/admin/licenses">Licenses</a>
-    <a href="/admin/devices">Devices</a>
-    <a href="/admin/alerts">Alerts</a>
-    <a class="active" href="/admin/pins">PIN Management</a>
-  </nav>
-</aside>
-
-<main class="main">
-
-<div class="header-card">
-  Tenant PIN Management
-</div>
-
-<div class="table-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th>Organization</th>
-        <th>PIN</th>
-        <th>Allowlisted Emails</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="rows">
-      <tr><td colspan="4">Loading...</td></tr>
-    </tbody>
-  </table>
-</div>
-
-</main>
-</div>
-
-<!-- Modal -->
-<div class="modal" id="modal">
-  <div class="modal-card">
-    <h3 id="modalTitle"></h3>
-    <input id="emails" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px solid #ccc;" />
-    <div style="margin-top:12px;display:flex;gap:10px;">
-      <button class="btn-primary" onclick="save()">Save</button>
-      <button class="btn-outline" onclick="closeModal()">Cancel</button>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/assets/ussignal-logo.jpg"
+           onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
+      <div class="title">
+        <b>Partner Portal</b>
+        <span>Managed Services</span>
+      </div>
     </div>
-  </div>
+
+    <nav class="nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/customers">Customers</a>
+      <a href="/admin/analytics">Analytics</a>
+      <a href="/admin/licenses">Licenses</a>
+      <a href="/admin/devices">Devices</a>
+      <a href="/admin/alerts">Alerts</a>
+      <a class="active" href="/admin/pins">PIN Management</a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="userline">
+        <b id="whoami"></b>
+        <div id="sessionLine"></div>
+      </div>
+      <button class="btn btn-primary" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <div class="header-card">
+      <div class="header-left">
+        <div class="h">PIN Management</div>
+        <div class="sub">Manage tenant PIN assignments and rotations</div>
+      </div>
+      <button class="btn btn-primary" onclick="refresh()">Refresh</button>
+    </div>
+
+    <div class="section">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Organization</th>
+              <th>PIN</th>
+              <th>Allowed Emails</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pinRows">
+            <tr><td colspan="4">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
 </div>
 
 <script>
-const $ = id=>document.getElementById(id);
-let CURRENT=null;
+const $ = id => document.getElementById(id);
 
-async function api(path,opts){
-  const r=await fetch(path,opts);
+async function api(path, opts){
+  const r = await fetch(path, opts);
   if(!r.ok){
-    if(r.status===401) location="/pin";
-    throw new Error("API error");
+    if(r.status===401) window.location="/pin";
+    throw new Error("API failed");
   }
   return await r.json();
 }
 
-async function load(){
-  const data=await api("/api/admin/pins");
-  $("rows").innerHTML=data.items.map(t=>`
+async function loadPins(){
+  const data = await api("/api/admin/pins");
+
+  $("pinRows").innerHTML = data.items.map(o=>`
     <tr>
-      <td>${t.orgName}</td>
-      <td><b>${t.pin}</b></td>
-      <td>${(t.emails||[]).join(", ")||"—"}</td>
+      <td><b>${o.orgName}</b></td>
+      <td>${o.pin || "—"}</td>
+      <td>${(o.emails||[]).join("<br>") || "—"}</td>
       <td>
-        <button class="btn-outline" onclick='edit(${JSON.stringify(t)})'>Edit</button>
-        <button class="btn-primary" onclick='rotate("${t.orgId}","${t.orgName}")'>Rotate</button>
+        <button class="btn btn-outline" onclick="rotate('${o.orgId}','${o.orgName}')">Rotate</button>
       </td>
     </tr>
   `).join("");
 }
 
-function edit(t){
-  CURRENT=t;
-  $("modalTitle").textContent="Edit Allowlist — "+t.orgName;
-  $("emails").value=(t.emails||[]).join(", ");
-  $("modal").style.display="flex";
-}
+async function rotate(orgId, orgName){
+  if(!confirm("Rotate PIN for "+orgName+"?")) return;
 
-function closeModal(){
-  $("modal").style.display="none";
-}
-
-async function save(){
-  const emails=$("emails").value.split(",").map(x=>x.trim()).filter(Boolean);
-  await api("/api/admin/pin/allowlist",{
-    method:"POST",
-    headers:{"content-type":"application/json"},
-    body:JSON.stringify({
-      orgId:CURRENT.orgId,
-      orgName:CURRENT.orgName,
-      emails
-    })
-  });
-  closeModal();
-  load();
-}
-
-async function rotate(orgId,orgName){
   await api("/api/admin/pin/rotate",{
     method:"POST",
-    headers:{"content-type":"application/json"},
-    body:JSON.stringify({orgId,orgName})
+    headers:{ "content-type":"application/json" },
+    body:JSON.stringify({ orgId, orgName })
   });
-  load();
+
+  loadPins();
 }
 
-load();
+function refresh(){
+  loadPins();
+}
+
+async function logout(){
+  await fetch("/api/pin/logout",{method:"POST"});
+  window.location="/pin";
+}
+
+async function init(){
+  const me = await api("/api/me");
+  if(me.role!=="admin") window.location="/pin";
+  $("whoami").textContent = me.email;
+  $("sessionLine").textContent = "Session: "+(me.sessionExpiresInSeconds||0)+"s";
+  loadPins();
+}
+
+init();
 </script>
 
 </body>
