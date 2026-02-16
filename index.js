@@ -1423,76 +1423,48 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
   try {
 
     const cache = caches.default;
-    const cacheKey = new Request("https://internal-cache/webex-maintenance-official");
+    const cacheKey = new Request("https://internal-cache/webex-maintenance-json");
 
     const cached = await cache.match(cacheKey);
     if (cached) return cached;
 
-    const token = await getAccessToken(env);
-
-    const res = await fetch("https://webexapis.com/v1/service/status", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json"
-      }
-    });
-
-    const text = await res.text();
-
-    if (!res.ok) {
-      return json({
-        error: "webex_status_failed",
-        status: res.status,
-        bodyPreview: text.slice(0, 400)
-      }, 502);
-    }
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      return json({
-        error: "webex_status_not_json",
-        bodyPreview: text.slice(0, 400)
-      }, 500);
-    }
-
-    // Normalize for your UI
-    const services = data.items || data.services || [];
-
-    const maintenance = services.map(s => ({
-      id: s.id || s.name,
-      name: s.name,
-      status: s.status,
-      productGroup: s.group || "Webex",
-      impact: s.status !== "operational" ? "degraded" : "none",
-      updates: [
-        {
-          status: s.status,
-          updated: new Date().toISOString(),
-          body: s.message || s.description || ""
+    async function fetchJson(endpoint) {
+      const res = await fetch(`https://status.webex.com/${endpoint}`, {
+        headers: {
+          "Accept": "application/json"
         }
-      ]
-    }));
+      });
 
-    const active = maintenance.filter(m =>
-      m.status &&
-      m.status.toLowerCase() !== "operational"
-    );
+      if (!res.ok) {
+        throw new Error(`${endpoint} failed: ${res.status}`);
+      }
 
-    const responsePayload = {
-      maintenance,
-      upcoming: [],
+      return await res.json();
+    }
+
+    const [upcomingData, activeData, allData] = await Promise.all([
+      fetchJson("upcoming-scheduled-maintenances.json"),
+      fetchJson("active-scheduled-maintenances.json"),
+      fetchJson("all-scheduled-maintenances.json")
+    ]);
+
+    const upcoming = upcomingData.scheduled_maintenances || [];
+    const active = activeData.scheduled_maintenances || [];
+    const all = allData.scheduled_maintenances || [];
+
+    const payload = {
+      maintenance: all,
+      upcoming,
       active,
       counts: {
-        upcoming: 0,
+        upcoming: upcoming.length,
         active: active.length,
-        total: maintenance.length
+        total: all.length
       },
       lastUpdated: new Date().toISOString()
     };
 
-    const response = new Response(JSON.stringify(responsePayload), {
+    const response = new Response(JSON.stringify(payload), {
       headers: {
         "content-type": "application/json",
         "cache-control": "public, max-age=300"
@@ -1504,12 +1476,10 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
     return response;
 
   } catch (e) {
-
     return json({
       error: "maintenance_engine_failed",
       message: e.message
     }, 500);
-
   }
 }
       /* -----------------------------
