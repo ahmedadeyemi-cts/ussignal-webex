@@ -1,343 +1,375 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8"/>
-<title>Webex Platform Status</title>
+<title>US Signal | Webex Platform Status</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
 <style>
-:root {
-  --bg: #f3f4f6;
-  --card: #ffffff;
-  --text: #111827;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --green: #16a34a;
-  --yellow: #f59e0b;
-  --red: #dc2626;
+:root{
+  --bg:#f8fafc;
+  --card:#ffffff;
+  --border:#e2e8f0;
+  --text:#0f172a;
+  --muted:#64748b;
+  --accent:#2563eb;
+  --green:#16a34a;
+  --yellow:#f59e0b;
+  --red:#dc2626;
+  --shadow:0 10px 30px rgba(0,0,0,.06);
 }
 
-body.dark {
-  --bg: #111827;
-  --card: #1f2937;
-  --text: #f9fafb;
-  --muted: #9ca3af;
-  --border: #374151;
-  --green: #22c55e;
-  --yellow: #fbbf24;
-  --red: #ef4444;
+html[data-theme="dark"]{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --border:#1e293b;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --accent:#3b82f6;
+  --shadow:0 10px 30px rgba(0,0,0,.35);
 }
 
-body {
-  margin: 0;
-  font-family: system-ui;
-  background: var(--bg);
-  color: var(--text);
+*{box-sizing:border-box;font-family:system-ui;}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
 }
 
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
+/* ================= HEADER ================= */
+
+.header{
+  background:var(--card);
+  border-bottom:1px solid var(--border);
+  padding:18px 30px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
-button {
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  cursor: pointer;
-  font-weight: 600;
-  background: transparent;
-  color: var(--text);
+.logo{
+  font-weight:800;
+  font-size:20px;
 }
 
-.container {
-  max-width: 1100px;
-  margin: 40px auto;
-  padding: 0 20px;
+.nav{
+  display:flex;
+  gap:20px;
 }
 
-.card {
-  background: var(--card);
-  border-radius: 14px;
-  padding: 24px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-  border: 1px solid var(--border);
-  margin-bottom: 24px;
+.nav a{
+  text-decoration:none;
+  color:var(--text);
+  font-weight:600;
 }
 
-.meta {
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 20px;
+.nav a:hover{color:var(--accent);}
+
+.actions button{
+  margin-left:10px;
+  padding:6px 12px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:transparent;
+  cursor:pointer;
 }
 
-.status-pill {
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-weight: 600;
-  font-size: 14px;
+/* ================= CONTAINER ================= */
+
+.container{
+  max-width:1200px;
+  margin:40px auto;
+  padding:0 20px;
 }
 
-.green { background: rgba(22,163,74,0.15); color: var(--green); }
-.yellow { background: rgba(245,158,11,0.15); color: var(--yellow); }
-.red { background: rgba(220,38,38,0.15); color: var(--red); }
+/* ================= OVERALL STATUS ================= */
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
+.overall-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:24px;
+  box-shadow:var(--shadow);
+  margin-bottom:30px;
 }
 
-.table th {
-  text-align: left;
-  font-size: 14px;
-  color: var(--muted);
-  border-bottom: 1px solid var(--border);
-  padding: 12px;
+.status-pill{
+  padding:6px 14px;
+  border-radius:999px;
+  font-weight:700;
+  font-size:14px;
 }
 
-.table td {
-  padding: 14px 12px;
-  border-bottom: 1px solid var(--border);
+.green{background:rgba(22,163,74,.15);color:var(--green);}
+.yellow{background:rgba(245,158,11,.15);color:var(--yellow);}
+.red{background:rgba(220,38,38,.15);color:var(--red);}
+
+.alert-banner{
+  background:var(--red);
+  color:#fff;
+  padding:12px 16px;
+  border-radius:8px;
+  margin-bottom:20px;
+  display:none;
 }
 
-.alert-banner {
-  background: var(--red);
-  color: white;
-  padding: 14px 20px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  font-weight: 600;
+/* ================= COMPONENT LIST ================= */
+
+.component{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  margin-bottom:14px;
+  overflow:hidden;
 }
 
-.badge {
-  background: #dbeafe;
-  color: #1d4ed8;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
+.component-header{
+  padding:16px 20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  cursor:pointer;
+  transition:.2s;
+}
+
+.component-header:hover{
+  background:rgba(37,99,235,.05);
+}
+
+.component-header.expanded{
+  background:rgba(37,99,235,.08);
+}
+
+.arrow{
+  transition:transform .2s ease;
+}
+
+.arrow.rotated{
+  transform:rotate(90deg);
+}
+
+.subcomponents{
+  display:none;
+  border-top:1px solid var(--border);
+}
+
+.sub-row{
+  padding:12px 20px;
+  display:flex;
+  justify-content:space-between;
+  border-bottom:1px solid var(--border);
+  font-size:14px;
+}
+
+.sub-row:last-child{border-bottom:none;}
+
+.email-btn{
+  padding:4px 10px;
+  border:none;
+  background:var(--accent);
+  color:#fff;
+  border-radius:6px;
+  font-size:12px;
+  cursor:pointer;
+}
+.email-btn:hover{opacity:.85;}
+
+.meta{
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:14px;
 }
 </style>
 </head>
 
 <body>
 
-<header>
-  <nav style="
-  background:var(--card);
-  padding:12px 30px;
-  border-bottom:1px solid rgba(0,0,0,.08);
-  display:flex;
-  gap:18px;
-  flex-wrap:wrap;
-">
-  <a href="/customer">Dashboard</a>
-  <a href="/customer/licenses">Licenses</a>
-  <a href="/customer/devices">Devices</a>
-  <a href="/customer/analytics">Analytics</a>
-  <a href="/customer/cdr">CDR</a>
-  <a href="/customer/maintenance">Maintenance</a>
-  <a href="/customer/status">Status</a>
-  <a href="/customer/incidents">Incidents</a>
-</nav>
-  
+<div class="header">
   <div>
-    <strong>Webex Platform Status</strong>
-    <div id="tenantBadge" style="margin-top:4px;font-size:13px;color:var(--muted);"></div>
+    <div class="logo">US Signal</div>
+    <div style="font-size:13px;color:var(--muted);">Webex Platform Status</div>
   </div>
 
-  <div>
-    <button onclick="toggleDark()">Dark Mode</button>
-    <button onclick="loadData()">Refresh</button>
+  <div class="nav">
+    <a href="/customer">Dashboard</a>
+    <a href="/customer/maintenance">Maintenance</a>
+    <a href="/customer/incidents">Incidents</a>
   </div>
-</header>
+
+  <div class="actions">
+    <button onclick="toggleTheme()">Toggle Theme</button>
+    <button onclick="loadStatus()">Refresh</button>
+  </div>
+</div>
 
 <div class="container">
 
-  <div id="alertBanner" class="alert-banner" style="display:none;">
-    ⚠ Major Outage Detected
+  <div id="alertBanner" class="alert-banner">
+    ⚠ Platform Issue Detected
   </div>
 
-  <div class="card">
+  <div class="overall-card">
     <div class="meta">
       Last updated: <span id="lastUpdated">Loading...</span>
     </div>
 
-    <div style="margin-bottom:20px;">
-      Overall Status:
-      <span id="overallStatus" class="status-pill">Loading...</span>
-    </div>
-
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Component</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
+    Overall Status:
+    <span id="overallStatus" class="status-pill">Loading...</span>
   </div>
+
+  <div id="componentList"></div>
 
 </div>
 
 <script>
 
-/* ============================
-   PIN SAFE FETCH (ONLY for /api/*)
-============================ */
+/* ================= THEME ================= */
 
-async function apiFetch(url) {
-  const res = await fetch(url, { credentials: "include" });
+function toggleTheme(){
+  const current = document.documentElement.getAttribute("data-theme");
+  const next = current === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("uiTheme", next);
+}
 
-  if (res.status === 401) {
-    window.location.href = "/pin";
-    return null;
+(function(){
+  const saved = localStorage.getItem("uiTheme") || "light";
+  document.documentElement.setAttribute("data-theme", saved);
+})();
+
+/* ================= HELPERS ================= */
+
+function formatDate(d){
+  if(!d) return "—";
+  const date = new Date(d);
+  return isNaN(date.getTime()) ? "—" : date.toLocaleString();
+}
+
+function statusClass(status){
+  if(status === "operational") return "green";
+  if(["degraded_performance","partial_outage","under_maintenance"].includes(status)) return "yellow";
+  if(["major_outage","critical"].includes(status)) return "red";
+  return "";
+}
+
+/* ================= EMAIL ================= */
+
+async function sendEmail(componentName){
+
+  const email = prompt("Enter email address for notification:");
+  if(!email) return;
+
+  await fetch("/api/status/notify",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ component:componentName, email })
+  });
+
+  alert("Notification sent.");
+}
+
+/* ================= LOAD STATUS ================= */
+
+async function loadStatus(){
+
+  const res = await fetch("/api/status", { credentials:"include" });
+  if(res.status === 401){
+    window.location="/pin";
+    return;
   }
 
-  let data;
-  try {
-    data = await res.json();
-  } catch {
-    window.location.href = "/pin";
-    return null;
+  const data = await res.json();
+
+  document.getElementById("lastUpdated").textContent =
+    formatDate(data.lastUpdated);
+
+  const components = data.components || [];
+
+  /* ===== OVERALL LOGIC ===== */
+
+  let overall = "operational";
+
+  if(components.some(c=>c.status==="major_outage"||c.status==="critical")){
+    overall = "major_outage";
+  }
+  else if(components.some(c=>c.status!=="operational")){
+    overall = "degraded_performance";
   }
 
-  if (data?.error === "pin_required" || data?.error === "pin_required_or_expired") {
-    window.location.href = "/pin";
-    return null;
-  }
+  const overallEl = document.getElementById("overallStatus");
+  overallEl.textContent = overall.replace("_"," ").toUpperCase();
+  overallEl.className = "status-pill " + statusClass(overall);
 
-  return data;
-}
+  document.getElementById("alertBanner").style.display =
+    overall !== "operational" ? "block" : "none";
 
-/* ============================
-   DARK MODE
-============================ */
+  /* ===== COMPONENT RENDER ===== */
 
-function toggleDark() {
-  document.body.classList.toggle("dark");
-  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
-}
+  const container = document.getElementById("componentList");
+  container.innerHTML = "";
 
-if (localStorage.getItem("darkMode") === "true") {
-  document.body.classList.add("dark");
-}
+  components.forEach(c => {
 
-/* ============================
-   HELPERS
-============================ */
+    const wrapper = document.createElement("div");
+    wrapper.className="component";
 
-function formatDate(dateStr) {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleString();
-}
+    const header = document.createElement("div");
+    header.className="component-header";
 
-function getStatusClass(status) {
-  switch(status) {
-    case "operational": return "green";
-    case "degraded_performance":
-    case "partial_outage":
-    case "under_maintenance": return "yellow";
-    case "major_outage": return "red";
-    default: return "";
-  }
-}
+    header.innerHTML = `
+      <div>
+        <strong>${c.name}</strong>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="status-pill ${statusClass(c.status)}">
+          ${c.status}
+        </span>
+        <span class="arrow">▶</span>
+      </div>
+    `;
 
-/* ============================
-   TENANT
-============================ */
+    const sub = document.createElement("div");
+    sub.className="subcomponents";
 
-async function loadTenant() {
-  const me = await apiFetch("/api/me");
-  if (!me) return;
+    (c.children || []).forEach(subComp=>{
+      const row = document.createElement("div");
+      row.className="sub-row";
 
-  if (me.orgName) {
-    document.getElementById("tenantBadge").innerHTML =
-      `<span class="badge">Tenant: ${me.orgName}</span>`;
-  }
-}
-
-/* ============================
-   LOAD STATUS (DIRECT PUBLIC API)
-============================ */
-
-async function loadData() {
-
-  try {
-
-    const data = await apiFetch("/api/status");
-    if (!data) return;
-
-    document.getElementById("lastUpdated").textContent =
-      formatDate(data.lastUpdated);
-
-    /* ============================
-       OVERALL STATUS
-    ============================ */
-
-    const overall = data.globalIndicator || "unknown";
-
-    const overallEl = document.getElementById("overallStatus");
-
-    overallEl.textContent = overall.toUpperCase();
-
-    overallEl.className = "status-pill " + (
-      overall === "none" ? "green" :
-      overall === "minor" ? "yellow" :
-      overall === "major" || overall === "critical" ? "red" :
-      ""
-    );
-
-    document.getElementById("alertBanner").style.display =
-      (overall === "major" || overall === "critical") ? "block" : "none";
-
-    /* ============================
-       COMPONENT TABLE
-    ============================ */
-
-    const tbody = document.getElementById("tableBody");
-    tbody.innerHTML = "";
-
-    (data.components || []).forEach(c => {
-
-      const tr = document.createElement("tr");
-
-      tr.innerHTML = `
-        <td>${c.name}</td>
-        <td>
-          <span class="status-pill ${getStatusClass(c.status)}">
-            ${c.status}
+      row.innerHTML = `
+        <div>${subComp.name}</div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <span class="status-pill ${statusClass(subComp.status)}">
+            ${subComp.status}
           </span>
-        </td>
+          ${subComp.status!=="operational"
+            ? `<button class="email-btn"
+                 onclick="sendEmail('${subComp.name}')">
+                 Email
+               </button>`
+            : ""
+          }
+        </div>
       `;
 
-      tbody.appendChild(tr);
+      sub.appendChild(row);
     });
 
-  } catch (err) {
+    header.onclick = function(){
+      const expanded = sub.style.display === "block";
+      sub.style.display = expanded ? "none" : "block";
+      header.classList.toggle("expanded");
+      header.querySelector(".arrow").classList.toggle("rotated");
+    };
 
-    console.error("Status load failed:", err);
-
-    document.getElementById("overallStatus").textContent = "ERROR";
-    document.getElementById("overallStatus").className =
-      "status-pill red";
-  }
+    wrapper.appendChild(header);
+    wrapper.appendChild(sub);
+    container.appendChild(wrapper);
+  });
 }
-/* ============================
-   INIT
-============================ */
 
-loadTenant();
-loadData();
+loadStatus();
 
 </script>
-
 </body>
 </html>
