@@ -1350,9 +1350,35 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
           ? (await unresolvedRes.json()).incidents || []
           : [];
 
-        const all = allRes.ok
-          ? (await allRes.json()).incidents || []
-          : [];
+        const baseIncidents = allRes.ok
+  ? (await allRes.json()).incidents || []
+  : [];
+
+async function enrichIncident(incident) {
+  try {
+    const detailRes = await fetch(
+      `https://status.webex.com/api/v2/incidents/${incident.id}.json`
+    );
+
+    if (!detailRes.ok) return incident;
+
+    const detail = await detailRes.json();
+
+    return {
+      ...incident,
+      updates: detail.incident?.incident_updates || incident.updates || [],
+      fullData: detail.incident || null
+    };
+
+  } catch (e) {
+    return incident;
+  }
+}
+
+const all = await Promise.all(
+  baseIncidents.map(enrichIncident)
+);
+
 
         return {
           incidents: all,
