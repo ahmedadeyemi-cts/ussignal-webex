@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Signal | Implementation</title>
+
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
+
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+}
+
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* Layout */
+.app{
+  display:grid;
+  grid-template-columns:270px 1fr;
+  min-height:100vh;
+}
+
+/* Sidebar */
+.sidebar{
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+
+.brand img{ height:34px; }
+
+.brand .title{
+  display:flex;
+  flex-direction:column;
+}
+.brand .title b{ font-size:14px; }
+.brand .title span{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
+}
+
+.nav a:hover{
+  background:rgba(15,98,254,.08);
+  color:var(--accent2);
+}
+
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+.sidebar-bottom{
+  margin-top:auto;
+  padding-top:10px;
+  border-top:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.userline{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.btn{
+  padding:10px 12px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:13px;
+  cursor:pointer;
+  border:none;
+}
+.btn-primary{
+  background:var(--accent);
+  color:#fff;
+}
+.btn-primary:hover{ background:var(--accent2); }
+
+.btn-outline{
+  background:#fff;
+  border:1px solid rgba(15,23,42,.18);
+}
+.btn-outline:hover{
+  border-color:rgba(15,98,254,.35);
+  color:var(--accent2);
+}
+
+.btn-danger{
+  background:#fff;
+  border:1px solid rgba(220,38,38,.35);
+  color:var(--bad);
+}
+.btn-danger:hover{
+  background:rgba(220,38,38,.06);
+}
+
+a.link{
+  color:var(--accent2);
+  text-decoration:none;
+  font-weight:800;
+}
+a.link:hover{ text-decoration:underline; }
+
+/* Main */
+.main{
+  padding:22px;
+}
+
+/* Header */
+.header-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.header-left{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.header-left .h{
+  font-size:16px;
+  font-weight:1000;
+}
+.header-left .sub{
+  font-size:12px;
+  color:var(--muted);
+  max-width:860px;
+}
+
+.header-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.14);
+  background:#fff;
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+}
+
+.pill b{ color:var(--text); }
+
+/* Sections */
+.section{ margin-top:18px; }
+
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:14px;
+}
+@media (max-width: 1100px){
+  .grid{ grid-template-columns: 1fr; }
+}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:14px;
+}
+
+.card h3{
+  margin:0 0 6px 0;
+  font-size:13px;
+  letter-spacing:.2px;
+  font-weight:1000;
+}
+.card p{
+  margin:0;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.45;
+}
+
+.hr{
+  height:1px;
+  background:rgba(15,23,42,.08);
+  margin:12px 0;
+}
+
+.kv{
+  display:grid;
+  grid-template-columns: 180px 1fr;
+  gap:10px;
+  font-size:12px;
+}
+.kv .k{ color:var(--muted); font-weight:900; }
+.kv .v{ color:var(--text); font-weight:800; }
+
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.badge.good{
+  background:rgba(22,163,74,.08);
+  border:1px solid rgba(22,163,74,.25);
+  color:var(--good);
+}
+.badge.warn{
+  background:rgba(245,158,11,.10);
+  border:1px solid rgba(245,158,11,.30);
+  color:#b45309;
+}
+.badge.bad{
+  background:rgba(220,38,38,.08);
+  border:1px solid rgba(220,38,38,.30);
+  color:var(--bad);
+}
+
+.small{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.steps{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:10px;
+}
+
+.step{
+  display:flex;
+  gap:10px;
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.10);
+  background:rgba(15,98,254,.02);
+}
+.step .n{
+  width:28px;
+  height:28px;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+  font-weight:1000;
+  color:var(--accent2);
+  flex:0 0 auto;
+}
+.step .c{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.step .t{
+  font-size:13px;
+  font-weight:1000;
+}
+.step .d{
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.45;
+}
+
+.table-wrap{
+  margin-top:10px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  overflow:auto;
+  background:var(--card);
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+thead th{
+  padding:12px;
+  font-size:12px;
+  color:var(--muted);
+  text-align:left;
+  text-transform:uppercase;
+}
+tbody td{
+  padding:12px;
+  border-top:1px solid rgba(15,23,42,.06);
+  font-size:13px;
+  vertical-align:top;
+}
+tbody tr:hover{
+  background:rgba(15,98,254,.04);
+}
+
+.check{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.10);
+  background:#fff;
+}
+.check input{ margin-top:2px; }
+.check .label{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.check .label b{ font-size:13px; }
+.check .label span{ font-size:12px; color:var(--muted); line-height:1.45; }
+
+.toolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+
+textarea.template{
+  width:100%;
+  min-height:340px;
+  resize:vertical;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.16);
+  padding:12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size:12px;
+  line-height:1.45;
+  outline:none;
+}
+
+.toast{
+  position:fixed;
+  right:14px;
+  bottom:14px;
+  padding:10px 12px;
+  background:#0f172a;
+  color:#fff;
+  border-radius:12px;
+  box-shadow:0 12px 30px rgba(0,0,0,.18);
+  font-size:12px;
+  font-weight:900;
+  opacity:0;
+  transform:translateY(10px);
+  transition:.18s ease;
+  pointer-events:none;
+}
+.toast.show{
+  opacity:1;
+  transform:translateY(0);
+}
+
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/assets/ussignal-logo.jpg"
+           onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
+      <div class="title">
+        <b>Partner Portal</b>
+        <span>Managed Services</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/customers">Customers</a>
+      <a href="/admin/analytics">Analytics</a>
+      <a href="/admin/licenses">Licenses</a>
+      <a href="/admin/devices">Devices</a>
+      <a href="/admin/alerts">Alerts</a>
+      <a href="/admin/pins">PIN Management</a>
+
+      <div class="hr"></div>
+
+      <a href="/admin/support">Support</a>
+      <a class="active" href="/admin/implementation">Implementation</a>
+      <a href="/admin/pstn">PSTN</a>
+      <a href="/admin/tenant-resolution">Resolution</a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="userline">
+        <b id="whoami"></b>
+        <div id="sessionLine"></div>
+      </div>
+      <button class="btn btn-primary" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <div class="header-card">
+      <div class="header-left">
+        <div class="h">Implementation</div>
+        <div class="sub">
+          Tenant agnostic playbook that covers presales discovery, network readiness validation (CSAN),
+          configuration workflow in Control Hub, migration and cutover, validation, and operations transition.
+          Use this as the standard delivery reference and as the basis for handoff documentation.
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <span class="pill"><b>Audience</b> SA, PM, Implementation, Support</span>
+        <button class="btn btn-outline" onclick="window.print()">Print</button>
+        <button class="btn btn-outline" onclick="copyAllHandoff()">Copy Handoff</button>
+      </div>
+    </div>
+
+    <!-- At a glance -->
+    <div class="section grid">
+
+      <div class="card">
+        <h3>How we run implementations</h3>
+        <p>
+          Every deployment follows the same structure: presales discovery and readiness, design and build, validation,
+          cutover, and a controlled transition to steady state support. Tenant details change, but the gates do not.
+        </p>
+
+        <div class="steps">
+          <div class="step">
+            <div class="n">1</div>
+            <div class="c">
+              <div class="t">Presales discovery and readiness gate</div>
+              <div class="d">SA confirms scope, dependencies, success criteria, and runs CSAN network testing before order and scheduling.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="n">2</div>
+            <div class="c">
+              <div class="t">Design and build</div>
+              <div class="d">Translate requirements into a dial plan, PSTN approach, user and device strategy, and feature configuration in Control Hub.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="n">3</div>
+            <div class="c">
+              <div class="t">Validate and cutover</div>
+              <div class="d">Confirm call flows, E911, number routing, devices, and quality. Execute change plan and perform controlled cutover.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="n">4</div>
+            <div class="c">
+              <div class="t">Hypercare and operations transition</div>
+              <div class="d">Short, structured hypercare with acceptance criteria, then handoff to support with final documentation and monitoring baselines.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Key delivery artifacts</h3>
+        <p>These artifacts are required for consistent outcomes and smooth operational ownership.</p>
+
+        <div class="hr"></div>
+
+        <div class="kv">
+          <div class="k">Presales outcome</div>
+          <div class="v">Validated scope, assumptions, risks, dependencies, and readiness results</div>
+
+          <div class="k">Solution design</div>
+          <div class="v">Dial plan, PSTN model, user strategy, device model, feature model, security model</div>
+
+          <div class="k">Change plan</div>
+          <div class="v">Cutover method, backout plan, stakeholders, comms timeline, validation checklist</div>
+
+          <div class="k">Handoff document</div>
+          <div class="v">As built details, admin credentials handling, support runbooks, escalation paths, monitoring</div>
+        </div>
+
+        <div class="hr"></div>
+
+        <span class="badge good">Standardized</span>
+        <span class="badge warn">Controlled gates</span>
+        <span class="badge good">Tenant agnostic</span>
+      </div>
+
+    </div>
+
+    <!-- PRESALES -->
+    <div class="section">
+      <div class="card">
+        <h3>Presales</h3>
+        <p>
+          The Solution Architect owns presales discovery and sets the delivery team up for success. The goal is to remove ambiguity early:
+          what is being delivered, what success looks like, what dependencies exist, and what could cause delays or quality issues.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Presales topic</th>
+                <th>What the SA confirms</th>
+                <th>Output</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>Business drivers</b></td>
+                <td>Why the customer is changing, desired end state, and the adoption approach for users and admins.</td>
+                <td>Success criteria, acceptance criteria, go live definition.</td>
+              </tr>
+              <tr>
+                <td><b>Scope boundaries</b></td>
+                <td>What is in scope and what is out of scope: sites, user groups, call flows, devices, integrations.</td>
+                <td>Implementation scope statement and assumptions list.</td>
+              </tr>
+              <tr>
+                <td><b>PSTN approach</b></td>
+                <td>Calling plans vs Local Gateway vs integrated PSTN provider model, number porting needs, emergency calling requirements.</td>
+                <td>PSTN decision and prerequisites for delivery scheduling.</td>
+              </tr>
+              <tr>
+                <td><b>Dial plan and routing</b></td>
+                <td>Extensions, E.164 strategy, site codes, legacy patterns, call permissions, and any interop needs.</td>
+                <td>Dial plan design inputs for build.</td>
+              </tr>
+              <tr>
+                <td><b>Devices and endpoints</b></td>
+                <td>Desk phones, soft clients, room devices, paging, analog, ATA needs, and provisioning model.</td>
+                <td>Endpoint BOM and provisioning approach.</td>
+              </tr>
+              <tr>
+                <td><b>Network readiness</b></td>
+                <td>LAN/WAN, QoS posture, firewall policy, NAT, proxy, and voice quality baseline.</td>
+                <td><span class="badge warn">CSAN results</span> plus remediation actions.</td>
+              </tr>
+              <tr>
+                <td><b>Security and identity</b></td>
+                <td>SSO status, MFA posture, admin roles, access model, and operational ownership boundaries.</td>
+                <td>Identity readiness notes and admin matrix.</td>
+              </tr>
+              <tr>
+                <td><b>Project logistics</b></td>
+                <td>Stakeholders, change windows, blackout periods, and escalation paths.</td>
+                <td>Project schedule constraints and communications plan.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="grid">
+          <div class="card" style="box-shadow:none;">
+            <h3>Network readiness gate: CSAN</h3>
+            <p>
+              During presales we run CSAN to validate network and firewall readiness, and to reduce the risk of cutover day issues.
+              CSAN should be treated as a gate: if results show risk, remediation is planned before implementation scheduling.
+            </p>
+            <div class="hr"></div>
+            <div class="kv">
+              <div class="k">When</div><div class="v">Presales, before final scope signoff and scheduling</div>
+              <div class="k">Who runs it</div><div class="v">SA or implementation engineer with customer network contact</div>
+              <div class="k">What to capture</div><div class="v">Run date, locations tested, summary results, and remediation items</div>
+              <div class="k">Evidence</div><div class="v">CSAN output exported or summarized in the handoff document</div>
+            </div>
+            <div class="hr"></div>
+            <div class="small">
+              Tip: keep CSAN results paired with a short remediation plan and a retest date so the project does not stall.
+            </div>
+          </div>
+
+          <div class="card" style="box-shadow:none;">
+            <h3>Presales risks to call out early</h3>
+            <p>These are common root causes of delays or degraded voice quality when discovered late.</p>
+            <div class="hr"></div>
+
+            <div class="check">
+              <input type="checkbox" />
+              <div class="label">
+                <b>Firewall policy unknown or unmanaged</b>
+                <span>Customer cannot confirm outbound policy, proxy behavior, or NAT impacts for real time media.</span>
+              </div>
+            </div>
+
+            <div style="height:10px;"></div>
+
+            <div class="check">
+              <input type="checkbox" />
+              <div class="label">
+                <b>No QoS posture</b>
+                <span>Voice packets are not prioritized end to end. Validate LAN tagging and WAN queuing early.</span>
+              </div>
+            </div>
+
+            <div style="height:10px;"></div>
+
+            <div class="check">
+              <input type="checkbox" />
+              <div class="label">
+                <b>Number porting timeline risk</b>
+                <span>Ports need LOA, CSR validation, carrier lead times, and a backout plan if the port window slips.</span>
+              </div>
+            </div>
+
+            <div style="height:10px;"></div>
+
+            <div class="check">
+              <input type="checkbox" />
+              <div class="label">
+                <b>Legacy analog and paging complexity</b>
+                <span>Analog lines, elevators, alarms, and paging often require site surveys and lab validation.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- IMPLEMENTATION WORKFLOW -->
+    <div class="section">
+      <div class="card">
+        <h3>Implementation workflow</h3>
+        <p>
+          The implementation phase converts the approved design into configured services, tested call flows, and a controlled go live.
+          The sequence below mirrors the common Control Hub based configuration flow and feature setup approach.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="n">1</div>
+            <div class="c">
+              <div class="t">Confirm prerequisites and identity readiness</div>
+              <div class="d">
+                Validate access to Control Hub, admin roles, identity strategy (local vs SSO), and baseline policies.
+                Confirm who owns day two operations and what tasks will be handed to support.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">2</div>
+            <div class="c">
+              <div class="t">Define locations and core calling settings</div>
+              <div class="d">
+                Create locations, assign calling behavior, emergency calling assumptions per location, and any location level settings needed for consistent routing.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">3</div>
+            <div class="c">
+              <div class="t">Select and implement PSTN connectivity</div>
+              <div class="d">
+                Implement the agreed PSTN model (Calling Plans, Local Gateway, or provider integrated approach), confirm number management plan,
+                and validate inbound and outbound routing.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">4</div>
+            <div class="c">
+              <div class="t">Build dial plan and call permissions</div>
+              <div class="d">
+                Implement extension ranges, E.164 strategy, site codes if needed, normalization rules, and class of service and call permissions.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">5</div>
+            <div class="c">
+              <div class="t">Provision users and endpoints</div>
+              <div class="d">
+                Add users, assign licenses, assign numbers and extensions, provision devices, confirm activation workflow, and validate client sign in experience.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">6</div>
+            <div class="c">
+              <div class="t">Configure calling features and call flows</div>
+              <div class="d">
+                Configure hunt groups, call queues, auto attendants, receptionist client where applicable, and shared line behavior.
+                Validate business hour logic and after hours routing.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">7</div>
+            <div class="c">
+              <div class="t">Validation and acceptance testing</div>
+              <div class="d">
+                Execute test plan across inbound, outbound, internal calling, voicemail, E911, feature flows, and endpoint behavior.
+                Capture results and remediation actions.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">8</div>
+            <div class="c">
+              <div class="t">Cutover, hypercare, and operations transition</div>
+              <div class="d">
+                Execute change plan in approved window, confirm acceptance criteria, provide hypercare coverage, then hand off with completed documentation
+                and monitoring baselines.
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- VALIDATION -->
+    <div class="section grid">
+
+      <div class="card">
+        <h3>Validation checklist</h3>
+        <p>Use this checklist during build validation and again during go live validation. Capture evidence for every critical call flow.</p>
+        <div class="hr"></div>
+
+        <div class="check"><input type="checkbox"/><div class="label"><b>Inbound calling</b><span>DID routes correctly, correct AA or queue, correct business hours and after hours behavior.</span></div></div>
+        <div style="height:10px;"></div>
+        <div class="check"><input type="checkbox"/><div class="label"><b>Outbound calling</b><span>Correct caller ID, correct permissions, correct routing, no unexpected blocking, international policy aligns to design.</span></div></div>
+        <div style="height:10px;"></div>
+        <div class="check"><input type="checkbox"/><div class="label"><b>Internal and extension dialing</b><span>Extensions reach intended user, shared lines work as expected, pick up and park behavior matches design.</span></div></div>
+        <div style="height:10px;"></div>
+        <div class="check"><input type="checkbox"/><div class="label"><b>Voicemail and greetings</b><span>Voicemail deposit and retrieval, greetings, MWI on endpoints, and notification behavior.</span></div></div>
+        <div style="height:10px;"></div>
+        <div class="check"><input type="checkbox"/><div class="label"><b>Emergency calling</b><span>E911 behavior validated per location where possible, address accuracy confirmed, test call procedure documented.</span></div></div>
+        <div style="height:10px;"></div>
+        <div class="check"><input type="checkbox"/><div class="label"><b>Quality and media path</b><span>Two way audio, DTMF, hold music, transfers, conference, and no unexpected one way audio across sites.</span></div></div>
+      </div>
+
+      <div class="card">
+        <h3>Cutover and backout</h3>
+        <p>Cutover success depends on predictable execution and clear rollback criteria. Use controlled decision points.</p>
+
+        <div class="hr"></div>
+
+        <div class="kv">
+          <div class="k">Change window</div><div class="v">Approved window with stakeholders available and escalation contacts on hand</div>
+          <div class="k">Cutover method</div><div class="v">Port event, trunk flip, routing change, or phased user migration</div>
+          <div class="k">Backout trigger</div><div class="v">If critical flows fail and cannot be remediated within agreed time</div>
+          <div class="k">Backout method</div><div class="v">Restore prior routing, restore trunks, revert number routing, restore device registration plan</div>
+          <div class="k">Acceptance criteria</div><div class="v">Top call flows pass, E911 addressed, core users can place and receive calls reliably</div>
+        </div>
+
+        <div class="hr"></div>
+        <span class="badge warn">Use decision gates</span>
+        <span class="badge good">Document evidence</span>
+      </div>
+
+    </div>
+
+    <!-- HANDOFF TEMPLATE -->
+    <div class="section">
+      <div class="card">
+        <h3>Handoff document template</h3>
+        <p>
+          This is the standard handoff structure from presales and implementation to support and operations.
+          Paste tenant specific details as needed. Keep this document updated as changes occur.
+        </p>
+
+        <div class="toolbar">
+          <button class="btn btn-outline" onclick="copyAllHandoff()">Copy to clipboard</button>
+          <button class="btn btn-outline" onclick="resetHandoff()">Reset template</button>
+        </div>
+
+        <div class="hr"></div>
+
+<textarea id="handoff" class="template" spellcheck="false">
+WEBEX CALLING IMPLEMENTATION HANDOFF
+
+1) Executive summary
+- Customer name:
+- Go live date:
+- Deployment model (Calling Plans, Local Gateway, Provider):
+- High level scope:
+- Key risks and mitigations:
+- Acceptance criteria:
+
+2) Presales discovery notes (SA owned)
+- Business drivers:
+- In scope items:
+- Out of scope items:
+- Critical call flows:
+- Integrations and dependencies:
+- Identity approach (SSO or local):
+- Security requirements:
+
+3) Network readiness (CSAN)
+- CSAN run date:
+- Sites tested:
+- Summary result:
+- Noted risks:
+- Remediation actions:
+- Retest date:
+
+4) Design decisions
+- Dial plan strategy:
+- Numbering strategy:
+- Extension ranges:
+- Caller ID strategy:
+- Class of service / permissions:
+- E911 approach:
+- Endpoint strategy:
+- Feature strategy (AA, queue, hunt group, receptionist, paging, etc):
+
+5) Build details
+- Control Hub org:
+- Locations configured:
+- PSTN configuration:
+- Trunks / Local Gateway details (if applicable):
+- Number inventory and assignments:
+- User provisioning approach:
+- Device provisioning approach:
+
+6) Call flows and features (as built)
+- Auto attendants:
+- Call queues:
+- Hunt groups:
+- Receptionist client:
+- Call park / pickup:
+- Shared lines:
+- Voicemail settings:
+- Business hours logic:
+
+7) Validation and testing evidence
+- Inbound tests:
+- Outbound tests:
+- Internal dialing tests:
+- Voicemail tests:
+- E911 tests:
+- Quality notes:
+
+8) Cutover plan
+- Change window:
+- Stakeholders on bridge:
+- Steps executed:
+- Backout criteria:
+- Backout steps:
+- Final results:
+
+9) Hypercare plan
+- Duration:
+- Coverage hours:
+- Escalation contacts:
+- Common issues expected and response:
+
+10) Support transition
+- Support ownership start date:
+- Support runbooks:
+- Monitoring baselines:
+- Admin access model:
+- Known issues and open items:
+- Reporting cadence:
+
+11) Contacts
+- Customer technical owner:
+- Customer change owner:
+- US Signal SA:
+- US Signal PM:
+- US Signal implementation lead:
+- US Signal support lead:
+</textarea>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast" class="toast">Copied</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+async function api(path){
+  const r = await fetch(path);
+  if(!r.ok){
+    if(r.status===401) window.location="/pin";
+    throw new Error("API failed");
+  }
+  return await r.json();
+}
+
+async function logout(){
+  await fetch("/api/pin/logout",{method:"POST"});
+  window.location="/pin";
+}
+
+function showToast(msg){
+  const t = $("toast");
+  t.textContent = msg || "Done";
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 1200);
+}
+
+function copyAllHandoff(){
+  const el = $("handoff");
+  el.select();
+  el.setSelectionRange(0, el.value.length);
+  navigator.clipboard.writeText(el.value).then(()=>{
+    showToast("Handoff copied");
+  }).catch(()=>{
+    showToast("Copy failed");
+  });
+}
+
+function resetHandoff(){
+  // Reload page to restore original content
+  window.location.reload();
+}
+
+async function init(){
+  const me = await api("/api/me");
+  if(me.role!=="admin") window.location="/pin";
+  $("whoami").textContent = me.email;
+  $("sessionLine").textContent = "Session: "+(me.sessionExpiresInSeconds||0)+"s";
+}
+
+init();
+</script>
+
+</body>
+</html>
