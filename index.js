@@ -1398,6 +1398,135 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
 }
 
       ///api/maintenance block
+     /* -----------------------------
+   /api/maintenance
+   - Uses official Webex JSON endpoints
+   - Supports filtering by components
+   - Edge cached
+----------------------------- */
+if (url.pathname === "/api/maintenance" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  const session = await getSession(env, user.email);
+
+  if (!user.isAdmin) {
+    if (!session || !session.orgId) {
+      return json({ error: "pin_required" }, 401);
+    }
+
+    if (session.expiresAt && session.expiresAt <= nowMs()) {
+      await clearSession(env, user.email);
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: "/pin?expired=1",
+          "cache-control": "no-store"
+        }
+      });
+    }
+  }
+
+  try {
+
+    const cache = caches.default;
+    const cacheKey = new Request("https://internal-cache/webex-maintenance-json");
+
+    const cached = await cache.match(cacheKey);
+    if (cached) return cached;
+
+    const [allRes, compRes] = await Promise.all([
+      fetch("https://status.webex.com/all-scheduled-maintenances.json", {
+        headers: { Accept: "application/json" }
+      }),
+      fetch("https://status.webex.com/components.json", {
+        headers: { Accept: "application/json" }
+      })
+    ]);
+
+    if (!allRes.ok) {
+      return json({
+        error: "maintenance_upstream_failed",
+        status: allRes.status
+      }, 502);
+    }
+
+    const allData = await allRes.json();
+    const compData = compRes.ok ? await compRes.json() : { components: [] };
+
+    const components = compData.components || [];
+
+    // Map component ID -> product group
+    const componentMap = {};
+    for (const c of components) {
+      componentMap[c.id] = {
+        id: c.id,
+        name: c.name,
+        group: c.group || "Other"
+      };
+    }
+
+    const items = (allData.scheduled_maintenances || []).map(m => {
+
+      const normalizedComponents = (m.components || []).map(c => {
+        const mapped = componentMap[c.id] || {};
+        return {
+          id: c.id,
+          name: mapped.name || c.name,
+          product_group: mapped.group || "Other"
+        };
+      });
+
+      return {
+        id: m.id,
+        name: m.name,
+        status: m.status,
+        impact: m.impact,
+        created_at: m.created_at,
+        scheduled_for: m.scheduled_for,
+        updated_at: m.updated_at,
+        components: normalizedComponents,
+        updates: m.incident_updates || []
+      };
+    });
+
+    const upcoming = items.filter(m => m.status === "scheduled");
+    const active = items.filter(m =>
+      ["in_progress", "verifying"].includes(m.status)
+    );
+    const completed = items.filter(m => m.status === "completed");
+
+    const payload = {
+      maintenance: items,
+      upcoming,
+      active,
+      completed,
+      counts: {
+        upcoming: upcoming.length,
+        active: active.length,
+        completed: completed.length,
+        total: items.length
+      },
+      lastUpdated: new Date().toISOString()
+    };
+
+    const response = new Response(JSON.stringify(payload), {
+      headers: {
+        "content-type": "application/json",
+        "cache-control": "public, max-age=300"
+      }
+    });
+
+    await cache.put(cacheKey, response.clone());
+
+    return response;
+
+  } catch (e) {
+    return json({
+      error: "maintenance_engine_failed",
+      message: e.message
+    }, 500);
+  }
+}
 /* -----------------------------
    /api/components
    - Returns all Webex Status components
