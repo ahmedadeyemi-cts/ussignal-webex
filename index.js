@@ -1308,83 +1308,123 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
 
   try {
 
-    // 🔹 5 minute edge cache
-    const cache = caches.default;
-    const cacheKey = new Request("https://internal-cache/webex-maintenance");
+    const FEEDS = [
+      { group: "Webex Meetings", url: "https://status.webex.com/history/rss/webex-meetings" },
+      { group: "Webex App", url: "https://status.webex.com/history/rss/webex-app" },
+      { group: "Webex Messaging", url: "https://status.webex.com/history/rss/webex-messaging" },
+      { group: "Webex User Hub", url: "https://status.webex.com/history/rss/webex-user-hub" },
+      { group: "Webex Control Hub", url: "https://status.webex.com/history/rss/webex-control-hub" },
+      { group: "Webex Cloud Registered Device", url: "https://status.webex.com/history/rss/webex-cloud-registered-device" },
+      { group: "Webex Hybrid Services", url: "https://status.webex.com/history/rss/webex-hybrid-services" },
+      { group: "Webex Events", url: "https://status.webex.com/history/rss/webex-events" },
+      { group: "Slido", url: "https://status.webex.com/history/rss/slido" },
 
-    let cached = await cache.match(cacheKey);
+      { group: "Webex Calling", url: "https://status.webex.com/history/rss/webex-calling" },
+      { group: "Cisco BroadCloud", url: "https://status.webex.com/history/rss/cisco-broadcloud" },
+      { group: "Dedicated Instance/UCM Cloud", url: "https://status.webex.com/history/rss/dedicated-instance-ucm-cloud" },
+      { group: "Webex for BroadWorks", url: "https://status.webex.com/history/rss/webex-for-broadworks" },
+      { group: "Gateway and Solutions", url: "https://status.webex.com/history/rss/gateway-and-solutions" },
+
+      { group: "Webex Contact Center", url: "https://status.webex.com/history/rss/webex-contact-center" },
+      { group: "Webex Contact Center Enterprise", url: "https://status.webex.com/history/rss/webex-contact-center-enterprise" },
+      { group: "Developer API", url: "https://status.webex.com/history/rss/developer-api" }
+    ];
+
+    const cache = caches.default;
+    const cacheKey = new Request("https://internal-cache/webex-maintenance-multi");
+
+    const cached = await cache.match(cacheKey);
     if (cached) return cached;
 
-    // 🔹 Fetch Webex Maintenance RSS Feed
-    const rssRes = await fetch(
-      "https://status.webex.com/history.atom",
-      {
-        headers: { "Accept": "application/xml" }
+    async function fetchFeed(feed) {
+      const res = await fetch(feed.url, {
+        headers: { "Accept": "application/rss+xml, application/xml" }
+      });
+
+      const text = await res.text();
+
+      if (!res.ok || !text.includes("<item>")) {
+        return [];
       }
-    );
 
-    const xmlText = await rssRes.text();
+      const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)];
 
-    if (!rssRes.ok || !xmlText.includes("<entry>")) {
-      return json({
-        error: "rss_fetch_failed",
-        status: rssRes.status,
-        bodyPreview: xmlText.slice(0, 300)
-      }, 502);
+      return items.map(match => {
+
+        const block = match[1];
+
+        const title = (block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || "Maintenance";
+        const pubDate = (block.match(/<pubDate>(.*?)<\/pubDate>/) || [])[1] || null;
+        const guid = (block.match(/<guid>(.*?)<\/guid>/) || [])[1] || null;
+        const descriptionRaw = (block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || "";
+
+        const clean = descriptionRaw
+          .replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1")
+          .replace(/<[^>]+>/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        let status = "scheduled";
+        const lower = clean.toLowerCase();
+
+        if (lower.includes("completed")) status = "completed";
+        else if (lower.includes("in progress")) status = "in progress";
+
+        return {
+          id: guid || title,
+          name: title,
+          scheduledFor: pubDate,
+          status,
+          productGroup: feed.group,
+          impact: "maintenance",
+          updates: [
+            {
+              status,
+              updated: pubDate,
+              body: clean.slice(0, 1200)
+            }
+          ]
+        };
+      });
     }
 
-    // 🔹 Basic XML Parsing (safe for Workers)
-    const entries = [...xmlText.matchAll(/<entry>([\s\S]*?)<\/entry>/g)];
+    const results = await Promise.all(FEEDS.map(fetchFeed));
 
-    const maintenance = entries.slice(0, 25).map(match => {
+    // Flatten + dedupe
+    const allMaintenance = [];
+    const seen = new Set();
 
-      const block = match[1];
-
-      const title = (block.match(/<title>(.*?)<\/title>/) || [])[1] || "Maintenance";
-      const updated = (block.match(/<updated>(.*?)<\/updated>/) || [])[1] || null;
-      const content = (block.match(/<content.*?>([\s\S]*?)<\/content>/) || [])[1] || "";
-
-      let status = "scheduled";
-
-      if (title.toLowerCase().includes("completed")) {
-        status = "completed";
+    for (const groupItems of results) {
+      for (const item of groupItems) {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          allMaintenance.push(item);
+        }
       }
-      else if (title.toLowerCase().includes("in progress")) {
-        status = "in progress";
-      }
+    }
 
-      return {
-        name: title,
-        scheduledFor: updated,
-        status,
-        impact: "maintenance",
-        productGroup: "Webex",
-        updates: [
-          {
-            status,
-            updated,
-            body: content.replace(/<[^>]+>/g, "").slice(0, 1000)
-          }
-        ]
-      };
-    });
+    const upcoming = allMaintenance.filter(m => m.status === "scheduled");
+    const active = allMaintenance.filter(m => m.status === "in progress");
 
-    const upcoming = maintenance.filter(m => m.status === "scheduled");
-    const active = maintenance.filter(m => m.status === "in progress");
-
-    const response = json({
-      maintenance,
+    const responsePayload = {
+      maintenance: allMaintenance,
       upcoming,
       active,
       counts: {
         upcoming: upcoming.length,
         active: active.length,
-        total: maintenance.length
+        total: allMaintenance.length
       },
       lastUpdated: new Date().toISOString()
+    };
+
+    const response = new Response(JSON.stringify(responsePayload), {
+      headers: {
+        "content-type": "application/json",
+        "cache-control": "public, max-age=300"
+      }
     });
 
-    // 🔹 Store in edge cache
     ctx.waitUntil(cache.put(cacheKey, response.clone()));
 
     return response;
@@ -1395,7 +1435,6 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
       error: "maintenance_engine_failed",
       message: e.message
     }, 500);
-
   }
 }
 
