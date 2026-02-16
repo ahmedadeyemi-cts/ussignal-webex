@@ -1295,48 +1295,82 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
 if (url.pathname === "/api/maintenance" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
-if (!user.isAdmin) {
-  if (!session || !session.orgId) {
-    return json({ error: "pin_required" }, 401);
+
+  if (!user.isAdmin) {
+    if (!session || !session.orgId) {
+      return json({ error: "pin_required" }, 401);
+    }
+
+    if (session.expiresAt && session.expiresAt <= nowMs()) {
+      await clearSession(env, user.email);
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: "/pin?expired=1",
+          "cache-control": "no-store"
+        }
+      });
+    }
   }
 
-  if (session.expiresAt && session.expiresAt <= nowMs()) {
-  await clearSession(env, user.email);
-
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: "/pin?expired=1",
-      "cache-control": "no-store"
-    }
-  });
-}
-
-
-}
-
   try {
-    const upcoming = await fetch("https://status.webex.com/api/upcoming-scheduled-maintenances.json");
-    const active = await fetch("https://status.webex.com/api/active-scheduled-maintenances.json");
+    const endpoints = {
+      upcoming: "https://status.webex.com/api/upcoming-scheduled-maintenances.json",
+      active: "https://status.webex.com/api/active-scheduled-maintenances.json",
+      recent: "https://status.webex.com/api/scheduled-maintenances.json"
+    };
 
-    const upcomingData = await upcoming.json();
-    const activeData = await active.json();
+    const results = {};
+
+    for (const [key, endpoint] of Object.entries(endpoints)) {
+      const res = await fetch(endpoint, {
+        headers: { Accept: "application/json" }
+      });
+
+      const textBody = await res.text();
+
+      if (!res.ok) {
+        return json({
+          error: "maintenance_upstream_failed",
+          source: key,
+          status: res.status,
+          bodyPreview: textBody.slice(0, 400)
+        }, 502);
+      }
+
+      try {
+        const parsed = JSON.parse(textBody);
+        results[key] = parsed.scheduled_maintenances || [];
+      } catch {
+        return json({
+          error: "maintenance_not_json",
+          source: key,
+          bodyPreview: textBody.slice(0, 400)
+        }, 500);
+      }
+    }
 
     const combined = [
-      ...(upcomingData.scheduled_maintenances || []),
-      ...(activeData.scheduled_maintenances || [])
+      ...results.upcoming,
+      ...results.active,
+      ...(results.recent || []).slice(0, 50)
     ];
 
     return json({
       maintenance: combined,
+      upcomingCount: results.upcoming.length,
+      activeCount: results.active.length,
+      recentCount: (results.recent || []).length,
       lastUpdated: new Date().toISOString()
-    });
+    }, 200);
 
   } catch (e) {
-    return json({ error: "maintenance_engine_failed", message: e.message }, 500);
+    return json({
+      error: "maintenance_engine_failed",
+      message: e.message
+    }, 500);
   }
 }
-
 
       /* -----------------------------
          /api/me
