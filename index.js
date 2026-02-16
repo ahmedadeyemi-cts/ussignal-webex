@@ -951,13 +951,6 @@ await auditLog(env, email, url.pathname, {
   });
 }
 
-/* -----------------------------
-   /api/maintenance
-   Pulls live Webex status data
-   Filters for Calling / Control Hub only
------------------------------ */
-//TBD
-
       /* -----------------------------
    PIN UI
 ----------------------------- */
@@ -1315,73 +1308,96 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
 
   try {
 
-    // ✅ Use StatusPage native API endpoint (stable)
-    const res = await fetch(
-      "https://webex.statuspage.io/api/v2/scheduled-maintenances.json",
+    // 🔹 5 minute edge cache
+    const cache = caches.default;
+    const cacheKey = new Request("https://internal-cache/webex-maintenance");
+
+    let cached = await cache.match(cacheKey);
+    if (cached) return cached;
+
+    // 🔹 Fetch Webex Maintenance RSS Feed
+    const rssRes = await fetch(
+      "https://status.webex.com/history.atom",
       {
-        headers: {
-          "Accept": "application/json"
-        }
+        headers: { "Accept": "application/xml" }
       }
     );
 
-    const text = await res.text();
+    const xmlText = await rssRes.text();
 
-    if (!res.ok) {
+    if (!rssRes.ok || !xmlText.includes("<entry>")) {
       return json({
-        error: "status_api_failed",
-        status: res.status,
-        bodyPreview: text.slice(0, 300)
+        error: "rss_fetch_failed",
+        status: rssRes.status,
+        bodyPreview: xmlText.slice(0, 300)
       }, 502);
     }
 
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      return json({
-        error: "status_api_not_json",
-        bodyPreview: text.slice(0, 300)
-      }, 502);
-    }
+    // 🔹 Basic XML Parsing (safe for Workers)
+    const entries = [...xmlText.matchAll(/<entry>([\s\S]*?)<\/entry>/g)];
 
-    const items = data.scheduled_maintenances || [];
+    const maintenance = entries.slice(0, 25).map(match => {
 
-    const upcoming = items.filter(m =>
-      (m.status || "").toLowerCase() === "scheduled"
-    );
+      const block = match[1];
 
-    const active = items.filter(m =>
-      (m.status || "").toLowerCase() === "in_progress"
-    );
+      const title = (block.match(/<title>(.*?)<\/title>/) || [])[1] || "Maintenance";
+      const updated = (block.match(/<updated>(.*?)<\/updated>/) || [])[1] || null;
+      const content = (block.match(/<content.*?>([\s\S]*?)<\/content>/) || [])[1] || "";
 
-    const completed = items.filter(m =>
-      (m.status || "").toLowerCase() === "completed"
-    );
+      let status = "scheduled";
 
-    return json({
-      maintenance: items,
+      if (title.toLowerCase().includes("completed")) {
+        status = "completed";
+      }
+      else if (title.toLowerCase().includes("in progress")) {
+        status = "in progress";
+      }
+
+      return {
+        name: title,
+        scheduledFor: updated,
+        status,
+        impact: "maintenance",
+        productGroup: "Webex",
+        updates: [
+          {
+            status,
+            updated,
+            body: content.replace(/<[^>]+>/g, "").slice(0, 1000)
+          }
+        ]
+      };
+    });
+
+    const upcoming = maintenance.filter(m => m.status === "scheduled");
+    const active = maintenance.filter(m => m.status === "in progress");
+
+    const response = json({
+      maintenance,
       upcoming,
       active,
-      completed,
       counts: {
         upcoming: upcoming.length,
         active: active.length,
-        completed: completed.length
+        total: maintenance.length
       },
       lastUpdated: new Date().toISOString()
     });
 
+    // 🔹 Store in edge cache
+    ctx.waitUntil(cache.put(cacheKey, response.clone()));
+
+    return response;
+
   } catch (e) {
 
     return json({
-      error: "status_api_failed",
+      error: "maintenance_engine_failed",
       message: e.message
-    }, 502);
+    }, 500);
 
   }
 }
-      
 
       /* -----------------------------
          /api/me
