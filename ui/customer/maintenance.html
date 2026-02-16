@@ -217,27 +217,45 @@ select{
 </div>
 
 <script>
+
 const CACHE_KEY = "maintenanceCacheV1";
 const CACHE_TTL = 5 * 60 * 1000;
 
+/* =========================
+   THEME
+========================= */
 function loadTheme(){
   const saved = localStorage.getItem("uiTheme") || "light";
   document.documentElement.setAttribute("data-theme", saved);
 }
-document.getElementById("btnTheme").onclick = () => {
+
+document.getElementById("btnTheme").onclick = function(){
   const cur = document.documentElement.getAttribute("data-theme");
   const next = cur === "dark" ? "light" : "dark";
   localStorage.setItem("uiTheme", next);
   loadTheme();
 };
+
 loadTheme();
 
+/* =========================
+   API
+========================= */
 async function fetchMaintenance(){
-  const res = await fetch("/api/maintenance");
-  return await res.json();
+  try {
+    const res = await fetch("/api/maintenance", { cache: "no-store" });
+    if(!res.ok) return null;
+    return await res.json();
+  } catch(e){
+    console.error("Maintenance API error", e);
+    return null;
+  }
 }
 
-async function loadMaintenance(force=false){
+/* =========================
+   LOAD
+========================= */
+async function loadMaintenance(force){
 
   if(!force){
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
@@ -248,46 +266,83 @@ async function loadMaintenance(force=false){
   }
 
   const data = await fetchMaintenance();
+  if(!data) return;
+
   localStorage.setItem(CACHE_KEY, JSON.stringify({
     timestamp: Date.now(),
-    data
+    data: data
   }));
 
   render(data);
 }
 
+/* =========================
+   RENDER
+========================= */
 function render(data){
 
   const container = document.getElementById("maintenanceContainer");
   container.innerHTML = "";
 
-  const items = data?.maintenance || [];
+  const items = data.maintenance || [];
 
-  const upcoming = items.filter(m => m.status?.toLowerCase() === "scheduled");
-  const active = items.filter(m => m.status?.toLowerCase().includes("progress"));
-  const completed = items.filter(m => m.status?.toLowerCase() === "completed");
+  const upcoming = items.filter(function(m){
+    return (m.status || "").toLowerCase() === "scheduled";
+  });
+
+  const active = items.filter(function(m){
+    return (m.status || "").toLowerCase().includes("progress");
+  });
+
+  const completed = items.filter(function(m){
+    return (m.status || "").toLowerCase() === "completed";
+  });
 
   document.getElementById("kUpcoming").textContent = upcoming.length;
   document.getElementById("kActive").textContent = active.length;
   document.getElementById("kCompleted").textContent = completed.length;
 
-  const filter = document.getElementById("productFilter").value;
+  const filterValue = document.getElementById("productFilter").value;
 
-  const filtered = filter ?
-    items.filter(m =>
-      (m.components || []).some(c => c.product_group === filter)
-    )
-    : items;
+  let filtered = items;
+
+  if(filterValue){
+    filtered = items.filter(function(m){
+      if(!m.components) return false;
+      return m.components.some(function(c){
+        return c.product_group === filterValue;
+      });
+    });
+  }
 
   if(filtered.length === 0){
     container.innerHTML = `
       <div class="empty">
         No maintenance events found.
-      </div>`;
+      </div>
+    `;
     return;
   }
 
   const table = document.createElement("table");
+
+  let rows = "";
+
+  filtered.forEach(function(m){
+
+    const dateStr = m.created_at
+      ? new Date(m.created_at).toLocaleString()
+      : "—";
+
+    rows += `
+      <tr>
+        <td>${dateStr}</td>
+        <td><span class="badge ${badgeClass(m.status)}">${m.status || "—"}</span></td>
+        <td>${m.impact || "—"}</td>
+        <td>${m.name || "—"}</td>
+      </tr>
+    `;
+  });
 
   table.innerHTML = `
     <thead>
@@ -299,31 +354,34 @@ function render(data){
       </tr>
     </thead>
     <tbody>
-      ${filtered.map(m => `
-        <tr>
-          <td>${new Date(m.created_at).toLocaleString()}</td>
-          <td><span class="badge ${badgeClass(m.status)}">${m.status}</span></td>
-          <td>${m.impact || "—"}</td>
-          <td>${m.name}</td>
-        </tr>
-      `).join("")}
+      ${rows}
     </tbody>
   `;
 
   container.appendChild(table);
 }
 
+/* =========================
+   BADGE COLOR
+========================= */
 function badgeClass(status){
   const s = (status || "").toLowerCase();
+
   if(s.includes("progress")) return "inprogress";
   if(s === "completed") return "completed";
   return "scheduled";
 }
 
+/* =========================
+   FILTER
+========================= */
 document.getElementById("productFilter")
-  .addEventListener("change", () => loadMaintenance(true));
+  .addEventListener("change", function(){
+    loadMaintenance(true);
+  });
 
-loadMaintenance();
+loadMaintenance(false);
+
 </script>
 
 </body>
