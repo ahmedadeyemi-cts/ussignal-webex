@@ -1291,7 +1291,6 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
   }
 }
       ///api/maintenance block
-      
 if (url.pathname === "/api/maintenance" && request.method === "GET") {
 
   const user = getCurrentUser(request);
@@ -1316,64 +1315,74 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
 
   try {
 
-  const headers = {
-    "Accept": "application/json, text/plain, */*",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36"
-  };
-
-  async function fetchJson(url, label) {
-    const res = await fetch(url, {
-      headers,
-      cf: {
-        cacheTtl: 300,
-        cacheEverything: false
+    // ✅ Use StatusPage native API endpoint (stable)
+    const res = await fetch(
+      "https://webex.statuspage.io/api/v2/scheduled-maintenances.json",
+      {
+        headers: {
+          "Accept": "application/json"
+        }
       }
-    });
+    );
 
     const text = await res.text();
 
     if (!res.ok) {
-      throw new Error(`${label} failed: ${res.status} ${text.slice(0,200)}`);
+      return json({
+        error: "status_api_failed",
+        status: res.status,
+        bodyPreview: text.slice(0, 300)
+      }, 502);
     }
 
-    if (!text.trim().startsWith("{")) {
-      throw new Error(`${label} returned non-JSON`);
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return json({
+        error: "status_api_not_json",
+        bodyPreview: text.slice(0, 300)
+      }, 502);
     }
 
-    return JSON.parse(text);
+    const items = data.scheduled_maintenances || [];
+
+    const upcoming = items.filter(m =>
+      (m.status || "").toLowerCase() === "scheduled"
+    );
+
+    const active = items.filter(m =>
+      (m.status || "").toLowerCase() === "in_progress"
+    );
+
+    const completed = items.filter(m =>
+      (m.status || "").toLowerCase() === "completed"
+    );
+
+    return json({
+      maintenance: items,
+      upcoming,
+      active,
+      completed,
+      counts: {
+        upcoming: upcoming.length,
+        active: active.length,
+        completed: completed.length
+      },
+      lastUpdated: new Date().toISOString()
+    });
+
+  } catch (e) {
+
+    return json({
+      error: "status_api_failed",
+      message: e.message
+    }, 502);
+
   }
-
-  const [upcomingData, activeData, allData] = await Promise.all([
-    fetchJson("https://status.webex.com/api/upcoming-scheduled-maintenances.json", "upcoming"),
-    fetchJson("https://status.webex.com/api/active-scheduled-maintenances.json", "active"),
-    fetchJson("https://status.webex.com/api/all-scheduled-maintenances.json", "all")
-  ]);
-
-  const upcoming = upcomingData.scheduled_maintenances || [];
-  const active = activeData.scheduled_maintenances || [];
-  const all = allData.scheduled_maintenances || [];
-
-  return json({
-    maintenance: all,
-    upcoming,
-    active,
-    recent: all,
-    counts: {
-      upcoming: upcoming.length,
-      active: active.length,
-      total: all.length
-    },
-    lastUpdated: new Date().toISOString()
-  });
-
-} catch (e) {
-
-  return json({
-    error: "status_api_failed",
-    message: e.message
-  }, 502);
-
 }
+      
+
       /* -----------------------------
          /api/me
          - returns role
