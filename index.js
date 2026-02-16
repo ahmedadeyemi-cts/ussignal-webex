@@ -1428,97 +1428,66 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
 
   try {
 
-    const cache = caches.default;
-    const cacheKey = new Request("https://internal-cache/webex-maintenance-json");
+    const cacheSeconds = 300;
 
-    const cached = await cache.match(cacheKey);
-    if (cached) return cached;
+    return await cacheJson(
+      cacheSeconds,
+      "https://internal-cache/webex-maintenance-v2",
+      async () => {
 
-    const [allRes, compRes] = await Promise.all([
-      fetch("https://status.webex.com/all-scheduled-maintenances.json", {
-        headers: { Accept: "application/json" }
-      }),
-      fetch("https://status.webex.com/components.json", {
-        headers: { Accept: "application/json" }
-      })
-    ]);
+        const upcomingRes = await fetch(
+          "https://status.webex.com/upcoming-scheduled-maintenances.json"
+        );
 
-    if (!allRes.ok) {
-      return json({
-        error: "maintenance_upstream_failed",
-        status: allRes.status
-      }, 502);
-    }
+        const activeRes = await fetch(
+          "https://status.webex.com/active-scheduled-maintenances.json"
+        );
 
-    const allData = await allRes.json();
-    const compData = compRes.ok ? await compRes.json() : { components: [] };
+        const upcoming = upcomingRes.ok
+          ? (await upcomingRes.json()).scheduled_maintenances || []
+          : [];
 
-    const components = compData.components || [];
+        const active = activeRes.ok
+          ? (await activeRes.json()).scheduled_maintenances || []
+          : [];
 
-    // Map component ID -> product group
-    const componentMap = {};
-    for (const c of components) {
-      componentMap[c.id] = {
-        id: c.id,
-        name: c.name,
-        group: c.group || "Other"
-      };
-    }
+        const all = [...active, ...upcoming];
 
-    const items = (allData.scheduled_maintenances || []).map(m => {
+        const normalized = all.map(m => {
 
-      const normalizedComponents = (m.components || []).map(c => {
-        const mapped = componentMap[c.id] || {};
+          const update = m.updates?.[0];
+
+          let body = update?.body || "";
+
+          // Clean CDATA if present
+          body = body
+            .replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1")
+            .trim();
+
+          return {
+            id: m.id,
+            name: m.name,
+            status: m.status,
+            impact: m.impact,
+            created_at: m.created_at,
+            updated_at: m.updated_at,
+            components: m.components || [],
+            detailsHtml: body,   // 🔥 full HTML preserved
+            updates: m.updates || []
+          };
+        });
+
         return {
-          id: c.id,
-          name: mapped.name || c.name,
-          product_group: mapped.group || "Other"
+          maintenance: normalized,
+          counts: {
+            upcoming: upcoming.length,
+            active: active.length,
+            total: normalized.length
+          },
+          lastUpdated: new Date().toISOString()
         };
-      });
-
-      return {
-        id: m.id,
-        name: m.name,
-        status: m.status,
-        impact: m.impact,
-        created_at: m.created_at,
-        scheduled_for: m.scheduled_for,
-        updated_at: m.updated_at,
-        components: normalizedComponents,
-        updates: m.incident_updates || []
-      };
-    });
-
-    const upcoming = items.filter(m => m.status === "scheduled");
-    const active = items.filter(m =>
-      ["in_progress", "verifying"].includes(m.status)
-    );
-    const completed = items.filter(m => m.status === "completed");
-
-    const payload = {
-      maintenance: items,
-      upcoming,
-      active,
-      completed,
-      counts: {
-        upcoming: upcoming.length,
-        active: active.length,
-        completed: completed.length,
-        total: items.length
-      },
-      lastUpdated: new Date().toISOString()
-    };
-
-    const response = new Response(JSON.stringify(payload), {
-      headers: {
-        "content-type": "application/json",
-        "cache-control": "public, max-age=300"
       }
-    });
-
-    await cache.put(cacheKey, response.clone());
-
-    return response;
+    );
 
   } catch (e) {
     return json({
@@ -1527,6 +1496,7 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
     }, 500);
   }
 }
+
 /* -----------------------------
    /api/components
    - Returns all Webex Status components
