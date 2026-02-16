@@ -1423,52 +1423,69 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
   try {
 
     const cache = caches.default;
-    const cacheKey = new Request("https://internal-cache/webex-maintenance-v2");
+    const cacheKey = new Request("https://internal-cache/webex-maintenance-official");
 
     const cached = await cache.match(cacheKey);
     if (cached) return cached;
 
-    const res = await fetch(
-      "https://status-api.webex.com/v2/scheduled-maintenances.json"
-    );
+    const token = await getAccessToken(env);
+
+    const res = await fetch("https://webexapis.com/v1/service/status", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json"
+      }
+    });
+
+    const text = await res.text();
 
     if (!res.ok) {
-      const text = await res.text();
       return json({
-        error: "status_api_failed",
+        error: "webex_status_failed",
         status: res.status,
-        bodyPreview: text.slice(0, 300)
+        bodyPreview: text.slice(0, 400)
       }, 502);
     }
 
-    const data = await res.json();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      return json({
+        error: "webex_status_not_json",
+        bodyPreview: text.slice(0, 400)
+      }, 500);
+    }
 
-    const maint = data.scheduled_maintenances || [];
+    // Normalize for your UI
+    const services = data.items || data.services || [];
 
-    const maintenance = maint.map(m => ({
-      id: m.id,
-      name: m.name,
-      status: m.status,
-      scheduledFor: m.scheduled_for,
-      impact: m.impact,
-      productGroup: "Webex",
-      updates: m.incident_updates || []
+    const maintenance = services.map(s => ({
+      id: s.id || s.name,
+      name: s.name,
+      status: s.status,
+      productGroup: s.group || "Webex",
+      impact: s.status !== "operational" ? "degraded" : "none",
+      updates: [
+        {
+          status: s.status,
+          updated: new Date().toISOString(),
+          body: s.message || s.description || ""
+        }
+      ]
     }));
 
-    const upcoming = maintenance.filter(m =>
-      m.status === "scheduled"
-    );
-
     const active = maintenance.filter(m =>
-      m.status === "in_progress"
+      m.status &&
+      m.status.toLowerCase() !== "operational"
     );
 
     const responsePayload = {
       maintenance,
-      upcoming,
+      upcoming: [],
       active,
       counts: {
-        upcoming: upcoming.length,
+        upcoming: 0,
         active: active.length,
         total: maintenance.length
       },
