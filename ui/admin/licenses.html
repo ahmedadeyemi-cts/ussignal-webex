@@ -1,372 +1,199 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>US Signal | Licenses</title>
+<div class="page-header">
+  <h2>License Management</h2>
+
+  <div style="display:flex; gap:12px; align-items:center;">
+    <select id="orgSelector"></select>
+
+    <label style="display:flex; align-items:center; gap:6px; font-size:14px;">
+      <input type="checkbox" id="auditToggle">
+      Audit Mode
+    </label>
+  </div>
+</div>
+
+<!-- SLA Overview -->
+<div class="kpi-row">
+
+  <div class="kpi-card">
+    <div class="kpi-label">Assigned</div>
+    <div class="kpi-value" id="assignedCount">—</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Available</div>
+    <div class="kpi-value" id="availableCount">—</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Deficit</div>
+    <div class="kpi-value danger" id="deficitCount">—</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Utilization</div>
+    <div class="kpi-value success" id="utilization">—</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">SLA Compliance</div>
+    <div class="kpi-value success" id="slaCompliance">—</div>
+  </div>
+
+</div>
+
+<!-- License Table -->
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>License SKU</th>
+        <th>Assigned</th>
+        <th>Total</th>
+        <th>Utilization</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="licenseTable">
+      <tr><td colspan="6">Select organization...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Multi-Tenant Drilldown Modal -->
+<div id="licenseModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="modalTitle">License Drilldown</h3>
+      <button onclick="closeModal()">Close</button>
+    </div>
+    <div id="modalContent" class="modal-body"></div>
+  </div>
+</div>
 
 <style>
-:root{
-  --bg:#f6f8fb;
-  --card:#ffffff;
-  --text:#0f172a;
-  --muted:#64748b;
-  --line:rgba(15,23,42,.10);
-  --shadow:0 8px 24px rgba(15,23,42,.08);
-
-  --accent:#0f62fe;
-  --accent2:#0b4bd4;
-
-  --good:#16a34a;
-  --warn:#f59e0b;
-  --bad:#dc2626;
-}
-
-*{ box-sizing:border-box; }
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
-
-/* Layout */
-.app{
-  display:grid;
-  grid-template-columns:270px 1fr;
-  min-height:100vh;
-}
-
-/* Sidebar */
-.sidebar{
-  background:var(--card);
-  border-right:1px solid var(--line);
-  padding:18px 14px;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-}
-
-.brand{
-  display:flex;
+.modal-overlay {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  display:none;
   align-items:center;
-  gap:12px;
-  padding-bottom:14px;
-  border-bottom:1px solid var(--line);
+  justify-content:center;
+  z-index:9999;
 }
 
-.brand img{ height:34px; }
-
-.brand .title{
-  display:flex;
-  flex-direction:column;
-}
-.brand .title b{ font-size:14px; }
-.brand .title span{
-  font-size:12px;
-  color:var(--muted);
-}
-
-.nav{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-.nav a{
-  padding:10px;
-  border-radius:12px;
-  font-weight:800;
-  font-size:13px;
-}
-
-.nav a:hover{
-  background:rgba(15,98,254,.08);
-  color:var(--accent2);
-}
-
-.nav a.active{
-  background:rgba(15,98,254,.12);
-  border:1px solid rgba(15,98,254,.20);
-}
-
-.sidebar-bottom{
-  margin-top:auto;
-  padding-top:10px;
-  border-top:1px solid var(--line);
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-.userline{
-  font-size:12px;
-  color:var(--muted);
-}
-
-.btn{
-  padding:10px 12px;
-  border-radius:12px;
-  font-weight:900;
-  font-size:13px;
-  cursor:pointer;
-  border:none;
-}
-.btn-primary{
-  background:var(--accent);
-  color:#fff;
-}
-.btn-primary:hover{ background:var(--accent2); }
-
-.btn-outline{
-  background:#fff;
-  border:1px solid rgba(15,23,42,.18);
-}
-.btn-outline:hover{
-  border-color:rgba(15,98,254,.35);
-  color:var(--accent2);
-}
-
-/* Main */
-.main{
-  padding:22px;
-}
-
-/* Header */
-.header-card{
+.modal-card {
+  width:800px;
+  max-width:95%;
   background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  padding:16px;
+  border-radius:14px;
+  padding:24px;
+}
+
+.modal-header {
   display:flex;
   justify-content:space-between;
   align-items:center;
-  gap:12px;
+  margin-bottom:16px;
 }
 
-.header-left{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
-.header-left .h{
-  font-size:16px;
-  font-weight:1000;
-}
-.header-left .sub{
-  font-size:12px;
-  color:var(--muted);
-}
-
-select{
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid rgba(15,23,42,.18);
-  font-weight:700;
-  min-width:260px;
-}
-
-/* Table */
-.section{
-  margin-top:18px;
-}
-
-.table-wrap{
-  margin-top:12px;
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow:var(--shadow);
+.modal-body {
+  max-height:60vh;
   overflow:auto;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-}
-
-thead th{
-  padding:12px;
-  font-size:12px;
-  color:var(--muted);
-  text-align:left;
-  text-transform:uppercase;
-}
-
-tbody td{
-  padding:12px;
-  border-top:1px solid rgba(15,23,42,.06);
-  font-size:13px;
-}
-
-tbody tr:hover{
-  background:rgba(15,98,254,.04);
-}
-
-.badge{
-  padding:6px 10px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:900;
-}
-
-.badge.good{
-  background:rgba(22,163,74,.08);
-  border:1px solid rgba(22,163,74,.25);
-  color:var(--good);
-}
-.badge.warn{
-  background:rgba(245,158,11,.10);
-  border:1px solid rgba(245,158,11,.30);
-  color:#b45309;
-}
-.badge.bad{
-  background:rgba(220,38,38,.08);
-  border:1px solid rgba(220,38,38,.30);
-  color:var(--bad);
+  font-size:14px;
 }
 </style>
-</head>
-
-<body>
-<div class="app">
-
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="brand">
-      <img src="/assets/ussignal-logo.jpg"
-           onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
-      <div class="title">
-        <b>Partner Portal</b>
-        <span>Managed Services</span>
-      </div>
-    </div>
-
-    <nav class="nav">
-      <a href="/admin">Dashboard</a>
-      <a href="/admin/customers">Customers</a>
-      <a href="/admin/analytics">Analytics</a>
-      <a class="active" href="/admin/licenses">Licenses</a>
-      <a href="/admin/devices">Devices</a>
-      <a href="/admin/alerts">Alerts</a>
-      <a href="/admin/pins">PIN Management</a>
-    </nav>
-
-    <div class="sidebar-bottom">
-      <div class="userline">
-        <b id="whoami"></b>
-        <div id="sessionLine"></div>
-      </div>
-      <button class="btn btn-primary" onclick="logout()">Logout</button>
-    </div>
-  </aside>
-
-  <!-- Main -->
-  <main class="main">
-
-    <div class="header-card">
-      <div class="header-left">
-        <div class="h">License Management</div>
-        <div class="sub">Webex Calling license allocation and deficit tracking</div>
-      </div>
-
-      <select id="orgSelect"></select>
-    </div>
-
-    <div class="section">
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>License</th>
-              <th>Total</th>
-              <th>Consumed</th>
-              <th>Available</th>
-              <th>Deficit</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="licenseRows">
-            <tr><td colspan="6">Select an organization...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </main>
-</div>
 
 <script>
-const $ = id => document.getElementById(id);
+let currentOrg = null;
 
-async function api(path){
-  const r = await fetch(path);
-  if(!r.ok){
-    if(r.status===401) window.location="/pin";
-    throw new Error("API failed");
+async function loadLicenses(orgId) {
+  currentOrg = orgId;
+
+  const data = await api(`/api/admin/licenses?orgId=${orgId}`);
+  if (!data) return;
+
+  const assigned = data.assigned || 0;
+  const total = data.total || 0;
+  const available = total - assigned;
+  const deficit = assigned > total ? assigned - total : 0;
+  const utilization = total ? Math.round((assigned / total) * 100) : 0;
+
+  document.getElementById("assignedCount").textContent = assigned;
+  document.getElementById("availableCount").textContent = available;
+  document.getElementById("deficitCount").textContent = deficit;
+  document.getElementById("utilization").textContent = utilization + "%";
+
+  // SLA Logic
+  const sla = deficit > 0 ? "At Risk" : "Compliant";
+  const slaEl = document.getElementById("slaCompliance");
+  slaEl.textContent = sla;
+  slaEl.className = "kpi-value " + (deficit > 0 ? "danger" : "success");
+
+  const rows = data.items.map(l => {
+
+    const util = l.total
+      ? Math.round((l.assigned / l.total) * 100)
+      : 0;
+
+    const status =
+      l.assigned > l.total
+        ? `<span class="danger">Deficit</span>`
+        : `<span class="success">Healthy</span>`;
+
+    return `
+      <tr>
+        <td>${l.sku}</td>
+        <td>${l.assigned}</td>
+        <td>${l.total}</td>
+        <td>${util}%</td>
+        <td>${status}</td>
+        <td>
+          <button onclick="openModal('${l.sku}')">
+            Details
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  document.getElementById("licenseTable").innerHTML = rows;
+
+  if (document.getElementById("auditToggle").checked) {
+    applyAuditMode();
   }
-  return await r.json();
 }
 
-function badge(status){
-  if(status==="DEFICIT") return `<span class="badge bad">Deficit</span>`;
-  if(status==="FULL") return `<span class="badge warn">Full</span>`;
-  if(status==="UNLIMITED") return `<span class="badge good">Unlimited</span>`;
-  return `<span class="badge good">Healthy</span>`;
+function openModal(sku) {
+  document.getElementById("modalTitle").textContent =
+    `License Details – ${sku}`;
+
+  document.getElementById("modalContent").innerHTML =
+    `<p>Detailed breakdown for SKU: <strong>${sku}</strong></p>
+     <p>Tenant: ${currentOrg}</p>
+     <p>This view can include user-level assignments, compliance checks, and change history.</p>`;
+
+  document.getElementById("licenseModal").style.display = "flex";
 }
 
-async function loadOrgs(){
-  const orgs = await api("/api/admin/orgs");
-  const select = $("orgSelect");
-
-  select.innerHTML = orgs.items.map(o =>
-    `<option value="${o.orgId}">${o.orgName}</option>`
-  ).join("");
-
-  const saved = localStorage.getItem("adminSelectedOrgId");
-  if(saved) select.value = saved;
-
-  loadLicenses(select.value);
-
-  select.onchange = e=>{
-    localStorage.setItem("adminSelectedOrgId", e.target.value);
-    loadLicenses(e.target.value);
-  };
+function closeModal() {
+  document.getElementById("licenseModal").style.display = "none";
 }
 
-async function loadLicenses(orgId){
-  const data = await api(`/api/licenses?orgId=${orgId}`);
-
-  const rows = data.items.map(l => `
-    <tr>
-      <td><b>${l.name}</b></td>
-      <td>${l.total === -1 ? "Unlimited" : l.total ?? "—"}</td>
-      <td>${l.consumed}</td>
-      <td>${l.available === -1 ? "Unlimited" : l.available ?? "—"}</td>
-      <td>${l.deficit}</td>
-      <td>${badge(l.status)}</td>
-    </tr>
-  `).join("");
-
-  $("licenseRows").innerHTML = rows || `<tr><td colspan="6">No licenses found.</td></tr>`;
+function applyAuditMode() {
+  document.querySelectorAll("#licenseTable tr").forEach(row => {
+    row.style.background =
+      row.innerHTML.includes("Deficit")
+        ? "rgba(220,38,38,0.08)"
+        : "";
+  });
 }
 
-async function logout(){
-  await fetch("/api/pin/logout",{method:"POST"});
-  window.location="/pin";
-}
+document.getElementById("auditToggle").onchange = () => {
+  if (currentOrg) loadLicenses(currentOrg);
+};
 
-async function init(){
-  const me = await api("/api/me");
-  if(me.role!=="admin") window.location="/pin";
-  $("whoami").textContent = me.email;
-  $("sessionLine").textContent = "Session: "+(me.sessionExpiresInSeconds||0)+"s";
-  loadOrgs();
-}
-
-init();
+document.getElementById("orgSelector").onchange = e => {
+  loadLicenses(e.target.value);
+};
 </script>
-
-</body>
-</html>
