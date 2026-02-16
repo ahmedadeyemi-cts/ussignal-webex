@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Signal | Support Operations</title>
+
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
+
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+}
+
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.app{
+  display:grid;
+  grid-template-columns:270px 1fr;
+  min-height:100vh;
+}
+
+.sidebar{
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+
+.brand img{ height:34px; }
+
+.brand .title{
+  display:flex;
+  flex-direction:column;
+}
+.brand .title b{ font-size:14px; }
+.brand .title span{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
+}
+
+.nav a:hover{
+  background:rgba(15,98,254,.08);
+  color:var(--accent2);
+}
+
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+.sidebar-bottom{
+  margin-top:auto;
+  padding-top:10px;
+  border-top:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.userline{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.btn{
+  padding:10px 12px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:13px;
+  cursor:pointer;
+  border:none;
+}
+.btn-primary{
+  background:var(--accent);
+  color:#fff;
+}
+.btn-primary:hover{ background:var(--accent2); }
+
+.btn-outline{
+  background:#fff;
+  border:1px solid rgba(15,23,42,.18);
+}
+.btn-outline:hover{
+  border-color:rgba(15,98,254,.35);
+  color:var(--accent2);
+}
+
+.main{
+  padding:22px;
+}
+
+.header-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+}
+
+.header-left .h{
+  font-size:16px;
+  font-weight:1000;
+}
+.header-left .sub{
+  font-size:12px;
+  color:var(--muted);
+  max-width:860px;
+}
+
+.section{ margin-top:18px; }
+
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:14px;
+}
+
+.card h3{
+  margin:0 0 6px 0;
+  font-size:13px;
+  font-weight:1000;
+}
+
+.hr{
+  height:1px;
+  background:rgba(15,23,42,.08);
+  margin:12px 0;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+@media (max-width:1100px){
+  .grid{ grid-template-columns:1fr; }
+}
+
+.kv{
+  display:grid;
+  grid-template-columns:200px 1fr;
+  gap:10px;
+  font-size:12px;
+}
+.kv .k{ color:var(--muted); font-weight:900; }
+.kv .v{ font-weight:800; }
+
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+}
+.badge.good{
+  background:rgba(22,163,74,.08);
+  border:1px solid rgba(22,163,74,.25);
+  color:var(--good);
+}
+.badge.warn{
+  background:rgba(245,158,11,.10);
+  border:1px solid rgba(245,158,11,.30);
+  color:#b45309;
+}
+.badge.bad{
+  background:rgba(220,38,38,.08);
+  border:1px solid rgba(220,38,38,.30);
+  color:var(--bad);
+}
+
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<aside class="sidebar">
+  <div class="brand">
+    <img src="/assets/ussignal-logo.jpg">
+    <div class="title">
+      <b>Partner Portal</b>
+      <span>Managed Services</span>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/customers">Customers</a>
+    <a href="/admin/licenses">Licenses</a>
+    <a href="/admin/devices">Devices</a>
+    <a class="active" href="/admin/support">Support</a>
+    <a href="/admin/implementation">Implementation</a>
+    <a href="/admin/pstn">PSTN</a>
+    <a href="/admin/tenant-resolution">Resolution</a>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <div class="userline">
+      <b id="whoami"></b>
+      <div id="sessionLine"></div>
+    </div>
+    <button class="btn btn-primary" onclick="logout()">Logout</button>
+  </div>
+</aside>
+
+<main class="main">
+
+<div class="header-card">
+  <div class="header-left">
+    <div class="h">Support Operations Command Center</div>
+    <div class="sub">
+      Centralized operational visibility across all managed Webex Calling tenants.
+      Includes live health posture, escalation governance, PSTN integrity monitoring,
+      SLA tracking, and structured support engagement workflows.
+    </div>
+  </div>
+</div>
+
+<!-- Operational Health -->
+<div class="section grid">
+
+  <div class="card">
+    <h3>Tenant Health Summary</h3>
+    <div class="hr"></div>
+    <div class="kv">
+      <div class="k">Active Tenants</div>
+      <div class="v" id="tenantCount">--</div>
+
+      <div class="k">Open Incidents</div>
+      <div class="v" id="incidentCount">--</div>
+
+      <div class="k">Critical (P1)</div>
+      <div class="v"><span class="badge bad">0</span></div>
+
+      <div class="k">Major (P2)</div>
+      <div class="v"><span class="badge warn">0</span></div>
+
+      <div class="k">Healthy</div>
+      <div class="v"><span class="badge good">Operational</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>PSTN Operational Integrity</h3>
+    <div class="hr"></div>
+    <div class="kv">
+      <div class="k">Carrier Status</div>
+      <div class="v"><span class="badge good">Stable</span></div>
+
+      <div class="k">Porting Events</div>
+      <div class="v">No active port windows</div>
+
+      <div class="k">E911 Posture</div>
+      <div class="v"><span class="badge good">Validated</span></div>
+
+      <div class="k">Failover Readiness</div>
+      <div class="v">Confirmed</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Escalation Model -->
+<div class="section">
+  <div class="card">
+    <h3>Escalation Governance Model</h3>
+    <div class="hr"></div>
+    <div class="kv">
+      <div class="k">Level 1</div>
+      <div class="v">Service Desk Intake and Issue Validation</div>
+
+      <div class="k">Level 2</div>
+      <div class="v">Collaboration Engineering Routing & Device Analysis</div>
+
+      <div class="k">Level 3</div>
+      <div class="v">Architectural Authority Review</div>
+
+      <div class="k">External</div>
+      <div class="v">Carrier or Cisco TAC Engagement</div>
+    </div>
+  </div>
+</div>
+
+<!-- US SIGNAL ONLY BLOCK -->
+<div id="ussignalBlock" class="section" style="display:none;">
+  <div class="card">
+    <h3>US Signal Customer Support & Escalation Structure</h3>
+
+    <div class="hr"></div>
+
+    <p>
+      US Signal provides structured managed services support for Webex Calling environments.
+      Engagement method depends on business hours versus after-hours support windows.
+    </p>
+
+    <div class="hr"></div>
+
+    <div class="kv">
+      <div class="k">Business Hours</div>
+      <div class="v">
+        Customers may contact US Signal Customer Support directly.
+      </div>
+
+      <div class="k">Phone</div>
+      <div class="v">515-334-5755</div>
+
+      <div class="k">Email</div>
+      <div class="v">DLD-customercare@ussignal.com</div>
+
+      <div class="k">After Hours</div>
+      <div class="v">
+        Customers must provide tenant PIN and contact OneAssist at 844-462-3828.
+      </div>
+
+      <div class="k">Escalation Authority</div>
+      <div class="v">
+        Engineering retains architectural oversight. Carrier or Cisco TAC escalation
+        is initiated when PSTN or platform-layer anomalies are confirmed.
+      </div>
+    </div>
+
+    <div class="hr"></div>
+    <span class="badge good">24/7 Structured Coverage</span>
+    <span class="badge warn">PIN Required After Hours</span>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+async function api(path){
+  const r = await fetch(path);
+  if(!r.ok){
+    if(r.status===401) window.location="/pin";
+    throw new Error("API failed");
+  }
+  return await r.json();
+}
+
+async function logout(){
+  await fetch("/api/pin/logout",{method:"POST"});
+  window.location="/pin";
+}
+
+async function init(){
+  const me = await api("/api/me");
+  if(me.role!=="admin") window.location="/pin";
+
+  $("whoami").textContent = me.email;
+  $("sessionLine").textContent = "Session: "+(me.sessionExpiresInSeconds||0)+"s";
+
+  // Only show US Signal support explanation for US Signal org
+  if(me.orgName === "US Signal"){
+    $("ussignalBlock").style.display = "block";
+  }
+
+  // Demo values (replace with real API calls later)
+  $("tenantCount").textContent = "24";
+  $("incidentCount").textContent = "0";
+}
+
+init();
+</script>
+
+</body>
+</html>
