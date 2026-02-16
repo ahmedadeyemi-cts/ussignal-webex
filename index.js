@@ -1041,9 +1041,7 @@ if (url.pathname === "/admin/alerts" && request.method === "GET") {
 }
 
 if (url.pathname === "/admin/pins" && request.method === "GET") {
-  return text(await renderAdminPinsHTML(), 200, {
-    "content-type": "text/html; charset=utf-8",
-  });
+  return fetch(new URL("/ui/admin/pins.html", request.url));
 }
 
 /* -----------------------------
