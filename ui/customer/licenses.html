@@ -1,508 +1,237 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8" />
-  <title>US Signal | Webex Calling License Management</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8" />
+<title>US Signal | Webex Calling License Management</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <style>
-   :root{
-  --bg:#f6f8fb;
-  --card:#ffffff;
-  --text:#0f172a;
-  --muted:#64748b;
-  --line:rgba(15,23,42,.10);
-  --shadow:0 8px 24px rgba(15,23,42,.08);
+<style>
 
-  --accent:#0f62fe;
-  --accent2:#0b4bd4;
+/* ======================================================
+   THEME SYSTEM
+====================================================== */
 
-  --good:#16a34a;
-  --warn:#f59e0b;
-  --bad:#dc2626;
-}
-
-*{ box-sizing:border-box; }
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  background:var(--bg);
-  color:var(--text);
+html[data-theme="light"] {
+  --bg: #f9fafb;
+  --fg: #111827;
+  --card: #ffffff;
+  --border: #e5e7eb;
+  --accent: #2563eb;
+  --muted: #6b7280;
+  --danger-bg: #fee2e2;
+  --danger-fg: #991b1b;
+  --pill-bg: rgba(37, 99, 235, 0.08);
+  --pill-fg: #1d4ed8;
+  --shadow: 0 8px 22px rgba(0,0,0,0.06);
+  --rowHover: rgba(17, 24, 39, 0.04);
 }
 
-/* Layout */
-.app{
-  display:grid;
-  grid-template-columns:270px 1fr;
-  min-height:100vh;
+html[data-theme="dark"] {
+  --bg: #0b1220;
+  --fg: #e5e7eb;
+  --card: #020617;
+  --border: #1f2937;
+  --accent: #3b82f6;
+  --muted: #9ca3af;
+  --danger-bg: rgba(248,113,113,0.18);
+  --danger-fg: #fecaca;
+  --pill-bg: rgba(59,130,246,0.18);
+  --pill-fg: #bfdbfe;
+  --shadow: 0 8px 22px rgba(0,0,0,0.25);
+  --rowHover: rgba(255,255,255,0.06);
 }
 
-/* Sidebar */
-.sidebar{
-  background:var(--card);
-  border-right:1px solid var(--line);
-  padding:18px 14px;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
+* {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.brand{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding-bottom:14px;
-  border-bottom:1px solid var(--line);
+/* ======================================================
+   FLEX LAYOUT (MATCHES INDEX.HTML)
+====================================================== */
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  display: flex;
+  height: 100vh;
 }
 
-.brand img{ height:34px; }
-
-.brand .title{
-  display:flex;
-  flex-direction:column;
-}
-.brand .title b{ font-size:14px; }
-.brand .title span{
-  font-size:12px;
-  color:var(--muted);
+/* SIDEBAR */
+.sidebar {
+  width: 250px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
-.nav{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
+.sidebar h2 {
+  font-size: 16px;
+  margin: 0 0 18px 0;
 }
 
-.nav a{
-  padding:10px;
-  border-radius:12px;
-  font-weight:800;
-  font-size:13px;
-  text-decoration:none;
-  color:var(--text);
+.sidebar a,
+.sidebar a:visited {
+  color: var(--fg);
+  text-decoration: none;
 }
 
-.nav a:hover{
-  background:rgba(15,98,254,.08);
-  color:var(--accent2);
+.nav-link {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 6px;
 }
 
-.nav a.active{
-  background:rgba(15,98,254,.12);
-  border:1px solid rgba(15,98,254,.20);
+.nav-link:hover {
+  background: var(--rowHover);
 }
 
-.sidebar-bottom{
-  margin-top:auto;
-  padding-top:10px;
-  border-top:1px solid var(--line);
-  display:flex;
-  flex-direction:column;
-  gap:10px;
+.nav-link.active {
+  background: var(--pill-bg);
+  border: 1px solid var(--accent);
 }
 
-.userline{
-  font-size:12px;
-  color:var(--muted);
+/* MAIN */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-.btn{
-  padding:10px 12px;
-  border-radius:12px;
-  font-weight:900;
-  font-size:13px;
-  cursor:pointer;
-  border:none;
-}
-.btn-primary{
-  background:var(--accent);
-  color:#fff;
-}
-.btn-primary:hover{ background:var(--accent2); }
-
-.btn-outline{
-  background:#fff;
-  border:1px solid rgba(15,23,42,.18);
-}
-.btn-outline:hover{
-  border-color:rgba(15,98,254,.35);
-  color:var(--accent2);
+/* HEADER */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 28px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
 }
 
-.btn-danger{
-  background:#fff;
-  border:1px solid rgba(220,38,38,.35);
-  color:var(--bad);
-}
-.btn-danger:hover{
-  background:rgba(220,38,38,.06);
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
-a.link{
-  color:var(--accent2);
-  text-decoration:none;
-  font-weight:800;
-}
-a.link:hover{ text-decoration:underline; }
-
-/* Main */
-.main{
-  padding:22px;
+.brand img {
+  height: 34px;
 }
 
-/* Header */
-.header-card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  padding:16px;
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:12px;
+.headerRight {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
-.header-left{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
-.header-left .h{
-  font-size:16px;
-  font-weight:1000;
-}
-.header-left .sub{
-  font-size:12px;
-  color:var(--muted);
-  max-width:900px;
+.pill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  color: var(--pill-fg);
+  font-weight: 600;
 }
 
-.header-actions{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-  justify-content:flex-end;
+/* CONTENT */
+.content {
+  padding: 32px;
+  overflow: auto;
 }
 
-.pill{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:8px 10px;
-  border-radius:999px;
-  border:1px solid rgba(15,23,42,.14);
-  background:#fff;
-  font-size:12px;
-  font-weight:900;
-  color:var(--muted);
+.grid {
+  display: grid;
+  gap: 18px;
 }
 
-.pill b{ color:var(--text); }
-
-/* Sections */
-.section{ margin-top:18px; }
-
-.grid{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap:14px;
-}
-@media (max-width: 1100px){
-  .grid{ grid-template-columns: 1fr; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: var(--shadow);
 }
 
-.card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  padding:14px;
+h2 { margin: 0 0 10px 0; font-size: 16px; }
+
+.muted { color: var(--muted); font-size: 13px; }
+
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  border-bottom: 1px solid var(--border);
 }
 
-.card h3{
-  margin:0 0 6px 0;
-  font-size:13px;
-  letter-spacing:.2px;
-  font-weight:1000;
-}
-.card p{
-  margin:0;
-  font-size:12px;
-  color:var(--muted);
-  line-height:1.55;
+.tab {
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 600;
+  border-bottom: 3px solid transparent;
+  color: var(--muted);
 }
 
-.hr{
-  height:1px;
-  background:rgba(15,23,42,.08);
-  margin:12px 0;
+.tab.active {
+  border-bottom: 3px solid var(--accent);
+  color: var(--accent);
 }
 
-.kv{
-  display:grid;
-  grid-template-columns: 220px 1fr;
-  gap:10px;
-  font-size:12px;
-}
-.kv .k{ color:var(--muted); font-weight:900; }
-.kv .v{ color:var(--text); font-weight:800; }
+.tabpanel.hidden { display: none; }
 
-.badge{
-  padding:6px 10px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:900;
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-}
-.badge.good{
-  background:rgba(22,163,74,.08);
-  border:1px solid rgba(22,163,74,.25);
-  color:var(--good);
-}
-.badge.warn{
-  background:rgba(245,158,11,.10);
-  border:1px solid rgba(245,158,11,.30);
-  color:#b45309;
-}
-.badge.bad{
-  background:rgba(220,38,38,.08);
-  border:1px solid rgba(220,38,38,.30);
-  color:var(--bad);
-}
-.badge.neutral{
-  background:rgba(15,98,254,.08);
-  border:1px solid rgba(15,98,254,.20);
-  color:var(--accent2);
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
 }
 
-.small{
-  font-size:12px;
-  color:var(--muted);
-  line-height:1.55;
+th, td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
 }
 
-.steps{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  margin-top:10px;
+th {
+  font-weight: 800;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-.step{
-  display:flex;
-  gap:10px;
-  padding:10px;
-  border-radius:14px;
-  border:1px solid rgba(15,23,42,.10);
-  background:rgba(15,98,254,.02);
-}
-.step .n{
-  width:28px;
-  height:28px;
-  border-radius:10px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:rgba(15,98,254,.12);
-  border:1px solid rgba(15,98,254,.20);
-  font-weight:1000;
-  color:var(--accent2);
-  flex:0 0 auto;
-}
-.step .c{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
-.step .t{
-  font-size:13px;
-  font-weight:1000;
-}
-.step .d{
-  font-size:12px;
-  color:var(--muted);
-  line-height:1.55;
+tr:hover td { background: var(--rowHover); }
+
+.right { text-align: right; }
+
+.statusLine {
+  font-size: 12px;
+  color: var(--muted);
 }
 
-.table-wrap{
-  margin-top:10px;
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  overflow:auto;
-  background:var(--card);
+.errorBox {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--danger-bg);
+  display: none;
 }
 
-table{
-  width:100%;
-  border-collapse:collapse;
-}
-thead th{
-  padding:12px;
-  font-size:12px;
-  color:var(--muted);
-  text-align:left;
-  text-transform:uppercase;
-}
-tbody td{
-  padding:12px;
-  border-top:1px solid rgba(15,23,42,.06);
-  font-size:13px;
-  vertical-align:top;
-}
-tbody tr:hover{
-  background:rgba(15,98,254,.04);
-}
-
-.check{
-  display:flex;
-  gap:10px;
-  align-items:flex-start;
-  padding:10px;
-  border-radius:14px;
-  border:1px solid rgba(15,23,42,.10);
-  background:#fff;
-}
-.check input{ margin-top:2px; }
-.check .label{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
-.check .label b{ font-size:13px; }
-.check .label span{ font-size:12px; color:var(--muted); line-height:1.55; }
-
-.toolbar{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:flex-end;
-  margin-top:10px;
-}
-
-textarea.template{
-  width:100%;
-  min-height:420px;
-  resize:vertical;
-  border-radius:14px;
-  border:1px solid rgba(15,23,42,.16);
-  padding:12px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size:12px;
-  line-height:1.55;
-  outline:none;
-}
-
-.mini-grid{
-  display:grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap:10px;
-}
-@media (max-width: 1100px){
-  .mini-grid{ grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 720px){
-  .mini-grid{ grid-template-columns: 1fr; }
-}
-
-.tile{
-  background:#fff;
-  border:1px solid rgba(15,23,42,.10);
-  border-radius:16px;
-  padding:12px;
-  box-shadow:none;
-}
-.tile .label{
-  font-size:11px;
-  color:var(--muted);
-  font-weight:900;
-  text-transform:uppercase;
-  letter-spacing:.4px;
-}
-.tile .value{
-  margin-top:6px;
-  font-size:18px;
-  font-weight:1000;
-}
-.tile .hint{
-  margin-top:6px;
-  font-size:12px;
-  color:var(--muted);
-  line-height:1.5;
-}
-
-.notice{
-  padding:12px;
-  border-radius:14px;
-  border:1px solid rgba(15,23,42,.10);
-  background:rgba(245,158,11,.08);
-}
-.notice b{ color:#92400e; }
-.notice .small{ color:#92400e; }
-
-.callout{
-  padding:12px;
-  border-radius:14px;
-  border:1px solid rgba(15,98,254,.18);
-  background:rgba(15,98,254,.06);
-}
-.callout b{ color:var(--accent2); }
-
-.toast{
-  position:fixed;
-  right:14px;
-  bottom:14px;
-  padding:10px 12px;
-  background:#0f172a;
-  color:#fff;
-  border-radius:12px;
-  box-shadow:0 12px 30px rgba(0,0,0,.18);
-  font-size:12px;
-  font-weight:900;
-  opacity:0;
-  transform:translateY(10px);
-  transition:.18s ease;
-  pointer-events:none;
-}
-.toast.show{
-  opacity:1;
-  transform:translateY(0);
-}
-
-.muted{
-  color:var(--muted);
-  font-weight:800;
-}
-
-.hidden{ display:none !important; }
-  </style>
+</style>
 </head>
 
 <body>
 
-<!-- ============================= -->
-<!-- MAIN WRAPPER -->
-<!-- ============================= -->
-<div class="main">
-
-  <!-- HEADER (Converted from <header>) -->
-  <div class="header">
-
-    <div class="brand">
-      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" alt="US Signal" />
-      <div>
-        <h1>Webex Calling — License Management</h1>
-        <div class="statusLine" id="whoLine">Loading…</div>
-      </div>
-    </div>
-<!-- ============================= -->
-<!-- SIDEBAR (Matches index.html) -->
-<!-- ============================= -->
+<!-- SIDEBAR -->
 <div class="sidebar">
   <h2>Customer Portal</h2>
 
@@ -515,224 +244,146 @@ textarea.template{
   <a href="/customer/status" class="nav-link">Status</a>
   <a href="/customer/incidents" class="nav-link">Incidents</a>
 </div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <div class="header">
+    <div class="brand">
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
+      <div>
+        <h1>Webex Calling — License Management</h1>
+        <div class="statusLine" id="whoLine">Loading…</div>
+      </div>
+    </div>
+
     <div class="headerRight">
       <div class="pill" id="tenantPill">Tenant: —</div>
       <button class="secondary" id="btnTheme">Dark Mode</button>
       <button class="secondary" id="btnRefresh">Refresh</button>
     </div>
-
   </div>
 
-  <!-- CONTENT (Converted from <main>) -->
   <div class="content">
-    <div class="grid">
+    <!-- Tenant Context -->
+    <div class="card">
+      <h2>Tenant Context</h2>
+      <div class="muted" id="orgContext">Loading…</div>
 
-      <!-- Admin Banner -->
-      <div id="admin-note" class="card" style="display:none">
-        <strong>US Signal Admin View</strong>
-        <div class="muted">
-          You can switch tenants using the selector below. Customers will only see their own tenant.
-        </div>
+      <div style="height:12px"></div>
+
+      <div class="row">
+        <select id="tenantSelect"></select>
+        <button id="btnLoad">Load Licenses</button>
       </div>
 
-      <!-- Tenant Selection + Context -->
+      <div id="errBox" class="muted" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" data-tab="licenses">Licenses</button>
+      <button class="tab" data-tab="devices">Devices</button>
+      <button class="tab" data-tab="analytics">Analytics</button>
+      <button class="tab" data-tab="cdr">CDR</button>
+    </div>
+
+    <!-- LICENSE TAB -->
+    <section id="tab-licenses" class="tabpanel">
+
       <div class="card">
-        <h2>Tenant Context</h2>
-        <div class="muted" id="orgContext">Loading…</div>
+        <h2>Deficient SKUs</h2>
 
-        <div style="height:12px"></div>
-
-        <div class="row">
-          <select id="tenantSelect" disabled>
-            <option value="">Loading tenants…</option>
-          </select>
-          <button id="btnLoad" disabled>Load Licenses</button>
-        </div>
-
-        <div class="errorBox" id="errBox"></div>
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th class="right">Available</th>
+              <th class="right">Total</th>
+              <th class="right">Used</th>
+              <th class="right">Licenses Needed</th>
+            </tr>
+          </thead>
+          <tbody id="deficitRows">
+            <tr><td colspan="5" class="muted">Loading…</td></tr>
+          </tbody>
+        </table>
       </div>
 
-      <!-- TABS -->
-      <div class="tabs">
-        <button class="tab active" data-tab="licenses">Licenses</button>
-        <button class="tab" data-tab="devices">Devices</button>
-        <button class="tab" data-tab="analytics">Analytics</button>
-        <button class="tab" data-tab="cdr">CDR</button>
+      <div class="card">
+        <h2>Current License Usage</h2>
+
+        <div id="licenseLoading" class="muted">Loading license data…</div>
+
+        <table id="licenseTable" style="display:none">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th class="right">Total</th>
+              <th class="right">Used</th>
+              <th class="right">Available</th>
+              <th class="right">Deficit</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="licenseRows"></tbody>
+        </table>
       </div>
 
-      <!-- ============================= -->
-      <!-- LICENSES TAB -->
-      <!-- ============================= -->
-      <section id="tab-licenses" class="tabpanel">
+    </section>
 
-        <div class="card">
-          <div class="row" style="justify-content:space-between; align-items:center;">
-            <h2 style="margin:0;">Deficient SKUs</h2>
-            <button id="btnEmailAlert" class="secondary">Send License Alert Email</button>
-          </div>
+    <!-- DEVICES TAB -->
+    <section id="tab-devices" class="tabpanel hidden">
+      <div class="card">
+        <h2>Devices</h2>
+        <div id="deviceLoading" class="muted">Loading devices…</div>
+        <table id="deviceTable" style="display:none">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Model</th>
+              <th>Status</th>
+              <th>Last Seen</th>
+              <th>Health</th>
+            </tr>
+          </thead>
+          <tbody id="deviceRows"></tbody>
+        </table>
+      </div>
+    </section>
 
-          <div class="muted" style="margin-top:6px;">
-            Only shows SKUs that are in deficit based on the current tenant selection.
-          </div>
+    <!-- ANALYTICS TAB -->
+    <section id="tab-analytics" class="tabpanel hidden">
+      <div class="card">
+        <h2>Calling Analytics (7 Day Summary)</h2>
+        <div id="analyticsLoading" class="muted">Loading analytics…</div>
+        <div id="analyticsData"></div>
+      </div>
+    </section>
 
-          <table id="deficitTable" style="margin-top:12px;">
-            <thead>
-              <tr>
-                <th>SKU</th>
-                <th class="right">Available</th>
-                <th class="right">Total</th>
-                <th class="right">Used</th>
-                <th class="right">Licenses Needed</th>
-              </tr>
-            </thead>
-            <tbody id="deficitRows">
-              <tr><td colspan="5" class="muted">Loading…</td></tr>
-            </tbody>
-          </table>
-        </div>
+    <!-- CDR TAB -->
+    <section id="tab-cdr" class="tabpanel hidden">
+      <div class="card">
+        <h2>Call Detail Records</h2>
+        <div id="cdrLoading" class="muted">Loading CDR…</div>
+        <table id="cdrTable" style="display:none">
+          <thead>
+            <tr>
+              <th>Start Time</th>
+              <th>Caller</th>
+              <th>Callee</th>
+              <th>Duration</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody id="cdrRows"></tbody>
+        </table>
+      </div>
+    </section>
 
-        <div class="card">
-          <h2>Email License Report</h2>
-          <p class="muted">
-            Sends a license summary for the currently selected tenant.
-          </p>
-
-          <div class="row">
-            <input id="reportEmail" placeholder="you@example.com" style="min-width:300px" />
-            <button id="btnSendEmail">Send Report</button>
-          </div>
-
-          <div class="muted" style="margin-top:10px" id="emailStatus"></div>
-        </div>
-
-        <div class="card">
-          <h2>Current License Usage</h2>
-
-          <div id="licenseLoading" class="muted">Loading license data…</div>
-
-          <table id="licenseTable" style="display:none">
-            <thead>
-              <tr>
-                <th>SKU</th>
-                <th class="right">Total</th>
-                <th class="right">Used</th>
-                <th class="right">Available</th>
-                <th class="right">Deficit</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="licenseRows"></tbody>
-          </table>
-        </div>
-
-      </section>
-
-      <!-- DEVICES TAB -->
-      <section id="tab-devices" class="tabpanel hidden">
-        <div class="card">
-
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h2 style="margin:0;">Devices</h2>
-            <div class="muted" id="deviceSummary">—</div>
-          </div>
-
-          <div class="card" style="margin-bottom:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <strong>Organization Health</strong>
-              <div id="orgHealthScore">—</div>
-            </div>
-          </div>
-
-          <div class="row" style="margin-bottom:12px;">
-            <select id="deviceFilter">
-              <option value="all">All</option>
-              <option value="offline">Offline / Disconnected</option>
-              <option value="online">Online</option>
-            </select>
-
-            <input id="deviceSearch" placeholder="Search devices..." style="min-width:260px;" />
-          </div>
-
-          <div id="deviceLoading" class="muted">Loading devices…</div>
-
-          <table id="deviceTable" style="display:none">
-            <thead>
-              <tr>
-                <th onclick="sortDevices('displayName')">Name</th>
-                <th onclick="sortDevices('product')">Model</th>
-                <th onclick="sortDevices('connectionStatus')">Status</th>
-                <th onclick="sortDevices('lastSeen')">Last Seen</th>
-                <th onclick="sortDevices('health')">Health</th>
-                <th>Location</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody id="deviceRows"></tbody>
-          </table>
-
-        </div>
-      </section>
-
-      <!-- ANALYTICS TAB -->
-      <section id="tab-analytics" class="tabpanel hidden">
-        <div class="card">
-          <h2>Calling Analytics (7 Day Summary)</h2>
-          <div id="analyticsLoading" class="muted">Loading analytics…</div>
-          <div id="analyticsData"></div>
-        </div>
-      </section>
-
-      <!-- CDR TAB -->
-      <section id="tab-cdr" class="tabpanel hidden">
-        <div class="card">
-          <h2>Call Detail Records</h2>
-          <div id="cdrLoading" class="muted">Loading CDR…</div>
-
-          <table id="cdrTable" style="display:none">
-            <thead>
-              <tr>
-                <th>Start Time</th>
-                <th>Caller</th>
-                <th>Callee</th>
-                <th>Duration</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody id="cdrRows"></tbody>
-          </table>
-        </div>
-      </section>
-
-    </div>
   </div>
 </div>
 
-<!-- ============================= -->
-<!-- DEVICE MODAL (UNCHANGED) -->
-<!-- ============================= -->
-<div id="deviceModal" style="
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.5);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:999;
-">
-  <div style="
-    background:var(--card);
-    padding:24px;
-    border-radius:14px;
-    width:500px;
-    max-width:90%;
-  ">
-    <h3 id="modalTitle"></h3>
-    <div id="modalContent" class="muted" style="margin-top:10px;"></div>
-    <div style="margin-top:16px; text-align:right;">
-      <button onclick="closeDeviceModal()">Close</button>
-    </div>
-  </div>
-</div>
 <script>
   const $ = (id) => document.getElementById(id);
 
