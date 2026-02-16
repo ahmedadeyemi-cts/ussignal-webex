@@ -1164,13 +1164,18 @@ if (url.pathname === "/api/status" && request.method === "GET") {
       return json({ error: "pin_required" }, 401);
     }
 
-    if (session.expiresAt && session.expiresAt <= nowMs()) {
+  if (session.expiresAt && session.expiresAt <= nowMs()) {
   await clearSession(env, user.email);
-  return json({
-    error: "pin_expired",
-    redirect: "/pin"
-  }, 401);
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: "/pin?expired=1",
+      "cache-control": "no-store"
+    }
+  });
 }
+
 
   }
 
@@ -1223,13 +1228,18 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
       return json({ error: "pin_required" }, 401);
     }
 
-   if (session.expiresAt && session.expiresAt <= nowMs()) {
+  if (session.expiresAt && session.expiresAt <= nowMs()) {
   await clearSession(env, user.email);
-  return json({
-    error: "pin_expired",
-    redirect: "/pin"
-  }, 401);
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: "/pin?expired=1",
+      "cache-control": "no-store"
+    }
+  });
 }
+
 
   }
 
@@ -1273,11 +1283,16 @@ if (!user.isAdmin) {
 
   if (session.expiresAt && session.expiresAt <= nowMs()) {
   await clearSession(env, user.email);
-  return json({
-    error: "pin_expired",
-    redirect: "/pin"
-  }, 401);
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: "/pin?expired=1",
+      "cache-control": "no-store"
+    }
+  });
 }
+
 
 }
 
@@ -1928,11 +1943,16 @@ if (url.pathname.startsWith("/api/customer/")) {
 
    if (session.expiresAt && session.expiresAt <= nowMs()) {
   await clearSession(env, user.email);
-  return json({
-    error: "pin_expired",
-    redirect: "/pin"
-  }, 401);
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: "/pin?expired=1",
+      "cache-control": "no-store"
+    }
+  });
 }
+
   }
 
   const parts = url.pathname.split("/");
@@ -2403,8 +2423,8 @@ if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
   }, 200);
 }
 if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
- // const user = getCurrentUser(request);
- // if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+ const user = getCurrentUser(request);
+ if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const payload = await computeGlobalSummary(env);
   await putGlobalSummarySnapshot(env, payload);
