@@ -100,8 +100,13 @@ body{
 .brand .sub{
   color:var(--muted);
   font-size:12px;
+.brand img,
+.topbar img{
+  height:34px;
+  width:auto;
+  object-fit:contain;
+  display:block;
 }
-  .brand img { height:34px; }
 
 .nav{
   display:flex;
@@ -141,10 +146,6 @@ body{
   justify-content:space-between;
   gap:14px;
 }
-   .topbar img{
-  height:34px;
-}
-
 .pageTitle{
   display:flex;
   flex-direction:column;
