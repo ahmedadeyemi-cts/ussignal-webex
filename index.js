@@ -46,9 +46,76 @@ async function putGlobalSummarySnapshot(env, payload) {
     payload
   }), { expirationTtl: 60 * 60 }); // keep 1 hour
 }
+function looksLikeWebexOrgId(s) {
+  const v = String(s || "");
+  return v.startsWith("Y2lzY29zcGFyazov"); // Webex orgId base64-ish prefix
+}
+
+async function resolveOrgIdForAdmin(env, key) {
+  // If they passed orgId directly, accept it
+  if (looksLikeWebexOrgId(key)) return key;
+
+  // If key is actually an orgId and stored as org:<orgId>
+  const direct = await env.ORG_MAP_KV.get(`org:${key}`, { type: "json" });
+  if (direct?.orgId) return direct.orgId;
+  if (direct?.pin && key) return key; // org:<orgId> stores pin; if present, key itself is orgId
+
+  // If you have a customer cache in WEBEX KV, try it (recommended)
+  const customer = await env.WEBEX.get(`customer:${key}`, { type: "json" });
+  if (customer?.orgId) return customer.orgId;
+
+  return null;
+}
+
+async function apiCDR(env, request) {
+  const url = new URL(request.url);
+  const orgId = url.searchParams.get("orgId");
+
+  if (!orgId) {
+    return json({ error: "missing_orgId" }, 400);
+  }
+
+  const result = await webexFetch(env, "/cdr", orgId);
+
+  if (!result.ok) {
+    return json({
+      error: "webex_cdr_failed",
+      status: result.status,
+      preview: result.preview
+    }, 500);
+  }
+
+  return json(result.data, 200);
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 async function getGlobalSummarySnapshot(env) {
   return await env.WEBEX.get(GLOBAL_SUMMARY_KEY, { type: "json" });
+}
+async function webexFetch(env, path, orgId = null) {
+  const token = await getAccessToken(env);
+
+  const headers = { Authorization: `Bearer ${token}` };
+  if (orgId) headers["X-Organization-Id"] = orgId;
+
+  const res = await fetch(`https://webexapis.com/v1${path}`, { headers });
+  const text = await res.text();
+  const preview = text.slice(0, 400);
+
+  try {
+    const data = JSON.parse(text);
+    return { ok: res.ok, status: res.status, data, preview };
+  } catch {
+    return { ok: false, status: res.status, error: "not_json", preview };
+  }
 }
 
 async function auditLog(env, userEmail, path, metadata = {}) {
@@ -296,44 +363,6 @@ function pickReference(obj) {
       return data.access_token;
     }
  
-async function getAnalyticsAccessToken(env) {
-  const cached = await env.WEBEX.get("analytics_access_token", { type: "json" });
-
-  if (cached && cached.token && cached.expires_at > nowMs()) {
-    return cached.token;
-  }
-
-  const body = new URLSearchParams({
-    grant_type: "refresh_token",
-    client_id: env.ANALYTICS_CLIENT_ID,
-    client_secret: env.ANALYTICS_CLIENT_SECRET,
-    refresh_token: env.ANALYTICS_REFRESH_TOKEN,
-  });
-
-  const res = await fetch("https://idbroker.webex.com/idb/oauth2/v1/access_token", {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body,
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error("Analytics token refresh failed");
-  }
-
-  const expiresAt = nowMs() + data.expires_in * 1000 - 60_000;
-
-  await env.WEBEX.put(
-    "analytics_access_token",
-    JSON.stringify({
-      token: data.access_token,
-      expires_at: expiresAt,
-    })
-  );
-
-  return data.access_token;
-}
 
     /* =====================================================
        Identity helpers
@@ -364,10 +393,11 @@ function getCurrentUser(request) {
   return await env.USER_SESSION_KV.get(KV.sessKey(email), { type: "json" });
 }
 
-async function setSession(env, email, session) {
+async function setSession(env, email, session, ttlSeconds = 3600) {
   await env.USER_SESSION_KV.put(
     KV.sessKey(email),
-    JSON.stringify(session)
+    JSON.stringify(session),
+    { expirationTtl: ttlSeconds }
   );
 }
 
@@ -508,7 +538,7 @@ function emailKey(email) {
   return `email:${email.toLowerCase()}`;
 }
 
-async function getOrgByEmail(email) {
+async function getOrgByEmail(env, email) {
   return await env.ORG_MAP_KV.get(emailKey(email), { type: "json" });
 }
 
@@ -720,51 +750,21 @@ async function apiCallingAnalytics(env, request) {
     return json({ error: "missing_orgId" }, 400);
   }
 
-  const token = await getAccessToken(env);
-
-  const res = await fetch(
-    `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(orgId)}&interval=DAY&from=-7d`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
+  const result = await webexFetch(
+    env,
+    "/analytics/calling?interval=DAY&from=-7d",
+    orgId
   );
 
-  const data = await res.json();
-
-  if (!res.ok) {
-    return json({ error: "webex_analytics_failed", details: data }, 500);
+  if (!result.ok) {
+    return json({
+      error: "webex_analytics_failed",
+      status: result.status,
+      preview: result.preview
+    }, 500);
   }
 
-  return json(data, 200);
-}
-async function apiCDR(env, request) {
-  const url = new URL(request.url);
-  const orgId = url.searchParams.get("orgId");
-
-  if (!orgId) {
-    return json({ error: "missing_orgId" }, 400);
-  }
-
-  const token = await getAccessToken(env);
-
-  const res = await fetch(
-    `https://webexapis.com/v1/cdr?orgId=${encodeURIComponent(orgId)}&max=200`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
-  );
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    return json({ error: "webex_cdr_failed", details: data }, 500);
-  }
-
-  return json(data, 200);
+  return json(result.data, 200);
 }
 // Simple concurrency limiter for partner-wide fanout calls
 async function mapLimit(items, limit, fn) {
@@ -787,18 +787,13 @@ async function mapLimit(items, limit, fn) {
   
 
 async function computeGlobalSummary(env) {
-  const token = await getAccessToken(env);
+  const orgResult = await webexFetch(env, "/partner/organizations");
 
-  const orgRes = await fetch("https://webexapis.com/v1/organizations", {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-
-  const orgData = await orgRes.json();
-  if (!orgRes.ok) {
+  if (!orgResult.ok) {
     throw new Error("org_list_failed");
   }
 
-  const orgs = orgData.items || [];
+  const orgs = orgResult.data.items || [];
   const CONCURRENCY = 6;
 
   async function perOrg(org) {
@@ -806,50 +801,88 @@ async function computeGlobalSummary(env) {
       const orgId = org.id;
       const orgName = org.displayName || org.name || "Unknown";
 
-      let deficit = 0;
-      let offlineDevices = 0;
-      let callVolume = 0;
+     let deficit = 0;
+let offlineDevices = 0;
+let callVolume = 0;
+
+let analyticsFailed = false;
+let cdrFailed = false;
+let pstnFailed = false;
+let licenseFailed = false;
+
+
+// Calling Analytics
+try {
+  const analyticsResult = await webexFetch(
+    env,
+    "/analytics/calling?interval=DAY&from=-7d",
+    orgId
+  );
+
+  if (analyticsResult.ok) {
+    const a = analyticsResult.data || {};
+    callVolume =
+      Number(a.totalCalls ?? 0) ||
+      Number(a.totalConnectedCalls ?? 0) ||
+      0;
+  } else {
+    analyticsFailed = true;
+  }
+} catch {
+  analyticsFailed = true;
+}
+
+
 
       // Licenses
-      const licRes = await fetch(
-        `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(orgId)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+     const licResult = await webexFetch(env, "/licenses", orgId);
 
-      if (licRes.ok) {
-        const licData = await licRes.json();
-        for (const l of licData.items || []) {
-          const total = Number(l.totalUnits ?? 0);
-          const consumed = Number(l.consumedUnits ?? 0);
-          deficit += Math.max(0, consumed - total);
-        }
-      }
+if (licResult.ok) {
+  for (const l of licResult.data.items || []) {
+    const total = Number(l.totalUnits ?? 0);
+    const consumed = Number(l.consumedUnits ?? 0);
+    deficit += Math.max(0, consumed - total);
+  }
+} else {
+  licenseFailed = true;
+}
 
-      // Devices
-     // const devRes = await fetch(
-   //       `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(orgId)}`,
-    //      { headers: { Authorization: `Bearer ${token}` } }
-   //     );
+      // Devices (optional)
+    const devResult = await webexFetch(env, "/devices", orgId);
 
-   //     if (devRes.ok) {
-   //       const devData = await devRes.json();
-     //     offlineDevices = (devData.items || []).filter(d =>
-    //        String(d.connectionStatus || "").toLowerCase() !== "connected"
-    //      ).length;
-   //     }
-     // Devices disabled for Free plan stability
-offlineDevices = 0;
+if (devResult.ok) {
+  offlineDevices = (devResult.data.items || []).filter(d =>
+    String(d.connectionStatus || "").toLowerCase() !== "connected"
+  ).length;
+}
+     // PSTN (Telephony Config)
+const pstnResult = await webexFetch(env, "/telephony/config/locations", orgId);
+if (!pstnResult.ok) {
+  pstnFailed = true;
+}
+
+// CDR (Call Detail Records)
+const cdrResult = await webexFetch(env, "/cdr", orgId);
+if (!cdrResult.ok) {
+  cdrFailed = true;
+}
 
 
-      return {
-        orgId,
-        orgName,
-        deficit,
-        offlineDevices,
-        callVolume
-      };
+     return {
+  orgId,
+  orgName,
+  deficit,
+  offlineDevices,
+  callVolume,
+  failures: {
+    analyticsFailed,
+    cdrFailed,
+    pstnFailed,
+    licenseFailed
+  }
+};
 
-    } catch (e) {
+    } catch {
       return {
         orgId: org.id,
         orgName: org.displayName || "Unknown",
@@ -902,11 +935,9 @@ const accessEmail =
 const publicPaths = [
   "/health",
   "/favicon.ico",
-  "/pin",   // ✅ allow PIN page
-  "/",      // ✅ allow home UI
-  "/api/admin/global-summary/refresh"
+  "/pin",
+  "/"
 ];
-
 
 if (!accessEmail && !publicPaths.includes(url.pathname)) {
   return json({ error: "access_required" }, 401);
@@ -969,11 +1000,11 @@ await auditLog(env, email, url.pathname, {
       continue;
     }
 
-    const orgId =
-      value.orgId ||
-      String(value.orgName || "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "");
+    const orgId = String(value.orgId || "").trim();
+if (!looksLikeWebexOrgId(orgId)) {
+  skipped++;
+  continue;
+}
 
     const role = value.role || "customer";
 
@@ -1652,7 +1683,7 @@ if (url.pathname === "/api/components" && request.method === "GET") {
       ----------------------------- */
       if (url.pathname === "/api/pin/verify" && request.method === "POST") {
         const user = getCurrentUser(request);
-        const token = await getAccessToken(env);
+       
         const ip = getIP(request);
 
         // Admins don't need PIN; but allow admin to verify PIN for demo if desired
@@ -1693,7 +1724,7 @@ if (url.pathname === "/api/components" && request.method === "GET") {
           expiresAt: nowMs() + SESSION_TTL_SECONDS * 1000,
         };
 
-        await setSession(env, user.email, session);
+       await setSession(env, user.email, session, SESSION_TTL_SECONDS);
 
         return json({
           status: "ok",
@@ -1709,44 +1740,45 @@ if (url.pathname === "/api/components" && request.method === "GET") {
       ----------------------------- */
       if (url.pathname === "/api/pin/logout" && request.method === "POST") {
         const user = getCurrentUser(request);
-        const token = await getAccessToken(env);
         await clearSession(env, user.email);
         return json({ status: "ok" });
       }
 
 
-      if (url.pathname === "/api/admin/pins" && request.method === "GET") {
+     if (url.pathname === "/api/admin/pins" && request.method === "GET") {
   const user = getCurrentUser(request);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
-  const token = await getAccessToken(env);
-  const orgRes = await fetch("https://webexapis.com/v1/organizations", {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  const orgData = await orgRes.json();
+  const orgResult = await webexFetch(env, "/partner/organizations");
+  if (!orgResult.ok) {
+    return json(
+      { error: "org_list_failed", status: orgResult.status, preview: orgResult.preview },
+      500
+    );
+  }
 
-  if (!orgRes.ok) return json({ error:"org_list_failed", details: orgData }, 500);
-
-  const orgs = orgData.items || [];
+  const orgs = orgResult.data.items || [];
 
   // For each org, attempt to read org->pin mapping from KV
-  const items = await Promise.all(orgs.map(async (o) => {
-    const orgId = o.id;
-    const orgName = o.displayName || o.name || "Unknown";
-    const kv = await env.ORG_MAP_KV.get(`org:${orgId}`, { type:"json" });
+  const items = await Promise.all(
+    orgs.map(async (o) => {
+      const orgId = o.id;
+      const orgName = o.displayName || o.name || "Unknown";
+      const kv = await env.ORG_MAP_KV.get(`org:${orgId}`, { type: "json" });
 
-    return {
-      orgId,
-      orgName,
-      pin: kv?.pin || null,
-      emails: kv?.emails || []
-    };
-  }));
+      return {
+        orgId,
+        orgName,
+        pin: kv?.pin || null,
+        emails: kv?.emails || []
+      };
+    })
+  );
 
   // Sort alphabetical
-  items.sort((a,b) => (a.orgName || "").localeCompare(b.orgName || ""));
+  items.sort((a, b) => (a.orgName || "").localeCompare(b.orgName || ""));
 
-  return json({ ok:true, items }, 200);
+  return json({ ok: true, items }, 200);
 }
 
 
@@ -1798,73 +1830,58 @@ if (url.pathname === "/api/admin/pin/allowlist" && request.method === "POST") {
   return json({ ok:true, orgId, orgName, pin, emails: normEmails }, 200);
 }
 
-if (url.pathname === "/api/admin/orgs") {
+if (url.pathname === "/api/admin/orgs" && request.method === "GET") {
   const token = await getAccessToken(env);
  const user = getCurrentUser(request);
 if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
 
-  const res = await fetch("https://webexapis.com/v1/organizations", {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+const result = await webexFetch(env, "/partner/organizations");
 
-  if (!res.ok) {
-    return json({ error: "org_list_failed" }, 500);
-  }
-
-  const data = await res.json();
-
+if (!result.ok) {
   return json({
-    items: (data.items || []).map(o => ({
-      orgId: o.id,
-      orgName: o.displayName
-    }))
-  });
+    error: "org_list_failed",
+    status: result.status,
+    preview: result.preview
+  }, 500);
+}
+
+return json({
+  items: (result.data.items || []).map(o => ({
+    orgId: o.id,
+    orgName: o.displayName
+  }))
+});
 }
       
 if (url.pathname === "/api/admin/org-health") {
- const user = getCurrentUser(request);
-if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
   const orgId = url.searchParams.get("orgId");
   if (!orgId) return json({ error: "missing_orgId" }, 400);
-
-  const token = await getAccessToken(env);
 
   let deficit = 0;
   let offline = 0;
 
-  const lic = await fetch(
-    `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(orgId)}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-
-  if (lic.ok) {
-    const l = await lic.json();
-    for (const x of l.items || []) {
-      if (x.totalUnits && x.consumedUnits)
-        deficit += Math.max(0, x.consumedUnits - x.totalUnits);
+  const licResult = await webexFetch(env, "/licenses", orgId);
+  if (licResult.ok) {
+    for (const x of licResult.data.items || []) {
+      const total = Number(x.totalUnits ?? 0);
+      const consumed = Number(x.consumedUnits ?? 0);
+      if (Number.isFinite(total) && total >= 0) deficit += Math.max(0, consumed - total);
     }
   }
 
-  const dev = await fetch(
-    `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(orgId)}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-
-  if (dev.ok) {
-    const d = await dev.json();
-    offline = (d.items || []).filter(x =>
-      x.connectionStatus !== "connected"
+  const devResult = await webexFetch(env, "/devices", orgId);
+  if (devResult.ok) {
+    offline = (devResult.data.items || []).filter(d =>
+      String(d.connectionStatus || "").toLowerCase() !== "connected"
     ).length;
   }
 
-  return json({
-    orgId,
-    deficit,
-    offline
-  });
+  return json({ orgId, deficit, offline });
 }
-
       /* -----------------------------
          /api/org
          - Admin: returns all orgs
@@ -1892,22 +1909,20 @@ if (!user.isAdmin) return json({ error: "admin_only" }, 403);
     );
   }
 
-  const orgRes = await fetch("https://webexapis.com/v1/organizations", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+ const result = await webexFetch(env, "/partner/organizations");
 
-  const orgData = await orgRes.json();
+if (!result.ok) {
+  throw new Error(`/organizations failed: ${result.status}`);
+}
 
-  if (!orgRes.ok) {
-    throw new Error(`/organizations failed: ${JSON.stringify(orgData)}`);
-  }
+const orgData = result.data;
 
-  if (user.isAdmin) {
-    return json(orgData.items);
-  }
+if (user.isAdmin) {
+  return json(orgData.items || []);
+}
 
-  const filtered = orgData.items.filter(o => o.id === session.orgId);
-  return json(filtered);
+const filtered = (orgData.items || []).filter(o => o.id === session.orgId);
+return json(filtered);
 }
 /* -----------------------------
    /api/licenses
@@ -1916,116 +1931,68 @@ if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 ----------------------------- */
 if (url.pathname === "/api/licenses" && request.method === "GET") {
   const user = getCurrentUser(request);
-  const token = await getAccessToken(env);
   const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
   let resolvedOrgId = null;
 
-if (user.isAdmin) {
-  resolvedOrgId = requestedOrgId ? requestedOrgId : null;
-} 
-else {
+  if (user.isAdmin) {
+    resolvedOrgId = requestedOrgId || null;
+  } else {
     if (!session || !session.orgId) {
-      return json({ error: "pin_required", message: "PIN required." }, 401);
+      return json({ error: "pin_required" }, 401);
     }
-
     if (session.expiresAt && session.expiresAt <= nowMs()) {
       await clearSession(env, user.email);
-      return json({ error: "pin_required_or_expired", message: "PIN required." }, 401);
+      return json({ error: "pin_required_or_expired" }, 401);
     }
-
     resolvedOrgId = session.orgId;
   }
 
-  const headers = {
-    Authorization: `Bearer ${token}`,
-  };
+  const result = await webexFetch(env, "/licenses", resolvedOrgId);
 
-  // 🚨 CRITICAL: Partner scope enforcement
-  if (resolvedOrgId) {
+  if (!result.ok) {
+    return json({
+      error: "webex_license_failed",
+      status: result.status,
+      preview: result.preview
+    }, 500);
   }
 
-let licenseUrl = "https://webexapis.com/v1/licenses";
+  const licenses = result.data.items || [];
 
-if (resolvedOrgId) {
-  licenseUrl += `?orgId=${encodeURIComponent(resolvedOrgId)}`;
-}
+  const normalized = licenses.map(l => {
+    const rawTotal = l.totalUnits;
+    const rawConsumed = l.consumedUnits;
 
-const res = await fetch(licenseUrl, {
-  headers: {
-    Authorization: `Bearer ${token}`
-  }
-});
+    const total = rawTotal == null ? null : Number(rawTotal);
+    const consumed = Number(rawConsumed ?? 0);
 
+    const isUnlimited = total === -1;
+    const hasTotal = Number.isFinite(total);
 
-const textBody = await res.text();
+    const available = isUnlimited ? -1 : (hasTotal ? Math.max(0, total - consumed) : null);
+    const deficit = isUnlimited ? 0 : (hasTotal ? Math.max(0, consumed - total) : 0);
 
-if (!res.ok) {
-  return json({
-    error: "webex_license_failed",
-    status: res.status,
-    bodyPreview: textBody.slice(0, 500)
-  }, 500);
-}
+    let status = "OK";
+    if (isUnlimited) status = "UNLIMITED";
+    else if (!hasTotal) status = "UNKNOWN";
+    else if (deficit > 0) status = "DEFICIT";
+    else if (available === 0) status = "FULL";
 
-let data;
-try {
-  data = JSON.parse(textBody);
-} catch {
-  return json({
-    error: "webex_license_not_json",
-    status: res.status,
-    bodyPreview: textBody.slice(0, 500)
-  }, 500);
-}
+    return { id:l.id, name:l.name, total, consumed, available, deficit, status };
+  });
 
-  const licenses = data.items || [];
-
-const normalized = licenses.map(l => {
- const rawTotal = l.totalUnits;
-const rawConsumed = l.consumedUnits;
-
-const total = (rawTotal === null || rawTotal === undefined) ? null : Number(rawTotal);
-const consumed = Number(rawConsumed ?? 0);
-
-const isUnlimited = total === -1;
-const hasTotal = Number.isFinite(total);
-
-const available = isUnlimited ? -1 : (hasTotal ? Math.max(0, total - consumed) : null);
-const deficit = isUnlimited ? 0 : (hasTotal ? Math.max(0, consumed - total) : 0);
-
-let status = "OK";
-if (isUnlimited) status = "UNLIMITED";
-else if (!hasTotal) status = "UNKNOWN";
-else if (deficit > 0) status = "DEFICIT";
-else if (available === 0) status = "FULL";
-
-  return {
-    id: l.id,
-    name: l.name,
-    total,
-    consumed,
-    available,
-    deficit,
-    status
+  const summary = {
+    totalLicenses: normalized.length,
+    totalConsumed: normalized.reduce((a,l)=>a+(l.consumed||0),0),
+    totalDeficit: normalized.reduce((a,l)=>a+(l.deficit||0),0),
+    hasDeficit: normalized.some(l=>l.status==="DEFICIT")
   };
-});
 
-const summary = {
-  totalLicenses: normalized.length,
-  totalConsumed: normalized.reduce((a, l) => a + (l.consumed || 0), 0),
-  totalDeficit: normalized.reduce((a, l) => a + (l.deficit || 0), 0),
-  hasDeficit: normalized.some(l => l.status === "DEFICIT")
-};
-
-return json({
-  orgId: resolvedOrgId,
-  summary,
-  items: normalized
-});
+  return json({ orgId: resolvedOrgId, summary, items: normalized });
 }
-  
+
 
 /* -----------------------------
    /api/licenses/email
@@ -2033,86 +2000,84 @@ return json({
 ----------------------------- */
 if (url.pathname === "/api/licenses/email" && request.method === "POST") {
   const user = getCurrentUser(request);
-  const token = await getAccessToken(env);
-   const body = await request.json().catch(() => ({}));
-  const toEmail = String(body.email || "").toLowerCase().trim();
-  const requestedOrgId = body.orgId || null;
 
-  if (!toEmail) {
-    return json({ error: "missing_email" }, 400);
+  const body = await request.json().catch(() => ({}));
+  const toEmail = String(body.email || "").toLowerCase().trim();
+  const requestedOrgId = normalizeOrgIdParam(body.orgId);
+
+  if (!toEmail) return json({ error: "missing_email" }, 400);
+
+  // Resolve org context
+  const session = await getSession(env, user.email);
+  let resolvedOrgId = null;
+
+  if (user.isAdmin) {
+    resolvedOrgId = requestedOrgId || null; // null = partner-default behavior (may or may not work per endpoint)
+  } else {
+    if (!session?.orgId) return json({ error: "pin_required" }, 401);
+    if (session.expiresAt && session.expiresAt <= nowMs()) {
+      await clearSession(env, user.email);
+      return json({ error: "pin_required_or_expired" }, 401);
+    }
+    resolvedOrgId = session.orgId;
   }
 
-//  if (requestedOrgId && user.isAdmin) {
- //   url.searchParams.set("orgId", requestedOrgId);
-//  }
-const licenseUrl = new URL(`${url.origin}/api/licenses`);
+  // Pull licenses directly from Webex
+  const result = await webexFetch(env, "/licenses", resolvedOrgId);
 
-if (requestedOrgId && user.isAdmin) {
-  licenseUrl.searchParams.set("orgId", requestedOrgId);
-}
-  // Begining of New Add
-const licRes = await fetch(licenseUrl.toString(), {
-  method: "GET"
-});
+  if (!result.ok) {
+    return json({
+      error: "license_fetch_failed",
+      status: result.status,
+      preview: result.preview
+    }, 500);
+  }
 
+  // Normalize like /api/licenses does
+  const normalized = (result.data.items || []).map(l => {
+    const total = l.totalUnits == null ? null : Number(l.totalUnits);
+    const consumed = Number(l.consumedUnits ?? 0);
 
-const licText = await licRes.text();
+    const isUnlimited = total === -1;
+    const hasTotal = Number.isFinite(total);
 
-if (!licRes.ok) {
-  return json({
-    error: "license_fetch_failed",
-    status: licRes.status,
-    body: licText.slice(0, 500)
-  }, 500);
-}
+    const available = isUnlimited ? -1 : (hasTotal ? Math.max(0, total - consumed) : null);
+    const deficit = isUnlimited ? 0 : (hasTotal ? Math.max(0, consumed - total) : 0);
 
-// Try to parse safely
-let licData;
-try {
-  licData = JSON.parse(licText);
-} catch (e) {
-  return json({
-    error: "license_not_json",
-    status: licRes.status,
-    bodyPreview: licText.slice(0, 500)
-  }, 500);
-}
+    let status = "OK";
+    if (isUnlimited) status = "UNLIMITED";
+    else if (!hasTotal) status = "UNKNOWN";
+    else if (deficit > 0) status = "DEFICIT";
+    else if (available === 0) status = "FULL";
 
-const rows = (licData.items || [])
-  .map(l => {
-    const assigned = l.consumed ?? 0;
-    const available = l.available ?? 0;
-    const deficit = l.deficit ?? 0;
-    const status = l.status ?? "OK";
+    return { name: l.name, consumed, available, deficit, status };
+  });
 
-    return `
-      <tr>
-        <td>${l.name}</td>
-        <td>${assigned}</td>
-        <td>${available === -1 ? "Unlimited" : available}</td>
-        <td>${deficit}</td>
-        <td>${status}</td>
-      </tr>
-    `;
-  })
-  .join("");
+  const rows = normalized.map(l => `
+    <tr>
+      <td>${escapeHtml(String(l.name || ""))}</td>
+      <td>${l.consumed}</td>
+      <td>${l.available === -1 ? "Unlimited" : (l.available == null ? "Unknown" : l.available)}</td>
+      <td>${l.deficit}</td>
+      <td>${l.status}</td>
+    </tr>
+  `).join("");
 
   const html = `
     <h2>Webex Calling License Report</h2>
-    <p>Generated for ${user.email}</p>
+    <p>Generated for ${escapeHtml(user.email)}</p>
     <table border="1" cellpadding="6" cellspacing="0">
       <tr>
-<th>License</th>
-<th>Assigned</th>
-<th>Available</th>
-<th>Deficit</th>
-<th>Status</th>
+        <th>License</th>
+        <th>Assigned</th>
+        <th>Available</th>
+        <th>Deficit</th>
+        <th>Status</th>
       </tr>
       ${rows}
     </table>
   `;
 
-  // ✅ Sender resolved OUTSIDE JSON
   const senderEmail =
     env.LICENSE_REPORT_FROM ||
     env.BREVO_SENDER_EMAIL ||
@@ -2125,10 +2090,7 @@ const rows = (licData.items || [])
       "api-key": env.BREVO_API_KEY,
     },
     body: JSON.stringify({
-      sender: {
-        email: senderEmail,
-        name: "US Signal Licensing",
-      },
+      sender: { email: senderEmail, name: "US Signal Licensing" },
       to: [{ email: toEmail }],
       subject: "Webex Calling License Report",
       htmlContent: html,
@@ -2136,75 +2098,14 @@ const rows = (licData.items || [])
   });
 
   const brevoText = await brevoRes.text();
-
-if (!brevoRes.ok) {
-  console.error("Brevo error:", brevoText);
-  return json({
-    error: "brevo_failed",
-    status: brevoRes.status,
-    body: brevoText
-  }, 500);
-}
-
+  if (!brevoRes.ok) {
+    console.error("Brevo error:", brevoText);
+    return json({ error: "brevo_failed", status: brevoRes.status, body: brevoText }, 500);
+  }
 
   return json({ status: "sent", to: toEmail });
 }
-if (url.pathname === "/api/devices" && request.method === "GET") {
-  const user = getCurrentUser(request);
-  const token = await getAccessToken(env);
-  const session = await getSession(env, user.email);
-  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
-  if (session?.expiresAt && session.expiresAt <= nowMs()) {
-  await clearSession(env, user.email);
-  return json({ error: "pin_required_or_expired" }, 401);
-}
 
-  let resolvedOrgId = null;
-
-  if (user.isAdmin) {
-    resolvedOrgId = requestedOrgId || null;
-  } else {
-    if (!session || !session.orgId) {
-      return json({ error: "pin_required" }, 401);
-    }
-    resolvedOrgId = session.orgId;
-  }
-
-  let deviceUrl = "https://webexapis.com/v1/devices";
-
-  if (resolvedOrgId) {
-    deviceUrl += `?orgId=${encodeURIComponent(resolvedOrgId)}`;
-  }
-
-  const res = await fetch(deviceUrl, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
-
-  const textBody = await res.text();
-let data;
-
-try {
-  data = JSON.parse(textBody);
-} catch {
-  return json({
-    error: "webex_devices_not_json",
-    status: res.status,
-    bodyPreview: textBody.slice(0, 500)
-  }, 500);
-}
-
-
-  if (!res.ok) {
-    return json({ error: "webex_devices_failed", body: data }, 500);
-  }
-
-  return json({
-    count: data.items?.length || 0,
-    items: data.items || []
-  });
-}
 /* =====================================================
    CUSTOMER-SCOPED ROUTES
    Mirrors Partner Portal contract
@@ -2217,197 +2118,57 @@ if (url.pathname.startsWith("/api/customer/")) {
 
   if (!user.isAdmin) {
     if (!session || !session.orgId) {
-      return json({ ok: false, error: "pin_required" }, 401);
+      return json({ ok:false, error:"pin_required" }, 401);
     }
-
-   if (session.expiresAt && session.expiresAt <= nowMs()) {
-  await clearSession(env, user.email);
-
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: "/pin?expired=1",
-      "cache-control": "no-store"
-    }
-  });
-}
-
   }
 
   const parts = url.pathname.split("/");
-  const key = parts[3]; // customer key
-  const action = parts[4]; // licenses/devices/analytics/etc
+  const key = parts[3];
+  const action = parts[4];
 
   let resolvedOrgId = null;
 
-if (user.isAdmin) {
-  // Look up orgId from KV using key mapping
-  const mapping = await env.ORG_MAP_KV.get(`org:${key}`, { type: "json" });
-  resolvedOrgId = mapping?.orgId || null;
-} else {
-  resolvedOrgId = session.orgId;
-}
-
-
-  /* ---------- LICENSES ---------- */
-if (action === "licenses") {
-  const token = await getAccessToken(env);
-
-  const res = await fetch(
-    `https://webexapis.com/v1/licenses?orgId=${encodeURIComponent(resolvedOrgId)}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-
-  const textBody = await res.text();
-
-  if (!res.ok) {
-    return json({
-      ok: false,
-      error: "webex_license_failed",
-      status: res.status,
-      bodyPreview: textBody.slice(0, 500)
-    }, 500);
+  if (user.isAdmin) {
+    resolvedOrgId = await resolveOrgIdForAdmin(env, key);
+  } else {
+    resolvedOrgId = session.orgId;
   }
 
-  let data;
-  try {
-    data = JSON.parse(textBody);
-  } catch {
-    return json({
-      ok: false,
-      error: "webex_license_not_json"
-    }, 500);
+  if (!resolvedOrgId) {
+    return json({ ok:false, error:"org_not_resolved" }, 400);
   }
 
-  const normalized = (data.items || []).map(l => {
-    const rawTotal = l.totalUnits;
-    const rawConsumed = l.consumedUnits;
+  if (action === "licenses") {
+    const result = await webexFetch(env, "/licenses", resolvedOrgId);
+    if (!result.ok) return json({ ok:false, error:"webex_license_failed" }, 500);
+    return json({ ok:true, items: result.data.items || [] });
+  }
 
-    const total = (rawTotal === null || rawTotal === undefined)
-      ? null
-      : Number(rawTotal);
-
-    const consumed = Number(rawConsumed ?? 0);
-
-    const isUnlimited = total === -1;
-    const hasTotal = Number.isFinite(total);
-
-    const available = isUnlimited
-      ? -1
-      : (hasTotal ? Math.max(0, total - consumed) : null);
-
-    const deficit = isUnlimited
-      ? 0
-      : (hasTotal ? Math.max(0, consumed - total) : 0);
-
-    let status = "OK";
-    if (isUnlimited) status = "UNLIMITED";
-    else if (!hasTotal) status = "UNKNOWN";
-    else if (deficit > 0) status = "DEFICIT";
-    else if (available === 0) status = "FULL";
-
-    return {
-      id: l.id,
-      name: l.name,
-      total,
-      consumed,
-      available,
-      deficit,
-      status
-    };
-  });
-
-  const summary = {
-    totalLicenses: normalized.length,
-    totalConsumed: normalized.reduce((a, l) => a + (l.consumed || 0), 0),
-    totalDeficit: normalized.reduce((a, l) => a + (l.deficit || 0), 0),
-    hasDeficit: normalized.some(l => l.status === "DEFICIT")
-  };
-
-  return json({
-    ok: true,
-    orgId: resolvedOrgId,
-    summary,
-    items: normalized
-  });
-}
-
-  /* ---------- DEVICES ---------- */
   if (action === "devices") {
-    const token = await getAccessToken(env);
-
-    const res = await fetch(
-      `https://webexapis.com/v1/devices?orgId=${encodeURIComponent(resolvedOrgId)}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    const textBody = await res.text();
-let data;
-try {
-  data = JSON.parse(textBody);
-} catch {
-  return json({ ok: false, error: "webex_devices_not_json" }, 500);
-}
-
-
-    return json({
-      ok: true,
-      devices: data.items || []
-    });
+    const result = await webexFetch(env, "/devices", resolvedOrgId);
+    if (!result.ok) return json({ ok:false, error:"webex_devices_failed" }, 500);
+    return json({ ok:true, devices: result.data.items || [] });
   }
 
-  /* ---------- ANALYTICS ---------- */
   if (action === "analytics") {
-    const token = await getAnalyticsAccessToken(env);
-
-    const res = await fetch(
-      `https://webexapis.com/v1/analytics/calling?orgId=${encodeURIComponent(resolvedOrgId)}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    const data = await res.json();
-
-    return json({
-      ok: true,
-      analytics: data
-    });
+    const result = await webexFetch(env, "/analytics/calling?interval=DAY&from=-7d", resolvedOrgId);
+    if (!result.ok) return json({ ok:false, error:"webex_analytics_failed" }, 500);
+    return json({ ok:true, analytics: result.data });
   }
 
-  /* ---------- CDR ---------- */
   if (action === "cdr") {
-    const token = await getAnalyticsAccessToken(env);
-
-    const res = await fetch(
-      `https://webexapis.com/v1/cdr?orgId=${encodeURIComponent(resolvedOrgId)}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    const data = await res.json();
-
-    return json({
-      ok: true,
-      records: data.items || []
-    });
+    const result = await webexFetch(env, "/cdr", resolvedOrgId);
+    if (!result.ok) return json({ ok:false, error:"webex_cdr_failed" }, 500);
+    return json({ ok:true, records: result.data.items || [] });
   }
 
-  /* ---------- PSTN HEALTH ---------- */
   if (action === "pstn-health") {
-    const token = await getAccessToken(env);
-
-    const res = await fetch(
-      `https://webexapis.com/v1/telephony/config/locations?orgId=${encodeURIComponent(resolvedOrgId)}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    const data = await res.json();
-
-    return json({
-      ok: true,
-      locations: data.items || []
-    });
+    const result = await webexFetch(env, "/telephony/config/locations", resolvedOrgId);
+    if (!result.ok) return json({ ok:false, error:"webex_pstn_failed" }, 500);
+    return json({ ok:true, locations: result.data.items || [] });
   }
 
-  return json({ ok: false, error: "unknown_customer_action" }, 404);
+  return json({ ok:false, error:"unknown_customer_action" }, 404);
 }
 
       /* -----------------------------
@@ -2439,7 +2200,7 @@ try {
   const role = existing?.role || "customer";
   const emails = existing?.emails || [];
 
-  const newPin = await generateUniqueNonEasyPin();
+  const newPin = await generateUniqueNonEasyPin(env);
 
   await putPinMapping(env, newPin, orgId, orgName, role, emails);
 
@@ -2492,10 +2253,6 @@ async function cacheJson(cacheSeconds, urlStr, computeFn){
   return resp;
 }
 
-
-
-
-
       /* -----------------------------
          /api/admin/pin/list (GET)
          Admin-only: returns current org->pin mappings (best-effort)
@@ -2512,11 +2269,74 @@ async function cacheJson(cacheSeconds, urlStr, computeFn){
         const out = [];
 
         for (const orgId of orgIds) {
-          const v = await getPinByOrg(String(orgId));
+          const v = await getPinByOrg(env, String(orgId));
           if (v?.pin) out.push({ orgId, pin: v.pin, orgName: v.orgName || null });
         }
         return json(out);
       }
+     /* =====================================================
+   🔬 ADMIN: PARTNER SCOPE DIAGNOSTICS
+   Tests partner-level scopes and APIs
+===================================================== */
+if (url.pathname === "/api/admin/diagnostics" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const tests = {};
+
+  async function test(name, path) {
+    const result = await webexFetch(env, path);
+    tests[name] = {
+      ok: result.ok,
+      status: result.status,
+      preview: result.preview?.slice(0, 200)
+    };
+  }
+
+  await test("partner_organizations", "/partner/organizations");
+  await test("reports", "/reports");
+  await test("wholesale_customers", "/wholesale/customers");
+
+  return json({
+    ok: true,
+    testedAt: new Date().toISOString(),
+    tests
+  });
+}
+/* =====================================================
+   🔬 ADMIN: ORG-SCOPED DIAGNOSTICS
+===================================================== */
+if (url.pathname.startsWith("/api/admin/diagnostics/org/") && request.method === "GET") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const orgId = decodeURIComponent(url.pathname.split("/").pop());
+
+  const tests = {};
+
+  async function test(name, path) {
+    const result = await webexFetch(env, path, orgId);
+    tests[name] = {
+      ok: result.ok,
+      status: result.status,
+      preview: result.preview?.slice(0, 200)
+    };
+  }
+
+  await test("licenses", "/licenses");
+  await test("devices", "/devices");
+  await test("analytics_calling", "/analytics/calling?interval=DAY&from=-7d");
+  await test("cdr", "/cdr");
+  await test("pstn_locations", "/telephony/config/locations");
+
+  return json({
+    ok: true,
+    orgId,
+    testedAt: new Date().toISOString(),
+    tests
+  });
+}
+
       /* =====================================================
    🔍 ADMIN INSPECTION ENDPOINTS (READ-ONLY)
    ===================================================== */
@@ -2682,17 +2502,14 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
     hasFrom: !!env.LICENSE_REPORT_FROM
   });
 }
+}// GET snapshot (already fine above)
 if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
   const user = getCurrentUser(request);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const snapshot = await getGlobalSummarySnapshot(env);
-
   if (!snapshot) {
-    return json({
-      ok: false,
-      message: "No snapshot available yet"
-    }, 404);
+    return json({ ok: false, message: "No snapshot available yet" }, 404);
   }
 
   return json({
@@ -2701,9 +2518,15 @@ if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
     ...snapshot.payload
   }, 200);
 }
-if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
- const user = getCurrentUser(request);
- if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+// POST refresh snapshot
+if (url.pathname === "/api/admin/global-summary/refresh") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  if (request.method !== "POST") {
+    return json({ error: "method_not_allowed", allowed: ["POST"] }, 405);
+  }
 
   const payload = await computeGlobalSummary(env);
   await putGlobalSummarySnapshot(env, payload);
@@ -2714,12 +2537,6 @@ if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "
     generatedAt: new Date().toISOString()
   }, 200);
 }
-         return json({ error: "not_found", path: url.pathname }, 404);
-    } catch (err) {
-      console.error("🔥 Worker error:", err);
-      return json({ error: "internal_error", message: err?.message || String(err) }, 500);
-    }
-  },
 
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
