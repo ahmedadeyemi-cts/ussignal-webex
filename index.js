@@ -103,10 +103,20 @@ async function getGlobalSummarySnapshot(env) {
 async function webexFetch(env, path, orgId = null) {
   const token = await getAccessToken(env);
 
-  const headers = { Authorization: `Bearer ${token}` };
-  if (orgId) headers["X-Organization-Id"] = orgId;
+  let url = `https://webexapis.com/v1${path}`;
 
-  const res = await fetch(`https://webexapis.com/v1${path}`, { headers });
+  // Only append orgId as query param if provided
+  if (orgId) {
+    const sep = url.includes("?") ? "&" : "?";
+    url += `${sep}orgId=${encodeURIComponent(orgId)}`;
+  }
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
   const text = await res.text();
   const preview = text.slice(0, 400);
 
