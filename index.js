@@ -1262,8 +1262,21 @@ if (url.pathname === "/api/debug/whoami-webex") {
   const txt = await res.text();
   return json({ status: res.status, body: txt.slice(0, 500) });
 }
+if (url.pathname === "/api/debug/partner-test") {
+  const token = await getAccessToken(env);
 
-      if (url.pathname === "/api/debug/token-test") {
+  const res = await fetch("https://webexapis.com/v1/partner/organizations", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const txt = await res.text();
+
+  return json({
+    status: res.status,
+    body: txt.slice(0, 500)
+  });
+}
+ if (url.pathname === "/api/debug/token-test") {
   if (env.DEBUG_MODE !== "true") {
     return json({ error: "disabled" }, 403);
   }
