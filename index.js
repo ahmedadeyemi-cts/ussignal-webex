@@ -1269,11 +1269,11 @@ if (url.pathname === "/api/debug/partner-test") {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  const txt = await res.text();
+  const text = await res.text();
 
   return json({
     status: res.status,
-    body: txt.slice(0, 500)
+    body: text.slice(0, 800)
   });
 }
 if (url.pathname === "/api/debug/org-context") {
