@@ -862,7 +862,11 @@ if (!pstnResult.ok) {
 }
 
 // CDR (Call Detail Records)
-const cdrResult = await webexFetch(env, "/cdr", orgId);
+const cdrResult = await webexFetch(
+  env,
+  "/cdr?max=1",
+  orgId
+);
 if (!cdrResult.ok) {
   cdrFailed = true;
 }
@@ -2536,7 +2540,14 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
     hasFrom: !!env.LICENSE_REPORT_FROM
   });
 }
-}// GET snapshot (already fine above)
+      // Default fallback (no route matched)
+      return json({ error: "not_found" }, 404);
+
+    } catch (e) {
+      console.error("Unhandled error:", e);
+      return json({ error: "internal_error", message: e.message }, 500);
+    }
+  },
 
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
