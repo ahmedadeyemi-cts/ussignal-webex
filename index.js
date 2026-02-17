@@ -797,7 +797,7 @@ async function mapLimit(items, limit, fn) {
   
 
 async function computeGlobalSummary(env) {
-  const orgResult = await webexFetch(env, "/partner/organizations");
+  const orgResult = await webexFetch(env, "/organizations");
 
   if (!orgResult.ok) {
     throw new Error("org_list_failed");
@@ -1275,7 +1275,7 @@ if (url.pathname === "/api/debug/whoami-webex") {
 if (url.pathname === "/api/debug/partner-test") {
   const token = await getAccessToken(env);
 
-  const res = await fetch("https://webexapis.com/v1/partner/organizations", {
+  const res = await fetch("https://webexapis.com/v1/organizations", {
     headers: { Authorization: `Bearer ${token}` }
   });
 
@@ -1826,7 +1826,7 @@ if (url.pathname === "/api/components" && request.method === "GET") {
   const user = getCurrentUser(request);
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
-  const orgResult = await webexFetch(env, "/partner/organizations");
+  const orgResult = await webexFetch(env, "/organizations");
   if (!orgResult.ok) {
     return json(
       { error: "org_list_failed", status: orgResult.status, preview: orgResult.preview },
@@ -1913,7 +1913,7 @@ if (url.pathname === "/api/admin/orgs" && request.method === "GET") {
 if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
 
-const result = await webexFetch(env, "/partner/organizations");
+const result = await webexFetch(env, "/organizations");
 
 if (!result.ok) {
   return json({
@@ -1986,7 +1986,7 @@ if (url.pathname === "/api/admin/org-health") {
     );
   }
 
- const result = await webexFetch(env, "/partner/organizations");
+ const result = await webexFetch(env, "/organizations");
 
 if (!result.ok) {
   throw new Error(`/organizations failed: ${result.status}`);
@@ -2370,7 +2370,7 @@ if (url.pathname === "/api/admin/diagnostics" && request.method === "GET") {
     };
   }
 
-  await test("partner_organizations", "/partner/organizations");
+  await test("partner_organizations", "/organizations");
   await test("reports", "/reports");
   await test("wholesale_customers", "/wholesale/customers");
 
