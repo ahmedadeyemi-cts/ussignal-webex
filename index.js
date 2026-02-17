@@ -1596,7 +1596,11 @@ return json({
   overall,
   components
 });
-} // closes /api/status
+} catch (e) {
+  return json({ error: "status_engine_failed", message: e.message }, 500);
+}
+}
+
      
 //api/incidents block
 // /api/incidents (GET) — maintenance-style with upstream fallback
