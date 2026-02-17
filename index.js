@@ -1279,15 +1279,17 @@ if (url.pathname === "/api/debug/partner-test") {
 if (url.pathname === "/api/debug/token-scope") {
   const token = await getAccessToken(env);
 
-  const res = await fetch("https://webexapis.com/v1/partner/organizations", {
+  const res = await fetch("https://webexapis.com/v1/people/me", {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  return new Response(await res.text(), {
-    headers: { "content-type": "application/json" }
+  const text = await res.text();
+
+  return json({
+    status: res.status,
+    body: text.slice(0, 500)
   });
 }
-
 if (url.pathname === "/api/debug/org-context") {
   const token = await getAccessToken(env);
 
