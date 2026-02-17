@@ -1557,14 +1557,47 @@ if (url.pathname === "/api/status" && request.method === "GET") {
 
     // 4) Aggregate status up to parents
     const severity = {
-      major_outage: 5,
-      critical: 5,
-      partial_outage: 4,
-      degraded_performance: 3,
-      under_maintenance: 2,
-      maintenance: 2,
-      operational: 1
-    };
+  // 4) Aggregate status up to parents
+const severity = {
+  major_outage: 5,
+  critical: 5,
+  partial_outage: 4,
+  degraded_performance: 3,
+  under_maintenance: 2,
+  maintenance: 2,
+  operational: 1
+};
+
+function aggStatus(statuses) {
+  let worst = "operational";
+  let worstScore = 1;
+
+  for (const s of statuses) {
+    const key = String(s || "operational").toLowerCase();
+    const score = severity[key] || 1;
+    if (score > worstScore) {
+      worstScore = score;
+      worst = key;
+    }
+  }
+  return worst;
+}
+
+const components = Object.values(groupById)
+  .filter(g => g.children.length > 0)
+  .map(g => ({
+    ...g,
+    status: aggStatus(g.children.map(x => x.status))
+  }));
+
+const overall = aggStatus(components.map(c => c.status));
+
+return json({
+  lastUpdated: new Date().toISOString(),
+  overall,
+  components
+});
+
      
 //api/incidents block
 // /api/incidents (GET) — maintenance-style with upstream fallback
