@@ -39,6 +39,8 @@ let PIN_MAX_ATTEMPTS = 5;
 let PIN_LOCKOUT_SECONDS = 900;
 
     const GLOBAL_SUMMARY_KEY = "globalSummarySnapshotV1";
+    const CALLING_ANALYTICS_QS = "interval=DAY&from=-7d";
+    const CALLING_ANALYTICS_PATH = `/analytics/calling?${CALLING_ANALYTICS_QS}`;
 
 async function putGlobalSummarySnapshot(env, payload) {
   await env.WEBEX.put(GLOBAL_SUMMARY_KEY, JSON.stringify({
@@ -50,7 +52,13 @@ function looksLikeWebexOrgId(s) {
   const v = String(s || "");
   return v.startsWith("Y2lzY29zcGFyazov"); // Webex orgId base64-ish prefix
 }
-
+async function storeHealth(env, health) {
+  await env.WEBEX.put(
+    `health:${health.orgId}`,
+    JSON.stringify(health),
+    { expirationTtl: 60 * 30 }
+  );
+}
 async function resolveOrgIdForAdmin(env, key) {
   // If they passed orgId directly, accept it
   if (looksLikeWebexOrgId(key)) return key;
@@ -70,12 +78,30 @@ async function resolveOrgIdForAdmin(env, key) {
 async function apiCDR(env, request) {
   const url = new URL(request.url);
   const orgId = url.searchParams.get("orgId");
+  const max = Math.min(
+    Number(url.searchParams.get("max") || 100),
+    1000
+  );
+  const days = Math.min(
+    Number(url.searchParams.get("days") || 1),
+    30
+  );
 
   if (!orgId) {
     return json({ error: "missing_orgId" }, 400);
   }
 
-  const result = await webexFetch(env, "/cdr", orgId);
+  const to = new Date().toISOString();
+  const from = new Date(
+    Date.now() - days * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  const path =
+    `/cdr/calls?startTime=${encodeURIComponent(from)}` +
+    `&endTime=${encodeURIComponent(to)}` +
+    `&max=${max}`;
+
+  const result = await webexFetch(env, path, orgId);
 
   if (!result.ok) {
     return json({
@@ -87,7 +113,6 @@ async function apiCDR(env, request) {
 
   return json(result.data, 200);
 }
-
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -430,28 +455,59 @@ async function setSession(env, email, session, ttlSeconds = 3600) {
       });
     }
 
-    async function throttleCheckOrThrow(env, email, ip) {
-      const kEmail = KV.attemptsKeyEmail(email);
-      const kIp = KV.attemptsKeyIp(ip);
+async function throttleCheckOrThrow(env, email, ip) {
+  const kEmail = KV.attemptsKeyEmail(email);
+  const kIp = KV.attemptsKeyIp(ip);
 
-    const [aEmail, aIp] = await Promise.all([
-  readAttempts(env, kEmail),
-  readAttempts(env, kIp)
-]);
+  const [aEmail, aIp] = await Promise.all([
+    readAttempts(env, kEmail),
+    readAttempts(env, kIp),
+  ]);
 
+  const t = nowMs();
 
-      const t = nowMs();
+  // If either is locked, deny
+  const lockedUntil = Math.max(aEmail.lockedUntil || 0, aIp.lockedUntil || 0);
+  if (lockedUntil > t) {
+    const retryAfter = Math.ceil((lockedUntil - t) / 1000);
+    await sleep(250);
+    return { allowed: false, retryAfter };
+  }
 
-      const lockedUntil = Math.max(aEmail.lockedUntil || 0, aIp.lockedUntil || 0);
-      if (lockedUntil && lockedUntil > t) {
-        const retryAfter = Math.ceil((lockedUntil - t) / 1000);
-        // add mild delay to frustrate brute forcing
-        await sleep(250);
-        return { allowed: false, retryAfter };
-      }
-
-      return { allowed: true, retryAfter: 0 };
+  // Reset windows if expired
+  function normalizeWindow(a) {
+    if (!a.windowStart || t - a.windowStart > PIN_THROTTLE_WINDOW_SECONDS * 1000) {
+      a.windowStart = t;
+      a.count = 0;
+      a.lockedUntil = 0;
     }
+    return a;
+  }
+
+  normalizeWindow(aEmail);
+  normalizeWindow(aIp);
+
+  // If already at max attempts, lock now (belt + suspenders)
+  if ((aEmail.count || 0) >= PIN_MAX_ATTEMPTS || (aIp.count || 0) >= PIN_MAX_ATTEMPTS) {
+    const until = t + PIN_LOCKOUT_SECONDS * 1000;
+    aEmail.lockedUntil = until;
+    aIp.lockedUntil = until;
+    await Promise.all([
+      writeAttempts(env, kEmail, aEmail),
+      writeAttempts(env, kIp, aIp),
+    ]);
+    return { allowed: false, retryAfter: PIN_LOCKOUT_SECONDS };
+  }
+
+  // Persist any window normalization
+  await Promise.all([
+    writeAttempts(env, kEmail, aEmail),
+    writeAttempts(env, kIp, aIp),
+  ]);
+
+  return { allowed: true, retryAfter: 0 };
+}
+
 
     async function throttleRecordFailure(env, email, ip) {
       const t = nowMs();
@@ -762,7 +818,7 @@ async function apiCallingAnalytics(env, request) {
 
   const result = await webexFetch(
     env,
-    "/analytics/calling?interval=DAY&from=-7d",
+    CALLING_ANALYTICS_PATH,
     orgId
   );
 
@@ -794,7 +850,100 @@ async function mapLimit(items, limit, fn) {
   return out;
 }
  
-  
+  async function computeTenantHealth(env, orgId) {
+
+  let deficit = 0;
+  let offline = 0;
+  let failedCalls = 0;
+  let totalCalls = 0;
+
+  // Licenses
+  const lic = await webexFetch(env, "/licenses", orgId);
+  if (lic.ok) {
+    for (const l of lic.data.items || []) {
+      const total = Number(l.totalUnits ?? 0);
+      const consumed = Number(l.consumedUnits ?? 0);
+      deficit += Math.max(0, consumed - total);
+    }
+  }
+
+  // Devices
+  const dev = await webexFetch(env, "/devices", orgId);
+  if (dev.ok) {
+    offline = (dev.data.items || []).filter(d =>
+      String(d.connectionStatus || "").toLowerCase() !== "connected"
+    ).length;
+  }
+
+  // Analytics
+  const analytics = await webexFetch(
+    env,
+    CALLING_ANALYTICS_PATH,
+    orgId
+  );
+
+  if (analytics.ok) {
+    const rows = analytics.data.items || [];
+    totalCalls = rows.reduce((a,r)=>a+(r.totalCalls||0),0);
+    failedCalls = rows.reduce((a,r)=>a+(r.failedCalls||0),0);
+  }
+
+  const failureRate = totalCalls > 0
+    ? (failedCalls / totalCalls) * 100
+    : 0;
+
+  // Weighted scoring
+  let score = 100;
+
+  if (deficit > 0) score -= 25;
+  if (offline > 5) score -= 15;
+  if (failureRate > 5) score -= 20;
+
+  if (score < 0) score = 0;
+
+  let status = "Healthy";
+  if (score < 80) status = "Warning";
+  if (score < 60) status = "Critical";
+
+  return {
+    orgId,
+    score,
+    status,
+    metrics: {
+      deficit,
+      offline,
+      failureRate
+    },
+    generatedAt: new Date().toISOString()
+  };
+}
+async function computeCallQuality(env, orgId) {
+
+  const result = await webexFetch(
+    env,
+    "/call_qualities?max=50",
+    orgId
+  );
+
+  if (!result.ok) {
+    return { ok:false };
+  }
+
+  const items = result.data.items || [];
+
+  const poor = items.filter(c =>
+    Number(c.packetLossPercent || 0) > 3 ||
+    Number(c.jitterMs || 0) > 30
+  );
+
+  return {
+    ok:true,
+    totalAnalyzed: items.length,
+    poorCalls: poor.length,
+    worstExamples: poor.slice(0,5)
+  };
+}
+
 
 async function computeGlobalSummary(env) {
   const orgResult = await webexFetch(env, "/organizations");
@@ -803,7 +952,14 @@ async function computeGlobalSummary(env) {
     throw new Error("org_list_failed");
   }
 
-  const orgs = orgResult.data.items || [];
+  const rawOrgs = orgResult.data.items || [];
+const seen = new Set();
+const orgs = rawOrgs.filter(o => {
+  if (seen.has(o.id)) return false;
+  seen.add(o.id);
+  return true;
+});
+
   const CONCURRENCY = 6;
 
   async function perOrg(org) {
@@ -820,27 +976,34 @@ let cdrFailed = false;
 let pstnFailed = false;
 let licenseFailed = false;
 
+     try {
+  const cdrProbe = await webexFetch(env, "/cdr/calls?max=1", orgId);
+  if (!cdrProbe.ok) {
+    cdrFailed = true;
+  }
+} catch {
+  cdrFailed = true;
+}
 
 // Calling Analytics
 try {
   const analyticsResult = await webexFetch(
     env,
-    "/analytics/calling?interval=DAY&from=-7d",
+    CALLING_ANALYTICS_PATH,
     orgId
   );
 
   if (analyticsResult.ok) {
-    const a = analyticsResult.data || {};
-    callVolume =
-      Number(a.totalCalls ?? 0) ||
-      Number(a.totalConnectedCalls ?? 0) ||
-      0;
+    const rows = analyticsResult.data?.items || [];
+    callVolume = rows.reduce((a,r)=>a+(r.totalCalls||0),0);
   } else {
     analyticsFailed = true;
   }
+
 } catch {
   analyticsFailed = true;
 }
+
 
 
 
@@ -869,16 +1032,6 @@ if (devResult.ok) {
 const pstnResult = await webexFetch(env, "/telephony/config/locations", orgId);
 if (!pstnResult.ok) {
   pstnFailed = true;
-}
-
-// CDR (Call Detail Records)
-const cdrResult = await webexFetch(
-  env,
-  "/cdr?max=1",
-  orgId
-);
-if (!cdrResult.ok) {
-  cdrFailed = true;
 }
 
 
@@ -924,15 +1077,13 @@ export default {
   async fetch(request, env) {
     try {
       const url = new URL(request.url);
-
+     
 const SESSION_TTL_SECONDS = cfgIntAllowZero(env, "SESSION_TTL_SECONDS", 3600);
+// IMPORTANT: assign to the GLOBALS (do not redeclare)
 PIN_THROTTLE_WINDOW_SECONDS = cfgIntAllowZero(env, "PIN_THROTTLE_WINDOW_SECONDS", 900);
 PIN_MAX_ATTEMPTS = cfgIntAllowZero(env, "PIN_MAX_ATTEMPTS", 5);
 PIN_LOCKOUT_SECONDS = cfgIntAllowZero(env, "PIN_LOCKOUT_SECONDS", 900);
 
-    
-
-   
 
     /* =====================================================
        Routes
@@ -1345,6 +1496,7 @@ if (url.pathname === "/api/debug/org-context") {
 
 //API/STATUS
 // /api/status (GET) — maintenance-style with upstream fallback
+// /api/status (GET)
 if (url.pathname === "/api/status" && request.method === "GET") {
 
   const user = getCurrentUser(request);
@@ -1357,33 +1509,133 @@ if (url.pathname === "/api/status" && request.method === "GET") {
   }
 
   try {
-
     const res = await fetch("https://status.webex.com/components.json");
-    if (!res.ok) {
-      return json({ error: "status_fetch_failed" }, 500);
-    }
+    if (!res.ok) return json({ error: "status_fetch_failed" }, 500);
 
     const raw = await res.json();
+    const comps = raw.components || [];
 
-    const groups = {};
+    // 1) Identify group rows + build lookup by id
+    const groupById = {};
+    for (const c of comps) {
+      if (c.group === true) {
+        groupById[c.id] = {
+          id: c.id,
+          name: c.name,
+          status: c.status || "operational",
+          children: []
+        };
+      }
+    }
 
-    (raw.components || []).forEach(c => {
-
-      const groupName = c.group || c.name;
-
-      if (!groups[groupName]) {
-        groups[groupName] = {
-          name: groupName,
+    // 2) Helper: put ungrouped items into a stable bucket
+    function ensureUngrouped() {
+      if (!groupById.__ungrouped) {
+        groupById.__ungrouped = {
+          id: "__ungrouped",
+          name: "Other",
           status: "operational",
           children: []
         };
       }
+      return groupById.__ungrouped;
+    }
 
-      groups[groupName].children.push({
+    // 3) Attach leaf components to their group_id parent
+    for (const c of comps) {
+      if (c.group === true) continue;
+
+      const parentId = c.group_id || c.groupId || null;
+      const parent = parentId && groupById[parentId] ? groupById[parentId] : ensureUngrouped();
+
+      parent.children.push({
+        id: c.id,
         name: c.name,
-        status: c.status
+        status: c.status || "operational"
       });
+    }
+
+    // 4) Aggregate status up to parents
+    const severity = {
+      major_outage: 5,
+      critical: 5,
+      partial_outage: 4,
+      degraded_performance: 3,
+      under_maintenance: 2,
+      maintenance: 2,
+      operational: 1
+    };
+
+    function aggStatus(statuses) {
+      let worst = "operational";
+      let worstScore = 1;
+      for (const s of statuses) {
+        const key = String(s || "operational").toLowerCase();
+        const score = severity[key] || 1;
+        if (score > worstScore) {
+          worstScore = score;
+          worst = key;
+        }
+      }
+      return worst;
+    }
+
+    const components = Object.values(groupById)
+      .filter(g => Array.isArray(g.children) && g.children.length > 0)
+      .map(g => ({
+        ...g,
+        status: aggStatus(g.children.map(x => x.status)),
+        children: g.children.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+      }))
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+    const overall = aggStatus(components.map(c => c.status));
+
+    return json({
+      lastUpdated: new Date().toISOString(),
+      overall,
+      components
     });
+
+  } catch (e) {
+    return json({ error: "status_engine_failed", message: e.message }, 500);
+  }
+}
+
+
+function aggStatus(statuses) {
+  let worst = "operational";
+  let worstScore = 1;
+  for (const s of statuses) {
+    const key = String(s || "operational").toLowerCase();
+    const score = severity[key] || 1;
+    if (score > worstScore) {
+      worstScore = score;
+      worst = key;
+    }
+  }
+  return worst;
+}
+
+const components = Object.values(groupById)
+  .filter(g => Array.isArray(g.children) && g.children.length > 0)
+  .map(g => {
+    const childStatuses = g.children.map(x => x.status);
+    return {
+      ...g,
+      status: aggStatus(childStatuses),
+      children: g.children.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+    };
+  })
+  .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+const overall = aggStatus(components.map(c => c.status));
+
+return json({
+  lastUpdated: new Date().toISOString(),
+  overall,
+  components
+});
 
     /* ===== Calculate Parent Status ===== */
 
@@ -1868,28 +2120,39 @@ if (url.pathname === "/api/admin/pin/allowlist" && request.method === "POST") {
   const orgName = String(body.orgName || "").trim() || "Unknown Org";
   const emails = Array.isArray(body.emails) ? body.emails : [];
 
-  if (!orgId) return json({ error:"missing_orgId" }, 400);
+  if (!orgId) return json({ error: "missing_orgId" }, 400);
 
   await auditLog(env, user.email, url.pathname, {
     action: "pin_allowlist_update",
     orgId
   });
 
-  const existing = await env.ORG_MAP_KV.get(`org:${orgId}`, { type:"json" });
+  // 1) Read existing org mapping FIRST (so we can delete old email:* keys)
+  const existing = await env.ORG_MAP_KV.get(`org:${orgId}`, { type: "json" });
   const pin = existing?.pin || null;
   const role = existing?.role || "customer";
 
   if (!pin) {
     return json({
-      error:"missing_pin_mapping",
-      message:"No org->pin mapping exists for this org yet."
+      error: "missing_pin_mapping",
+      message: "No org->pin mapping exists for this org yet."
     }, 404);
   }
 
+  // 2) Normalize incoming emails
   const normEmails = emails
     .map(e => String(e || "").toLowerCase().trim())
     .filter(Boolean);
 
+  // 3) DELETE STALE email:* mappings (must happen BEFORE we overwrite org/pin)
+  const oldEmails = Array.isArray(existing?.emails) ? existing.emails : [];
+  await Promise.all(
+    oldEmails.map(e =>
+      env.ORG_MAP_KV.delete(`email:${String(e).toLowerCase().trim()}`)
+    )
+  );
+
+  // 4) Overwrite org + pin mapping with the new allowlist
   await env.ORG_MAP_KV.put(`org:${orgId}`, JSON.stringify({
     pin, orgName, role, emails: normEmails
   }));
@@ -1898,13 +2161,16 @@ if (url.pathname === "/api/admin/pin/allowlist" && request.method === "POST") {
     orgId, orgName, role, emails: normEmails
   }));
 
-  for (const e of normEmails) {
-    await env.ORG_MAP_KV.put(`email:${e}`, JSON.stringify({
-      orgId, orgName, role
-    }));
-  }
+  // 5) Write email:* mappings for the NEW allowlist
+  await Promise.all(
+    normEmails.map(e =>
+      env.ORG_MAP_KV.put(`email:${e}`, JSON.stringify({
+        orgId, orgName, role
+      }))
+    )
+  );
 
-  return json({ ok:true, orgId, orgName, pin, emails: normEmails }, 200);
+  return json({ ok: true, orgId, orgName, pin, emails: normEmails }, 200);
 }
 
 if (url.pathname === "/api/admin/orgs" && request.method === "GET") {
@@ -2228,21 +2494,64 @@ if (url.pathname.startsWith("/api/customer/")) {
   }
 
   if (action === "analytics") {
-    const result = await webexFetch(env, "/analytics/calling?interval=DAY&from=-7d", resolvedOrgId);
+    const result = await webexFetch(env, CALLING_ANALYTICS_PATH, resolvedOrgId);
     if (!result.ok) return json({ ok:false, error:"webex_analytics_failed" }, 500);
     return json({ ok:true, analytics: result.data });
   }
 
-  if (action === "cdr") {
-    const result = await webexFetch(env, "/cdr", resolvedOrgId);
-    if (!result.ok) return json({ ok:false, error:"webex_cdr_failed" }, 500);
-    return json({ ok:true, records: result.data.items || [] });
-  }
+ if (action === "cdr") {
+  const now = new Date().toISOString();
+  const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const path =
+    `/cdr/calls?startTime=${encodeURIComponent(from)}` +
+    `&endTime=${encodeURIComponent(now)}` +
+    `&max=100`;
+
+  const result = await webexFetch(env, path, resolvedOrgId);
+
+  if (!result.ok) return json({ ok:false, error:"webex_cdr_failed" }, 500);
+
+  return json({ ok:true, records: result.data.items || [] });
+}
 
   if (action === "pstn-health") {
     const result = await webexFetch(env, "/telephony/config/locations", resolvedOrgId);
     if (!result.ok) return json({ ok:false, error:"webex_pstn_failed" }, 500);
     return json({ ok:true, locations: result.data.items || [] });
+  }
+  // -------------------------------------------------------------------
+  // NEW: tenant "health" snapshot (written by scheduled() into WEBEX KV)
+  // GET /api/customer/:key/health
+  // -------------------------------------------------------------------
+  if (action === "health") {
+    const health = await env.WEBEX.get(
+      `health:${resolvedOrgId}`,
+      { type: "json" }
+    );
+
+    if (!health) {
+      return json({ ok: false, error: "health_not_available" }, 404);
+    }
+
+    return json({ ok: true, health });
+  }
+
+  // -------------------------------------------------------------------
+  // NEW: tenant "call-quality" snapshot (written by scheduled() into WEBEX KV)
+  // GET /api/customer/:key/call-quality
+  // -------------------------------------------------------------------
+  if (action === "call-quality") {
+    const quality = await env.WEBEX.get(
+      `quality:${resolvedOrgId}`,
+      { type: "json" }
+    );
+
+    if (!quality) {
+      return json({ ok: false, error: "quality_not_available" }, 404);
+    }
+
+    return json({ ok: true, quality });
   }
 
   return json({ ok:false, error:"unknown_customer_action" }, 404);
@@ -2331,7 +2640,7 @@ async function cacheJson(cacheSeconds, urlStr, computeFn){
 }
 
       /* -----------------------------
-         /api/admin/pin/list (GET)
+         /api/admin/pin/list (POST)
          Admin-only: returns current org->pin mappings (best-effort)
          NOTE: KV can't list keys here; so this endpoint expects you to pass orgIds if needed.
          For demo, you can skip this.
@@ -2436,8 +2745,8 @@ if (url.pathname.startsWith("/api/admin/diagnostics/org/") && request.method ===
 
   await test("licenses", "/licenses");
   await test("devices", "/devices");
-  await test("analytics_calling", "/analytics/calling?interval=DAY&from=-7d");
-  await test("cdr", "/cdr");
+  await test("analytics_calling", CALLING_ANALYTICS_PATH);
+  await test("cdr", "/cdr/calls?max=1");
   await test("pstn_locations", "/telephony/config/locations");
 
   return json({
@@ -2622,16 +2931,37 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
     }
   },
 
-  async scheduled(event, env, ctx) {
-    ctx.waitUntil((async () => {
-      try {
-        const payload = await computeGlobalSummary(env);
-        await putGlobalSummarySnapshot(env, payload);
-        console.log("Global summary snapshot updated");
-      } catch (e) {
-        console.error("Scheduled snapshot failed:", e.message);
-      }
-    })());
-  }
+async scheduled(event, env, ctx) {
+  ctx.waitUntil((async () => {
+
+    try {
+      const orgResult = await webexFetch(env, "/organizations");
+      if (!orgResult.ok) return;
+
+      const orgs = orgResult.data.items || [];
+
+    const CONCURRENCY = 5;
+
+await mapLimit(orgs, CONCURRENCY, async (org) => {
+  const health = await computeTenantHealth(env, org.id);
+  await storeHealth(env, health);
+
+  const quality = await computeCallQuality(env, org.id);
+  await env.WEBEX.put(
+    `quality:${org.id}`,
+    JSON.stringify(quality),
+    { expirationTtl: 60 * 30 }
+  );
+});
+
+      console.log("Health + Quality snapshots updated");
+
+    } catch (e) {
+      console.error("Scheduled job failed:", e.message);
+    }
+
+  })());
+}
+
 
 };
