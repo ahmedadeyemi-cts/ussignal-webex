@@ -1556,8 +1556,6 @@ if (url.pathname === "/api/status" && request.method === "GET") {
     }
 
     // 4) Aggregate status up to parents
-    const severity = {
-  // 4) Aggregate status up to parents
 const severity = {
   major_outage: 5,
   critical: 5,
@@ -1580,6 +1578,7 @@ function aggStatus(statuses) {
       worst = key;
     }
   }
+
   return worst;
 }
 
@@ -1597,7 +1596,7 @@ return json({
   overall,
   components
 });
-
+} // closes /api/status
      
 //api/incidents block
 // /api/incidents (GET) — maintenance-style with upstream fallback
