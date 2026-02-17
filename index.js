@@ -1286,25 +1286,6 @@ if (url.pathname === "/api/debug/partner-test") {
     body: text.slice(0, 800)
   });
 }
-     if (url.pathname === "/api/debug/license-test") {
-  const token = await getAccessToken(env);
-  const orgId = url.searchParams.get("orgId");
-
-  const res = await fetch(
-    `https://webexapis.com/v1/licenses?orgId=${orgId}`,
-    {
-      headers: { Authorization: `Bearer ${token}` }
-    }
-  );
-
-  const text = await res.text();
-
-  return json({
-    status: res.status,
-    body: text.slice(0, 500)
-  });
-}
-
      if (url.pathname === "/api/debug/orgs-direct") {
   const token = await getAccessToken(env);
 
