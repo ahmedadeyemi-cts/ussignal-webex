@@ -1441,6 +1441,25 @@ if (url.pathname === "/api/debug/whoami-webex") {
   const txt = await res.text();
   return json({ status: res.status, body: txt.slice(0, 500) });
 }
+     if (url.pathname === "/api/debug/analytics-direct") {
+  const token = await getAccessToken(env);
+  const orgId = url.searchParams.get("orgId");
+
+  const res = await fetch(
+    `https://webexapis.com/v1/analytics/calling?orgId=${orgId}`,
+    {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  );
+
+  const text = await res.text();
+
+  return json({
+    status: res.status,
+    body: text.slice(0, 800)
+  });
+}
+
 if (url.pathname === "/api/debug/partner-test") {
   const token = await getAccessToken(env);
 
