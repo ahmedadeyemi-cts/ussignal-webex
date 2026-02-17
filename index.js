@@ -1077,6 +1077,24 @@ export default {
   async fetch(request, env) {
     try {
       const url = new URL(request.url);
+     const path = url.pathname;
+
+      /* =====================================================
+         STATIC ASSETS
+      ====================================================== */
+
+      if (path === "/assets/ussignal-logo.jpg") {
+        const res = await fetch(
+          "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/assets/ussignal-logo.jpg"
+        );
+
+        return new Response(res.body, {
+          headers: {
+            "content-type": "image/jpeg",
+            "cache-control": "public, max-age=86400"
+          }
+        });
+      }
      
 const SESSION_TTL_SECONDS = cfgIntAllowZero(env, "SESSION_TTL_SECONDS", 3600);
 // IMPORTANT: assign to the GLOBALS (do not redeclare)
