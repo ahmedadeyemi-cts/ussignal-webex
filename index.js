@@ -1252,6 +1252,17 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
     headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
   });
 }
+if (url.pathname === "/api/debug/whoami-webex") {
+  const token = await getAccessToken(env);
+
+  const res = await fetch("https://webexapis.com/v1/people/me", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const txt = await res.text();
+  return json({ status: res.status, body: txt.slice(0, 500) });
+}
+
       if (url.pathname === "/api/debug/token-test") {
   if (env.DEBUG_MODE !== "true") {
     return json({ error: "disabled" }, 403);
