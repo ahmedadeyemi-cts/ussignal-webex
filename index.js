@@ -1566,43 +1566,6 @@ if (url.pathname === "/api/status" && request.method === "GET") {
       operational: 1
     };
 
-    function aggStatus(statuses) {
-      let worst = "operational";
-      let worstScore = 1;
-      for (const s of statuses) {
-        const key = String(s || "operational").toLowerCase();
-        const score = severity[key] || 1;
-        if (score > worstScore) {
-          worstScore = score;
-          worst = key;
-        }
-      }
-      return worst;
-    }
-
-    const components = Object.values(groupById)
-      .filter(g => Array.isArray(g.children) && g.children.length > 0)
-      .map(g => ({
-        ...g,
-        status: aggStatus(g.children.map(x => x.status)),
-        children: g.children.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
-      }))
-      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-
-    const overall = aggStatus(components.map(c => c.status));
-
-    return json({
-      lastUpdated: new Date().toISOString(),
-      overall,
-      components
-    });
-
-  } catch (e) {
-    return json({ error: "status_engine_failed", message: e.message }, 500);
-  }
-}
-
-
 function aggStatus(statuses) {
   let worst = "operational";
   let worstScore = 1;
