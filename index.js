@@ -1276,6 +1276,16 @@ if (url.pathname === "/api/debug/partner-test") {
     body: txt.slice(0, 500)
   });
 }
+if (url.pathname === "/api/debug/org-context") {
+  const token = await getAccessToken(env);
+
+  const res = await fetch("https://webexapis.com/v1/organizations", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const txt = await res.text();
+  return json({ status: res.status, body: txt.slice(0, 1000) });
+}
  if (url.pathname === "/api/debug/token-test") {
   if (env.DEBUG_MODE !== "true") {
     return json({ error: "disabled" }, 403);
