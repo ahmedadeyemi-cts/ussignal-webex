@@ -103,19 +103,19 @@ async function getGlobalSummarySnapshot(env) {
 async function webexFetch(env, path, orgId = null) {
   const token = await getAccessToken(env);
 
-  let url = `https://webexapis.com/v1${path}`;
+  const url = `https://webexapis.com/v1${path}`;
 
-  // Only append orgId as query param if provided
+  const headers = {
+    Authorization: `Bearer ${token}`
+  };
+
+  // 🔥 THIS IS THE FIX
+  // Use partner org switching via header instead of ?orgId=
   if (orgId) {
-    const sep = url.includes("?") ? "&" : "?";
-    url += `${sep}orgId=${encodeURIComponent(orgId)}`;
+    headers["X-Organization-Id"] = orgId;
   }
 
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
+  const res = await fetch(url, { headers });
 
   const text = await res.text();
   const preview = text.slice(0, 400);
