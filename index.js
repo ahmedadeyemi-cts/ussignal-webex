@@ -2303,6 +2303,40 @@ if (url.pathname === "/api/admin/diagnostics" && request.method === "GET") {
     tests
   });
 }
+     /* =====================================================
+   📊 ADMIN: GLOBAL SUMMARY SNAPSHOT
+===================================================== */
+
+if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const snapshot = await getGlobalSummarySnapshot(env);
+  if (!snapshot) {
+    return json({ ok: false, message: "No snapshot available yet" }, 404);
+  }
+
+  return json({
+    ok: true,
+    generatedAt: snapshot.generatedAt,
+    ...snapshot.payload
+  }, 200);
+}
+
+if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
+  const user = getCurrentUser(request);
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const payload = await computeGlobalSummary(env);
+  await putGlobalSummarySnapshot(env, payload);
+
+  return json({
+    ok: true,
+    message: "Snapshot refreshed",
+    generatedAt: new Date().toISOString()
+  }, 200);
+}
+
 /* =====================================================
    🔬 ADMIN: ORG-SCOPED DIAGNOSTICS
 ===================================================== */
@@ -2503,40 +2537,6 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
   });
 }
 }// GET snapshot (already fine above)
-if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
-  const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
-
-  const snapshot = await getGlobalSummarySnapshot(env);
-  if (!snapshot) {
-    return json({ ok: false, message: "No snapshot available yet" }, 404);
-  }
-
-  return json({
-    ok: true,
-    generatedAt: snapshot.generatedAt,
-    ...snapshot.payload
-  }, 200);
-}
-
-// POST refresh snapshot
-if (url.pathname === "/api/admin/global-summary/refresh") {
-  const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
-
-  if (request.method !== "POST") {
-    return json({ error: "method_not_allowed", allowed: ["POST"] }, 405);
-  }
-
-  const payload = await computeGlobalSummary(env);
-  await putGlobalSummarySnapshot(env, payload);
-
-  return json({
-    ok: true,
-    message: "Snapshot refreshed",
-    generatedAt: new Date().toISOString()
-  }, 200);
-}
 
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
