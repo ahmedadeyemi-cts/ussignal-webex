@@ -1286,6 +1286,21 @@ if (url.pathname === "/api/debug/partner-test") {
     body: text.slice(0, 800)
   });
 }
+     if (url.pathname === "/api/debug/orgs-direct") {
+  const token = await getAccessToken(env);
+
+  const res = await fetch("https://webexapis.com/v1/organizations", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const text = await res.text();
+
+  return json({
+    status: res.status,
+    body: text.slice(0, 500)
+  });
+}
+
 if (url.pathname === "/api/debug/token-scope") {
   const token = await getAccessToken(env);
 
