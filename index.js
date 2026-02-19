@@ -2701,13 +2701,32 @@ if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
 if (path === "/api/admin/global-summary/refresh" && request.method === "POST") {
 
   const secret = request.headers.get("x-admin-secret");
-  const user = getCurrentUser(request);
 
-  const allowed =
-    (secret && secret === env.ADMIN_SECRET) ||
-    (user && user.isAdmin === true);
+  // If secret matches, skip Access entirely
+  if (secret && secret === env.ADMIN_SECRET) {
+    try {
+      const payload = await computeGlobalSummary(env);
+      await putGlobalSummarySnapshot(env, payload);
 
-  if (!allowed) {
+      return json({
+        ok: true,
+        refreshedAt: new Date().toISOString(),
+        totalOrgs: payload.totalOrgs
+      });
+    } catch (err) {
+      return json({ error: err.message }, 500);
+    }
+  }
+
+  // Otherwise require Cloudflare Access admin
+  let user;
+  try {
+    user = getCurrentUser(request);
+  } catch {
+    return json({ error: "Unauthorized" }, 401);
+  }
+
+  if (!user.isAdmin) {
     return json({ error: "Unauthorized" }, 401);
   }
 
@@ -2720,12 +2739,8 @@ if (path === "/api/admin/global-summary/refresh" && request.method === "POST") {
       refreshedAt: new Date().toISOString(),
       totalOrgs: payload.totalOrgs
     });
-
   } catch (err) {
-    return json({
-      error: "refresh_failed",
-      message: err.message
-    }, 500);
+    return json({ error: err.message }, 500);
   }
 }
 
