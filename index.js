@@ -1563,7 +1563,7 @@ if (url.pathname === "/api/status" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
 
-  if (!user.isAdmin) {
+  if (!user || !user.isAdmin) {
     if (!session || !session.orgId) {
       return json({ error: "pin_required" }, 401);
     }
@@ -1670,7 +1670,7 @@ if (url.pathname === "/api/incidents" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
 
-  if (!user.isAdmin) {
+  if (!user || !user.isAdmin) {
     if (!session || !session.orgId) {
       return json({ error: "pin_required" }, 401);
     }
@@ -1754,7 +1754,7 @@ if (url.pathname === "/api/maintenance" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
 
-  if (!user.isAdmin) {
+  if (!user || !user.isAdmin) {
     if (!session || !session.orgId) {
       return json({ error: "pin_required" }, 401);
     }
@@ -1858,7 +1858,7 @@ if (url.pathname === "/api/components" && request.method === "GET") {
 
   const session = await getSession(env, user.email);
 
-  if (!user.isAdmin) {
+  if (!user || !user.isAdmin) {
     if (!session || !session.orgId) {
       return json({ error: "pin_required" }, 401);
     }
@@ -2061,7 +2061,7 @@ if (url.pathname === "/api/components" && request.method === "GET") {
 
      if (url.pathname === "/api/admin/pins" && request.method === "GET") {
   const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+  if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const orgResult = await webexFetch(env, "/organizations");
   if (!orgResult.ok) {
@@ -2098,7 +2098,7 @@ if (url.pathname === "/api/components" && request.method === "GET") {
 
 if (url.pathname === "/api/admin/pin/allowlist" && request.method === "POST") {
   const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+  if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const body = await request.json().catch(() => ({}));
   const orgId = String(body.orgId || "").trim();
@@ -2161,7 +2161,7 @@ if (url.pathname === "/api/admin/pin/allowlist" && request.method === "POST") {
 if (url.pathname === "/api/admin/orgs" && request.method === "GET") {
   const token = await getAccessToken(env);
  const user = getCurrentUser(request);
-if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
 
 
 const result = await webexFetch(env, "/organizations");
@@ -2184,7 +2184,7 @@ return json({
       
 if (url.pathname === "/api/admin/org-health") {
   const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+  if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const orgId = url.searchParams.get("orgId");
   if (!orgId) return json({ error: "missing_orgId" }, 400);
@@ -2221,7 +2221,7 @@ if (url.pathname === "/api/admin/org-health") {
   const session = await getSession(env, user.email);
 
   // customers require tenant resolution (email OR PIN)
-  if (!user.isAdmin) {
+  if (!user || !user.isAdmin) {
    if (!user.isAdmin && (!session || !session.orgId)) {
   return json({ error: "pin_required" }, 401);
 }
@@ -2444,7 +2444,7 @@ if (url.pathname.startsWith("/api/customer/")) {
   const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
 
-  if (!user.isAdmin) {
+  if (!user || !user.isAdmin) {
     if (!session || !session.orgId) {
       return json({ ok:false, error:"pin_required" }, 401);
     }
@@ -2552,7 +2552,7 @@ if (url.pathname.startsWith("/api/customer/")) {
       ----------------------------- */
      if (url.pathname === "/api/admin/pin/rotate" && request.method === "POST") {
   const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+  if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const body = await request.json().catch(() => ({}));
   const orgId = String(body.orgId || "").trim();
@@ -2633,7 +2633,7 @@ async function cacheJson(cacheSeconds, urlStr, computeFn){
       if (url.pathname === "/api/admin/pin/list" && request.method === "POST") {
         const user = getCurrentUser(request);
         const token = await getAccessToken(env);
-        if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+        if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
 
         const body = await request.json().catch(() => ({}));
         const orgIds = Array.isArray(body.orgIds) ? body.orgIds : [];
@@ -2651,7 +2651,7 @@ async function cacheJson(cacheSeconds, urlStr, computeFn){
 ===================================================== */
 if (url.pathname === "/api/admin/diagnostics" && request.method === "GET") {
   const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+  if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const tests = {};
 
@@ -2678,29 +2678,28 @@ if (url.pathname === "/api/admin/diagnostics" && request.method === "GET") {
    📊 ADMIN: GLOBAL SUMMARY SNAPSHOT
 ===================================================== */
 
-if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
+if (path === "/api/admin/global-summary" && request.method === "GET") {
+
+  const secret = request.headers.get("x-admin-secret");
   const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const allowed =
+    (secret && secret === env.ADMIN_SECRET) ||
+    (user?.isAdmin === true);
+
+  if (!allowed) {
+    return json({ error: "access_required" }, 401);
+  }
 
   const snapshot = await getGlobalSummarySnapshot(env);
- if (!snapshot) {
-  ctx.waitUntil((async () => {
-    const payload = await computeGlobalSummary(env);
-    await putGlobalSummarySnapshot(env, payload);
-  })());
 
-  return json({
-    ok: false,
-    message: "Snapshot building. Refresh in 10 seconds."
-  }, 202);
-}
-  return json({
-    ok: true,
-    generatedAt: snapshot.generatedAt,
-    ...snapshot.payload
-  }, 200);
-}
+  if (!snapshot) {
+    return json({ ok: false, message: "No snapshot available yet" });
+  }
 
+  return json(snapshot);
+}
+     
 if (path === "/api/admin/global-summary/refresh" && request.method === "POST") {
 
   const secret = request.headers.get("x-admin-secret");
@@ -2729,7 +2728,7 @@ if (path === "/api/admin/global-summary/refresh" && request.method === "POST") {
     return json({ error: "Unauthorized" }, 401);
   }
 
-  if (!user.isAdmin) {
+  if (!user || !user.isAdmin) {
     return json({ error: "Unauthorized" }, 401);
   }
 
@@ -2750,7 +2749,7 @@ if (path === "/api/admin/global-summary/refresh" && request.method === "POST") {
 
 if (url.pathname === "/api/admin/global-summary/clear" && request.method === "POST") {
   const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
+  if (!user || !user.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
 
   await env.WEBEX.delete("globalSummarySnapshotV1");
 
@@ -2761,7 +2760,7 @@ if (url.pathname === "/api/admin/global-summary/clear" && request.method === "PO
 ===================================================== */
 if (url.pathname.startsWith("/api/admin/diagnostics/org/") && request.method === "GET") {
   const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+  if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const orgId = decodeURIComponent(url.pathname.split("/").pop());
 
@@ -2800,7 +2799,7 @@ if (url.pathname.startsWith("/api/admin/diagnostics/org/") && request.method ===
 if (url.pathname.startsWith("/api/admin/inspect/email/") && request.method === "GET") {
   const user = getCurrentUser(request);
   const token = await getAccessToken(env);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+  if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const email = decodeURIComponent(url.pathname.split("/").pop()).toLowerCase();
 
@@ -2819,7 +2818,7 @@ if (url.pathname.startsWith("/api/admin/inspect/email/") && request.method === "
 if (url.pathname.startsWith("/api/admin/inspect/pin/") && request.method === "GET") {
   const user = getCurrentUser(request);
   const token = await getAccessToken(env);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+  if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const pin = url.pathname.split("/").pop();
 
@@ -2842,7 +2841,7 @@ if (url.pathname.startsWith("/api/admin/inspect/pin/") && request.method === "GE
 if (url.pathname.startsWith("/api/admin/inspect/org/") && request.method === "GET") {
   const user = getCurrentUser(request);
   const token = await getAccessToken(env);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+  if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const orgId = decodeURIComponent(url.pathname.split("/").pop());
 
@@ -2861,7 +2860,7 @@ if (url.pathname.startsWith("/api/admin/inspect/org/") && request.method === "GE
 if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
   const user = getCurrentUser(request);
   const token = await getAccessToken(env);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+  if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const body = await request.json().catch(() => ({}));
   const email = body.email?.toLowerCase()?.trim() || null;
