@@ -1,17 +1,12 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8" />
-<title>US Signal | Webex Calling License Management</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <title>US Signal | Webex Calling License Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<style>
-
-/* ======================================================
-   THEME (MATCH INDEX)
-====================================================== */
-
-:root{
+  <style>
+   :root{
   --bg:#f6f8fb;
   --card:#ffffff;
   --text:#0f172a;
@@ -28,22 +23,22 @@
 }
 
 *{ box-sizing:border-box; }
-
 body{
   margin:0;
   font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
   background:var(--bg);
   color:var(--text);
-  display:flex;                 /* 🔴 CRITICAL */
+}
+
+/* Layout */
+.app{
+  display:grid;
+  grid-template-columns:270px 1fr;
   min-height:100vh;
 }
 
-/* ======================================================
-   SIDEBAR (IDENTICAL TO INDEX)
-====================================================== */
-
+/* Sidebar */
 .sidebar{
-  width:270px;
   background:var(--card);
   border-right:1px solid var(--line);
   padding:18px 14px;
@@ -97,18 +92,65 @@ body{
   border:1px solid rgba(15,98,254,.20);
 }
 
-/* ======================================================
-   MAIN AREA
-====================================================== */
-
-.main{
-  flex:1;
-  padding:22px;
+.sidebar-bottom{
+  margin-top:auto;
+  padding-top:10px;
+  border-top:1px solid var(--line);
   display:flex;
   flex-direction:column;
+  gap:10px;
 }
 
-/* Header Card (MATCH INDEX) */
+.userline{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.btn{
+  padding:10px 12px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:13px;
+  cursor:pointer;
+  border:none;
+}
+.btn-primary{
+  background:var(--accent);
+  color:#fff;
+}
+.btn-primary:hover{ background:var(--accent2); }
+
+.btn-outline{
+  background:#fff;
+  border:1px solid rgba(15,23,42,.18);
+}
+.btn-outline:hover{
+  border-color:rgba(15,98,254,.35);
+  color:var(--accent2);
+}
+
+.btn-danger{
+  background:#fff;
+  border:1px solid rgba(220,38,38,.35);
+  color:var(--bad);
+}
+.btn-danger:hover{
+  background:rgba(220,38,38,.06);
+}
+
+a.link{
+  color:var(--accent2);
+  text-decoration:none;
+  font-weight:800;
+}
+a.link:hover{ text-decoration:underline; }
+
+/* Main */
+.main{
+  padding:22px;
+}
+
+/* Header */
 .header-card{
   background:var(--card);
   border:1px solid var(--line);
@@ -133,6 +175,7 @@ body{
 .header-left .sub{
   font-size:12px;
   color:var(--muted);
+  max-width:900px;
 }
 
 .header-actions{
@@ -140,9 +183,13 @@ body{
   gap:10px;
   align-items:center;
   flex-wrap:wrap;
+  justify-content:flex-end;
 }
 
 .pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
   padding:8px 10px;
   border-radius:999px;
   border:1px solid rgba(15,23,42,.14);
@@ -152,67 +199,142 @@ body{
   color:var(--muted);
 }
 
-/* ======================================================
-   CONTENT SECTIONS
-====================================================== */
+.pill b{ color:var(--text); }
 
+/* Sections */
 .section{ margin-top:18px; }
+
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:14px;
+}
+@media (max-width: 1100px){
+  .grid{ grid-template-columns: 1fr; }
+}
 
 .card{
   background:var(--card);
   border:1px solid var(--line);
   border-radius:16px;
   box-shadow:var(--shadow);
-  padding:16px;
+  padding:14px;
 }
 
-h2{
-  margin:0 0 10px 0;
-  font-size:14px;
+.card h3{
+  margin:0 0 6px 0;
+  font-size:13px;
+  letter-spacing:.2px;
   font-weight:1000;
 }
-
-.muted{
+.card p{
+  margin:0;
   font-size:12px;
   color:var(--muted);
+  line-height:1.55;
 }
 
-.row{
+.hr{
+  height:1px;
+  background:rgba(15,23,42,.08);
+  margin:12px 0;
+}
+
+.kv{
+  display:grid;
+  grid-template-columns: 220px 1fr;
+  gap:10px;
+  font-size:12px;
+}
+.kv .k{ color:var(--muted); font-weight:900; }
+.kv .v{ color:var(--text); font-weight:800; }
+
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.badge.good{
+  background:rgba(22,163,74,.08);
+  border:1px solid rgba(22,163,74,.25);
+  color:var(--good);
+}
+.badge.warn{
+  background:rgba(245,158,11,.10);
+  border:1px solid rgba(245,158,11,.30);
+  color:#b45309;
+}
+.badge.bad{
+  background:rgba(220,38,38,.08);
+  border:1px solid rgba(220,38,38,.30);
+  color:var(--bad);
+}
+.badge.neutral{
+  background:rgba(15,98,254,.08);
+  border:1px solid rgba(15,98,254,.20);
+  color:var(--accent2);
+}
+
+.small{
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.55;
+}
+
+.steps{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:10px;
+}
+
+.step{
   display:flex;
   gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.10);
+  background:rgba(15,98,254,.02);
 }
-
-.tabs{
+.step .n{
+  width:28px;
+  height:28px;
+  border-radius:10px;
   display:flex;
-  gap:8px;
-  margin-top:18px;
-  border-bottom:1px solid var(--line);
+  align-items:center;
+  justify-content:center;
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+  font-weight:1000;
+  color:var(--accent2);
+  flex:0 0 auto;
 }
-
-.tab{
-  padding:10px 16px;
-  background:transparent;
-  border:none;
-  cursor:pointer;
-  font-weight:900;
-  border-bottom:3px solid transparent;
+.step .c{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.step .t{
+  font-size:13px;
+  font-weight:1000;
+}
+.step .d{
+  font-size:12px;
   color:var(--muted);
+  line-height:1.55;
 }
-
-.tab.active{
-  border-bottom:3px solid var(--accent);
-  color:var(--accent);
-}
-
-.tabpanel.hidden{ display:none; }
 
 .table-wrap{
   margin-top:10px;
   border:1px solid var(--line);
   border-radius:16px;
+  box-shadow:var(--shadow);
   overflow:auto;
+  background:var(--card);
 }
 
 table{
@@ -223,139 +345,244 @@ thead th{
   padding:12px;
   font-size:12px;
   color:var(--muted);
+  text-align:left;
   text-transform:uppercase;
 }
 tbody td{
   padding:12px;
   border-top:1px solid rgba(15,23,42,.06);
   font-size:13px;
+  vertical-align:top;
 }
 tbody tr:hover{
   background:rgba(15,98,254,.04);
 }
 
+.check{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.10);
+  background:#fff;
+}
+.check input{ margin-top:2px; }
+.check .label{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.check .label b{ font-size:13px; }
+.check .label span{ font-size:12px; color:var(--muted); line-height:1.55; }
+
+.toolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+
+textarea.template{
+  width:100%;
+  min-height:420px;
+  resize:vertical;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.16);
+  padding:12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size:12px;
+  line-height:1.55;
+  outline:none;
+}
+
+.mini-grid{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:10px;
+}
+@media (max-width: 1100px){
+  .mini-grid{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 720px){
+  .mini-grid{ grid-template-columns: 1fr; }
+}
+
+.tile{
+  background:#fff;
+  border:1px solid rgba(15,23,42,.10);
+  border-radius:16px;
+  padding:12px;
+  box-shadow:none;
+}
+.tile .label{
+  font-size:11px;
+  color:var(--muted);
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+}
+.tile .value{
+  margin-top:6px;
+  font-size:18px;
+  font-weight:1000;
+}
+.tile .hint{
+  margin-top:6px;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.5;
+}
+
+.notice{
+  padding:12px;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.10);
+  background:rgba(245,158,11,.08);
+}
+.notice b{ color:#92400e; }
+.notice .small{ color:#92400e; }
+
+.callout{
+  padding:12px;
+  border-radius:14px;
+  border:1px solid rgba(15,98,254,.18);
+  background:rgba(15,98,254,.06);
+}
+.callout b{ color:var(--accent2); }
+
+.toast{
+  position:fixed;
+  right:14px;
+  bottom:14px;
+  padding:10px 12px;
+  background:#0f172a;
+  color:#fff;
+  border-radius:12px;
+  box-shadow:0 12px 30px rgba(0,0,0,.18);
+  font-size:12px;
+  font-weight:900;
+  opacity:0;
+  transform:translateY(10px);
+  transition:.18s ease;
+  pointer-events:none;
+}
+.toast.show{
+  opacity:1;
+  transform:translateY(0);
+}
+
+.muted{
+  color:var(--muted);
+  font-weight:800;
+}
+
 .hidden{ display:none !important; }
-body {
-  display: flex;
-  min-height: 100vh;
-}
-
-.app {
-  display: contents;
-}
-
-</style>
+  </style>
 </head>
 
 <body>
 
 <!-- ============================= -->
-<!-- SIDEBAR -->
+<!-- MAIN WRAPPER -->
 <!-- ============================= -->
-
-<div class="sidebar">
-
-  <div class="brand">
-    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
-    <div class="title">
-      <b>US Signal</b>
-      <span>Customer Portal</span>
-    </div>
-  </div>
-
-  <div class="nav">
-    <a href="/customer">Dashboard</a>
-    <a href="/customer/licenses" class="active">Licenses</a>
-    <a href="/customer/devices">Devices</a>
-    <a href="/customer/analytics">Analytics</a>
-    <a href="/customer/cdr">CDR</a>
-    <a href="/customer/maintenance">Maintenance</a>
-    <a href="/customer/status">Status</a>
-    <a href="/customer/incidents">Incidents</a>
-  </div>
-
-</div>
-
-<!-- ============================= -->
-<!-- MAIN -->
-<!-- ============================= -->
-
 <div class="main">
 
-  <!-- HEADER -->
-  <div class="header-card">
-    <div class="header-left">
-      <div class="h">Webex Calling — License Management</div>
-      <div class="sub" id="whoLine">Loading…</div>
-    </div>
+  <!-- HEADER (Converted from <header>) -->
+  <div class="header">
 
-    <div class="header-actions">
+    <div class="brand">
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" alt="US Signal" />
+      <div>
+        <h1>Webex Calling — License Management</h1>
+        <div class="statusLine" id="whoLine">Loading…</div>
+      </div>
+    </div>
+<!-- ============================= -->
+<!-- SIDEBAR (Matches index.html) -->
+<!-- ============================= -->
+<div class="sidebar">
+  <h2>Customer Portal</h2>
+
+  <a href="/customer" class="nav-link">Dashboard</a>
+  <a href="/customer/licenses" class="nav-link active">Licenses</a>
+  <a href="/customer/devices" class="nav-link">Devices</a>
+  <a href="/customer/analytics" class="nav-link">Analytics</a>
+  <a href="/customer/cdr" class="nav-link">CDR</a>
+  <a href="/customer/maintenance" class="nav-link">Maintenance</a>
+  <a href="/customer/status" class="nav-link">Status</a>
+  <a href="/customer/incidents" class="nav-link">Incidents</a>
+</div>
+    <div class="headerRight">
       <div class="pill" id="tenantPill">Tenant: —</div>
-      <button class="btn-outline" id="btnTheme">Dark Mode</button>
-      <button class="btn-outline" id="btnRefresh">Refresh</button>
+      <button class="secondary" id="btnTheme">Dark Mode</button>
+      <button class="secondary" id="btnRefresh">Refresh</button>
     </div>
+
   </div>
 
-  <!-- ============================= -->
-  <!-- TENANT CONTEXT -->
-  <!-- ============================= -->
+  <!-- CONTENT (Converted from <main>) -->
+  <div class="content">
+    <div class="grid">
 
-  <div class="section">
-
-    <div id="admin-note" class="card hidden">
-      <b>US Signal Admin View</b>
-      <div class="muted">
-        You can switch tenants using the selector below.
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Tenant Context</h2>
-      <div class="muted" id="orgContext">Loading…</div>
-
-      <div style="height:12px"></div>
-
-      <div class="row">
-        <select id="tenantSelect" disabled>
-          <option>Loading tenants…</option>
-        </select>
-        <button id="btnLoad">Load Licenses</button>
+      <!-- Admin Banner -->
+      <div id="admin-note" class="card" style="display:none">
+        <strong>US Signal Admin View</strong>
+        <div class="muted">
+          You can switch tenants using the selector below. Customers will only see their own tenant.
+        </div>
       </div>
 
-      <div class="muted hidden" id="errBox"></div>
-    </div>
-
-  </div>
-
-  <!-- ============================= -->
-  <!-- TABS -->
-  <!-- ============================= -->
-
-  <div class="tabs">
-    <button class="tab active" data-tab="licenses">Licenses</button>
-    <button class="tab" data-tab="devices">Devices</button>
-    <button class="tab" data-tab="analytics">Analytics</button>
-    <button class="tab" data-tab="cdr">CDR</button>
-  </div>
-
-  <!-- ============================= -->
-  <!-- LICENSES TAB -->
-  <!-- ============================= -->
-
-  <section id="tab-licenses" class="tabpanel">
-
-    <div class="section">
+      <!-- Tenant Selection + Context -->
       <div class="card">
-        <h2>Deficient SKUs</h2>
-        <div class="table-wrap">
-          <table>
+        <h2>Tenant Context</h2>
+        <div class="muted" id="orgContext">Loading…</div>
+
+        <div style="height:12px"></div>
+
+        <div class="row">
+          <select id="tenantSelect" disabled>
+            <option value="">Loading tenants…</option>
+          </select>
+          <button id="btnLoad" disabled>Load Licenses</button>
+        </div>
+
+        <div class="errorBox" id="errBox"></div>
+      </div>
+
+      <!-- TABS -->
+      <div class="tabs">
+        <button class="tab active" data-tab="licenses">Licenses</button>
+        <button class="tab" data-tab="devices">Devices</button>
+        <button class="tab" data-tab="analytics">Analytics</button>
+        <button class="tab" data-tab="cdr">CDR</button>
+      </div>
+
+      <!-- ============================= -->
+      <!-- LICENSES TAB -->
+      <!-- ============================= -->
+      <section id="tab-licenses" class="tabpanel">
+
+        <div class="card">
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <h2 style="margin:0;">Deficient SKUs</h2>
+            <button id="btnEmailAlert" class="secondary">Send License Alert Email</button>
+          </div>
+
+          <div class="muted" style="margin-top:6px;">
+            Only shows SKUs that are in deficit based on the current tenant selection.
+          </div>
+
+          <table id="deficitTable" style="margin-top:12px;">
             <thead>
               <tr>
                 <th>SKU</th>
-                <th>Available</th>
-                <th>Total</th>
-                <th>Used</th>
-                <th>Needed</th>
+                <th class="right">Available</th>
+                <th class="right">Total</th>
+                <th class="right">Used</th>
+                <th class="right">Licenses Needed</th>
               </tr>
             </thead>
             <tbody id="deficitRows">
@@ -363,33 +590,42 @@ body {
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
 
-    <div class="section">
-      <div class="card">
-        <h2>Current License Usage</h2>
-        <div id="licenseLoading" class="muted">Loading…</div>
-        <div class="table-wrap">
-          <table id="licenseTable" class="hidden">
+        <div class="card">
+          <h2>Email License Report</h2>
+          <p class="muted">
+            Sends a license summary for the currently selected tenant.
+          </p>
+
+          <div class="row">
+            <input id="reportEmail" placeholder="you@example.com" style="min-width:300px" />
+            <button id="btnSendEmail">Send Report</button>
+          </div>
+
+          <div class="muted" style="margin-top:10px" id="emailStatus"></div>
+        </div>
+
+        <div class="card">
+          <h2>Current License Usage</h2>
+
+          <div id="licenseLoading" class="muted">Loading license data…</div>
+
+          <table id="licenseTable" style="display:none">
             <thead>
               <tr>
                 <th>SKU</th>
-                <th>Total</th>
-                <th>Used</th>
-                <th>Available</th>
-                <th>Deficit</th>
+                <th class="right">Total</th>
+                <th class="right">Used</th>
+                <th class="right">Available</th>
+                <th class="right">Deficit</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody id="licenseRows"></tbody>
           </table>
         </div>
-      </div>
-    </div>
-  </section>  
-</div>
 
+      </section>
 
       <!-- DEVICES TAB -->
       <section id="tab-devices" class="tabpanel hidden">
