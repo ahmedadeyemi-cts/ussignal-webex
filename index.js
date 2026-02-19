@@ -1134,7 +1134,8 @@ const publicPaths = [
   "/favicon.ico",
   "/pin",
   "/",
- "/api/admin/global-summary/refresh"
+ "/api/admin/global-summary/refresh",
+  "/api/admin/org-health"
 ];
 
 //if (!accessEmail && !publicPaths.includes(url.pathname)) {
