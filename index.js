@@ -128,15 +128,27 @@ async function getGlobalSummarySnapshot(env) {
 async function webexFetch(env, path, orgId = null) {
   const token = await getAccessToken(env);
 
-  const url = `https://webexapis.com/v1${path}`;
+  let finalPath = path;
+
+  // Some Webex APIs REQUIRE ?orgId= instead of header switching
+  const requiresQueryOrg =
+    path.startsWith("/analytics") ||
+    path.startsWith("/cdr") ||
+    path.startsWith("/telephony");
+
+  if (orgId && requiresQueryOrg) {
+    const sep = path.includes("?") ? "&" : "?";
+    finalPath = `${path}${sep}orgId=${encodeURIComponent(orgId)}`;
+  }
+
+  const url = `https://webexapis.com/v1${finalPath}`;
 
   const headers = {
     Authorization: `Bearer ${token}`
   };
 
-  // 🔥 THIS IS THE FIX
-  // Use partner org switching via header instead of ?orgId=
-  if (orgId) {
+  // For endpoints that support header switching
+  if (orgId && !requiresQueryOrg) {
     headers["X-Organization-Id"] = orgId;
   }
 
