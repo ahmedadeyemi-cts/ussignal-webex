@@ -243,7 +243,64 @@ body {
 .app {
   display: contents;
 }
+/* Spinner */
+.spinner {
+  width:14px;
+  height:14px;
+  border:2px solid rgba(255,255,255,.4);
+  border-top:2px solid #fff;
+  border-radius:50%;
+  animation: spin .6s linear infinite;
+  display:inline-block;
+  vertical-align:middle;
+}
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Button polish */
+button {
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+button:disabled {
+  opacity:.65;
+  cursor:not-allowed;
+}
+   /* Smooth status message */
+.status-message {
+  opacity:0;
+  transition:opacity .25s ease;
+}
+
+.status-message.show {
+  opacity:1;
+}
+
+/* Success state */
+button.success {
+  background:var(--good);
+}
+
+/* Input validation */
+input.error {
+  border:1px solid var(--bad);
+}
+
+/* Better input styling */
+input[type="email"] {
+  padding:8px 12px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  font-size:13px;
+}
 </style>
 </head>
 
@@ -387,6 +444,23 @@ body {
         </div>
       </div>
     </div>
+     <div class="section">
+  <div class="card">
+    <h2>Email License Report</h2>
+
+    <div class="row">
+      <input
+        id="reportEmail"
+        type="email"
+        placeholder="Enter email address"
+        style="min-width:260px;"
+      />
+      <button id="btnSendEmail">Send Report</button>
+    </div>
+
+    <div id="emailStatus" class="muted status-message" style="margin-top:8px;"></div>
+  </div>
+</div>
   </section>  
 </div>
 
@@ -812,7 +886,10 @@ if (ME.role !== "admin" && !ME.orgId) {
     ? `${ME.orgName} (${ME.resolution} resolution)`
     : "No tenant resolved";
 
-  $("reportEmail").value = ME.email || "";
+const reportEmail = $("reportEmail");
+if (reportEmail) {
+  reportEmail.value = ME.email || "";
+}
   $("admin-note").style.display = ME.role === "admin" ? "block" : "none";
 
   return true; // ✅ OK to continue
@@ -1070,60 +1147,74 @@ $("deviceSearch").addEventListener("input", () => {
   // -----------------------------
   // Send email (calls /api/licenses/email)
   // -----------------------------
-  async function sendReport() {
-    setError(null);
-    $("emailStatus").textContent = "";
+async function sendReport() {
+  setError(null);
 
-    const email = $("reportEmail").value.trim();
-    if (!email) {
-      alert("Please enter an email address.");
-      return;
-    }
+  const emailStatus = $("emailStatus");
+  const emailInput = $("reportEmail");
+  const btn = $("btnSendEmail");
 
-    const orgId = SELECTED_ORG_ID || null;
+  const email = emailInput.value.trim();
 
-    const btn1 = $("btnSendEmail");
-    const btn2 = $("btnEmailAlert");
+  // Reset states
+  emailInput.classList.remove("error");
+  emailStatus.textContent = "";
+  emailStatus.classList.remove("show");
 
-    if (btn1) btn1.disabled = true;
-    if (btn2) btn2.disabled = true;
+  // Inline validation
+  if (!email || !email.includes("@")) {
+    emailInput.classList.add("error");
+    emailStatus.textContent = "Please enter a valid email address.";
+    emailStatus.classList.add("show");
+    return;
+  }
 
-    $("emailStatus").textContent = "Sending…";
+  const orgId = SELECTED_ORG_ID || null;
 
+  // Disable + spinner
+  btn.disabled = true;
+  btn.dataset.originalText = btn.innerHTML;
+  btn.innerHTML = `<span class="spinner"></span> Sending`;
+
+  try {
     const r = await api("/api/licenses/email", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email, orgId }),
     });
 
-   if (btn1) btn1.disabled = false;
-if (btn2) btn2.disabled = false;
-
     if (!r.ok) {
       const msg =
         (r.data && (r.data.message || r.data.error)) ||
         `Email send failed (HTTP ${r.status}).`;
-      $("emailStatus").textContent = "Failed to send.";
+
+      emailStatus.textContent = "Failed to send report.";
+      emailStatus.classList.add("show");
       setError(msg);
       return;
     }
 
-    $("emailStatus").textContent = "✅ License report sent successfully.";
+    // Success
+    btn.classList.add("success");
+    emailStatus.textContent = "✅ License report sent successfully.";
+    emailStatus.classList.add("show");
+
+    // Auto clear after 5s
+    setTimeout(() => {
+      emailStatus.classList.remove("show");
+      emailStatus.textContent = "";
+      btn.classList.remove("success");
+    }, 5000);
+
+  } catch (err) {
+    emailStatus.textContent = "Unexpected error occurred.";
+    emailStatus.classList.add("show");
+    setError(err.message || "Unexpected error.");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = btn.dataset.originalText || "Send Report";
   }
-
-  $("btnSendEmail").addEventListener("click", sendReport);
-$("btnLoad").addEventListener("click", async () => {
-  await loadLicenses();
-
-  if (document.querySelector(".tab.active").dataset.tab === "devices") {
-    await loadDevices();
-  }
-});
-
-  $("btnRefresh").addEventListener("click", async () => {
-    await init();
-  });
-
+}
   // -----------------------------
   // Utilities
   // -----------------------------
