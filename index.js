@@ -2184,8 +2184,15 @@ return json({
 }
       
 if (url.pathname === "/api/admin/org-health") {
-  const user = getCurrentUser(request);
-  if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
+  const secret = request.headers.get("x-admin-secret");
+const user = getCurrentUser(request);
+
+const allowed =
+  (secret && secret === env.ADMIN_SECRET) ||
+  (user?.isAdmin === true);
+
+if (!allowed) return json({ error: "admin_only" }, 403);
+
 
   const orgId = url.searchParams.get("orgId");
   if (!orgId) return json({ error: "missing_orgId" }, 400);
