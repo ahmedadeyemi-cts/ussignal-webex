@@ -2689,30 +2689,13 @@ if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
 }
 
 if (path === "/api/admin/global-summary/refresh" && request.method === "POST") {
-
-  const secret = request.headers.get("x-admin-secret");
-  const user = getCurrentUser(request);
-
-  const allowed =
-    (secret && secret === env.ADMIN_SECRET) ||
-    (user && user.isAdmin === true);
-
-  if (!allowed) {
-    return json({ error: "access_required" }, 401);
-  }
-
-  try {
-    await computeAndStoreGlobalSummary(env);
-
-    return json({
-      ok: true,
-      refreshedAt: new Date().toISOString()
-    });
-
-  } catch (err) {
-    return json({ error: err.message }, 500);
-  }
+  return json({
+    debug: "ROUTE_MATCHED",
+    secretHeader: request.headers.get("x-admin-secret"),
+    envSecret: env.ADMIN_SECRET
+  });
 }
+
 
 
 if (url.pathname === "/api/admin/global-summary/clear" && request.method === "POST") {
