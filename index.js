@@ -1130,12 +1130,22 @@ const publicPaths = [
   "/health",
   "/favicon.ico",
   "/pin",
-  "/"
+  "/",
+ "/api/admin/global-summary/refresh"
 ];
 
-if (!accessEmail && !publicPaths.includes(url.pathname)) {
+//if (!accessEmail && !publicPaths.includes(url.pathname)) {
+ // return json({ error: "access_required" }, 401);
+//}
+     const adminSecret = request.headers.get("x-admin-secret");
+
+const isSecretAllowed =
+  adminSecret && adminSecret === env.ADMIN_SECRET;
+
+if (!accessEmail && !isSecretAllowed && !publicPaths.includes(url.pathname)) {
   return json({ error: "access_required" }, 401);
 }
+
 
 
 
