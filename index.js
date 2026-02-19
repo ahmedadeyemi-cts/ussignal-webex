@@ -1,6 +1,5 @@
 /**
  * ussignal-webex — index.js (DROP-IN)
- *
  * Features included:
  * - /api/pin/verify (POST)  → verifies PIN, creates session (TTL)
  * - Session TTLs (configurable)
