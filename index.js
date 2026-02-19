@@ -2699,13 +2699,35 @@ if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
 }
 
 if (path === "/api/admin/global-summary/refresh" && request.method === "POST") {
-  return json({
-    debug: "ROUTE_MATCHED",
-    secretHeader: request.headers.get("x-admin-secret"),
-    envSecret: env.ADMIN_SECRET
-  });
-}
 
+  const secret = request.headers.get("x-admin-secret");
+  const user = getCurrentUser(request);
+
+  const allowed =
+    (secret && secret === env.ADMIN_SECRET) ||
+    (user && user.isAdmin === true);
+
+  if (!allowed) {
+    return json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const payload = await computeGlobalSummary(env);
+    await putGlobalSummarySnapshot(env, payload);
+
+    return json({
+      ok: true,
+      refreshedAt: new Date().toISOString(),
+      totalOrgs: payload.totalOrgs
+    });
+
+  } catch (err) {
+    return json({
+      error: "refresh_failed",
+      message: err.message
+    }, 500);
+  }
+}
 
 
 if (url.pathname === "/api/admin/global-summary/clear" && request.method === "POST") {
