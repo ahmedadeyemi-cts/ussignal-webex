@@ -1074,7 +1074,7 @@ if (!pstnResult.ok) {
 
 export default {
 
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
       const url = new URL(request.url);
      const path = url.pathname;
@@ -2692,7 +2692,7 @@ if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "
 }
 if (url.pathname === "/api/admin/global-summary/clear" && request.method === "POST") {
   const user = getCurrentUser(request);
-  if (!isAdmin(user)) return json({ ok: false, error: "Forbidden" }, 403);
+  if (!user.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
 
   await env.WEBEX.delete("globalSummarySnapshotV1");
 
@@ -2920,13 +2920,6 @@ async scheduled(event, env, ctx) {
 await mapLimit(orgs, CONCURRENCY, async (org) => {
   const health = await computeTenantHealth(env, org.id);
   await storeHealth(env, health);
-try {
-  const globalPayload = await computeGlobalSummary(env);
-  await putGlobalSummarySnapshot(env, globalPayload);
-  console.log("Global summary snapshot rebuilt via cron");
-} catch (e) {
-  console.error("Global summary rebuild failed:", e);
-}
 
   const quality = await computeCallQuality(env, org.id);
   await env.WEBEX.put(
@@ -2936,6 +2929,14 @@ try {
   );
 });
 
+// 🔥 Rebuild global snapshot ONCE
+try {
+  const globalPayload = await computeGlobalSummary(env);
+  await putGlobalSummarySnapshot(env, globalPayload);
+  console.log("Global summary snapshot rebuilt via cron");
+} catch (e) {
+  console.error("Global summary rebuild failed:", e);
+}
       console.log("Health + Quality snapshots updated");
 
     } catch (e) {
