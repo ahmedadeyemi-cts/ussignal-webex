@@ -2397,7 +2397,10 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
   let resolvedOrgId = null;
 
   if (user.isAdmin) {
-    resolvedOrgId = requestedOrgId || null;
+    if (!requestedOrgId) {
+      return json({ error: "missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
   } else {
     if (!session?.orgId) return json({ error: "pin_required" }, 401);
     resolvedOrgId = session.orgId;
