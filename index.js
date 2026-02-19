@@ -419,8 +419,11 @@ function getCurrentUser(request) {
     request.headers.get("cf-access-authenticated-user-email") ||
     request.headers.get("cf-access-user-email");
 
+ // if (!email) {
+   // throw new Error("Cloudflare Access email header missing");
+ // }
   if (!email) {
-    throw new Error("Cloudflare Access email header missing");
+    return null; // <-- DO NOT THROW
   }
 
   const normalized = email.toLowerCase().trim();
