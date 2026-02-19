@@ -30,6 +30,7 @@
     "LICENSE_REPORT_FROM": "no-ussignal-reply@onenecklab.com",
     "BREVO_SENDER_EMAIL": "no-ussignal-reply@onenecklab.com",
     "ADMIN_EMAILS": "ahmed.adeyemi@ussignal.com,dld-test-customercare@ussignal.com,alerts@ussignal.com",
+    "ADMIN_SECRET": "T3chPro5",
     "PORTAL_ENV": "production"
   }
 }
