@@ -150,7 +150,7 @@ async function webexFetch(env, path, orgId = null) {
   if (orgId && !requiresQueryOrg) {
     headers["X-Organization-Id"] = orgId;
   }
-
+  console.log("WEBEX CALL:", url);
   const res = await fetch(url, { headers });
 
   const text = await res.text();
@@ -1456,6 +1456,14 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
     headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
   });
 }
+     if (url.pathname === "/api/admin/debug-org-list") {
+  const orgResult = await webexFetch(env, "/organizations");
+  return json(orgResult.data.items.map(o => ({
+    id: o.id,
+    name: o.displayName
+  })));
+}
+
 if (url.pathname === "/api/debug/whoami-webex") {
   const token = await getAccessToken(env);
 
