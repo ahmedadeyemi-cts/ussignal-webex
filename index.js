@@ -2698,7 +2698,7 @@ if (path === "/api/admin/global-summary/refresh" && request.method === "POST") {
     (user && user.isAdmin === true);
 
   if (!allowed) {
-    return json({ error: "Unauthorized" }, 401);
+    return json({ error: "access_required" }, 401);
   }
 
   try {
@@ -2713,6 +2713,7 @@ if (path === "/api/admin/global-summary/refresh" && request.method === "POST") {
     return json({ error: err.message }, 500);
   }
 }
+
 
 if (url.pathname === "/api/admin/global-summary/clear" && request.method === "POST") {
   const user = getCurrentUser(request);
