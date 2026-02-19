@@ -864,32 +864,48 @@ async function mapLimit(items, limit, fn) {
   return out;
 }
  
-  async function computeTenantHealth(env, orgId) {
+async function computeTenantHealth(env, orgId) {
 
   let deficit = 0;
   let offline = 0;
   let failedCalls = 0;
   let totalCalls = 0;
 
-  // Licenses
+  let licenseFailed = false;
+  let deviceFailed = false;
+  let analyticsFailed = false;
+
+  /* -------------------------
+     LICENSES
+  -------------------------- */
   const lic = await webexFetch(env, "/licenses", orgId);
+
   if (lic.ok) {
     for (const l of lic.data.items || []) {
       const total = Number(l.totalUnits ?? 0);
       const consumed = Number(l.consumedUnits ?? 0);
       deficit += Math.max(0, consumed - total);
     }
+  } else {
+    licenseFailed = true;
   }
 
-  // Devices
+  /* -------------------------
+     DEVICES
+  -------------------------- */
   const dev = await webexFetch(env, "/devices", orgId);
+
   if (dev.ok) {
     offline = (dev.data.items || []).filter(d =>
       String(d.connectionStatus || "").toLowerCase() !== "connected"
     ).length;
+  } else {
+    deviceFailed = true;
   }
 
-  // Analytics
+  /* -------------------------
+     CALLING ANALYTICS
+  -------------------------- */
   const analytics = await webexFetch(
     env,
     CALLING_ANALYTICS_PATH,
@@ -898,26 +914,63 @@ async function mapLimit(items, limit, fn) {
 
   if (analytics.ok) {
     const rows = analytics.data.items || [];
-    totalCalls = rows.reduce((a,r)=>a+(r.totalCalls||0),0);
-    failedCalls = rows.reduce((a,r)=>a+(r.failedCalls||0),0);
+    totalCalls = rows.reduce((a, r) => a + (r.totalCalls || 0), 0);
+    failedCalls = rows.reduce((a, r) => a + (r.failedCalls || 0), 0);
+  } else {
+    analyticsFailed = true;
   }
 
   const failureRate = totalCalls > 0
     ? (failedCalls / totalCalls) * 100
     : 0;
 
-  // Weighted scoring
+  /* =====================================================
+     ENTERPRISE WEIGHTED SCORING
+  ===================================================== */
+
   let score = 100;
 
-  if (deficit > 0) score -= 25;
-  if (offline > 5) score -= 15;
-  if (failureRate > 5) score -= 20;
+  // License deficit
+  if (deficit > 0 && deficit <= 5) score -= 10;
+  if (deficit > 5) score -= 25;
+
+  // Device offline penalties
+  if (offline > 0 && offline <= 5) score -= 10;
+  if (offline > 5 && offline <= 10) score -= 20;
+  if (offline > 10) score -= 30;
+
+  // Call failure rate penalties
+  if (failureRate > 3 && failureRate <= 5) score -= 10;
+  if (failureRate > 5 && failureRate <= 10) score -= 20;
+  if (failureRate > 10) score -= 35;
+
+  // Hard penalties for API failures
+  if (licenseFailed) score -= 10;
+  if (deviceFailed) score -= 10;
+  if (analyticsFailed) score -= 15;
 
   if (score < 0) score = 0;
 
+  /* -------------------------
+     STATUS TIERS
+  -------------------------- */
+
   let status = "Healthy";
-  if (score < 80) status = "Warning";
+  if (score < 85) status = "Warning";
   if (score < 60) status = "Critical";
+
+  /* -------------------------
+     ALERT FLAGS
+  -------------------------- */
+
+  const alerts = {
+    licenseDeficit: deficit > 0,
+    minorDeviceOutage: offline > 0 && offline <= 5,
+    majorDeviceOutage: offline > 10,
+    elevatedCallFailures: failureRate > 5,
+    severeCallFailures: failureRate > 10,
+    apiDegraded: licenseFailed || deviceFailed || analyticsFailed
+  };
 
   return {
     orgId,
@@ -925,12 +978,16 @@ async function mapLimit(items, limit, fn) {
     status,
     metrics: {
       deficit,
-      offline,
-      failureRate
+      offlineDevices: offline,
+      failureRate: Number(failureRate.toFixed(2)),
+      totalCalls,
+      failedCalls
     },
+    alerts,
     generatedAt: new Date().toISOString()
   };
 }
+
 async function computeCallQuality(env, orgId) {
 
   const result = await webexFetch(
@@ -2326,7 +2383,68 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
   return json({ orgId: resolvedOrgId, summary, items: normalized });
 }
 
+/* -----------------------------
+   /api/devices
+   - Admin: may specify ?orgId=...
+   - Customer: resolved org only
+----------------------------- */
+if (url.pathname === "/api/devices" && request.method === "GET") {
 
+  const user = getCurrentUser(request);
+  const session = await getSession(env, user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId = null;
+
+  if (user.isAdmin) {
+    resolvedOrgId = requestedOrgId || null;
+  } else {
+    if (!session?.orgId) return json({ error: "pin_required" }, 401);
+    resolvedOrgId = session.orgId;
+  }
+
+  const result = await webexFetch(env, "/devices", resolvedOrgId);
+
+  if (!result.ok) {
+    return json({ error: "webex_devices_failed" }, 500);
+  }
+
+  const raw = result.data.items || [];
+
+  const normalized = raw.map(d => {
+    const connected = String(d.connectionStatus || "").toLowerCase() === "connected";
+
+    let status = "OK";
+    let severity = 0;
+
+    if (!connected) {
+      status = "OFFLINE";
+      severity = 2;
+    }
+
+    return {
+      id: d.id,
+      displayName: d.displayName,
+      model: d.model,
+      connectionStatus: d.connectionStatus,
+      status,
+      severity
+    };
+  });
+
+  const summary = {
+    totalDevices: normalized.length,
+    connected: normalized.filter(d => d.status === "OK").length,
+    offline: normalized.filter(d => d.status === "OFFLINE").length,
+    hasOffline: normalized.some(d => d.status === "OFFLINE")
+  };
+
+  return json({
+    orgId: resolvedOrgId,
+    summary,
+    items: normalized
+  });
+}
 /* -----------------------------
    /api/licenses/email
    Sends license report via Brevo
