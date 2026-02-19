@@ -2659,10 +2659,17 @@ if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
   if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
   const snapshot = await getGlobalSummarySnapshot(env);
-  if (!snapshot) {
-    return json({ ok: false, message: "No snapshot available yet" }, 404);
-  }
+ if (!snapshot) {
+  ctx.waitUntil((async () => {
+    const payload = await computeGlobalSummary(env);
+    await putGlobalSummarySnapshot(env, payload);
+  })());
 
+  return json({
+    ok: false,
+    message: "Snapshot building. Refresh in 10 seconds."
+  }, 202);
+}
   return json({
     ok: true,
     generatedAt: snapshot.generatedAt,
@@ -2683,7 +2690,14 @@ if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "
     generatedAt: new Date().toISOString()
   }, 200);
 }
+if (url.pathname === "/api/admin/global-summary/clear" && request.method === "POST") {
+  const user = getCurrentUser(request);
+  if (!isAdmin(user)) return json({ ok: false, error: "Forbidden" }, 403);
 
+  await env.WEBEX.delete("globalSummarySnapshotV1");
+
+  return json({ ok: true, message: "Snapshot cleared" });
+}
 /* =====================================================
    🔬 ADMIN: ORG-SCOPED DIAGNOSTICS
 ===================================================== */
@@ -2906,6 +2920,13 @@ async scheduled(event, env, ctx) {
 await mapLimit(orgs, CONCURRENCY, async (org) => {
   const health = await computeTenantHealth(env, org.id);
   await storeHealth(env, health);
+try {
+  const globalPayload = await computeGlobalSummary(env);
+  await putGlobalSummarySnapshot(env, globalPayload);
+  console.log("Global summary snapshot rebuilt via cron");
+} catch (e) {
+  console.error("Global summary rebuild failed:", e);
+}
 
   const quality = await computeCallQuality(env, org.id);
   await env.WEBEX.put(
