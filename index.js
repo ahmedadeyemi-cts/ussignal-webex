@@ -2688,19 +2688,32 @@ if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
   }, 200);
 }
 
-if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
+if (path === "/api/admin/global-summary/refresh" && request.method === "POST") {
+
+  const secret = request.headers.get("x-admin-secret");
   const user = getCurrentUser(request);
-  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
 
-  const payload = await computeGlobalSummary(env);
-  await putGlobalSummarySnapshot(env, payload);
+  const allowed =
+    (secret && secret === env.ADMIN_SECRET) ||
+    (user && user.isAdmin === true);
 
-  return json({
-    ok: true,
-    message: "Snapshot refreshed",
-    generatedAt: new Date().toISOString()
-  }, 200);
+  if (!allowed) {
+    return json({ error: "Unauthorized" }, 401);
+  }
+
+  try {
+    await computeAndStoreGlobalSummary(env);
+
+    return json({
+      ok: true,
+      refreshedAt: new Date().toISOString()
+    });
+
+  } catch (err) {
+    return json({ error: err.message }, 500);
+  }
 }
+
 if (url.pathname === "/api/admin/global-summary/clear" && request.method === "POST") {
   const user = getCurrentUser(request);
   if (!user.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
