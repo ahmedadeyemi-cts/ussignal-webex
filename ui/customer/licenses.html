@@ -1018,8 +1018,6 @@ if (btn.dataset.tab === "devices" && !DEVICES_LOADED) {
   return;
 }
 
-
-    const items = (r.data && r.data.items) ? r.data.items : [];
 const items = Array.isArray(r.data?.items) ? r.data.items : [];
 
 // Always hide loading
