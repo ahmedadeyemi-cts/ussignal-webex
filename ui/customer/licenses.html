@@ -305,6 +305,38 @@ input[type="email"] {
   text-align: right;
 }
    .right { text-align:right; }
+   thead th {
+  padding:12px;
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+}
+   /* Align numeric columns properly */
+#licenseTable thead th:nth-child(2),
+#licenseTable thead th:nth-child(3),
+#licenseTable thead th:nth-child(4),
+#licenseTable thead th:nth-child(5),
+#licenseTable tbody td:nth-child(2),
+#licenseTable tbody td:nth-child(3),
+#licenseTable tbody td:nth-child(4),
+#licenseTable tbody td:nth-child(5) {
+  text-align: right;
+}
+
+/* SKU column */
+#licenseTable thead th:nth-child(1),
+#licenseTable tbody td:nth-child(1) {
+  text-align: left;
+}
+
+/* Status column */
+#licenseTable thead th:nth-child(6),
+#licenseTable tbody td:nth-child(6) {
+  text-align: left;
+}
+   #licenseTable tbody td:nth-child(5) {
+  font-weight: 700;
+}
 </style>
 </head>
 
