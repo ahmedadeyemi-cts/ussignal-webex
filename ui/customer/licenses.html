@@ -301,6 +301,10 @@ input[type="email"] {
   border:1px solid var(--line);
   font-size:13px;
 }
+   .right {
+  text-align: right;
+}
+   .right { text-align:right; }
 </style>
 </head>
 
@@ -463,7 +467,6 @@ input[type="email"] {
   </div>
 </div>
   </section>  
-</div>
 
 
       <!-- DEVICES TAB -->
@@ -994,7 +997,7 @@ if (btn.dataset.tab === "devices" && !DEVICES_LOADED) {
     setError(null);
     $("licenseLoading").style.display = "block";
     $("licenseLoading").textContent = "Loading license data…";
-    $("licenseTable").style.display = "none";
+    $("licenseTable").classList.add("hidden");
     $("licenseRows").innerHTML = "";
 
     const orgId = SELECTED_ORG_ID || "";
@@ -1017,14 +1020,25 @@ if (btn.dataset.tab === "devices" && !DEVICES_LOADED) {
 
 
     const items = (r.data && r.data.items) ? r.data.items : [];
-  if (!Array.isArray(items) || items.length === 0) {
-  $("licenseLoading").textContent = "No license data returned for this tenant.";
+const items = Array.isArray(r.data?.items) ? r.data.items : [];
+
+// Always hide loading
+$("licenseLoading").style.display = "none";
+$("licenseTable").classList.remove("hidden");
+
+// If no items, show empty state row instead of exiting
+if (items.length === 0) {
+  $("licenseRows").innerHTML = `
+    <tr>
+      <td colspan="6" class="muted">No license data available for this tenant.</td>
+    </tr>
+  `;
   renderDeficits([]);
   return;
 }
 
     $("licenseLoading").style.display = "none";
-    $("licenseTable").style.display = "table";
+    $("licenseTable").classList.remove("hidden");
 
     // Expected item shape:
     // { name, consumed, available, status }
@@ -1091,11 +1105,11 @@ function renderDeficits(items) {
 
     return `
       <tr>
-        <td>${escapeHtml(name)}</td>
-        <td class="right">${available}</td>
-        <td class="right">${total}</td>
-        <td class="right">${used}</td>
-        <td class="right"><span class="badge badge-danger">${needed}</span></td>
+<td>${escapeHtml(name)}</td>
+<td class="right">${available}</td>
+<td class="right">${total}</td>
+<td class="right">${used}</td>
+<td class="right"><strong style="color:var(--bad)">${needed}</strong></td>
       </tr>
     `;
   }).join("");
