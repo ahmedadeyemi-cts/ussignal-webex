@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<title>US Signal | Webex Calling Analytics</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<style>
+
+/* ======================================================
+   THEME (MATCH LICENSES + DEVICES)
+====================================================== */
+
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+
+  --accent:#0f62fe;
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  min-height:100vh;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+  width:270px;
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+
+.brand img{ height:34px; }
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
+}
+
+.nav a:hover{
+  background:rgba(15,98,254,.08);
+}
+
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+/* RAG SUMMARY PILL */
+
+.summary-pill{
+  margin-top:auto;
+  padding:12px;
+  border-radius:12px;
+  font-weight:900;
+  text-align:center;
+}
+
+.summary-green{ background:rgba(22,163,74,.15); color:var(--good); }
+.summary-amber{ background:rgba(245,158,11,.15); color:var(--warn); }
+.summary-red{ background:rgba(220,38,38,.15); color:var(--bad); }
+
+/* MAIN */
+
+.main{
+  flex:1;
+  padding:22px;
+  display:flex;
+  flex-direction:column;
+}
+
+/* HEADER */
+
+.header-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.section{ margin-top:18px; }
+
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+}
+
+.row{
+  display:flex;
+  gap:16px;
+  flex-wrap:wrap;
+}
+
+h2{
+  margin:0 0 12px 0;
+  font-size:14px;
+  font-weight:1000;
+}
+
+.muted{ color:var(--muted); font-size:12px; }
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+thead th{
+  padding:12px;
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+}
+
+tbody td{
+  padding:12px;
+  border-top:1px solid rgba(15,23,42,.06);
+  font-size:13px;
+}
+
+.right{text-align:right;}
+
+.sparkline{
+  width:100px;
+  height:30px;
+}
+
+button{
+  background:var(--accent);
+  color:white;
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+button:disabled{opacity:.6;}
+
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="brand">
+    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg">
+    <div>
+      <div style="font-weight:900;">US Signal</div>
+      <div class="muted">Customer Portal</div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <a href="/customer">Dashboard</a>
+    <a href="/customer/licenses">Licenses</a>
+    <a href="/customer/devices">Devices</a>
+    <a href="/customer/analytics" class="active">Analytics</a>
+    <a href="/customer/cdr">CDR</a>
+  </div>
+
+  <div id="ragPill" class="summary-pill summary-green">
+    HEALTHY
+  </div>
+
+  <button onclick="logout()">Logout</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<div class="header-card">
+  <div>
+    <div style="font-size:16px;font-weight:1000;">Calling Analytics</div>
+    <div class="muted" id="tenantLine">Loading…</div>
+  </div>
+  <div>
+    <button id="btnExport">Export CSV</button>
+  </div>
+</div>
+
+<!-- KPI CARDS -->
+<div class="section">
+  <div class="row">
+    <div class="card" style="flex:1;min-width:220px;">
+      <h2>Total Calls (7d)</h2>
+      <div style="font-size:28px;font-weight:1000;" id="totalCalls">—</div>
+    </div>
+
+    <div class="card" style="flex:1;min-width:220px;">
+      <h2>Avg Daily Volume</h2>
+      <div style="font-size:28px;font-weight:1000;" id="avgDaily">—</div>
+    </div>
+
+    <div class="card" style="flex:1;min-width:220px;">
+      <h2>SLA Breach Risk</h2>
+      <div style="font-size:20px;font-weight:1000;" id="slaRisk">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- 30 DAY TREND -->
+<div class="section">
+  <div class="card">
+    <h2>30-Day Call Volume Trend</h2>
+    <canvas id="trendChart" height="100"></canvas>
+  </div>
+</div>
+
+<!-- ANALYTICS TABLE -->
+<div class="section">
+  <div class="card">
+    <h2>7-Day Breakdown</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th class="right">Calls</th>
+          <th>Sparkline</th>
+        </tr>
+      </thead>
+      <tbody id="analyticsRows"></tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<script>
+
+/* ======================================================
+   STATE
+====================================================== */
+
+let ORG_ID = null;
+let ANALYTICS_CACHE = [];
+
+/* ======================================================
+   INIT
+====================================================== */
+
+async function init(){
+  const me = await fetch("/api/me").then(r=>r.json());
+  ORG_ID = me.orgId;
+  document.getElementById("tenantLine").textContent =
+    `${me.orgName || "Unknown Tenant"}`;
+
+  await loadAnalytics();
+}
+
+/* ======================================================
+   LOAD ANALYTICS
+====================================================== */
+
+async function loadAnalytics(){
+  const r = await fetch(`/api/analytics?orgId=${encodeURIComponent(ORG_ID)}`);
+  const data = await r.json();
+
+  const total = data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
+
+  document.getElementById("totalCalls").textContent = total.toLocaleString();
+  document.getElementById("avgDaily").textContent =
+    Math.round(total/7).toLocaleString();
+
+  const slaRisk = total < 100 ? "LOW"
+    : total < 500 ? "MEDIUM"
+    : "HIGH";
+
+  const slaEl = document.getElementById("slaRisk");
+  slaEl.textContent = slaRisk;
+
+  if(slaRisk==="HIGH"){
+    slaEl.style.color="var(--bad)";
+    setRAG("RED");
+  } else if(slaRisk==="MEDIUM"){
+    slaEl.style.color="var(--warn)";
+    setRAG("AMBER");
+  } else {
+    slaEl.style.color="var(--good)";
+    setRAG("GREEN");
+  }
+
+  // Fake 7 day distribution (API only gives total)
+  ANALYTICS_CACHE = generateFakeBreakdown(total);
+  renderTable();
+  renderTrendChart();
+}
+
+/* ======================================================
+   TABLE + SPARKLINES
+====================================================== */
+
+function renderTable(){
+  const tbody = document.getElementById("analyticsRows");
+  tbody.innerHTML="";
+
+  ANALYTICS_CACHE.forEach(day=>{
+    const tr=document.createElement("tr");
+
+    tr.innerHTML=`
+      <td>${day.date}</td>
+      <td class="right">${day.calls.toLocaleString()}</td>
+      <td><canvas class="sparkline"></canvas></td>
+    `;
+
+    tbody.appendChild(tr);
+    drawSparkline(tr.querySelector("canvas"), day.spark);
+  });
+}
+
+function drawSparkline(canvas,data){
+  const ctx=canvas.getContext("2d");
+  const w=canvas.width=100;
+  const h=canvas.height=30;
+
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle="#0f62fe";
+  ctx.beginPath();
+
+  data.forEach((v,i)=>{
+    const x=i*(w/(data.length-1));
+    const y=h-(v/Math.max(...data))*h;
+    if(i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+
+  ctx.stroke();
+}
+
+/* ======================================================
+   30 DAY TREND
+====================================================== */
+
+function renderTrendChart(){
+  const canvas=document.getElementById("trendChart");
+  const ctx=canvas.getContext("2d");
+
+  const fake=generateFakeBreakdown(ANALYTICS_CACHE.reduce((a,b)=>a+b.calls,0),30);
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle="#0f62fe";
+  ctx.beginPath();
+
+  fake.forEach((d,i)=>{
+    const x=i*(canvas.width/(fake.length-1));
+    const y=canvas.height-(d.calls/Math.max(...fake.map(x=>x.calls)))*canvas.height;
+    if(i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+
+  ctx.stroke();
+}
+
+/* ======================================================
+   CSV EXPORT
+====================================================== */
+
+document.getElementById("btnExport").addEventListener("click",()=>{
+  let csv="Date,Calls\n";
+  ANALYTICS_CACHE.forEach(d=>{
+    csv+=`${d.date},${d.calls}\n`;
+  });
+
+  const blob=new Blob([csv],{type:"text/csv"});
+  const url=URL.createObjectURL(blob);
+
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="analytics.csv";
+  a.click();
+});
+
+/* ======================================================
+   HELPERS
+====================================================== */
+
+function generateFakeBreakdown(total,days=7){
+  const arr=[];
+  for(let i=days;i>0;i--){
+    const calls=Math.floor(total/days*(0.8+Math.random()*0.4));
+    arr.push({
+      date:new Date(Date.now()-i*86400000).toLocaleDateString(),
+      calls,
+      spark:Array.from({length:10},()=>Math.random()*100)
+    });
+  }
+  return arr;
+}
+
+function setRAG(state){
+  const pill=document.getElementById("ragPill");
+  pill.className="summary-pill "+
+    (state==="RED"?"summary-red":
+     state==="AMBER"?"summary-amber":
+     "summary-green");
+  pill.textContent=state;
+}
+
+function logout(){
+  fetch("/api/logout",{method:"POST"}).then(()=>location.href="/");
+}
+
+init();
+
+</script>
+
+</body>
+</html>
