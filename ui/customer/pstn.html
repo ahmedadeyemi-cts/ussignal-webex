@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>US Signal | Webex Calling PSTN Command Center</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8">
+<title>US Signal | PSTN Intelligence Center</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 :root{
  --bg:#f6f8fb;
  --card:#ffffff;
  --text:#0f172a;
  --muted:#64748b;
- --line:rgba(15,23,42,.10);
- --shadow:0 8px 24px rgba(15,23,42,.08);
+ --line:rgba(15,23,42,.08);
+ --shadow:0 10px 30px rgba(15,23,42,.08);
  --accent:#0f62fe;
  --good:#16a34a;
  --warn:#f59e0b;
@@ -19,93 +19,92 @@
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);display:flex;min-height:100vh}
-.sidebar{width:260px;background:var(--card);border-right:1px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:14px}
-.sidebar a{padding:10px;border-radius:12px;font-weight:800;font-size:13px;text-decoration:none;color:var(--text)}
-.sidebar a.active{background:rgba(15,98,254,.12);border:1px solid rgba(15,98,254,.2)}
-.sidebarBottom{margin-top:auto;display:flex;flex-direction:column;gap:10px}
-.summary-pill{padding:12px;border-radius:12px;font-weight:900;text-align:center}
+.sidebar{width:250px;background:#fff;border-right:1px solid var(--line);padding:18px;display:flex;flex-direction:column}
+.sidebar a{padding:10px;border-radius:10px;text-decoration:none;color:var(--text);font-weight:700;font-size:13px}
+.sidebar a.active{background:rgba(15,98,254,.1)}
+.sidebarBottom{margin-top:auto}
+.summary-pill{padding:10px;border-radius:12px;font-weight:900;text-align:center;margin-bottom:10px}
 .summary-green{background:rgba(22,163,74,.15);color:var(--good)}
 .summary-amber{background:rgba(245,158,11,.15);color:var(--warn)}
 .summary-red{background:rgba(220,38,38,.15);color:var(--bad)}
-.main{flex:1;padding:22px;display:flex;flex-direction:column;gap:18px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px}
-h2{margin:0 0 10px 0;font-size:14px;font-weight:1000}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.kpi{padding:12px;border-radius:14px;border:1px solid rgba(15,23,42,.08)}
-.kpi .value{font-size:22px;font-weight:1100}
-.table-wrap{border:1px solid var(--line);border-radius:16px;overflow:auto}
+.main{flex:1;padding:22px;display:flex;flex-direction:column;gap:20px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+h2{margin:0 0 14px;font-size:15px;font-weight:900}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.kpi{padding:14px;border:1px solid var(--line);border-radius:14px}
+.kpi .value{font-size:22px;font-weight:900}
+.table-wrap{overflow:auto;border-radius:14px;border:1px solid var(--line)}
 table{width:100%;border-collapse:collapse}
-thead th{padding:10px;font-size:12px;color:var(--muted);text-transform:uppercase}
-tbody td{padding:10px;border-top:1px solid rgba(15,23,42,.06);font-size:13px}
-.badge{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:900}
-.badge.good{background:rgba(22,163,74,.15);color:var(--good)}
-.badge.warn{background:rgba(245,158,11,.15);color:var(--warn)}
-.badge.bad{background:rgba(220,38,38,.15);color:var(--bad)}
-canvas{width:100%;height:160px}
+th,td{padding:10px;font-size:13px}
+th{background:#f8fafc;text-align:left;color:var(--muted)}
+tr:not(:last-child) td{border-bottom:1px solid var(--line)}
+.badge{padding:4px 8px;border-radius:999px;font-size:11px;font-weight:900}
+.good{background:rgba(22,163,74,.15);color:var(--good)}
+.warn{background:rgba(245,158,11,.15);color:var(--warn)}
+.bad{background:rgba(220,38,38,.15);color:var(--bad)}
+canvas{width:100%;height:180px}
+.small{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
 
 <div class="sidebar">
- <a href="/customer">Dashboard</a>
- <a href="/customer/licenses">Licenses</a>
- <a href="/customer/devices">Devices</a>
- <a href="/customer/analytics">Analytics</a>
- <a href="/customer/cdr">CDR</a>
- <a href="/customer/pstn" class="active">PSTN</a>
- <div class="sidebarBottom">
-   <div id="rag" class="summary-pill summary-green">GREEN</div>
-   <button onclick="logout()">Logout</button>
- </div>
+  <a href="/customer">Dashboard</a>
+  <a href="/customer/licenses">Licenses</a>
+  <a href="/customer/devices">Devices</a>
+  <a href="/customer/analytics">Analytics</a>
+  <a href="/customer/cdr">CDR</a>
+  <a href="/customer/pstn" class="active">PSTN</a>
+  <div class="sidebarBottom">
+    <div id="rag" class="summary-pill summary-green">HEALTHY</div>
+    <button onclick="logout()">Logout</button>
+  </div>
 </div>
 
 <div class="main">
 
 <div class="card">
-<h2>PSTN Global Health</h2>
+<h2>PSTN Global Overview</h2>
 <div class="grid">
- <div class="kpi"><div>Trunks</div><div id="kTrunks" class="value">—</div></div>
- <div class="kpi"><div>DIDs</div><div id="kDids" class="value">—</div></div>
- <div class="kpi"><div>Gateways</div><div id="kGateways" class="value">—</div></div>
- <div class="kpi"><div>Capacity Risk</div><div id="kRisk" class="value">—</div></div>
+ <div class="kpi"><div>Total Trunks</div><div id="kTrunks" class="value">—</div></div>
+ <div class="kpi"><div>Total DIDs</div><div id="kDids" class="value">—</div></div>
+ <div class="kpi"><div>Capacity Score</div><div id="kCapacity" class="value">—</div></div>
+ <div class="kpi"><div>Predictive Risk</div><div id="kPredict" class="value">—</div></div>
 </div>
 </div>
 
 <div class="card">
-<h2>Call Routing Simulation</h2>
-<input id="simNumber" placeholder="Enter E.164 number">
-<button onclick="simulate()">Simulate</button>
-<div id="simResult"></div>
-</div>
-
-<div class="card">
-<h2>Failover Path Validation</h2>
-<div id="failover"></div>
-</div>
-
-<div class="card">
-<h2>DID Inventory Reconciliation</h2>
-<div id="didAudit"></div>
-</div>
-
-<div class="card">
-<h2>SBC / Local Gateway Monitoring</h2>
-<div id="gatewayStatus"></div>
-</div>
-
-<div class="card">
-<h2>E911 Compliance Audit</h2>
-<div id="e911Audit"></div>
-</div>
-
-<div class="card">
-<h2>Fraud Pattern Detection</h2>
-<div id="fraud"></div>
-</div>
-
-<div class="card">
-<h2>Historical Trunk Utilization</h2>
+<h2>Historical Trunk Capacity Trend</h2>
 <canvas id="trend"></canvas>
+<div class="small">Trend based on stored PSTN capacity snapshots</div>
+</div>
+
+<div class="card">
+<h2>Location PSTN Architecture</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>PSTN Type</th>
+<th>Trunks</th>
+<th>DIDs</th>
+<th>Unassigned</th>
+<th>Redundancy</th>
+<th>Blast Radius</th>
+<th>Capacity</th>
+<th>E911</th>
+</tr>
+</thead>
+<tbody id="locRows"></tbody>
+</table>
+</div>
+</div>
+
+<div class="card">
+<h2>Diagnostics</h2>
+<div id="diagSummary"></div>
+<div id="diagRows" class="small"></div>
 </div>
 
 </div>
@@ -113,110 +112,91 @@ canvas{width:100%;height:160px}
 <script>
 const $=id=>document.getElementById(id)
 
-async function api(p){
-  const r=await fetch(p)
-  return r.json()
+async function api(p){const r=await fetch(p);return r.json()}
+
+function badge(txt,type){return `<span class="badge ${type}">${txt}</span>`}
+
+function updateRAG(score){
+ let state="HEALTHY"
+ if(score<70){state="CRITICAL";$("rag").className="summary-pill summary-red"}
+ else if(score<85){state="WARNING";$("rag").className="summary-pill summary-amber"}
+ else{$("rag").className="summary-pill summary-green"}
+ $("rag").textContent=state
+}
+
+function renderTrend(history){
+ const c=$("trend")
+ const ctx=c.getContext("2d")
+ ctx.clearRect(0,0,c.width,c.height)
+ if(!history||history.length<2){ctx.fillText("Not enough historical data yet",20,80);return}
+ const values=history.map(h=>h.pstnCapacityScore)
+ const max=Math.max(...values)
+ const min=Math.min(...values)
+ const range=max-min||1
+ ctx.strokeStyle="#0f62fe"
+ ctx.lineWidth=2
+ ctx.beginPath()
+ values.forEach((v,i)=>{
+  const x=i*(c.width/(values.length-1))
+  const y=c.height-((v-min)/range)*c.height
+  if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)
+ })
+ ctx.stroke()
+}
+
+function renderLocations(pstn){
+ $("locRows").innerHTML=pstn.locations.map(l=>{
+  const cap=l.capacityRisk==="RED"?badge("RED","bad"):
+           l.capacityRisk==="AMBER"?badge("AMBER","warn"):
+           badge("GREEN","good")
+  const e911=l.emergencyConfigured?badge("OK","good"):badge("Missing","bad")
+  return `<tr>
+  <td>${l.name}</td>
+  <td>${l.pstnOption||"Unknown"}</td>
+  <td>${l.trunkCount||0}</td>
+  <td>${l.dids?.total||0}</td>
+  <td>${l.dids?.unassigned||0}</td>
+  <td>${l.redundancyScore||0}</td>
+  <td>${l.blastRadius||0}%</td>
+  <td>${cap}</td>
+  <td>${e911}</td>
+  </tr>`
+ }).join("")
+}
+
+function renderDiagnostics(pstn){
+ const s=pstn.diagSummary||{}
+ $("diagSummary").innerHTML=
+ `Total Checks: ${s.total||0} | Failed: ${s.failed||0} | 403: ${s.has403?"Yes":"No"} | 5xx: ${s.has5xx?"Yes":"No"}`
+ $("diagRows").innerHTML=(pstn.diagnostics||[]).map(d=>{
+   const status=d.ok?badge("OK","good"):badge(d.status||"FAIL","bad")
+   return `<div>${status} ${d.name}</div>`
+ }).join("")
 }
 
 async function init(){
+ const me=await api("/api/me")
+ if(!me.orgId){location="/pin";return}
+ let data=await api(`/api/customer/${me.orgId}/pstn`)
+ if(!data.ok){data=await api(`/api/customer/${me.orgId}/pstn-deep`)}
+ if(!data.ok){alert("PSTN unavailable");return}
+ const pstn=data.pstn
 
-  const me=await api("/api/me")
-  if(!me.orgId){
-    location="/pin"
-    return
-  }
+ $("kTrunks").textContent=pstn.totals.trunks+pstn.totals.premisePstnConnections
+ $("kDids").textContent=pstn.totals.didsTotal
+ $("kCapacity").textContent=pstn.scores.pstnCapacityScore
+ $("kPredict").textContent=pstn.prediction?.predictedRisk||"UNKNOWN"
 
-  const key=me.orgId
-
-  // Try snapshot first (fast)
-  let data = await api(`/api/customer/${key}/pstn`)
-
-  if(!data.ok){
-    // fallback to live deep
-    data = await api(`/api/customer/${key}/pstn-deep`)
-  }
-
-  if(!data.ok){
-    alert("PSTN data unavailable")
-    return
-  }
-
-  const pstn = data.pstn
-
-  // KPIs
-  $("kTrunks").textContent = pstn.totals.trunks
-  $("kDids").textContent = pstn.totals.didsTotal
-  $("kGateways").textContent = pstn.totals.premisePstnConnections
-  $("kRisk").textContent = pstn.scores.pstnReliabilityScore
-
-  updateRAGFromScore(pstn.scores.pstnReliabilityScore)
-
-  validateFailover(pstn.locations)
-  auditDids(pstn.locations)
-  monitorGateways(pstn.locations)
-  auditE911(pstn.locations)
-
-  renderTrendPlaceholder()
+ updateRAG(pstn.scores.pstnCapacityScore)
+ renderTrend(pstn.history||[])
+ renderLocations(pstn)
+ renderDiagnostics(pstn)
 }
 
-function updateRAGFromScore(score){
-  let state="GREEN"
-  if(score < 70) state="RED"
-  else if(score < 85) state="AMBER"
-
-  const el=$("rag")
-  el.className="summary-pill"
-  if(state==="RED") el.classList.add("summary-red")
-  else if(state==="AMBER") el.classList.add("summary-amber")
-  else el.classList.add("summary-green")
-  el.textContent=state
-}
-
-function validateFailover(locations){
-  $("failover").innerHTML =
-    locations.map(l=>
-      `<div><b>${l.name}</b> → ${
-        l.riskFlags.singleTrunkRisk ? "Single Trunk Risk" : "Redundant"
-      }</div>`
-    ).join("")
-}
-
-function auditDids(locations){
-  const orphan = locations.reduce((a,l)=>a+(l.dids.unassigned||0),0)
-  $("didAudit").textContent = "Unassigned DIDs: "+orphan
-}
-
-function monitorGateways(locations){
-  const list=[]
-  locations.forEach(l=>{
-    l.premisePstnConnections.forEach(g=>{
-      list.push(`<div>${l.name} → ${g.name} (${g.status||"unknown"})</div>`)
-    })
-  })
-  $("gatewayStatus").innerHTML = list.join("") || "No Local Gateways"
-}
-
-function auditE911(locations){
-  const nonCompliant = locations.filter(l=>l.riskFlags.e911Missing)
-  $("e911Audit").textContent =
-    nonCompliant.length===0
-      ? "Compliant"
-      : nonCompliant.length+" Locations Missing E911"
-}
-
-function renderTrendPlaceholder(){
-  const c=$("trend")
-  const ctx=c.getContext("2d")
-  ctx.clearRect(0,0,c.width,c.height)
-  ctx.font="14px system-ui"
-  ctx.fillText("Historical utilization coming next phase",20,80)
-}
-
-function logout(){
-  fetch("/api/pin/logout",{method:"POST"}).finally(()=>location="/")
-}
+function logout(){fetch("/api/pin/logout",{method:"POST"}).finally(()=>location="/")}
 
 init()
 </script>
+
 </body>
 </html>
