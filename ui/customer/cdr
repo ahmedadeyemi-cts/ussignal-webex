@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<title>US Signal | Webex Calling CDR</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+
+  --accent:#0f62fe;
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+
+  --chip: rgba(15,98,254,.10);
+  --chipText: #0b4bd4;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  min-height:100vh;
+}
+
+/* =========================
+   SIDEBAR (LICENSES STYLE)
+========================= */
+
+.sidebar{
+  width:270px;
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+
+.brand img{ height:34px; }
+
+.brand .title{
+  display:flex;
+  flex-direction:column;
+}
+.brand .title b{ font-size:14px; }
+.brand .title span{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
+}
+
+.nav a:hover{
+  background:rgba(15,98,254,.08);
+  color:#0b4bd4;
+}
+
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+.sidebarBottom{
+  margin-top:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+/* RAG pill */
+.summary-pill{
+  padding:12px;
+  border-radius:12px;
+  font-weight:1000;
+  text-align:center;
+}
+.summary-green{ background:rgba(22,163,74,.15); color:var(--good); }
+.summary-amber{ background:rgba(245,158,11,.15); color:var(--warn); }
+.summary-red{ background:rgba(220,38,38,.15); color:var(--bad); }
+
+button{
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+button:disabled{ opacity:.6; cursor:not-allowed; }
+
+.btn-outline{
+  background:transparent;
+  border:1px solid rgba(15,23,42,.14);
+  color:var(--text);
+}
+
+/* =========================
+   MAIN
+========================= */
+
+.main{
+  flex:1;
+  padding:22px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.header-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.header-left .h{
+  font-size:16px;
+  font-weight:1000;
+}
+.header-left .sub{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:4px;
+}
+
+.header-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.pill{
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.14);
+  background:#fff;
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+}
+
+.section{ margin-top:0; }
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+}
+
+h2{
+  margin:0 0 10px 0;
+  font-size:14px;
+  font-weight:1000;
+}
+
+.muted{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap:12px;
+}
+
+@media (max-width:1100px){
+  .grid{ grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+}
+@media (max-width:640px){
+  .grid{ grid-template-columns: 1fr; }
+}
+
+.kpi{
+  background:linear-gradient(180deg, rgba(15,98,254,.06), rgba(15,98,254,0));
+  border:1px solid rgba(15,23,42,.08);
+  border-radius:14px;
+  padding:12px;
+}
+.kpi .label{ font-size:12px; color:var(--muted); font-weight:900; }
+.kpi .value{ font-size:26px; font-weight:1100; margin-top:6px; }
+.kpi .hint{ font-size:11px; color:var(--muted); margin-top:6px; }
+
+.table-wrap{
+  margin-top:10px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  overflow:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+thead th{
+  padding:12px;
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+tbody td{
+  padding:12px;
+  border-top:1px solid rgba(15,23,42,.06);
+  font-size:13px;
+  vertical-align:top;
+}
+tbody tr:hover{
+  background:rgba(15,98,254,.04);
+}
+
+.right{ text-align:right; }
+.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+.badge{
+  display:inline-block;
+  padding:4px 10px;
+  border-radius:999px;
+  font-weight:1000;
+  font-size:11px;
+  border:1px solid rgba(15,23,42,.10);
+  background:#fff;
+}
+.badge.good{ background:rgba(22,163,74,.12); color:var(--good); border-color:rgba(22,163,74,.25); }
+.badge.warn{ background:rgba(245,158,11,.12); color:var(--warn); border-color:rgba(245,158,11,.25); }
+.badge.bad{  background:rgba(220,38,38,.12); color:var(--bad);  border-color:rgba(220,38,38,.25); }
+
+.chip{
+  display:inline-block;
+  padding:3px 8px;
+  border-radius:999px;
+  background:var(--chip);
+  color:var(--chipText);
+  font-size:11px;
+  font-weight:900;
+}
+
+.input, select{
+  padding:9px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  font-size:13px;
+  outline:none;
+  background:#fff;
+}
+
+.input:focus, select:focus{
+  border-color: rgba(15,98,254,.35);
+  box-shadow: 0 0 0 3px rgba(15,98,254,.10);
+}
+
+.small{
+  font-size:11px;
+  color:var(--muted);
+}
+
+.canvasWrap{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:10px;
+  overflow:hidden;
+}
+
+hr.sep{
+  border:none;
+  border-top:1px solid var(--line);
+  margin:12px 0;
+}
+
+/* =========================
+   MODAL
+========================= */
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.5);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+}
+.modalCard{
+  background:var(--card);
+  padding:20px;
+  border-radius:16px;
+  width:760px;
+  max-width:94vw;
+  max-height:88vh;
+  overflow:auto;
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+}
+.modalTitle{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.modalTitle h3{
+  margin:0;
+  font-size:15px;
+  font-weight:1100;
+}
+.kv{
+  display:grid;
+  grid-template-columns: 180px 1fr;
+  gap:8px 12px;
+  margin-top:12px;
+}
+.kv div{
+  font-size:13px;
+}
+.kv .k{
+  color:var(--muted);
+  font-weight:900;
+}
+pre{
+  white-space:pre-wrap;
+  word-break:break-word;
+  background:rgba(15,23,42,.04);
+  border:1px solid rgba(15,23,42,.10);
+  padding:12px;
+  border-radius:12px;
+  margin:10px 0 0 0;
+  font-size:12px;
+}
+.hidden{ display:none !important; }
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <div class="brand">
+    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
+    <div class="title">
+      <b>US Signal</b>
+      <span>Customer Portal</span>
+    </div>
+  </div>
+
+  <div class="nav">
+    <a href="/customer">Dashboard</a>
+    <a href="/customer/licenses">Licenses</a>
+    <a href="/customer/devices">Devices</a>
+    <a href="/customer/analytics">Analytics</a>
+    <a href="/customer/cdr" class="active">CDR</a>
+    <a href="/customer/maintenance">Maintenance</a>
+    <a href="/customer/status">Status</a>
+    <a href="/customer/incidents">Incidents</a>
+  </div>
+
+  <div class="sidebarBottom">
+    <div id="ragPill" class="summary-pill summary-green">GREEN</div>
+    <button class="btn-outline" id="btnLogout">Logout</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="header-card">
+    <div class="header-left">
+      <div class="h">Webex Calling — Call Detail Records (Enterprise)</div>
+      <div class="sub" id="whoLine">Loading…</div>
+    </div>
+    <div class="header-actions">
+      <div class="pill" id="tenantPill">Tenant: —</div>
+      <button class="btn-outline" id="btnTheme">Dark Mode</button>
+      <button class="btn-outline" id="btnRefresh">Refresh</button>
+      <button id="btnExport">Export CSV</button>
+    </div>
+  </div>
+
+  <!-- Tenant Context -->
+  <div class="card">
+    <h2>Tenant Context</h2>
+    <div class="muted" id="orgContext">Loading…</div>
+    <div style="height:12px"></div>
+
+    <div class="row">
+      <select id="tenantSelect" disabled>
+        <option>Loading tenants…</option>
+      </select>
+      <button id="btnLoad">Load CDR</button>
+
+      <span class="chip" id="rangeChip">Window: —</span>
+      <span class="chip" id="countChip">Records: —</span>
+      <span class="chip" id="anomalyChip">Anomalies: —</span>
+    </div>
+
+    <div class="muted hidden" id="errBox" style="margin-top:10px;"></div>
+  </div>
+
+  <!-- KPI Grid -->
+  <div class="grid">
+    <div class="kpi">
+      <div class="label">Total Calls</div>
+      <div class="value" id="kpiTotal">—</div>
+      <div class="hint">Loaded from /api/cdr</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Failure Rate</div>
+      <div class="value" id="kpiFailRate">—</div>
+      <div class="hint">Based on callResult categorization</div>
+    </div>
+    <div class="kpi">
+      <div class="label">P95 Duration</div>
+      <div class="value" id="kpiP95">—</div>
+      <div class="hint">Seconds</div>
+    </div>
+    <div class="kpi">
+      <div class="label">SLA Status</div>
+      <div class="value" id="kpiSla">—</div>
+      <div class="hint" id="kpiSlaHint">—</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="card">
+    <h2>Filters & Troubleshooting Controls</h2>
+    <div class="row">
+      <select id="timeWindow">
+        <option value="24h">Last 24 hours</option>
+        <option value="7d" selected>Last 7 days</option>
+        <option value="30d">Last 30 days</option>
+      </select>
+
+      <select id="resultFilter">
+        <option value="all" selected>All Results</option>
+        <option value="success">Success Only</option>
+        <option value="failed">Failed Only</option>
+        <option value="unknown">Unknown Only</option>
+      </select>
+
+      <select id="directionFilter">
+        <option value="all" selected>All Directions</option>
+        <option value="inbound">Inbound</option>
+        <option value="outbound">Outbound</option>
+      </select>
+
+      <input class="input" id="searchBox" placeholder="Search caller/callee/result/ID..." style="min-width:320px;" />
+
+      <button class="btn-outline" id="btnClear">Clear</button>
+    </div>
+
+    <hr class="sep">
+
+    <div class="row">
+      <div class="muted">
+        <b>Operational SLA</b>: Failure rate ≥ <span class="mono" id="slaFailThresh">5%</span> OR
+        Unknown rate ≥ <span class="mono" id="slaUnknownThresh">2%</span> triggers amber/red.
+      </div>
+      <div style="flex:1"></div>
+      <div class="muted small" id="lastRefresh">—</div>
+    </div>
+  </div>
+
+  <!-- Distributions + Trend -->
+  <div class="row">
+    <div class="card" style="flex:1; min-width:340px;">
+      <h2>Call Result Breakdown</h2>
+      <div class="muted">Success vs Failed vs Unknown</div>
+      <div class="canvasWrap" style="margin-top:10px;">
+        <canvas id="resultChart" height="120"></canvas>
+      </div>
+    </div>
+
+    <div class="card" style="flex:1; min-width:340px;">
+      <h2>30-Day Volume Trend</h2>
+      <div class="muted">Calls per day (from loaded sample window, extrapolated if needed)</div>
+      <div class="canvasWrap" style="margin-top:10px;">
+        <canvas id="trendChart" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Talkers -->
+  <div class="row">
+    <div class="card" style="flex:1; min-width:340px;">
+      <h2>Top Callers</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Caller</th><th class="right">Calls</th><th class="right">Failures</th></tr></thead>
+          <tbody id="topCallers"><tr><td colspan="3" class="muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="flex:1; min-width:340px;">
+      <h2>Top Called Numbers</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Callee</th><th class="right">Calls</th><th class="right">Failures</th></tr></thead>
+          <tbody id="topCallees"><tr><td colspan="3" class="muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Table -->
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+      <div>
+        <h2 style="margin:0;">CDR Records</h2>
+        <div class="muted">Click a record to drill down (debug view includes raw payload snapshot)</div>
+      </div>
+      <div class="row" style="gap:8px;">
+        <select id="pageSize">
+          <option value="25">25 rows</option>
+          <option value="50" selected>50 rows</option>
+          <option value="100">100 rows</option>
+          <option value="250">250 rows</option>
+        </select>
+        <button class="btn-outline" id="btnPrev">Prev</button>
+        <button class="btn-outline" id="btnNext">Next</button>
+      </div>
+    </div>
+
+    <div id="cdrLoading" class="muted" style="margin-top:10px;">Loading…</div>
+
+    <div class="table-wrap">
+      <table id="cdrTable" class="hidden">
+        <thead>
+          <tr>
+            <th>Start Time</th>
+            <th>Direction</th>
+            <th>Caller</th>
+            <th>Callee</th>
+            <th class="right">Duration</th>
+            <th>Result</th>
+            <th>Quality</th>
+            <th>Flags</th>
+          </tr>
+        </thead>
+        <tbody id="cdrRows"></tbody>
+      </table>
+    </div>
+
+    <div class="muted small" id="pagingNote" style="margin-top:10px;"></div>
+  </div>
+
+</div>
+
+<!-- =========================
+     MODAL (DRILL DOWN)
+========================= -->
+<div id="cdrModal" class="modal">
+  <div class="modalCard">
+    <div class="modalTitle">
+      <div>
+        <h3 id="modalTitle">CDR Drill-Down</h3>
+        <div class="muted" id="modalSub">—</div>
+      </div>
+      <div class="row">
+        <button class="btn-outline" id="btnModalCopy">Copy JSON</button>
+        <button id="btnModalClose">Close</button>
+      </div>
+    </div>
+
+    <div class="kv" id="modalKv"></div>
+
+    <hr class="sep">
+    <div class="muted"><b>Raw Record</b> (best-effort based on /api/cdr response)</div>
+    <pre id="modalRaw">{}</pre>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+/* =========================
+   THEME (PERSISTED)
+========================= */
+function loadTheme(){
+  const saved = localStorage.getItem("uiTheme");
+  const theme = saved === "dark" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  $("btnTheme").textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+  applyDarkVars(theme === "dark");
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme") || "light";
+  const next = cur === "dark" ? "light" : "dark";
+  localStorage.setItem("uiTheme", next);
+  loadTheme();
+}
+/* Minimal dark vars without touching worker */
+function applyDarkVars(isDark){
+  if(!isDark){
+    document.documentElement.style.removeProperty("--bg");
+    document.documentElement.style.removeProperty("--card");
+    document.documentElement.style.removeProperty("--text");
+    document.documentElement.style.removeProperty("--muted");
+    document.documentElement.style.removeProperty("--line");
+    document.documentElement.style.removeProperty("--shadow");
+    document.documentElement.style.removeProperty("--chip");
+    document.documentElement.style.removeProperty("--chipText");
+    return;
+  }
+  document.documentElement.style.setProperty("--bg", "#0b1220");
+  document.documentElement.style.setProperty("--card", "#0f172a");
+  document.documentElement.style.setProperty("--text", "#e5e7eb");
+  document.documentElement.style.setProperty("--muted", "#94a3b8");
+  document.documentElement.style.setProperty("--line", "rgba(226,232,240,.12)");
+  document.documentElement.style.setProperty("--shadow", "0 10px 28px rgba(0,0,0,.35)");
+  document.documentElement.style.setProperty("--chip", "rgba(15,98,254,.22)");
+  document.documentElement.style.setProperty("--chipText", "#9bb8ff");
+}
+
+$("btnTheme").addEventListener("click", toggleTheme);
+loadTheme();
+
+/* =========================
+   HELPERS
+========================= */
+function setError(msg){
+  const box = $("errBox");
+  if(!msg){
+    box.classList.add("hidden");
+    box.textContent = "";
+    return;
+  }
+  box.classList.remove("hidden");
+  box.textContent = msg;
+}
+
+async function api(path, opts){
+  const res = await fetch(path, opts);
+  const txt = await res.text();
+  let data = null;
+  try { data = txt ? JSON.parse(txt) : null; }
+  catch { data = { raw: txt }; }
+  return { ok: res.ok, status: res.status, data };
+}
+
+function escapeHtml(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function fmtInt(n){
+  if(!Number.isFinite(n)) return "0";
+  const abs = Math.abs(Math.trunc(n));
+  return (n<0?"-":"") + abs.toLocaleString();
+}
+
+function fmtPct(x){
+  if(!Number.isFinite(x)) return "0%";
+  return Math.round(x*1000)/10 + "%";
+}
+
+function toLocal(ts){
+  if(!ts) return "—";
+  const d = new Date(ts);
+  if(Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString();
+}
+
+function normalizeE164(n){
+  if(!n) return "—";
+  const s = String(n).trim();
+  return s;
+}
+
+/* =========================
+   SLA THRESHOLDS
+   (tunable without worker)
+========================= */
+const SLA = {
+  failRateAmber: 0.05,
+  failRateRed: 0.10,
+  unknownRateAmber: 0.02,
+  unknownRateRed: 0.05,
+  p95DurAmber: 900,   // 15 min unusual
+  p95DurRed: 1800     // 30 min
+};
+
+$("slaFailThresh").textContent = Math.round(SLA.failRateAmber*100) + "%";
+$("slaUnknownThresh").textContent = Math.round(SLA.unknownRateAmber*100) + "%";
+
+/* =========================
+   STATE
+========================= */
+let ME=null;
+let ORGS=[];
+let SELECTED_ORG_ID=null;
+
+let CDR_RAW=[];         // All loaded
+let CDR_VIEW=[];        // Filtered
+let PAGE=0;
+
+let AUTO_REFRESH=null;
+
+/* =========================
+   DATA SHAPE NORMALIZER
+   Supports multiple worker variants
+========================= */
+function normalizeCdrRecord(r){
+  const start = r.startTime || r.start || r.startedAt || r.time || r.timestamp || null;
+  const local = r.localNumber || r.callingNumber || r.caller || r.from || r.ani || r.source || "";
+  const remote = r.remoteNumber || r.calledNumber || r.callee || r.to || r.dnis || r.destination || "";
+  const duration = Number(r.duration ?? r.durationSeconds ?? r.billableDuration ?? r.talkDuration ?? 0) || 0;
+  const result = (r.callResult || r.result || r.status || r.outcome || "UNKNOWN") + "";
+  const direction = (r.direction || inferDirection(local, remote, r) || "unknown") + "";
+
+  // Optional fields if present
+  const callId = r.id || r.callId || r.correlationId || r.uuid || "";
+  const trunk = r.trunk || r.trunkName || r.route || r.routeName || r.gateway || "";
+  const cause = r.cause || r.sipCause || r.releaseCause || r.disconnectReason || "";
+  const codec = r.codec || r.audioCodec || "";
+  const region = r.region || r.site || r.location || "";
+
+  const bucket = classifyResult(result, cause);
+  const quality = estimateQuality(bucket, duration, r);
+  const flags = buildFlags(bucket, duration, r);
+
+  return {
+    _raw: r,
+    startTime: start,
+    direction,
+    caller: local,
+    callee: remote,
+    duration,
+    result,
+    bucket,
+    quality,
+    flags,
+    callId,
+    trunk,
+    cause,
+    codec,
+    region
+  };
+}
+
+function inferDirection(local, remote, r){
+  // Best-effort heuristics. If worker provides direction, we use it.
+  // If local looks like internal extension and remote is E.164, assume outbound.
+  const l = String(local||"");
+  const m = String(remote||"");
+  if(l.length<=6 && m.length>=10) return "outbound";
+  if(m.length<=6 && l.length>=10) return "inbound";
+  return "";
+}
+
+function classifyResult(result, cause){
+  const s = String(result||"").toLowerCase();
+  const c = String(cause||"").toLowerCase();
+
+  if(s.includes("success") || s.includes("answered") || s.includes("connected") || s === "ok") return "success";
+  if(s.includes("fail") || s.includes("busy") || s.includes("no answer") || s.includes("blocked") || s.includes("rejected")) return "failed";
+  if(c.includes("486") || c.includes("busy")) return "failed";
+  if(c.includes("404") || c.includes("not found")) return "failed";
+  if(c.includes("403") || c.includes("forbidden")) return "failed";
+  if(c.includes("408") || c.includes("timeout")) return "failed";
+  if(c.includes("480") || c.includes("temporarily unavailable")) return "failed";
+  return "unknown";
+}
+
+function estimateQuality(bucket, duration, r){
+  // No MOS in CDR usually. Provide ops-grade signal.
+  // success + reasonable duration => better, short/failed => worse
+  if(bucket === "failed") return 20;
+  if(bucket === "unknown") return 55;
+
+  // success
+  if(duration <= 5) return 60;       // likely mis-dial or drop
+  if(duration <= 30) return 75;
+  if(duration <= 300) return 88;
+  return 92;
+}
+
+function buildFlags(bucket, duration, r){
+  const flags = [];
+  if(bucket === "unknown") flags.push("UNKNOWN_RESULT");
+  if(bucket === "failed") flags.push("FAILED_CALL");
+  if(duration === 0) flags.push("ZERO_DURATION");
+  if(duration > 3600) flags.push("VERY_LONG");
+  return flags;
+}
+
+/* =========================
+   LOAD /api/me
+========================= */
+async function loadMe(){
+  const r = await api("/api/me");
+  if(!r.ok) throw new Error("Failed to load /api/me");
+
+  ME = r.data;
+  if (ME.role !== "admin" && !ME.orgId){
+    window.location.href = "/pin";
+    return false;
+  }
+
+  $("whoLine").textContent = `${ME.email} (${ME.role})`;
+  $("tenantPill").textContent = `Tenant: ${ME.orgName || "—"}`;
+  $("orgContext").textContent = ME.orgName
+    ? `${ME.orgName} (${ME.resolution} resolution)`
+    : "No tenant resolved";
+
+  return true;
+}
+
+/* =========================
+   ORGS
+========================= */
+function safeOrgLabel(o){
+  const name = o.displayName || o.name || o.orgName || "Unknown";
+  const id = o.id || o.orgId || "";
+  return `${name}${id ? " — " + id.slice(0,10) + "…" : ""}`;
+}
+
+async function loadOrgs(){
+  const r = await api("/api/org");
+  if(!r.ok){
+    if(r.status === 401){
+      setError("Tenant not resolved. Please verify your PIN or contact US Signal.");
+      return;
+    }
+    setError("Failed to load org list.");
+    return;
+  }
+
+  ORGS = Array.isArray(r.data) ? r.data : [];
+  const sel = $("tenantSelect");
+  sel.innerHTML = "";
+
+  if(ORGS.length === 0){
+    sel.innerHTML = `<option value="">No organizations available</option>`;
+    sel.disabled = true;
+    $("btnLoad").disabled = true;
+    return;
+  }
+
+  for(const o of ORGS){
+    const opt = document.createElement("option");
+    opt.value = o.id || o.orgId || "";
+    opt.textContent = safeOrgLabel(o);
+    sel.appendChild(opt);
+  }
+
+  sel.disabled = false;
+  $("btnLoad").disabled = false;
+
+  const defaultOrgId = ME?.orgId || (ORGS[0].id || ORGS[0].orgId);
+  if(defaultOrgId) sel.value = defaultOrgId;
+  SELECTED_ORG_ID = sel.value;
+}
+
+$("tenantSelect").addEventListener("change", ()=>{
+  SELECTED_ORG_ID = $("tenantSelect").value;
+  setError(null);
+  PAGE = 0;
+  CDR_RAW = [];
+  CDR_VIEW = [];
+  renderAll();
+});
+
+/* =========================
+   TIME WINDOW (UI only)
+   - If worker supports query params, we pass them.
+   - If not, we still compute based on what comes back.
+========================= */
+function timeWindowToRange(win){
+  const now = Date.now();
+  if(win === "24h") return { from: now - 24*3600*1000, to: now };
+  if(win === "30d") return { from: now - 30*24*3600*1000, to: now };
+  return { from: now - 7*24*3600*1000, to: now };
+}
+
+/* =========================
+   LOAD CDR
+========================= */
+async function loadCDR(){
+  setError(null);
+  $("cdrLoading").textContent = "Loading CDR…";
+  $("cdrLoading").classList.remove("hidden");
+  $("cdrTable").classList.add("hidden");
+
+  const orgId = SELECTED_ORG_ID || "";
+  const win = $("timeWindow").value;
+  const range = timeWindowToRange(win);
+
+  // Best-effort: pass params if your worker chooses to use them
+  const q = new URLSearchParams();
+  if(orgId) q.set("orgId", orgId);
+  q.set("from", new Date(range.from).toISOString());
+  q.set("to", new Date(range.to).toISOString());
+  q.set("window", win);
+
+  const r = await api(`/api/cdr?${q.toString()}`);
+
+  if(!r.ok){
+    if(r.status === 401){
+      setError("Tenant not resolved. Please verify your PIN.");
+      $("cdrLoading").textContent = "Unauthorized.";
+      return;
+    }
+    const msg = (r.data && (r.data.message || r.data.error)) || `Failed to load CDR (HTTP ${r.status}).`;
+    setError(msg);
+    $("cdrLoading").textContent = "Failed to load CDR.";
+    return;
+  }
+
+  const items = Array.isArray(r.data?.items) ? r.data.items : (Array.isArray(r.data) ? r.data : []);
+  const normalized = items.map(normalizeCdrRecord);
+
+  // Optional: filter by time window locally (in case worker ignores from/to)
+  const filteredByTime = normalized.filter(x=>{
+    if(!x.startTime) return true;
+    const t = new Date(x.startTime).getTime();
+    if(Number.isNaN(t)) return true;
+    return t >= range.from && t <= range.to;
+  });
+
+  CDR_RAW = filteredByTime.sort((a,b)=>{
+    const ta = new Date(a.startTime || 0).getTime();
+    const tb = new Date(b.startTime || 0).getTime();
+    return tb - ta;
+  });
+
+  $("rangeChip").textContent = `Window: ${win}`;
+  $("countChip").textContent = `Records: ${CDR_RAW.length.toLocaleString()}`;
+
+  PAGE = 0;
+  applyFilters();
+  computeKPIsAndHealth();
+  renderAll();
+
+  $("cdrLoading").classList.add("hidden");
+  $("cdrTable").classList.remove("hidden");
+
+  $("lastRefresh").textContent = `Last refresh: ${new Date().toLocaleString()}`;
+}
+
+/* =========================
+   FILTERS
+========================= */
+function applyFilters(){
+  const q = $("searchBox").value.trim().toLowerCase();
+  const rf = $("resultFilter").value;
+  const df = $("directionFilter").value;
+
+  CDR_VIEW = CDR_RAW.filter(r=>{
+    let ok = true;
+
+    if(rf !== "all"){
+      if(rf === "success") ok = ok && r.bucket === "success";
+      if(rf === "failed") ok = ok && r.bucket === "failed";
+      if(rf === "unknown") ok = ok && r.bucket === "unknown";
+    }
+
+    if(df !== "all"){
+      ok = ok && String(r.direction || "").toLowerCase() === df;
+    }
+
+    if(q){
+      const hay = [
+        r.callId, r.caller, r.callee, r.result, r.bucket, r.trunk, r.cause, r.codec, r.region
+      ].join(" ").toLowerCase();
+      ok = ok && hay.includes(q);
+    }
+
+    return ok;
+  });
+
+  $("pagingNote").textContent = `Showing ${CDR_VIEW.length.toLocaleString()} matching records (from ${CDR_RAW.length.toLocaleString()} loaded).`;
+}
+
+/* =========================
+   KPI + HEALTH + SLA
+========================= */
+function computeKPIsAndHealth(){
+  const total = CDR_RAW.length;
+  const failed = CDR_RAW.filter(x=>x.bucket === "failed").length;
+  const unknown = CDR_RAW.filter(x=>x.bucket === "unknown").length;
+
+  const failRate = total ? failed/total : 0;
+  const unknownRate = total ? unknown/total : 0;
+
+  $("kpiTotal").textContent = total.toLocaleString();
+  $("kpiFailRate").textContent = fmtPct(failRate);
+
+  const durations = CDR_RAW.map(x=>Number(x.duration||0)).filter(n=>Number.isFinite(n)).sort((a,b)=>a-b);
+  const p95 = durations.length ? percentile(durations, 0.95) : 0;
+  $("kpiP95").textContent = fmtInt(p95);
+
+  const sla = computeSlaState(failRate, unknownRate, p95);
+  $("kpiSla").innerHTML = sla.label;
+  $("kpiSlaHint").textContent = sla.hint;
+
+  setSidebarRag(sla.state);
+
+  // Anomaly detection (simple + useful)
+  const anomalies = detectAnomalies(CDR_RAW);
+  $("anomalyChip").textContent = `Anomalies: ${anomalies.length}`;
+}
+
+function computeSlaState(failRate, unknownRate, p95){
+  let state = "green";
+  const breaches = [];
+
+  if(failRate >= SLA.failRateRed) { state = "red"; breaches.push("Failure rate breach"); }
+  else if(failRate >= SLA.failRateAmber && state !== "red") { state = "amber"; breaches.push("Failure rate at risk"); }
+
+  if(unknownRate >= SLA.unknownRateRed) { state = "red"; breaches.push("Unknown result breach"); }
+  else if(unknownRate >= SLA.unknownRateAmber && state !== "red") { state = "amber"; breaches.push("Unknown result at risk"); }
+
+  if(p95 >= SLA.p95DurRed) { state = "red"; breaches.push("P95 duration breach"); }
+  else if(p95 >= SLA.p95DurAmber && state !== "red") { state = "amber"; breaches.push("P95 duration at risk"); }
+
+  const label =
+    state === "green" ? `<span class="badge good">MEETING SLA</span>` :
+    state === "amber" ? `<span class="badge warn">AT RISK</span>` :
+    `<span class="badge bad">BREACH</span>`;
+
+  const hint = breaches.length ? breaches.join(" • ") : "Healthy operational signals";
+  return { state, label, hint };
+}
+
+function setSidebarRag(state){
+  const pill = $("ragPill");
+  pill.classList.remove("summary-green","summary-amber","summary-red");
+
+  if(state === "green"){
+    pill.classList.add("summary-green");
+    pill.textContent = "GREEN";
+  }else if(state === "amber"){
+    pill.classList.add("summary-amber");
+    pill.textContent = "AMBER";
+  }else{
+    pill.classList.add("summary-red");
+    pill.textContent = "RED";
+  }
+}
+
+function percentile(sortedAsc, p){
+  if(!sortedAsc.length) return 0;
+  const idx = (sortedAsc.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if(lo === hi) return sortedAsc[lo];
+  const w = idx - lo;
+  return Math.round(sortedAsc[lo] * (1 - w) + sortedAsc[hi] * w);
+}
+
+function detectAnomalies(records){
+  // Useful ops anomalies:
+  // - high duration outliers
+  // - too many unknowns for a caller/callee
+  const out = [];
+
+  const durations = records.map(x=>x.duration||0).filter(Number.isFinite).sort((a,b)=>a-b);
+  const p99 = durations.length ? percentile(durations, 0.99) : 0;
+
+  for(const r of records){
+    if(r.duration > Math.max(1800, p99)) out.push({ type:"LONG_CALL", r });
+    if(r.bucket === "unknown") out.push({ type:"UNKNOWN_RESULT", r });
+  }
+
+  // de-dup lightly
+  return out.slice(0, 200);
+}
+
+/* =========================
+   CHARTS (CANVAS)
+========================= */
+function drawResultChart(){
+  const canvas = $("resultChart");
+  const ctx = canvas.getContext("2d");
+
+  const total = CDR_RAW.length || 1;
+  const success = CDR_RAW.filter(x=>x.bucket==="success").length;
+  const failed = CDR_RAW.filter(x=>x.bucket==="failed").length;
+  const unknown = CDR_RAW.filter(x=>x.bucket==="unknown").length;
+
+  const data = [
+    { label:"Success", v: success },
+    { label:"Failed", v: failed },
+    { label:"Unknown", v: unknown }
+  ];
+
+  // Clear
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // Simple bar chart without external libs
+  const w = canvas.width;
+  const h = canvas.height;
+  const pad = 14;
+  const max = Math.max(...data.map(d=>d.v), 1);
+  const barW = (w - pad*2) / data.length - 18;
+
+  data.forEach((d,i)=>{
+    const x = pad + i * ((w - pad*2)/data.length) + 9;
+    const barH = (d.v / max) * (h - 44);
+    const y = h - 26 - barH;
+
+    ctx.fillStyle = i===0 ? "rgba(22,163,74,.55)" : i===1 ? "rgba(220,38,38,.55)" : "rgba(245,158,11,.55)";
+    ctx.fillRect(x, y, barW, barH);
+
+    ctx.fillStyle = "rgba(100,116,139,.95)";
+    ctx.font = "11px system-ui";
+    ctx.fillText(d.label, x, h - 10);
+    ctx.fillText(String(d.v), x, y - 6);
+  });
+
+  // Chips update (count already shown)
+}
+
+function drawTrendChart(){
+  const canvas = $("trendChart");
+  const ctx = canvas.getContext("2d");
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const points = buildDailyTrend(CDR_RAW, 30);
+
+  // line
+  const w = canvas.width;
+  const h = canvas.height;
+  const padX = 10;
+  const padY = 12;
+  const max = Math.max(...points.map(p=>p.calls), 1);
+
+  ctx.strokeStyle = "rgba(15,98,254,.95)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  points.forEach((p,i)=>{
+    const x = padX + (i * (w - padX*2) / (points.length - 1));
+    const y = h - padY - (p.calls / max) * (h - padY*2 - 12);
+    if(i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+
+  ctx.stroke();
+
+  // baseline labels
+  ctx.fillStyle = "rgba(100,116,139,.95)";
+  ctx.font = "11px system-ui";
+  ctx.fillText("0", 4, h - 6);
+  ctx.fillText(String(max), 4, 12);
+}
+
+function buildDailyTrend(records, days){
+  const now = new Date();
+  const buckets = [];
+  for(let i=days-1; i>=0; i--){
+    const d = new Date(now.getTime() - i*86400000);
+    const key = d.toISOString().slice(0,10);
+    buckets.push({ key, calls: 0 });
+  }
+
+  const idx = new Map(buckets.map((b,i)=>[b.key, i]));
+
+  for(const r of records){
+    if(!r.startTime) continue;
+    const t = new Date(r.startTime);
+    if(Number.isNaN(t.getTime())) continue;
+    const key = t.toISOString().slice(0,10);
+    const i = idx.get(key);
+    if(i !== undefined) buckets[i].calls += 1;
+  }
+  return buckets;
+}
+
+/* =========================
+   TOP TALKERS
+========================= */
+function renderTopTalkers(){
+  const callers = aggregateBy(CDR_RAW, r=>normalizeE164(r.caller));
+  const callees = aggregateBy(CDR_RAW, r=>normalizeE164(r.callee));
+
+  $("topCallers").innerHTML = renderAggRows(callers, "caller");
+  $("topCallees").innerHTML = renderAggRows(callees, "callee");
+}
+
+function aggregateBy(records, keyFn){
+  const map = new Map();
+  for(const r of records){
+    const k = keyFn(r) || "—";
+    const v = map.get(k) || { key:k, calls:0, failures:0 };
+    v.calls += 1;
+    if(r.bucket === "failed") v.failures += 1;
+    map.set(k, v);
+  }
+  return Array.from(map.values()).sort((a,b)=>b.calls-a.calls).slice(0,10);
+}
+
+function renderAggRows(list, kind){
+  if(!list.length) return `<tr><td colspan="3" class="muted">No data</td></tr>`;
+  return list.map(x=>`
+    <tr>
+      <td>${escapeHtml(x.key)}</td>
+      <td class="right">${fmtInt(x.calls)}</td>
+      <td class="right">${fmtInt(x.failures)}</td>
+    </tr>
+  `).join("");
+}
+
+/* =========================
+   TABLE RENDERING + PAGING
+========================= */
+function renderTable(){
+  applyFilters();
+
+  const size = Number($("pageSize").value) || 50;
+  const start = PAGE * size;
+  const pageItems = CDR_VIEW.slice(start, start + size);
+
+  $("btnPrev").disabled = PAGE <= 0;
+  $("btnNext").disabled = (start + size) >= CDR_VIEW.length;
+
+  if(CDR_RAW.length === 0){
+    $("cdrRows").innerHTML = `<tr><td colspan="8" class="muted">No CDR records found for this window.</td></tr>`;
+    return;
+  }
+
+  if(pageItems.length === 0){
+    $("cdrRows").innerHTML = `<tr><td colspan="8" class="muted">No matches for current filters.</td></tr>`;
+    return;
+  }
+
+  $("cdrRows").innerHTML = pageItems.map(r=>{
+    const dir = String(r.direction||"unknown").toLowerCase();
+    const dirLabel = dir === "inbound" ? "IN" : dir === "outbound" ? "OUT" : "—";
+
+    const resultBadge =
+      r.bucket === "success" ? `<span class="badge good">SUCCESS</span>` :
+      r.bucket === "failed" ? `<span class="badge bad">FAILED</span>` :
+      `<span class="badge warn">UNKNOWN</span>`;
+
+    const qBadge =
+      r.quality >= 85 ? `<span class="badge good">${r.quality}%</span>` :
+      r.quality >= 60 ? `<span class="badge warn">${r.quality}%</span>` :
+      `<span class="badge bad">${r.quality}%</span>`;
+
+    const flagText = r.flags?.length ? r.flags.join(", ") : "—";
+    const flagBadge = r.flags?.length
+      ? (r.flags.some(f=>f.includes("FAILED") || f.includes("UNKNOWN")) ? `<span class="badge warn">${escapeHtml(flagText)}</span>` : `<span class="badge">${escapeHtml(flagText)}</span>`)
+      : `<span class="badge">—</span>`;
+
+    const idShort = r.callId ? r.callId.slice(0,10)+"…" : "";
+
+    return `
+      <tr style="cursor:pointer;" data-callid="${escapeHtml(r.callId||"")}" onclick="openModal('${escapeHtml(r.callId||"")}')">
+        <td>
+          ${escapeHtml(toLocal(r.startTime))}
+          ${r.callId ? `<div class="small mono">ID: ${escapeHtml(idShort)}</div>` : ``}
+        </td>
+        <td><span class="chip">${dirLabel}</span></td>
+        <td>${escapeHtml(normalizeE164(r.caller))}</td>
+        <td>${escapeHtml(normalizeE164(r.callee))}</td>
+        <td class="right">${fmtInt(r.duration)}s</td>
+        <td>${resultBadge}</td>
+        <td>${qBadge}</td>
+        <td>${flagBadge}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderAll(){
+  renderTable();
+  renderTopTalkers();
+  drawResultChart();
+  drawTrendChart();
+}
+
+/* =========================
+   MODAL DRILL-DOWN
+========================= */
+function openModal(callId){
+  // Find by callId if available; if missing, fallback by index not possible from UI
+  const rec = CDR_RAW.find(x=>String(x.callId||"") === String(callId||"")) || null;
+
+  // If callId missing in dataset, still allow drill by picking first match from visible row text is hard.
+  // We will locate by row click using callId; if callId is empty, we pick by startTime+caller+callee
+  if(!rec){
+    // try fallback: if callId empty, choose first record (best effort)
+    const fallback = CDR_VIEW[0] || null;
+    if(!fallback) return;
+    return openModalWithRecord(fallback);
+  }
+
+  openModalWithRecord(rec);
+}
+
+function openModalWithRecord(rec){
+  $("cdrModal").style.display = "flex";
+
+  const title = `CDR Drill-Down — ${normalizeE164(rec.caller)} → ${normalizeE164(rec.callee)}`;
+  $("modalTitle").textContent = title;
+  $("modalSub").textContent = `${toLocal(rec.startTime)} • ${rec.duration}s • ${rec.bucket.toUpperCase()}`;
+
+  const kv = [
+    ["Call ID", rec.callId || "—"],
+    ["Direction", rec.direction || "—"],
+    ["Caller", normalizeE164(rec.caller)],
+    ["Callee", normalizeE164(rec.callee)],
+    ["Duration (s)", fmtInt(rec.duration)],
+    ["Result", rec.result || "—"],
+    ["Bucket", rec.bucket || "—"],
+    ["Estimated Quality", rec.quality + "%"],
+    ["Trunk / Route", rec.trunk || "—"],
+    ["Cause / Reason", rec.cause || "—"],
+    ["Codec", rec.codec || "—"],
+    ["Region / Site", rec.region || "—"],
+    ["Flags", rec.flags?.length ? rec.flags.join(", ") : "—"]
+  ];
+
+  $("modalKv").innerHTML = kv.map(([k,v])=>`
+    <div class="k">${escapeHtml(k)}</div>
+    <div class="v">${escapeHtml(String(v ?? "—"))}</div>
+  `).join("");
+
+  $("modalRaw").textContent = JSON.stringify(rec._raw || rec, null, 2);
+
+  $("btnModalCopy").onclick = async ()=>{
+    try{
+      await navigator.clipboard.writeText($("modalRaw").textContent);
+      $("btnModalCopy").textContent = "Copied";
+      setTimeout(()=> $("btnModalCopy").textContent = "Copy JSON", 1200);
+    }catch{
+      $("btnModalCopy").textContent = "Copy failed";
+      setTimeout(()=> $("btnModalCopy").textContent = "Copy JSON", 1200);
+    }
+  };
+}
+
+function closeModal(){
+  $("cdrModal").style.display = "none";
+}
+
+$("btnModalClose").addEventListener("click", closeModal);
+$("cdrModal").addEventListener("click", (e)=>{
+  if(e.target.id === "cdrModal") closeModal();
+});
+document.addEventListener("keydown", (e)=>{
+  if(e.key === "Escape") closeModal();
+});
+
+/* =========================
+   CSV EXPORT
+========================= */
+function exportCsv(){
+  // Export what user is viewing (filtered set)
+  const rows = CDR_VIEW.map(r=>({
+    startTime: r.startTime || "",
+    direction: r.direction || "",
+    caller: r.caller || "",
+    callee: r.callee || "",
+    duration: r.duration || 0,
+    result: r.result || "",
+    bucket: r.bucket || "",
+    quality: r.quality || 0,
+    flags: (r.flags||[]).join("|"),
+    callId: r.callId || "",
+    trunk: r.trunk || "",
+    cause: r.cause || "",
+    codec: r.codec || "",
+    region: r.region || ""
+  }));
+
+  const header = Object.keys(rows[0] || {
+    startTime:"", direction:"", caller:"", callee:"", duration:0, result:"", bucket:"", quality:0, flags:"", callId:"", trunk:"", cause:"", codec:"", region:""
+  });
+
+  let csv = header.join(",") + "\n";
+  for(const row of rows){
+    csv += header.map(k=>csvCell(row[k])).join(",") + "\n";
+  }
+
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `cdr_${SELECTED_ORG_ID || "tenant"}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function csvCell(v){
+  const s = String(v ?? "");
+  // Escape quotes
+  const esc = s.replaceAll('"','""');
+  // Quote if contains comma/newline
+  if(esc.includes(",") || esc.includes("\n") || esc.includes("\r")) return `"${esc}"`;
+  return esc;
+}
+
+/* =========================
+   LOGOUT
+========================= */
+async function logout(){
+  try{
+    await fetch("/api/logout", { method:"POST" });
+  }catch{}
+  window.location.href = "/";
+}
+
+/* =========================
+   EVENTS
+========================= */
+$("btnRefresh").addEventListener("click", loadCDR);
+$("btnLoad").addEventListener("click", loadCDR);
+$("btnExport").addEventListener("click", exportCsv);
+$("btnLogout").addEventListener("click", logout);
+
+$("timeWindow").addEventListener("change", ()=>{
+  PAGE = 0;
+  loadCDR();
+});
+
+$("resultFilter").addEventListener("change", ()=>{
+  PAGE = 0;
+  renderAll();
+});
+$("directionFilter").addEventListener("change", ()=>{
+  PAGE = 0;
+  renderAll();
+});
+$("searchBox").addEventListener("input", ()=>{
+  PAGE = 0;
+  renderAll();
+});
+$("pageSize").addEventListener("change", ()=>{
+  PAGE = 0;
+  renderTable();
+});
+
+$("btnPrev").addEventListener("click", ()=>{
+  PAGE = Math.max(0, PAGE - 1);
+  renderTable();
+});
+$("btnNext").addEventListener("click", ()=>{
+  PAGE = PAGE + 1;
+  renderTable();
+});
+
+$("btnClear").addEventListener("click", ()=>{
+  $("searchBox").value = "";
+  $("resultFilter").value = "all";
+  $("directionFilter").value = "all";
+  PAGE = 0;
+  renderAll();
+});
+
+/* =========================
+   INIT
+========================= */
+async function init(){
+  try{
+    setError(null);
+
+    const ok = await loadMe();
+    if(!ok) return;
+
+    await loadOrgs();
+    SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
+
+    // Prime canvases (ensure width based on rendered size)
+    // Canvas width defaults to CSS size; set explicit for crispness
+    setTimeout(()=>{
+      const rc = $("resultChart");
+      const tc = $("trendChart");
+      rc.width = rc.parentElement.clientWidth - 20;
+      tc.width = tc.parentElement.clientWidth - 20;
+      rc.height = 120;
+      tc.height = 120;
+    }, 50);
+
+    await loadCDR();
+
+    if(AUTO_REFRESH) clearInterval(AUTO_REFRESH);
+    AUTO_REFRESH = setInterval(()=>{
+      // Only refresh if the user is on this page (always true) and not in modal
+      if($("cdrModal").style.display !== "flex"){
+        loadCDR();
+      }
+    }, 120000); // every 2 min
+
+  }catch(e){
+    setError(e?.message || String(e));
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>
