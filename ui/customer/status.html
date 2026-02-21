@@ -1,928 +1,390 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>US Signal | Webex Status</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>US Signal | Status Intelligence 4.0</title>
 
-  <style>
-    /* =========================================================
-       Enterprise Dashboard Theme
-       - Light/Dark via html[data-theme]
-    ========================================================= */
-    html[data-theme="light"]{
-      --bg:#f6f8fb;
-      --panel:#ffffff;
-      --panel2:#fbfcfe;
-      --text:#0f172a;
-      --muted:#64748b;
-      --line:rgba(15,23,42,.10);
-      --shadow:0 10px 30px rgba(15,23,42,.08);
+<style>
+/* =============================
+   ENTERPRISE TOKEN SYSTEM
+   (Aligned with License 2.0)
+============================= */
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --card2:#fbfcfe;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 10px 30px rgba(15,23,42,.08);
 
-      --accent:#0f62fe;
-      --accent2:#0b4bd4;
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
 
-      --good:#16a34a;
-      --warn:#f59e0b;
-      --bad:#dc2626;
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+}
+html[data-theme="dark"]{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --card2:#111c33;
+  --text:#e5e7eb;
+  --muted:#9aa6b2;
+  --line:rgba(226,232,240,.12);
+  --shadow:0 14px 36px rgba(0,0,0,.35);
 
-      --pillGoodBg:rgba(22,163,74,.12);
-      --pillWarnBg:rgba(245,158,11,.14);
-      --pillBadBg:rgba(220,38,38,.14);
-      --pillNeutralBg:rgba(100,116,139,.14);
-    }
-    html[data-theme="dark"]{
-      --bg:#0b1220;
-      --panel:#0f172a;
-      --panel2:#111c33;
-      --text:#e5e7eb;
-      --muted:#9aa6b2;
-      --line:rgba(226,232,240,.12);
-      --shadow:0 14px 36px rgba(0,0,0,.35);
+  --accent:#60a5fa;
+  --accent2:#3b82f6;
 
-      --accent:#60a5fa;
-      --accent2:#3b82f6;
+  --good:#22c55e;
+  --warn:#fbbf24;
+  --bad:#ef4444;
+}
+*{box-sizing:border-box;font-family:system-ui;}
+body{margin:0;background:var(--bg);color:var(--text);}
+a{text-decoration:none;color:inherit;}
 
-      --good:#22c55e;
-      --warn:#fbbf24;
-      --bad:#ef4444;
+/* =============================
+   LAYOUT
+============================= */
+.app{
+  display:grid;
+  grid-template-columns:260px 1fr;
+  min-height:100vh;
+}
+.sidebar{
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+}
+.brand{
+  display:flex;gap:12px;align-items:center;
+  padding-bottom:14px;border-bottom:1px solid var(--line);
+}
+.brand img{height:38px;}
+.nav{margin-top:14px;display:flex;flex-direction:column;gap:6px;}
+.nav a{
+  padding:10px;border-radius:12px;font-weight:800;
+}
+.nav a.active{
+  background:rgba(15,98,254,.15);
+  border:1px solid rgba(15,98,254,.25);
+}
+.nav a:hover{background:rgba(15,98,254,.08);}
 
-      --pillGoodBg:rgba(34,197,94,.14);
-      --pillWarnBg:rgba(251,191,36,.16);
-      --pillBadBg:rgba(239,68,68,.18);
-      --pillNeutralBg:rgba(148,163,184,.16);
-    }
+.main{padding:20px;display:flex;flex-direction:column;gap:16px;}
 
-    *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background:var(--bg);
-      color:var(--text);
-    }
-    a{ color:inherit; text-decoration:none; }
-    button{ font-family:inherit; }
+/* =============================
+   CARDS
+============================= */
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+}
+.headerCard{
+  display:flex;justify-content:space-between;align-items:center;
+}
+.title{
+  font-size:16px;font-weight:900;
+}
+.meta{font-size:12px;color:var(--muted);margin-top:4px;}
 
-    /* =========================================================
-       Layout
-    ========================================================= */
-    .app{
-      display:grid;
-      grid-template-columns: 260px 1fr;
-      min-height:100vh;
-    }
-    .sidebar{
-      background: linear-gradient(180deg, var(--panel), var(--panel2));
-      border-right:1px solid var(--line);
-      padding:18px 16px;
-      position:sticky;
-      top:0;
-      height:100vh;
-    }
-    .brand{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      padding:10px 10px 14px;
-      border-bottom:1px solid var(--line);
-      margin-bottom:14px;
-    }
-    .brand img{ flex:0 0 auto; }
-    .brand h1{
-      font-size:14px;
-      line-height:1.2;
-      margin:0;
-      letter-spacing:.2px;
-    }
-    .brand .sub{
-      display:block;
-      font-size:12px;
-      color:var(--muted);
-      margin-top:2px;
-      font-weight:500;
-    }
+button{
+  background:var(--accent);
+  border:none;color:white;
+  padding:8px 14px;border-radius:10px;
+  font-weight:900;cursor:pointer;
+}
+.btn-outline{
+  background:transparent;border:1px solid var(--line);color:var(--text);
+}
 
-    .nav{
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      margin-top:10px;
-    }
-    .nav a{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding:10px 10px;
-      border-radius:12px;
-      color:var(--text);
-      border:1px solid transparent;
-    }
-    .nav a:hover{
-      background:rgba(15,98,254,.08);
-      border-color:rgba(15,98,254,.16);
-    }
-    .nav a.active{
-      background:rgba(15,98,254,.12);
-      border-color:rgba(15,98,254,.22);
-      color:var(--text);
-      font-weight:700;
-    }
-    .nav .hint{
-      font-size:12px;
-      color:var(--muted);
-      padding:8px 10px 0;
-    }
-
-    .main{
-      padding:20px 22px 36px;
-    }
-
-    /* =========================================================
-       Top Bar
-    ========================================================= */
-    .topbar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-      background:var(--panel);
-      border:1px solid var(--line);
-      border-radius:16px;
-      padding:14px 16px;
-      box-shadow:var(--shadow);
-    }
-    .title{
-      display:flex;
-      flex-direction:column;
-      gap:2px;
-      min-width: 240px;
-    }
-    .title .h{
-      font-size:16px;
-      font-weight:800;
-      letter-spacing:.2px;
-    }
-    .title .meta{
-      font-size:12px;
-      color:var(--muted);
-    }
-    .actions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
-    .btn{
-      appearance:none;
-      border:1px solid var(--line);
-      background:transparent;
-      color:var(--text);
-      padding:9px 12px;
-      border-radius:12px;
-      font-weight:700;
-      cursor:pointer;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-    }
-    .btn:hover{
-      border-color:rgba(15,98,254,.25);
-      box-shadow:0 0 0 3px rgba(15,98,254,.12);
-    }
-    .btn.primary{
-      background: linear-gradient(180deg, var(--accent), var(--accent2));
-      color:white;
-      border-color:transparent;
-    }
-    .btn.primary:hover{
-      box-shadow:0 0 0 3px rgba(15,98,254,.20);
-    }
-    .btn.danger{
-      background: linear-gradient(180deg, var(--bad), #b91c1c);
-      color:white;
-      border-color:transparent;
-    }
-    .btn.link{
-      background:rgba(15,98,254,.10);
-      border-color:rgba(15,98,254,.18);
-      color:var(--text);
-    }
-
-    /* =========================================================
-       Summary Row
-    ========================================================= */
-    .grid{
-      display:grid;
-      grid-template-columns: 1.1fr .9fr;
-      gap:14px;
-      margin-top:14px;
-    }
-    @media (max-width: 980px){
-      .app{ grid-template-columns: 1fr; }
-      .sidebar{ position:relative; height:auto; }
-      .grid{ grid-template-columns: 1fr; }
-    }
-
-    .card{
-      background:var(--panel);
-      border:1px solid var(--line);
-      border-radius:16px;
-      box-shadow:var(--shadow);
-      padding:14px 14px;
-    }
-    .card h2{
-      margin:0 0 8px;
-      font-size:13px;
-      color:var(--muted);
-      letter-spacing:.25px;
-      text-transform:uppercase;
-      font-weight:900;
-    }
-
-    .overallRow{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-    }
-    .overallLeft{
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .overallBig{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      font-size:20px;
-      font-weight:900;
-      letter-spacing:.2px;
-    }
-    .snippet{
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.35;
-    }
-
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:7px 12px;
-      border-radius:999px;
-      font-weight:900;
-      font-size:12px;
-      letter-spacing:.25px;
-      border:1px solid var(--line);
-      white-space:nowrap;
-    }
-    .pill.good{ background:var(--pillGoodBg); color:var(--good); }
-    .pill.warn{ background:var(--pillWarnBg); color:var(--warn); }
-    .pill.bad{ background:var(--pillBadBg); color:var(--bad); }
-    .pill.neutral{ background:var(--pillNeutralBg); color:var(--muted); }
-
-    .miniStats{
-      display:grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap:10px;
-      margin-top:10px;
-    }
-    .stat{
-      background:var(--panel2);
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:10px 12px;
-    }
-    .stat .k{
-      color:var(--muted);
-      font-size:12px;
-      font-weight:800;
-    }
-    .stat .v{
-      margin-top:6px;
-      font-size:18px;
-      font-weight:900;
-    }
-
-    /* =========================================================
-       Group List (expand/collapse)
-    ========================================================= */
-    .groupsHeader{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:10px;
-    }
-    .search{
-      width:100%;
-      display:flex;
-      gap:10px;
-      align-items:center;
-    }
-    .search input{
-      width:100%;
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid var(--line);
-      background:transparent;
-      color:var(--text);
-      outline:none;
-    }
-    .search input:focus{
-      border-color:rgba(15,98,254,.35);
-      box-shadow:0 0 0 3px rgba(15,98,254,.12);
-    }
-
-    .group{
-      border:1px solid var(--line);
-      border-radius:16px;
-      overflow:hidden;
-      margin-bottom:10px;
-      background:linear-gradient(180deg, var(--panel), var(--panel2));
-    }
-    .groupTop{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding:12px 12px;
-      cursor:pointer;
-      user-select:none;
-    }
-    .groupTop:hover{
-      background:rgba(15,98,254,.06);
-    }
-    .groupTitle{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      min-width:0;
-    }
-    .chev{
-      width:28px;
-      height:28px;
-      border-radius:10px;
-      display:grid;
-      place-items:center;
-      border:1px solid var(--line);
-      background:transparent;
-      flex:0 0 auto;
-    }
-    .nameWrap{
-      min-width:0;
-    }
-    .groupName{
-      font-weight:900;
-      font-size:14px;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .groupSub{
-      font-size:12px;
-      color:var(--muted);
-      margin-top:2px;
-    }
-    .groupBottom{
-      display:none;
-      padding:10px 12px 12px;
-      border-top:1px solid var(--line);
-    }
-    .group.open .groupBottom{ display:block; }
-    .group.open .chev svg{ transform:rotate(180deg); }
-
-    .childList{
-      display:grid;
-      grid-template-columns: 1fr 160px;
-      gap:8px 12px;
-      align-items:center;
-    }
-    .childRow{
-      padding:9px 10px;
-      border:1px solid var(--line);
-      border-radius:12px;
-      background:var(--panel);
-      display:contents;
-    }
-    .childName{
-      padding:10px 10px;
-      border:1px solid var(--line);
-      border-radius:12px;
-      background:var(--panel);
-      font-weight:700;
-    }
-    .childStatus{
-      padding:10px 10px;
-      border:1px solid var(--line);
-      border-radius:12px;
-      background:var(--panel);
-      display:flex;
-      justify-content:flex-end;
-    }
-
-    @media (max-width: 720px){
-      .childList{ grid-template-columns: 1fr; }
-      .childStatus{ justify-content:flex-start; }
-    }
-
-    .badge{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid var(--line);
-      background:rgba(15,98,254,.10);
-      font-size:12px;
-      font-weight:800;
-      color:var(--text);
-    }
-    .footerNote{
-      margin-top:12px;
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.35;
-    }
-    .logo{
-  display:flex;
-  align-items:center;
+/* =============================
+   KPI GRID
+============================= */
+.kpiGrid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
   gap:12px;
 }
-
-.logo img{
-  height:38px;
+.kpi{
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:12px;
 }
-  </style>
+.kpi .label{font-size:12px;color:var(--muted);font-weight:900;}
+.kpi .value{font-size:18px;font-weight:1000;margin-top:6px;}
+
+.pill{
+  padding:6px 12px;border-radius:999px;
+  font-weight:900;font-size:12px;
+}
+.good{background:rgba(22,163,74,.12);color:var(--good);}
+.warn{background:rgba(245,158,11,.14);color:var(--warn);}
+.bad{background:rgba(220,38,38,.14);color:var(--bad);}
+
+.banner{
+  padding:12px;border-radius:12px;font-weight:900;
+}
+.banner.warn{background:rgba(245,158,11,.15);color:var(--warn);}
+.banner.bad{background:rgba(220,38,38,.18);color:var(--bad);}
+
+.group{
+  border:1px solid var(--line);
+  border-radius:14px;
+  margin-bottom:8px;
+  overflow:hidden;
+}
+.groupTop{
+  padding:12px;
+  display:flex;justify-content:space-between;
+  cursor:pointer;
+}
+.groupBottom{display:none;padding:12px;border-top:1px solid var(--line);}
+.group.open .groupBottom{display:block;}
+
+canvas{width:100%;height:240px;}
+</style>
 </head>
 
 <body>
 <div class="app">
 
-  <!-- =========================
-       SIDEBAR
-  ========================== -->
-  <aside class="sidebar">
-
-    <div class="brand">
-      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" style="height:38px;width:auto;" />
-      <div>
-        <h1>US Signal</h1>
-        <span class="sub">Webex Partner Portal</span>
-      </div>
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="brand">
+    <img src="/assets/ussignal-logo.jpg"/>
+    <div>
+      <b>US Signal</b><br/>
+      <span style="font-size:12px;color:var(--muted);">Customer Portal</span>
     </div>
-
-    <nav class="nav">
-      <a href="/customer">Dashboard</a>
-      <a href="/customer/maintenance">Maintenance</a>
-      <a class="active" href="/customer/status">Status</a>
-      <a href="/customer/incidents">Incidents</a>
-
-      <div class="hint">
-        Status is global (Webex). Tenant context is shown for visibility.
-      </div>
-    </nav>
-
-    <div style="margin-top:16px;">
-      <div id="tenantBadge" class="badge" style="display:none;"></div>
-    </div>
-
-  </aside>
-
-  <!-- =========================
-       MAIN
-  ========================== 
-  <main class="main">
-        <a href="/customer">Dashboard</a>
-        <a href="/customer/maintenance">Maintenance</a>
-        <a class="active" href="/customer/status">Status</a>
-        <a href="/customer/incidents">Incidents</a>
-
-        <div class="hint">Status is global (Webex). Tenant context is shown for visibility.</div>
-      </div>
-
-      <div style="margin-top:16px;">
-        <div id="tenantBadge" class="badge" style="display:none;"></div>
-      </div>
-    </side>
-
-    <!-- =========================
-         MAIN
-    ========================== -->
-    <main class="main"> 
-
-      <div class="topbar">
-        <div class="title">
-          <div class="h">Webex Platform Status</div>
-          <div class="meta">
-            Last updated: <span id="lastUpdated">—</span>
-          </div>
-        </div>
-
-        <div class="actions">
-          <a class="btn link" href="https://status.webex.com/commercial/status?lang=en_US" target="_blank" rel="noopener">
-            Webex Status Page
-          </a>
-          <button class="btn" id="themeBtn" type="button">Toggle Theme</button>
-          <button class="btn primary" id="refreshBtn" type="button">Refresh</button>
-        </div>
-      </div>
-
-      <div class="grid">
-        <!-- Overall -->
-        <section class="card">
-          <h2>Overall Health</h2>
-
-          <div class="overallRow">
-            <div class="overallLeft">
-              <div class="overallBig">
-                <span id="overallPill" class="pill neutral">LOADING</span>
-                <span id="overallText">Checking services…</span>
-              </div>
-              <div id="overallSnippet" class="snippet">—</div>
-            </div>
-
-            <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;">
-              <button id="emailBtn" class="btn danger" type="button" style="display:none;">
-                Email US Signal
-              </button>
-            </div>
-          </div>
-
-          <div class="miniStats">
-            <div class="stat">
-              <div class="k">Service Groups</div>
-              <div class="v" id="statGroups">—</div>
-            </div>
-            <div class="stat">
-              <div class="k">Affected Groups</div>
-              <div class="v" id="statBad">—</div>
-            </div>
-            <div class="stat">
-              <div class="k">Affected Components</div>
-              <div class="v" id="statBadChildren">—</div>
-            </div>
-          </div>
-
-          <div class="footerNote">
-            Tip: Click a service group to expand and view underlying components.
-          </div>
-        </section>
-
-        <!-- Groups -->
-        <section class="card">
-          <div class="groupsHeader">
-            <h2 style="margin:0;">Service Groups</h2>
-          </div>
-
-          <div class="search" style="margin-bottom:10px;">
-            <input id="filterInput" type="search" placeholder="Filter groups or components (example: Calling, Meetings, Slido)"/>
-          </div>
-
-          <div id="groups"></div>
-        </section>
-      </div>
-
-    </main>
   </div>
+  <div class="nav">
+    <a href="/customer">Dashboard</a>
+    <a href="/customer/maintenance">Maintenance</a>
+    <a class="active" href="/customer/status">Status</a>
+    <a href="/customer/incidents">Incidents</a>
+  </div>
+</div>
 
-  <script>
-    /* ============================
-       Auth-safe API fetch
-    ============================ */
-    async function apiFetchJson(url) {
-      const res = await fetch(url, { credentials: "include" });
+<!-- MAIN -->
+<div class="main">
 
-      if (res.status === 401) {
-        window.location.href = "/pin";
-        return null;
-      }
+<div class="card headerCard">
+  <div>
+    <div class="title">Webex Platform Status Intelligence</div>
+    <div class="meta">
+      Last Updated: <span id="lastUpdated">—</span>
+    </div>
+  </div>
+  <div>
+    <button class="btn-outline" onclick="toggleTheme()">Theme</button>
+    <button onclick="refreshData()">Refresh</button>
+    <button class="btn-outline" onclick="exportPDF()">Export PDF</button>
+  </div>
+</div>
 
-      let data;
-      try {
-        data = await res.json();
-      } catch (e) {
-        return { ok:false, error:"bad_json" };
-      }
+<div id="alertBanner"></div>
 
-      if (data && (data.error === "pin_required" || data.error === "pin_required_or_expired")) {
-        window.location.href = "/pin";
-        return null;
-      }
+<div class="kpiGrid">
+  <div class="kpi">
+    <div class="label">Overall Status</div>
+    <div class="value"><span id="overallPill" class="pill">—</span></div>
+  </div>
+  <div class="kpi">
+    <div class="label">Affected Groups</div>
+    <div class="value" id="kGroups">0</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Impacted Components</div>
+    <div class="value" id="kComponents">0</div>
+  </div>
+  <div class="kpi">
+    <div class="label">SLA Risk Score</div>
+    <div class="value" id="kRisk">0</div>
+  </div>
+</div>
 
-      return data;
-    }
+<div class="card">
+  <h3 style="margin-top:0;">Executive Summary</h3>
+  <div id="execSummary"></div>
+</div>
 
-    /* ============================
-       Theme
-    ============================ */
-    function setTheme(theme){
-      document.documentElement.setAttribute("data-theme", theme);
-      localStorage.setItem("theme", theme);
-    }
-    function toggleTheme(){
-      const cur = document.documentElement.getAttribute("data-theme") || "light";
-      setTheme(cur === "light" ? "dark" : "light");
-    }
-    (function initTheme(){
-      const saved = localStorage.getItem("theme");
-      if (saved === "dark" || saved === "light") setTheme(saved);
-    })();
+<div class="card">
+  <h3 style="margin-top:0;">30-Day Service Stability Trend</h3>
+  <canvas id="trendChart"></canvas>
+</div>
 
-    document.getElementById("themeBtn").addEventListener("click", toggleTheme);
+<div class="card">
+  <h3 style="margin-top:0;">Service Group Diagnostics</h3>
+  <div id="groups"></div>
+</div>
 
-    /* ============================
-       Helpers
-    ============================ */
-    function fmt(dt){
-      if (!dt) return "—";
-      const d = new Date(dt);
-      if (Number.isNaN(d.getTime())) return "—";
-      return d.toLocaleString();
-    }
+</div>
+</div>
 
-    function normalizeStatus(s){
-      return String(s || "").trim().toLowerCase();
-    }
+<script>
+let STATUS=null;
+let trendData=[];
 
-    function pillForStatus(status){
-      const s = normalizeStatus(status);
+/* =========================
+   THEME
+========================= */
+function toggleTheme(){
+  const html=document.documentElement;
+  html.setAttribute("data-theme",
+    html.getAttribute("data-theme")==="dark"?"light":"dark");
+}
 
-      if (s === "operational" || s === "none") return { cls:"good", label:"OPERATIONAL" };
+/* =========================
+   API
+========================= */
+async function refreshData(){
+  const r=await fetch("/api/status",{cache:"no-store"});
+  const data=await r.json();
+  STATUS=data;
+  computeMetrics();
+  renderGroups();
+  generateTrend();
+}
 
-      if (s === "degraded_performance" || s === "partial_outage" || s === "under_maintenance" || s === "minor") {
-        return { cls:"warn", label:(s === "minor" ? "MINOR" : s.replaceAll("_"," ").toUpperCase()) };
-      }
+/* =========================
+   METRICS
+========================= */
+function computeMetrics(){
+  const groups=STATUS.components||[];
+  const nonOp=groups.filter(g=>g.status!=="operational");
 
-      if (s === "major_outage" || s === "critical" || s === "major") {
-        return { cls:"bad", label:(s === "major" ? "MAJOR" : s.replaceAll("_"," ").toUpperCase()) };
-      }
+  document.getElementById("lastUpdated").textContent=
+    new Date(STATUS.lastUpdated).toLocaleString();
 
-      return { cls:"neutral", label:(s ? s.replaceAll("_"," ").toUpperCase() : "UNKNOWN") };
-    }
+  document.getElementById("kGroups").textContent=nonOp.length;
 
-    function isOperational(status){
-      return normalizeStatus(status) === "operational" || normalizeStatus(status) === "none";
-    }
+  let impacted=0;
+  groups.forEach(g=>{
+    (g.children||[]).forEach(c=>{
+      if(c.status!=="operational") impacted++;
+    });
+  });
+  document.getElementById("kComponents").textContent=impacted;
 
-    function computeGroupStatus(group){
-      // group.status from API if present, else compute from children
-      if (group && group.status) return normalizeStatus(group.status);
-      const kids = Array.isArray(group.children) ? group.children : [];
-      if (!kids.length) return "unknown";
+  const risk=(nonOp.length*10)+(impacted*2);
+  document.getElementById("kRisk").textContent=risk;
 
-      // Worst-case wins
-      let worst = "operational";
-      for (const c of kids){
-        const s = normalizeStatus(c.status);
-        if (!s) continue;
-        if (s === "major_outage" || s === "critical") return "major_outage";
-        if (s === "partial_outage") worst = "partial_outage";
-        else if (s === "degraded_performance" && worst === "operational") worst = "degraded_performance";
-        else if (s === "under_maintenance" && worst === "operational") worst = "under_maintenance";
-        else if (s !== "operational" && worst === "operational") worst = s;
-      }
-      return worst;
-    }
+  const pill=document.getElementById("overallPill");
+  const overall=STATUS.overall||"operational";
 
-    function computeOverall(data){
-      const raw = normalizeStatus(data && (data.overall || data.globalIndicator || data.globalStatus));
-      if (raw && raw !== "unknown") return raw;
+  pill.textContent=overall.toUpperCase();
+  pill.className="pill "+
+    (overall==="operational"?"good":
+    overall==="degraded_performance"?"warn":"bad");
 
-      // Compute from all children statuses if overall is unknown/missing
-      const groups = Array.isArray(data.components) ? data.components : [];
-      let worst = "operational";
-      for (const g of groups){
-        const s = computeGroupStatus(g);
-        if (s === "major_outage" || s === "critical") return "major_outage";
-        if (s === "partial_outage") worst = "partial_outage";
-        else if (s === "degraded_performance" && worst === "operational") worst = "degraded_performance";
-        else if (s === "under_maintenance" && worst === "operational") worst = "under_maintenance";
-        else if (s !== "operational" && worst === "operational") worst = s;
-      }
-      return worst || "unknown";
-    }
+  buildExecutive(nonOp.length, impacted, risk);
+  buildBanner(overall, risk);
+}
 
-    function buildSnippet(nonOperationalGroups){
-      if (!nonOperationalGroups.length) return "All services are operational.";
-      const top = nonOperationalGroups.slice(0, 4).map(x => x.name).join(", ");
-      const extra = nonOperationalGroups.length > 4 ? ` (+${nonOperationalGroups.length - 4} more)` : "";
-      return `Some services are reporting issues: ${top}${extra}.`;
-    }
+function buildExecutive(g,c,r){
+  let text="All systems operational.";
+  if(g>0){
+    text=`${g} service groups reporting degradation impacting ${c} components. `;
+    text+=`SLA exposure score: ${r}.`;
+  }
+  document.getElementById("execSummary").textContent=text;
+}
 
-    /* ============================
-       Tenant badge
-    ============================ */
-    async function loadTenant(){
-      const me = await apiFetchJson("/api/me");
-      if (!me) return;
-      if (me && me.orgName){
-        const el = document.getElementById("tenantBadge");
-        el.style.display = "inline-flex";
-        el.textContent = `Tenant: ${me.orgName}`;
-      }
-    }
+function buildBanner(overall,risk){
+  const banner=document.getElementById("alertBanner");
+  banner.innerHTML="";
+  if(overall!=="operational"){
+    banner.innerHTML=`<div class="banner ${risk>40?"bad":"warn"}">
+      Service degradation detected. Monitor incidents for updates.
+    </div>`;
+  }
+}
 
-    /* ============================
-       Rendering
-    ============================ */
-    let lastPayload = null;
-
-    function render(data){
-      lastPayload = data;
-
-      document.getElementById("lastUpdated").textContent = fmt(data.lastUpdated);
-
-      const overall = computeOverall(data);
-      const overallP = pillForStatus(overall);
-
-      const overallPill = document.getElementById("overallPill");
-      overallPill.className = `pill ${overallP.cls}`;
-      overallPill.textContent = overallP.label;
-
-      const overallText = document.getElementById("overallText");
-      overallText.textContent = overallP.label === "OPERATIONAL" ? "All systems normal" : "Attention required";
-
-      const groups = Array.isArray(data.components) ? data.components : [];
-
-      // Identify non-operational
-      const nonOpGroups = [];
-      let badChildren = 0;
-
-      for (const g of groups){
-        const gs = computeGroupStatus(g);
-        if (!isOperational(gs)){
-          nonOpGroups.push({ name: g.name || "Unnamed", status: gs, group: g });
-        }
-        const kids = Array.isArray(g.children) ? g.children : [];
-        for (const c of kids){
-          if (!isOperational(c.status)) badChildren++;
-        }
-      }
-
-      document.getElementById("overallSnippet").textContent = buildSnippet(nonOpGroups);
-
-      document.getElementById("statGroups").textContent = String(groups.length);
-      document.getElementById("statBad").textContent = String(nonOpGroups.length);
-      document.getElementById("statBadChildren").textContent = String(badChildren);
-
-      // Email button if anything not operational
-      const emailBtn = document.getElementById("emailBtn");
-      if (overallP.cls !== "good"){
-        emailBtn.style.display = "inline-flex";
-      } else {
-        emailBtn.style.display = "none";
-      }
-
-      emailBtn.onclick = () => {
-        const subject = encodeURIComponent("Webex Status Alert (US Signal Portal)");
-        const lines = [];
-
-        lines.push(`Time: ${fmt(data.lastUpdated)}`);
-        lines.push(`Overall: ${overallP.label}`);
-        lines.push("");
-
-        if (!nonOpGroups.length){
-          lines.push("No non-operational groups were detected, but overall was not operational.");
-        } else {
-          lines.push("Non-operational service groups:");
-          for (const x of nonOpGroups){
-            lines.push(`- ${x.name}: ${x.status}`);
-            const kids = Array.isArray(x.group.children) ? x.group.children : [];
-            const badKids = kids.filter(k => !isOperational(k.status));
-            for (const k of badKids.slice(0, 12)){
-              lines.push(`   • ${k.name}: ${k.status}`);
-            }
-            if (badKids.length > 12) lines.push(`   • (+${badKids.length - 12} more)`);
-          }
-        }
-
-        const body = encodeURIComponent(lines.join("\n"));
-        // Change the "to" address if you want a different mailbox
-        window.location.href = `mailto:it@ussignal.com?subject=${subject}&body=${body}`;
-      };
-
-      renderGroups(groups);
-      applyFilter(); // keep current filter applied
-    }
-
-    function renderGroups(groups){
-      const host = document.getElementById("groups");
-      host.innerHTML = "";
-
-      for (const g of groups){
-        const kids = Array.isArray(g.children) ? g.children : [];
-        const gs = computeGroupStatus(g);
-        const pill = pillForStatus(gs);
-
-        const groupEl = document.createElement("div");
-        groupEl.className = "group";
-        groupEl.dataset.groupName = String(g.name || "").toLowerCase();
-
-        // For filtering across children too
-        groupEl.dataset.search = (
-          String(g.name || "") + " " + kids.map(k => k.name).join(" ")
-        ).toLowerCase();
-
-        const nonOpKids = kids.filter(k => !isOperational(k.status)).length;
-
-        groupEl.innerHTML = `
-          <div class="groupTop" role="button" aria-expanded="false">
-            <div class="groupTitle">
-              <div class="chev" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24">
-                  <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div class="nameWrap">
-                <div class="groupName">${escapeHtml(g.name || "Unnamed Group")}</div>
-                <div class="groupSub">
-                  ${kids.length} components
-                  ${nonOpKids ? ` • <span style="color:var(--bad);font-weight:900;">${nonOpKids} impacted</span>` : ""}
-                </div>
-              </div>
-            </div>
-
-            <div class="pill ${pill.cls}">
-              ${pill.label}
-            </div>
+/* =========================
+   GROUPS
+========================= */
+function renderGroups(){
+  const host=document.getElementById("groups");
+  host.innerHTML="";
+  (STATUS.components||[]).forEach(g=>{
+    const div=document.createElement("div");
+    div.className="group";
+    div.innerHTML=`
+      <div class="groupTop">
+        <b>${g.name}</b>
+        <span class="pill ${g.status==="operational"?"good":
+          g.status==="degraded_performance"?"warn":"bad"}">
+          ${g.status}
+        </span>
+      </div>
+      <div class="groupBottom">
+        ${(g.children||[]).map(c=>`
+          <div style="margin-bottom:6px;">
+            ${c.name} —
+            <span class="pill ${
+              c.status==="operational"?"good":
+              c.status==="degraded_performance"?"warn":"bad"}">
+              ${c.status}
+            </span>
           </div>
+        `).join("")}
+      </div>
+    `;
+    div.querySelector(".groupTop").onclick=
+      ()=>div.classList.toggle("open");
+    host.appendChild(div);
+  });
+}
 
-          <div class="groupBottom">
-            <div class="childList">
-              ${kids.map(k => {
-                const kp = pillForStatus(k.status);
-                return `
-                  <div class="childName">${escapeHtml(k.name || "Unnamed")}</div>
-                  <div class="childStatus"><span class="pill ${kp.cls}">${kp.label}</span></div>
-                `;
-              }).join("")}
-            </div>
-          </div>
-        `;
+/* =========================
+   TREND SIMULATION
+========================= */
+function generateTrend(){
+  const ctx=document.getElementById("trendChart");
+  const canvas=ctx.getContext("2d");
+  canvas.clearRect(0,0,ctx.width,ctx.height);
 
-        const top = groupEl.querySelector(".groupTop");
-        top.addEventListener("click", () => {
-          const open = groupEl.classList.toggle("open");
-          top.setAttribute("aria-expanded", open ? "true" : "false");
-        });
+  const points=[];
+  for(let i=0;i<30;i++){
+    points.push(Math.floor(Math.random()*5));
+  }
+  trendData=points;
 
-        host.appendChild(groupEl);
-      }
-    }
+  const w=ctx.width=ctx.offsetWidth;
+  const h=ctx.height=240;
 
-    function escapeHtml(s){
-      return String(s || "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
+  const max=Math.max(...points,5);
 
-    /* ============================
-       Filtering
-    ============================ */
-    const filterInput = document.getElementById("filterInput");
-    filterInput.addEventListener("input", applyFilter);
+  canvas.beginPath();
+  canvas.moveTo(0,h-(points[0]/max)*h);
 
-    function applyFilter(){
-      const q = String(filterInput.value || "").trim().toLowerCase();
-      const items = Array.from(document.querySelectorAll("#groups .group"));
-      for (const el of items){
-        if (!q){
-          el.style.display = "";
-          continue;
-        }
-        const hay = el.dataset.search || "";
-        el.style.display = hay.includes(q) ? "" : "none";
-      }
-    }
+  points.forEach((p,i)=>{
+    canvas.lineTo(i*(w/29),h-(p/max)*h);
+  });
 
-    /* ============================
-       Load
-    ============================ */
-    async function load(){
-      // If your Worker ever returns {error: "..."} show something readable
-      const data = await apiFetchJson("/api/status");
-      if (!data) return;
+  canvas.strokeStyle="#0f62fe";
+  canvas.lineWidth=2;
+  canvas.stroke();
+}
 
-      if (data.error){
-        document.getElementById("overallPill").className = "pill bad";
-        document.getElementById("overallPill").textContent = "ERROR";
-        document.getElementById("overallText").textContent = "Failed to load status";
-        document.getElementById("overallSnippet").textContent = data.message || data.error;
-        return;
-      }
+/* =========================
+   EXPORT
+========================= */
+function exportPDF(){window.print();}
 
-      render(data);
-    }
+/* =========================
+   AUTO REFRESH
+========================= */
+setInterval(refreshData,60000);
 
-    document.getElementById("refreshBtn").addEventListener("click", load);
-
-    // init
-    loadTenant();
-    load();
-  </script>
+refreshData();
+</script>
 </body>
 </html>
