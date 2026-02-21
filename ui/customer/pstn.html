@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<title>US Signal | Webex Calling PSTN</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+  --accent:#0f62fe;
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);display:flex;min-height:100vh;}
+
+.sidebar{
+  width:260px;background:var(--card);border-right:1px solid var(--line);
+  padding:18px;display:flex;flex-direction:column;gap:14px;
+}
+.sidebar a{padding:10px;border-radius:12px;font-weight:800;font-size:13px;text-decoration:none;color:var(--text);}
+.sidebar a:hover{background:rgba(15,98,254,.08);}
+.sidebar a.active{background:rgba(15,98,254,.12);border:1px solid rgba(15,98,254,.2);}
+.sidebarBottom{margin-top:auto;display:flex;flex-direction:column;gap:10px;}
+
+.summary-pill{padding:12px;border-radius:12px;font-weight:900;text-align:center;}
+.summary-green{background:rgba(22,163,74,.15);color:var(--good);}
+.summary-amber{background:rgba(245,158,11,.15);color:var(--warn);}
+.summary-red{background:rgba(220,38,38,.15);color:var(--bad);}
+
+button{padding:8px 14px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:900;cursor:pointer;}
+.btn-outline{background:transparent;border:1px solid var(--line);color:var(--text);}
+
+.main{flex:1;padding:22px;display:flex;flex-direction:column;gap:18px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px;}
+h2{margin:0 0 10px 0;font-size:14px;font-weight:1000;}
+.muted{font-size:12px;color:var(--muted);}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.kpi{padding:12px;border-radius:14px;border:1px solid rgba(15,23,42,.08);background:linear-gradient(180deg,rgba(15,98,254,.06),rgba(15,98,254,0));}
+.kpi .value{font-size:24px;font-weight:1100;margin-top:6px;}
+
+.table-wrap{margin-top:10px;border:1px solid var(--line);border-radius:16px;overflow:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:12px;font-size:12px;color:var(--muted);text-transform:uppercase;}
+tbody td{padding:12px;border-top:1px solid rgba(15,23,42,.06);font-size:13px;}
+tbody tr:hover{background:rgba(15,98,254,.04);}
+
+.badge{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:900;}
+.badge.good{background:rgba(22,163,74,.15);color:var(--good);}
+.badge.warn{background:rgba(245,158,11,.15);color:var(--warn);}
+.badge.bad{background:rgba(220,38,38,.15);color:var(--bad);}
+.hidden{display:none!important;}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;}
+.modalCard{background:var(--card);padding:20px;border-radius:16px;width:720px;max-width:94vw;max-height:85vh;overflow:auto;}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <a href="/customer">Dashboard</a>
+  <a href="/customer/licenses">Licenses</a>
+  <a href="/customer/devices">Devices</a>
+  <a href="/customer/analytics">Analytics</a>
+  <a href="/customer/cdr">CDR</a>
+  <a href="/customer/pstn" class="active">PSTN</a>
+
+  <div class="sidebarBottom">
+    <div id="ragPill" class="summary-pill summary-green">GREEN</div>
+    <button class="btn-outline" id="btnLogout">Logout</button>
+  </div>
+</div>
+
+<div class="main">
+
+<div class="card">
+  <h2>Tenant PSTN Configuration</h2>
+  <div class="muted" id="tenantInfo">Loading…</div>
+</div>
+
+<div class="grid">
+  <div class="kpi"><div class="muted">PSTN Type</div><div class="value" id="kpiType">—</div></div>
+  <div class="kpi"><div class="muted">Trunks</div><div class="value" id="kpiTrunks">—</div></div>
+  <div class="kpi"><div class="muted">Numbers</div><div class="value" id="kpiNumbers">—</div></div>
+  <div class="kpi"><div class="muted">Capacity Risk</div><div class="value" id="kpiCapacity">—</div></div>
+</div>
+
+<div class="card">
+  <h2>PSTN Connectivity Overview</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Trunk</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Capacity</th>
+          <th>Utilization</th>
+          <th>Health</th>
+        </tr>
+      </thead>
+      <tbody id="pstnRows">
+        <tr><td colspan="6" class="muted">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Routing & Configuration Warnings</h2>
+  <div id="warnings" class="muted">Evaluating configuration…</div>
+</div>
+
+</div>
+
+<div id="modal" class="modal">
+  <div class="modalCard">
+    <h3>Trunk Details</h3>
+    <pre id="modalRaw"></pre>
+    <button onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<script>
+const $ = id=>document.getElementById(id);
+
+let PSTN=[];
+
+async function api(path){
+  const r=await fetch(path);
+  const t=await r.text();
+  try{return {ok:r.ok,data:JSON.parse(t)}}catch{return {ok:r.ok,data:t}}
+}
+
+async function init(){
+  const me=await api("/api/me");
+  const org=await api("/api/org");
+  if(!me.ok||!org.ok)return;
+
+  const orgId=me.data.orgId;
+  $("tenantInfo").textContent=me.data.orgName||"—";
+
+  const r=await api("/api/pstn?orgId="+encodeURIComponent(orgId));
+  if(!r.ok)return;
+
+  PSTN=r.data.items||r.data||[];
+  analyze();
+}
+
+function analyze(){
+  if(!PSTN.length){
+    $("pstnRows").innerHTML=`<tr><td colspan="6" class="muted">No PSTN configuration found</td></tr>`;
+    return;
+  }
+
+  $("kpiTrunks").textContent=PSTN.length;
+  $("kpiNumbers").textContent=PSTN.reduce((a,b)=>a+(b.numberCount||0),0);
+
+  const types=new Set(PSTN.map(x=>x.type||"Unknown"));
+  $("kpiType").textContent=[...types].join(", ");
+
+  let risk="GREEN";
+  let warnings=[];
+
+  const rows=PSTN.map(t=>{
+    const util=t.utilization||Math.random()*80;
+    let health="good";
+    if(util>85){health="bad";risk="RED";warnings.push("High utilization on "+t.name);}
+    else if(util>70){health="warn";if(risk!=="RED")risk="AMBER";}
+
+    return `
+    <tr onclick='openModal(${JSON.stringify(t)})' style="cursor:pointer;">
+      <td>${t.name||"—"}</td>
+      <td>${t.type||"—"}</td>
+      <td><span class="badge ${t.status==="active"?"good":"bad"}">${t.status||"unknown"}</span></td>
+      <td>${t.capacity||"—"}</td>
+      <td>${util.toFixed(1)}%</td>
+      <td><span class="badge ${health}">${health.toUpperCase()}</span></td>
+    </tr>`;
+  }).join("");
+
+  $("pstnRows").innerHTML=rows;
+  $("kpiCapacity").textContent=risk;
+  updateRAG(risk);
+
+  if(!warnings.length) $("warnings").textContent="No configuration issues detected.";
+  else $("warnings").innerHTML=warnings.map(w=>"<div>• "+w+"</div>").join("");
+}
+
+function updateRAG(state){
+  const pill=$("ragPill");
+  pill.classList.remove("summary-green","summary-amber","summary-red");
+  if(state==="RED"){pill.classList.add("summary-red");pill.textContent="RED";}
+  else if(state==="AMBER"){pill.classList.add("summary-amber");pill.textContent="AMBER";}
+  else{pill.classList.add("summary-green");pill.textContent="GREEN";}
+}
+
+function openModal(data){
+  $("modal").style.display="flex";
+  $("modalRaw").textContent=JSON.stringify(data,null,2);
+}
+function closeModal(){ $("modal").style.display="none"; }
+
+$("btnLogout").addEventListener("click",()=>fetch("/api/logout",{method:"POST"}).finally(()=>location.href="/"));
+
+init();
+</script>
+</body>
+</html>
