@@ -2,150 +2,273 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8"/>
-<title>US Signal | Webex Incidents</title>
+<title>US Signal | Incident Intelligence</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
 <style>
+/* ===============================
+   ENTERPRISE THEME (MATCH DEVICES)
+================================= */
 :root{
-  --bg:#f4f7fb;
-  --sidebar:#ffffff;
+  --bg:#f8fafc;
   --card:#ffffff;
-  --border:#e5edf6;
   --text:#0f172a;
   --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
   --accent:#2563eb;
-  --green:#16a34a;
-  --yellow:#f59e0b;
-  --red:#dc2626;
-  --rowHover:#f2f7ff;
-  --expanded:#eaf3ff;
-  --shadow:0 12px 28px rgba(15,23,42,.08);
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
 }
 html[data-theme="dark"]{
   --bg:#0b1220;
-  --sidebar:#0f172a;
-  --card:#111827;
-  --border:#1f2a3a;
+  --card:#0f172a;
   --text:#e5e7eb;
   --muted:#94a3b8;
-  --rowHover:rgba(59,130,246,.12);
-  --expanded:rgba(59,130,246,.18);
+  --line:rgba(148,163,184,.18);
+  --shadow:0 12px 30px rgba(0,0,0,.45);
+  --accent:#3b82f6;
 }
-*{box-sizing:border-box;font-family:system-ui;}
-body{margin:0;background:var(--bg);color:var(--text);display:flex;min-height:100vh;}
-.sidebar{width:230px;background:var(--sidebar);border-right:1px solid var(--border);padding:24px;}
-.sidebar img{
-  max-height:40px;
-  width:auto;
-  height:auto;
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:system-ui;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  height:100vh;
+}
+
+/* ===============================
+   SIDEBAR (UNIFIED NAVIGATION)
+================================= */
+.sidebar{
+  width:260px;
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+.nav a{
   display:block;
-  object-fit:contain;
+  padding:10px;
+  border-radius:12px;
+  text-decoration:none;
+  color:var(--text);
+  font-weight:700;
+  margin-bottom:6px;
 }
-.nav-link{display:block;padding:10px 12px;border-radius:8px;text-decoration:none;color:var(--text);font-weight:600;margin-bottom:8px;}
-.nav-link:hover{background:var(--rowHover);}
+.nav a:hover{background:rgba(37,99,235,.12);}
+.nav a.active{
+  background:rgba(37,99,235,.18);
+  border:1px solid rgba(37,99,235,.35);
+}
+.rag{
+  padding:8px 12px;
+  border-radius:999px;
+  text-align:center;
+  font-weight:900;
+}
+.rag.green{background:rgba(22,163,74,.15);color:var(--good);}
+.rag.amber{background:rgba(245,158,11,.15);color:var(--warn);}
+.rag.red{background:rgba(220,38,38,.15);color:var(--bad);}
+
+/* ===============================
+   MAIN
+================================= */
 .main{flex:1;display:flex;flex-direction:column;}
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:20px 28px;background:var(--card);border-bottom:1px solid var(--border);}
-.topbar h1{margin:0;font-size:20px;font-weight:800;}
-.actions{display:flex;gap:10px;align-items:center;}
-.btn{padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;font-weight:600;cursor:pointer;}
-.btn.primary{background:var(--accent);color:#fff;border:none;}
-.controls{display:flex;gap:15px;padding:15px 28px;align-items:center;}
-input[type="text"]{padding:8px 12px;border-radius:8px;border:1px solid var(--border);width:250px;}
-select{padding:8px;border-radius:8px;border:1px solid var(--border);}
-.summary{display:flex;gap:20px;padding:0 28px 20px;}
-.summaryCard{flex:1;background:var(--card);border-radius:16px;padding:20px;border:1px solid var(--border);box-shadow:var(--shadow);}
-.summaryCard h3{margin:0 0 8px;font-size:14px;color:var(--muted);}
-.summaryCard .value{font-size:26px;font-weight:800;}
-.panel{margin:0 28px 28px;background:var(--card);border-radius:16px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;}
-table{width:100%;border-collapse:collapse;}
-thead th{text-align:left;font-size:12px;text-transform:uppercase;color:var(--muted);padding:14px;border-bottom:1px solid var(--border);}
-tbody td{padding:14px;border-bottom:1px solid var(--border);}
-.dataRow{cursor:pointer;transition:.2s;}
-.dataRow:hover{background:var(--rowHover);}
-.dataRow.expanded{background:var(--expanded);}
-.badge{padding:5px 9px;border-radius:999px;font-size:11px;font-weight:700;}
-.active{background:#fee2e2;color:#991b1b;}
-.resolved{background:#dcfce7;color:#166534;}
-.major{background:#fecaca;color:#7f1d1d;}
-.partial{background:#fde68a;color:#92400e;}
-.expandArrow{display:inline-block;transition:.2s;}
-.dataRow.expanded .expandArrow{transform:rotate(90deg);}
-.detailRow{display:none;}
-.detailCard{padding:20px;background:#fafcff;}
-.timelineItem{margin-bottom:15px;}
-.modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;}
-.modal{background:var(--card);padding:25px;border-radius:12px;width:400px;}
-.modal input{width:100%;margin-top:10px;}
-.autoTimer{font-size:12px;color:var(--muted);}
+.header{
+  background:var(--card);
+  border-bottom:1px solid var(--line);
+  padding:18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.header h1{margin:0;font-size:18px;}
+.actions button{
+  padding:8px 14px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  cursor:pointer;
+  font-weight:800;
+}
+.actions .primary{
+  background:var(--accent);
+  color:white;
+  border:none;
+}
+
+.content{padding:18px;overflow:auto;}
+
+/* ===============================
+   KPI CARDS
+================================= */
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:14px;
+}
+.kpi{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:18px;
+  box-shadow:var(--shadow);
+}
+.kpi h3{
+  margin:0;
+  font-size:12px;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.kpi .value{
+  font-size:26px;
+  font-weight:1000;
+  margin-top:6px;
+}
+
+/* ===============================
+   TABLE
+================================= */
+.panel{
+  margin-top:20px;
+  background:var(--card);
+  border-radius:16px;
+  border:1px solid var(--line);
+  overflow:hidden;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+thead th{
+  font-size:12px;
+  text-transform:uppercase;
+  color:var(--muted);
+  padding:14px;
+  text-align:left;
+  border-bottom:1px solid var(--line);
+}
+tbody td{
+  padding:14px;
+  border-bottom:1px solid var(--line);
+}
+.row{cursor:pointer;}
+.row:hover{background:rgba(37,99,235,.08);}
+
+.badge{
+  padding:5px 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+}
+.active{background:rgba(220,38,38,.15);color:var(--bad);}
+.resolved{background:rgba(22,163,74,.15);color:var(--good);}
+.monitoring{background:rgba(245,158,11,.15);color:var(--warn);}
+
+/* ===============================
+   MODAL DETAIL VIEW
+================================= */
+.modalOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+.modal{
+  width:900px;
+  max-height:85vh;
+  overflow:auto;
+  background:var(--card);
+  padding:25px;
+  border-radius:16px;
+}
+.timeline{
+  margin-top:15px;
+}
+.timelineItem{
+  margin-bottom:15px;
+  border-left:3px solid var(--accent);
+  padding-left:12px;
+}
+.closeBtn{
+  float:right;
+  cursor:pointer;
+  font-weight:900;
+  color:var(--bad);
+}
 </style>
 </head>
 
 <body>
 
 <div class="sidebar">
-  <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg"/>
-  <a class="nav-link" href="/customer">Dashboard</a>
-  <a class="nav-link" href="/customer/status">Status</a>
-  <a class="nav-link" href="/customer/maintenance">Maintenance</a>
-  <a class="nav-link" href="/customer/incidents">Incidents</a>
+  <div>
+    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" style="height:32px;">
+    <div class="nav" style="margin-top:20px;">
+      <a href="/customer">Dashboard</a>
+      <a href="/customer/licenses">Licenses</a>
+      <a href="/customer/devices">Devices</a>
+      <a href="/customer/analytics">Analytics</a>
+      <a href="/customer/cdr">CDR</a>
+      <a href="/customer/pstn">PSTN</a>
+      <a href="/customer/incidents" class="active">Incidents</a>
+    </div>
+  </div>
+  <div>
+    <div id="ragIndicator" class="rag green">HEALTHY</div>
+  </div>
 </div>
 
 <div class="main">
 
-<main class="main">
-    <div class="topbar">
-      <div class="pageTitle">
-        <h1>Webex Incidents</h1>
-        <p>US Signal</p>
-      </div>
-
-    <div class="actions">
-
-  <a 
-    href="https://status.webex.com/incident/history?lang=en_US" 
-    target="_blank" 
-    rel="noopener noreferrer"
-    class="btn"
-    style="text-decoration:none; display:inline-flex; align-items:center;"
-  >
-    Webex Maintenance
-  </a>
-
-  <span id="timerLabel" class="autoTimer">
-    Auto refresh in 60s
-  </span>
-
-  <button id="btnTheme" class="btn" type="button">Toggle Theme</button>
-  <button id="btnRefresh" class="btn primary" type="button">Refresh</button>
-
-</div>
+<div class="header">
+  <h1>Incident Intelligence Console</h1>
+  <div class="actions">
+    <button onclick="toggleTheme()">Theme</button>
+    <button class="primary" onclick="load()">Refresh</button>
+  </div>
 </div>
 
-<div class="controls">
-  <label><input type="checkbox" id="activeOnly"/> Active Only</label>
-  <input type="text" id="searchInput" placeholder="Search incidents..."/>
-  <select id="productFilter">
-    <option value="">All Products</option>
-  </select>
+<div class="content">
+
+<!-- KPI -->
+<div class="kpi-grid">
+  <div class="kpi">
+    <h3>Active Incidents</h3>
+    <div class="value" id="activeCount">0</div>
+  </div>
+  <div class="kpi">
+    <h3>Resolved (30d)</h3>
+    <div class="value" id="resolvedCount">0</div>
+  </div>
+  <div class="kpi">
+    <h3>Mean Time To Resolve</h3>
+    <div class="value" id="mttr">0h</div>
+  </div>
+  <div class="kpi">
+    <h3>High Severity</h3>
+    <div class="value" id="majorCount">0</div>
+  </div>
 </div>
 
-<div class="summary">
-  <div class="summaryCard"><h3>Active</h3><div class="value" id="activeCount">0</div></div>
-  <div class="summaryCard"><h3>Resolved</h3><div class="value" id="resolvedCount">0</div></div>
-  <div class="summaryCard"><h3>Total</h3><div class="value" id="totalCount">0</div></div>
-</div>
-
+<!-- TABLE -->
 <div class="panel">
 <table>
 <thead>
 <tr>
-<th>Reference</th>
+<th>ID</th>
 <th>Status</th>
-<th>Severity</th>
-<th>Date</th>
+<th>Impact</th>
+<th>Start</th>
 <th>Products</th>
 <th>Description</th>
-<th></th>
 </tr>
 </thead>
 <tbody id="incidentBody"></tbody>
@@ -153,23 +276,20 @@ tbody td{padding:14px;border-bottom:1px solid var(--border);}
 </div>
 
 </div>
-
-<div class="modalOverlay" id="emailModal">
-<div class="modal">
-<h3>Email Notification</h3>
-<p>Enter your email to receive updates:</p>
-<input type="email" id="notifyEmail"/>
-<br><br>
-<button class="btn primary" onclick="submitNotify()">Submit</button>
-<button class="btn" onclick="closeModal()">Cancel</button>
 </div>
+
+<!-- MODAL -->
+<div class="modalOverlay" id="modal">
+  <div class="modal">
+    <span class="closeBtn" onclick="closeModal()">✕</span>
+    <h2 id="modalTitle"></h2>
+    <div id="modalMeta"></div>
+    <div class="timeline" id="modalTimeline"></div>
+  </div>
 </div>
 
 <script>
-
-let allIncidents=[];
-let refreshInterval=60;
-let timer;
+let incidents=[];
 
 function toggleTheme(){
   const html=document.documentElement;
@@ -177,168 +297,104 @@ function toggleTheme(){
     html.getAttribute("data-theme")==="dark"?"light":"dark");
 }
 
-async function fetchIncidents(){
+async function load(){
   const res=await fetch("/api/incidents",{cache:"no-store"});
-  if(!res.ok) return null;
-  return await res.json();
-}
-
-function classifySeverity(i){
-  const impact=(i.impact||"").toLowerCase();
-  if(impact.includes("major")) return "major";
-  if(impact.includes("partial")) return "partial";
-  return "resolved";
-}
-
-function groupProducts(items){
-  const set=new Set();
-  items.forEach(i=>{
-    (i.components||[]).forEach(c=>set.add(c.group||c.name));
-  });
-  const select=document.getElementById("productFilter");
-  set.forEach(p=>{
-    const opt=document.createElement("option");
-    opt.value=p;
-    opt.textContent=p;
-    select.appendChild(opt);
-  });
+  if(!res.ok) return;
+  const data=await res.json();
+  incidents=data.incidents||[];
+  render();
 }
 
 function render(){
-  const activeOnly=document.getElementById("activeOnly").checked;
-  const search=document.getElementById("searchInput").value.toLowerCase();
-  const filter=document.getElementById("productFilter").value;
+  const active=incidents.filter(i=>i.status!=="resolved");
+  const resolved=incidents.filter(i=>i.status==="resolved");
+  const major=incidents.filter(i=>(i.impact||"").toLowerCase().includes("major"));
 
-  let items=allIncidents;
+  document.getElementById("activeCount").textContent=active.length;
+  document.getElementById("resolvedCount").textContent=resolved.length;
+  document.getElementById("majorCount").textContent=major.length;
 
-//  if(activeOnly){
- //   items=items.filter(i=>["investigating","identified","monitoring"]
- //     .includes((i.status||"").toLowerCase()));
-//  }
-
-  if(search){
-    items=items.filter(i=>
-      (i.name||"").toLowerCase().includes(search) ||
-      (i.external_id||"").toLowerCase().includes(search)
-    );
-  }
-
-  if(filter){
-    items=items.filter(i=>
-      (i.components||[]).some(c=>(c.group||c.name)===filter)
-    );
-  }
-
-  document.getElementById("activeCount").textContent=
-    allIncidents.filter(i=>["investigating","identified","monitoring"]
-    .includes((i.status||"").toLowerCase())).length;
-
-  document.getElementById("resolvedCount").textContent=
-    allIncidents.filter(i=>(i.status||"").toLowerCase()==="resolved").length;
-
-  document.getElementById("totalCount").textContent=allIncidents.length;
+  calculateMTTR(resolved);
+  updateRAG(active.length,major.length);
 
   const tbody=document.getElementById("incidentBody");
   tbody.innerHTML="";
 
-  items.forEach((i,index)=>{
-    const id=`detail-${index}`;
-    const severity=classifySeverity(i);
-    const active=["investigating","identified","monitoring"]
-      .includes((i.status||"").toLowerCase());
+  incidents.forEach(i=>{
+    const row=document.createElement("tr");
+    row.className="row";
+    row.onclick=()=>openModal(i);
 
-    tbody.innerHTML+=`
-    <tr class="dataRow" onclick="toggleDetail('${id}',this)">
+    const statusClass=i.status==="resolved"?"resolved":
+      (i.status==="monitoring"?"monitoring":"active");
+
+    row.innerHTML=`
       <td>${i.external_id||i.id}</td>
-      <td><span class="badge ${active?"active":"resolved"}">
-        ${active?"Active":"Resolved"}</span></td>
-      <td><span class="badge ${severity}">${severity.toUpperCase()}</span></td>
-      <td>${i.created_at?new Date(i.created_at).toLocaleString():"—"}</td>
+      <td><span class="badge ${statusClass}">${i.status}</span></td>
+      <td>${i.impact||"—"}</td>
+      <td>${new Date(i.created_at).toLocaleString()}</td>
       <td>${(i.components||[]).map(c=>c.name).join(", ")}</td>
       <td>${i.name}</td>
-      <td><span class="expandArrow">▶</span></td>
-    </tr>
-    <tr id="${id}" class="detailRow">
-      <td colspan="7">
-        <div class="detailCard">
-          ${(i.updates || [])
-  .sort((a,b)=> new Date(b.created_at) - new Date(a.created_at))
-  .map(u=>`
-    <div class="timelineItem">
-      <strong>${(u.status || "").toUpperCase()}</strong>
-      <div style="margin-top:6px;">
-        ${u.body_html || u.body || ""}
-      </div>
-      <div style="font-size:12px;color:#64748b;margin-top:6px;">
-        ${u.created_at ? new Date(u.created_at).toLocaleString() : ""}
-      </div>
-    </div>
-  `)
-  .join("")
-}
-          <button class="btn primary" onclick="openModal(event)">Email Update</button>
-        </div>
-      </td>
-    </tr>`;
+    `;
+    tbody.appendChild(row);
   });
 }
 
-function toggleDetail(id,row){
-  const detail=document.getElementById(id);
-  const isOpen=detail.style.display==="table-row";
-  document.querySelectorAll(".detailRow").forEach(d=>d.style.display="none");
-  document.querySelectorAll(".dataRow").forEach(r=>r.classList.remove("expanded"));
-  if(!isOpen){
-    detail.style.display="table-row";
-    row.classList.add("expanded");
+function calculateMTTR(resolved){
+  if(!resolved.length){
+    document.getElementById("mttr").textContent="0h";
+    return;
+  }
+  const avg=resolved.reduce((sum,i)=>{
+    const start=new Date(i.created_at);
+    const end=new Date(i.resolved_at||i.updated_at||Date.now());
+    return sum+(end-start);
+  },0)/resolved.length;
+
+  const hours=Math.round(avg/3600000);
+  document.getElementById("mttr").textContent=hours+"h";
+}
+
+function updateRAG(active,major){
+  const rag=document.getElementById("ragIndicator");
+  if(major>0){
+    rag.className="rag red";
+    rag.textContent="CRITICAL";
+  }else if(active>0){
+    rag.className="rag amber";
+    rag.textContent="DEGRADED";
+  }else{
+    rag.className="rag green";
+    rag.textContent="HEALTHY";
   }
 }
 
-function openModal(e){
-  e.stopPropagation();
-  document.getElementById("emailModal").style.display="flex";
+function openModal(i){
+  document.getElementById("modal").style.display="flex";
+  document.getElementById("modalTitle").textContent=i.name;
+  document.getElementById("modalMeta").innerHTML=`
+    <strong>Status:</strong> ${i.status}<br>
+    <strong>Impact:</strong> ${i.impact||"—"}<br>
+    <strong>Started:</strong> ${new Date(i.created_at).toLocaleString()}<br>
+    <strong>Products:</strong> ${(i.components||[]).map(c=>c.name).join(", ")}
+  `;
+  document.getElementById("modalTimeline").innerHTML=
+    (i.updates||[])
+      .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))
+      .map(u=>`
+        <div class="timelineItem">
+          <strong>${u.status}</strong><br>
+          ${u.body_html||u.body||""}<br>
+          <small>${new Date(u.created_at).toLocaleString()}</small>
+        </div>
+      `).join("");
 }
+
 function closeModal(){
-  document.getElementById("emailModal").style.display="none";
-}
-function submitNotify(){
-  const email=document.getElementById("notifyEmail").value;
-  alert("Notification registered for "+email);
-  closeModal();
+  document.getElementById("modal").style.display="none";
 }
 
-function startAutoRefresh(){
-  updateTimer();
-  timer=setInterval(()=>{
-    refreshInterval--;
-    updateTimer();
-    if(refreshInterval===0){
-      refreshInterval=60;
-      loadIncidents();
-    }
-  },1000);
-}
-function updateTimer(){
-  document.getElementById("timerLabel")
-    .textContent="Auto refresh in "+refreshInterval+"s";
-}
-
-async function loadIncidents(){
-  const data=await fetchIncidents();
-  if(!data) return;
-  allIncidents=data.incidents||[];
-  render();
-}
-
-document.getElementById("activeOnly").addEventListener("change",render);
-document.getElementById("searchInput").addEventListener("input",render);
-document.getElementById("productFilter").addEventListener("change",render);
-
-loadIncidents().then(()=>{
-  groupProducts(allIncidents);
-  startAutoRefresh();
-});
-
+load();
 </script>
 </body>
 </html>
