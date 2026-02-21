@@ -1,222 +1,2070 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="utf-8"/>
-  <title>Devices</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta charset="UTF-8" />
+<title>US Signal | Webex Calling — Devices</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #f5f7fa;
-      margin: 0;
-      padding: 30px;
-      color: #1f2937;
-    }
+<style>
+/* ======================================================
+   THEME (MATCH LICENSES/INDEX)
+====================================================== */
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
 
-    h1 {
-      margin-bottom: 20px;
-    }
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
 
-    .nav {
-      margin-bottom: 25px;
-    }
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
 
-    .nav a {
-      text-decoration: none;
-      margin-right: 20px;
-      color: #2563eb;
-      font-weight: 600;
-    }
+  --pill-bg: rgba(15,98,254,.08);
+  --pill-bd: rgba(15,98,254,.20);
+  --rowHover: rgba(15,98,254,.04);
+}
 
-    .summary {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
-      margin-bottom: 25px;
-    }
+html[data-theme="dark"]{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --line:rgba(148,163,184,.18);
+  --shadow:0 10px 30px rgba(0,0,0,.45);
 
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
+  --pill-bg: rgba(59,130,246,.12);
+  --pill-bd: rgba(59,130,246,.24);
+  --rowHover: rgba(59,130,246,.08);
+}
 
-    .card h3 {
-      margin: 0;
-      font-size: 14px;
-      color: #6b7280;
-    }
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  min-height:100vh;
+}
 
-    .card .value {
-      font-size: 28px;
-      font-weight: bold;
-      margin-top: 8px;
-    }
+/* ======================================================
+   SIDEBAR (MATCH LICENSES/INDEX)
+====================================================== */
+.sidebar{
+  width:270px;
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
 
-    .healthy { color: #059669; }
-    .warning { color: #d97706; }
-    .critical { color: #dc2626; }
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+.brand img{ height:34px; border-radius:6px; }
+.brand .title{ display:flex; flex-direction:column; }
+.brand .title b{ font-size:14px; letter-spacing:.2px; }
+.brand .title span{ font-size:12px; color:var(--muted); }
 
-    .alert {
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      font-weight: 600;
-    }
+.nav{ display:flex; flex-direction:column; gap:6px; }
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
+  border:1px solid transparent;
+}
+.nav a:hover{
+  background:rgba(15,98,254,.08);
+  color:var(--accent2);
+}
+.nav a.active{
+  background:var(--pill-bg);
+  border:1px solid var(--pill-bd);
+}
 
-    .alert-warning {
-      background: #fef3c7;
-      color: #92400e;
-    }
+.side-foot{
+  margin-top:auto;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
+.side-pills{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.sidepill{
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.14);
+  background:transparent;
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.dot{
+  width:10px; height:10px; border-radius:50%;
+  display:inline-block;
+  background: #9ca3af;
+}
+.dot.good{ background: var(--good); }
+.dot.warn{ background: var(--warn); }
+.dot.bad{  background: var(--bad); }
 
-    th, td {
-      padding: 14px;
-      text-align: left;
-      border-bottom: 1px solid #e5e7eb;
-    }
+.side-actions{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
 
-    th {
-      background: #f9fafb;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: .05em;
-      color: #6b7280;
-    }
+/* ======================================================
+   MAIN AREA
+====================================================== */
+.main{
+  flex:1;
+  padding:22px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
 
-    tr:last-child td {
-      border-bottom: none;
-    }
+.header-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
 
-    .status-ok {
-      color: #059669;
-      font-weight: 600;
-    }
+.header-left{ display:flex; flex-direction:column; gap:4px; }
+.header-left .h{ font-size:16px; font-weight:1000; }
+.header-left .sub{ font-size:12px; color:var(--muted); }
 
-    .status-offline {
-      color: #dc2626;
-      font-weight: 600;
-    }
+.header-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
 
-    .loading {
-      font-size: 14px;
-      color: #6b7280;
-    }
-  </style>
+.pill{
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.14);
+  background:transparent;
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+}
+
+.section{ margin-top:0; }
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+}
+h2{
+  margin:0 0 10px 0;
+  font-size:14px;
+  font-weight:1000;
+}
+.muted{ font-size:12px; color:var(--muted); }
+
+.row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.table-wrap{
+  margin-top:10px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  overflow:auto;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+thead th{
+  padding:12px;
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  white-space:nowrap;
+  user-select:none;
+}
+tbody td{
+  padding:12px;
+  border-top:1px solid rgba(15,23,42,.06);
+  font-size:13px;
+  vertical-align:top;
+}
+tbody tr:hover{ background:var(--rowHover); }
+
+.hidden{ display:none !important; }
+.right{ text-align:right; }
+
+/* ======================================================
+   BUTTONS / INPUTS (MATCH LICENSES FEEL)
+====================================================== */
+.btn{
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  padding:9px 14px;
+  border-radius:10px;
+  font-weight:900;
+  cursor:pointer;
+}
+.btn:disabled{ opacity:.65; cursor:not-allowed; }
+
+.btn-outline{
+  background:transparent;
+  color:var(--text);
+  border:1px solid rgba(15,23,42,.14);
+  padding:9px 14px;
+  border-radius:10px;
+  font-weight:900;
+  cursor:pointer;
+}
+html[data-theme="dark"] .btn-outline{
+  border:1px solid rgba(148,163,184,.30);
+}
+
+select, input[type="text"], input[type="search"]{
+  padding:9px 12px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--text);
+  font-size:13px;
+  outline:none;
+}
+input[type="search"]{ min-width:260px; }
+select:disabled, input:disabled{ opacity:.7; }
+
+/* Spinner */
+.spinner{
+  width:14px; height:14px;
+  border:2px solid rgba(255,255,255,.4);
+  border-top:2px solid #fff;
+  border-radius:50%;
+  animation:spin .6s linear infinite;
+  display:inline-block;
+  vertical-align:middle;
+}
+@keyframes spin { to{ transform:rotate(360deg); } }
+
+/* ======================================================
+   STATUS BADGES / HEALTH PILLS
+====================================================== */
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:1000;
+  border:1px solid rgba(15,23,42,.14);
+  background:transparent;
+}
+.badge .dot{ width:9px; height:9px; }
+
+.badge.good{ border-color: rgba(22,163,74,.25); }
+.badge.good .dot{ background: var(--good); }
+
+.badge.warn{ border-color: rgba(245,158,11,.25); }
+.badge.warn .dot{ background: var(--warn); }
+
+.badge.bad{ border-color: rgba(220,38,38,.25); }
+.badge.bad .dot{ background: var(--bad); }
+
+.health-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:58px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:1000;
+  font-size:12px;
+  border:1px solid rgba(15,23,42,.14);
+  background:transparent;
+}
+.health-good{ border-color: rgba(22,163,74,.25); color:var(--good); }
+.health-mid { border-color: rgba(245,158,11,.25); color:var(--warn); }
+.health-bad { border-color: rgba(220,38,38,.25); color:var(--bad); }
+
+/* Clickable rows / links */
+.link{
+  color:var(--accent2);
+  text-decoration:none;
+  font-weight:900;
+}
+.link:hover{ text-decoration:underline; }
+
+/* ======================================================
+   MINI CHARTS (SPARKLINES + TREND)
+====================================================== */
+.spark{
+  width:110px;
+  height:22px;
+  border-radius:8px;
+  background:rgba(15,23,42,.04);
+  border:1px solid rgba(15,23,42,.08);
+}
+html[data-theme="dark"] .spark{
+  background: rgba(148,163,184,.10);
+  border:1px solid rgba(148,163,184,.18);
+}
+.chart{
+  width:100%;
+  height:180px;
+  border-radius:16px;
+  background:rgba(15,23,42,.02);
+  border:1px solid rgba(15,23,42,.08);
+}
+html[data-theme="dark"] .chart{
+  background: rgba(148,163,184,.06);
+  border:1px solid rgba(148,163,184,.16);
+}
+
+/* ======================================================
+   MODAL
+====================================================== */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+}
+.modal .panel{
+  width:860px;
+  max-width:92vw;
+  max-height:86vh;
+  overflow:auto;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+}
+.modal .top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+}
+.modal h3{
+  margin:0;
+  font-size:15px;
+  font-weight:1000;
+}
+.kv{
+  display:grid;
+  grid-template-columns: 180px 1fr;
+  gap:10px 14px;
+  margin-top:12px;
+}
+.kv .k{ color:var(--muted); font-size:12px; font-weight:900; text-transform:uppercase; }
+.kv .v{ font-size:13px; }
+hr.sep{
+  border:none;
+  border-top:1px solid var(--line);
+  margin:14px 0;
+}
+
+/* ======================================================
+   TOAST / INLINE STATUS
+====================================================== */
+.toast{
+  position:fixed;
+  right:16px;
+  bottom:16px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow:var(--shadow);
+  padding:12px 14px;
+  min-width:240px;
+  max-width:360px;
+  display:none;
+  z-index:1000;
+}
+.toast .t{ font-weight:1000; font-size:13px; margin:0 0 4px 0; }
+.toast .m{ margin:0; font-size:12px; color:var(--muted); }
+
+.small{
+  font-size:11px;
+  color:var(--muted);
+}
+.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+
+/* Responsive */
+@media (max-width: 980px){
+  .sidebar{ display:none; }
+  body{ display:block; }
+  .main{ padding:16px; }
+}
+</style>
 </head>
 
 <body>
 
+<!-- ============================= -->
+<!-- SIDEBAR -->
+<!-- ============================= -->
+<div class="sidebar">
+  <div class="brand">
+    <img src="/assets/ussignal-logo.jpg" alt="US Signal" />
+    <div class="title">
+      <b>US Signal</b>
+      <span>Customer Portal</span>
+    </div>
+  </div>
+
   <div class="nav">
     <a href="/customer">Dashboard</a>
     <a href="/customer/licenses">Licenses</a>
-    <a href="/customer/devices">Devices</a>
+    <a href="/customer/devices" class="active">Devices</a>
     <a href="/customer/analytics">Analytics</a>
     <a href="/customer/cdr">CDR</a>
+    <a href="/customer/maintenance">Maintenance</a>
+    <a href="/customer/status">Status</a>
+    <a href="/customer/incidents">Incidents</a>
   </div>
 
-  <h1>Device Overview</h1>
+  <div class="side-foot">
+    <!-- R/A/G summary pill in sidebar -->
+    <div class="side-pills">
+      <div class="sidepill" id="sideRag">
+        <span class="dot" id="sideRagDot"></span>
+        <span id="sideRagText">Health: —</span>
+      </div>
+      <div class="sidepill" id="sideSla">
+        <span class="dot" id="sideSlaDot"></span>
+        <span id="sideSlaText">SLA: —</span>
+      </div>
+    </div>
 
-  <div id="alertContainer"></div>
+    <div class="side-actions">
+      <button class="btn-outline" id="btnLogout">Logout</button>
+      <div class="small" id="sideMeta">—</div>
+    </div>
+  </div>
+</div>
 
-  <div class="summary">
-    <div class="card">
-      <h3>Total Endpoints</h3>
-      <div id="totalDevices" class="value">-</div>
+<!-- ============================= -->
+<!-- MAIN -->
+<!-- ============================= -->
+<div class="main">
+
+  <!-- HEADER -->
+  <div class="header-card">
+    <div class="header-left">
+      <div class="h">Webex Calling — Devices</div>
+      <div class="sub" id="whoLine">Loading…</div>
+    </div>
+
+    <div class="header-actions">
+      <div class="pill" id="tenantPill">Tenant: —</div>
+      <button class="btn-outline" id="btnTheme">Dark Mode</button>
+      <button class="btn-outline" id="btnRefresh">Refresh</button>
+      <button class="btn" id="btnExportCsv">Export CSV</button>
+    </div>
+  </div>
+
+  <!-- TENANT CONTEXT -->
+  <div class="section">
+    <div id="admin-note" class="card hidden">
+      <b>US Signal Admin View</b>
+      <div class="muted">Switch tenants using the selector below.</div>
     </div>
 
     <div class="card">
-      <h3>Connected</h3>
-      <div id="connectedDevices" class="value healthy">-</div>
-    </div>
+      <h2>Tenant Context</h2>
+      <div class="muted" id="orgContext">Loading…</div>
+      <div style="height:12px"></div>
 
+      <div class="row">
+        <select id="tenantSelect" disabled>
+          <option>Loading tenants…</option>
+        </select>
+        <button class="btn" id="btnLoad">Load Devices</button>
+        <button class="btn-outline" id="btnClearLocal">Reset Local History</button>
+      </div>
+
+      <div class="muted hidden" id="errBox" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <!-- SUMMARY / SLA / TREND -->
+  <div class="section">
+    <div class="row" style="gap:12px;">
+      <div class="card" style="flex:1; min-width:320px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+          <div>
+            <h2 style="margin:0;">Fleet Summary</h2>
+            <div class="muted" id="summaryLine">—</div>
+          </div>
+          <div id="healthPill" class="health-pill">—</div>
+        </div>
+        <div style="height:10px"></div>
+        <div class="row">
+          <span class="badge good"><span class="dot"></span><span id="sumOnline">0 Online</span></span>
+          <span class="badge warn"><span class="dot"></span><span id="sumWarning">0 Issues</span></span>
+          <span class="badge bad"><span class="dot"></span><span id="sumOffline">0 Offline</span></span>
+          <span class="pill" id="lastRefreshPill">Last refresh: —</span>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1; min-width:320px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+          <div>
+            <h2 style="margin:0;">SLA / Breach Detection</h2>
+            <div class="muted">Computed client-side using device telemetry + local history.</div>
+          </div>
+          <div id="slaPill" class="health-pill">—</div>
+        </div>
+
+        <div style="height:10px"></div>
+        <div class="kv">
+          <div class="k">Rule set</div>
+          <div class="v">
+            <span class="mono">Offline &gt;= <span id="ruleOfflinePct"></span>%</span>,
+            <span class="mono">Stale last-seen &gt;= <span id="ruleStaleMin"></span> min</span>,
+            <span class="mono">Breach window: <span id="ruleWindowMin"></span> min</span>
+          </div>
+
+          <div class="k">Current</div>
+          <div class="v" id="slaDetail">—</div>
+
+          <div class="k">Breaches</div>
+          <div class="v" id="slaBreaches">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TREND GRAPH -->
+  <div class="section">
     <div class="card">
-      <h3>Offline</h3>
-      <div id="offlineDevices" class="value critical">-</div>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+        <div>
+          <h2 style="margin:0;">30-Day Health Trend</h2>
+          <div class="muted">
+            This chart is built from snapshots saved in your browser (no worker changes required).
+            It fills in as your portal runs over time.
+          </div>
+        </div>
+        <div class="pill" id="trendMeta">—</div>
+      </div>
+
+      <div style="height:12px"></div>
+      <canvas class="chart" id="trendChart"></canvas>
+      <div class="small" id="trendHint" style="margin-top:8px;">Tip: leave this tab open or visit periodically to build history.</div>
     </div>
   </div>
 
-  <div class="card">
-    <h3>All Devices</h3>
-    <div id="loading" class="loading">Loading devices…</div>
-    <table id="deviceTable" style="display:none;">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Model</th>
-          <th>Connection Status</th>
-        </tr>
-      </thead>
-      <tbody id="deviceBody"></tbody>
-    </table>
+  <!-- FILTERS + TABLE -->
+  <div class="section">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div>
+          <h2 style="margin:0;">Devices</h2>
+          <div class="muted" id="deviceSummary">—</div>
+        </div>
+
+        <div class="row">
+          <select id="deviceFilter">
+            <option value="all">All</option>
+            <option value="online">Online</option>
+            <option value="warning">Issues</option>
+            <option value="offline">Offline / Disconnected</option>
+            <option value="stale">Stale (last-seen)</option>
+          </select>
+
+          <select id="deviceGroup">
+            <option value="none">Group: None</option>
+            <option value="model">Group: Model</option>
+            <option value="status">Group: Status</option>
+          </select>
+
+          <input id="deviceSearch" type="search" placeholder="Search name/model/status…" />
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+      <div class="row">
+        <span class="pill">Auto refresh: <b id="autoRefreshLabel">60s</b></span>
+        <button class="btn-outline" id="btnAutoRefresh">Pause</button>
+        <button class="btn-outline" id="btnCopyJson">Copy JSON</button>
+        <span class="small" id="localStoreState">—</span>
+      </div>
+
+      <div id="deviceLoading" class="muted" style="margin-top:12px;">Loading devices…</div>
+
+      <div class="table-wrap">
+        <table id="deviceTable" class="hidden">
+          <thead>
+            <tr>
+              <th data-sort="displayName">Name</th>
+              <th data-sort="product">Model</th>
+              <th data-sort="connectionStatus">Status</th>
+              <th data-sort="lastSeen" class="right">Last Seen</th>
+              <th class="right">Health</th>
+              <th>SLA</th>
+              <th class="right">Uptime (spark)</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="deviceRows"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
+
+</div>
+
+<!-- ============================= -->
+<!-- DEVICE DRILL-DOWN MODAL (also supports ?device=<id>)
+<!-- ============================= -->
+<div class="modal" id="deviceModal" aria-hidden="true">
+  <div class="panel">
+    <div class="top">
+      <div>
+        <h3 id="modalTitle">Device</h3>
+        <div class="muted" id="modalSub">—</div>
+      </div>
+      <div class="row">
+        <button class="btn-outline" id="btnOpenDeepLink">Open Deep Link</button>
+        <button class="btn-outline" id="btnCloseModal">Close</button>
+      </div>
+    </div>
+
+    <hr class="sep"/>
+
+    <div class="row" style="justify-content:space-between; align-items:flex-start;">
+      <div style="min-width:260px;">
+        <div class="kv">
+          <div class="k">Device ID</div><div class="v mono" id="d_id">—</div>
+          <div class="k">Model</div><div class="v" id="d_model">—</div>
+          <div class="k">Status</div><div class="v" id="d_status">—</div>
+          <div class="k">Last Seen</div><div class="v" id="d_lastSeen">—</div>
+          <div class="k">Health</div><div class="v" id="d_health">—</div>
+          <div class="k">SLA</div><div class="v" id="d_sla">—</div>
+        </div>
+      </div>
+
+      <div style="flex:1; min-width:320px;">
+        <h2 style="margin:0;">Uptime Sparkline</h2>
+        <div class="muted">Built from local history samples for this device (fills in over time).</div>
+        <div style="height:10px"></div>
+        <canvas class="chart" id="deviceSparkChart" style="height:140px;"></canvas>
+        <div class="small" id="deviceSparkMeta" style="margin-top:8px;">—</div>
+      </div>
+    </div>
+
+    <hr class="sep"/>
+
+    <h2 style="margin:0;">Recent Local Events</h2>
+    <div class="muted">These events are captured in your browser from periodic refreshes.</div>
+    <div style="height:10px"></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Status</th>
+            <th class="right">Health</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody id="deviceEventRows">
+          <tr><td colspan="4" class="muted">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <p class="t" id="toastTitle">—</p>
+  <p class="m" id="toastMsg">—</p>
+</div>
 
 <script>
-async function loadDevices() {
-  try {
-    const res = await fetch("/api/devices");
-    const data = await res.json();
+/* ======================================================
+   DEVICES.HTML — DROP-IN ENTERPRISE PAGE
+   - No worker rewrites required
+   - Uses existing routes:
+       /api/me
+       /api/org
+       /api/devices?orgId=...
+   - Builds local 30-day trend + per-device uptime sparks using localStorage history
+====================================================== */
 
-    if (!data || !data.items) {
-      document.getElementById("loading").innerText = "Failed to load devices.";
-      return;
+const $ = (id) => document.getElementById(id);
+
+/* -----------------------------
+   Config knobs (SLA rules)
+----------------------------- */
+const SLA_RULES = {
+  // If offline/disconnected devices exceed this percent -> SLA at risk
+  OFFLINE_PCT_BREACH: 10,          // %
+  // If lastSeen older than this -> counts as stale
+  STALE_MINUTES: 30,               // min
+  // If breach condition persists longer than this -> mark as breach
+  BREACH_WINDOW_MINUTES: 10,       // min
+  // Health score thresholds (computed client-side)
+  HEALTH_GREEN_MIN: 85,
+  HEALTH_AMBER_MIN: 60
+};
+
+/* -----------------------------
+   State
+----------------------------- */
+let ME = null;
+let ORGS = [];
+let SELECTED_ORG_ID = null;
+
+let DEVICE_CACHE = [];      // last pull
+let DEVICE_SORT_KEY = "displayName";
+let DEVICE_SORT_ASC = true;
+
+let AUTO_REFRESH_MS = 60_000;
+let AUTO_REFRESH_TIMER = null;
+let AUTO_REFRESH_ENABLED = true;
+
+/* -----------------------------
+   Theme (persisted)
+----------------------------- */
+function loadTheme(){
+  const saved = localStorage.getItem("uiTheme");
+  const theme = saved === "dark" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  $("btnTheme").textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme") || "light";
+  const next = cur === "dark" ? "light" : "dark";
+  localStorage.setItem("uiTheme", next);
+  loadTheme();
+}
+$("btnTheme").addEventListener("click", toggleTheme);
+loadTheme();
+
+/* -----------------------------
+   Generic fetch wrapper
+----------------------------- */
+async function api(path, opts){
+  const res = await fetch(path, opts);
+  const txt = await res.text();
+  let data = null;
+  try { data = txt ? JSON.parse(txt) : null; } catch { data = { raw: txt }; }
+  return { ok: res.ok, status: res.status, data };
+}
+
+/* -----------------------------
+   Errors / toast
+----------------------------- */
+function setError(msg){
+  const box = $("errBox");
+  if (!msg){
+    box.classList.add("hidden");
+    box.textContent = "";
+    return;
+  }
+  box.classList.remove("hidden");
+  box.textContent = msg;
+}
+function toast(title, msg){
+  $("toastTitle").textContent = title || "";
+  $("toastMsg").textContent = msg || "";
+  const t = $("toast");
+  t.style.display = "block";
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(()=> t.style.display="none", 3500);
+}
+
+/* -----------------------------
+   Utilities
+----------------------------- */
+function escapeHtml(str){
+  return String(str ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function fmtInt(n){
+  if (!Number.isFinite(n)) return "0";
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(Math.trunc(n));
+  return sign + abs.toLocaleString();
+}
+function fmtDate(d){
+  if (!d) return "—";
+  const t = new Date(d);
+  if (Number.isNaN(t.getTime())) return "—";
+  return t.toLocaleString();
+}
+function timeAgo(dateString){
+  if (!dateString) return "—";
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days !== 1 ? "s" : ""} ago`;
+}
+function minutesSince(dateString){
+  if (!dateString) return Infinity;
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  if (!Number.isFinite(diffMs)) return Infinity;
+  return Math.floor(diffMs / 60000);
+}
+
+/* -----------------------------
+   Normalize device model fields
+   (Webex /devices can vary; your worker currently returns
+    id, displayName, model, connectionStatus, status, severity)
+   Some older UI code used `product`; we support both.
+----------------------------- */
+function normalizeDevice(d){
+  const id = d?.id || "";
+  const displayName = d?.displayName || d?.name || "—";
+  const model = d?.product || d?.model || d?.deviceType || "—";
+  const connectionStatus = d?.connectionStatus || d?.status || "—";
+  const lastSeen = d?.lastSeen || d?.lastSeenTime || d?.lastSeenAt || null;
+
+  return {
+    raw: d,
+    id,
+    displayName,
+    product: model,
+    connectionStatus,
+    lastSeen
+  };
+}
+
+function normalizeStatus(status){
+  if (!status) return "offline";
+  const s = String(status).toLowerCase();
+  if (s.includes("connected") && !s.includes("disconnected")) return "online";
+  if (s.includes("issue") || s.includes("warning") || s.includes("degraded")) return "warning";
+  if (s.includes("offline") || s.includes("disconnected") || s.includes("unknown")) return "offline";
+  // Default conservative
+  return "offline";
+}
+
+/* -----------------------------
+   Health score (client-side)
+----------------------------- */
+function calculateHealthScore(device){
+  const st = normalizeStatus(device.connectionStatus);
+
+  // hard floors
+  if (st === "offline") return 20;
+  if (st === "warning") return 60;
+
+  // online
+  const mins = minutesSince(device.lastSeen);
+  if (!Number.isFinite(mins)) return 70;
+
+  if (mins < 5) return 100;
+  if (mins < 30) return 90;
+  if (mins < 120) return 80;
+  if (mins < 1440) return 70;
+
+  return 50; // stale
+}
+
+/* -----------------------------
+   SLA evaluation (client-side)
+   - Uses current snapshot + persisted local history to decide breach
+----------------------------- */
+function evaluateSla(snapshot){
+  const devices = snapshot.devices || [];
+  const total = devices.length || 0;
+  const offline = devices.filter(d => normalizeStatus(d.connectionStatus) === "offline").length;
+  const stale  = devices.filter(d => minutesSince(d.lastSeen) >= SLA_RULES.STALE_MINUTES).length;
+
+  const offlinePct = total ? (offline / total) * 100 : 0;
+
+  // Breach condition: offline pct too high OR stale too high
+  const condition =
+    (offlinePct >= SLA_RULES.OFFLINE_PCT_BREACH) ||
+    (stale >= Math.max(1, Math.ceil(total * 0.10))); // 10% stale threshold, min 1
+
+  // Determine persistence via local history window
+  const windowMs = SLA_RULES.BREACH_WINDOW_MINUTES * 60_000;
+  const now = Date.now();
+
+  const recent = (snapshot.historyWindow || [])
+    .filter(x => (now - x.ts) <= windowMs);
+
+  const sustained = recent.length >= 2 && recent.every(x => x.condition === true);
+
+  const breach = condition && sustained;
+
+  return {
+    total, offline, stale,
+    offlinePct: Number(offlinePct.toFixed(2)),
+    condition,
+    sustained,
+    breach
+  };
+}
+
+/* ======================================================
+   Local history storage
+   - No worker changes required.
+   - We store:
+     - Org daily trend points (avg health, offline pct)
+     - Per-device event samples (status + health)
+====================================================== */
+function keyOrgTrend(orgId){ return `devTrend:${orgId}`; }
+function keyOrgSla(orgId){ return `devSla:${orgId}`; }
+function keyDeviceEvents(orgId, deviceId){ return `devEvents:${orgId}:${deviceId}`; }
+
+function readJsonLS(key, def){
+  try{
+    const raw = localStorage.getItem(key);
+    if (!raw) return def;
+    return JSON.parse(raw);
+  }catch{
+    return def;
+  }
+}
+function writeJsonLS(key, obj){
+  try{ localStorage.setItem(key, JSON.stringify(obj)); }catch{}
+}
+
+function clearLocalHistoryForOrg(orgId){
+  // Trend
+  localStorage.removeItem(keyOrgTrend(orgId));
+  localStorage.removeItem(keyOrgSla(orgId));
+  // Device events: we can’t enumerate keys reliably without scanning;
+  // best-effort: leave device events unless you want to wipe all localStorage.
+}
+
+function upsertTrendPoint(orgId, snapshot){
+  const list = readJsonLS(keyOrgTrend(orgId), []);
+  const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+
+  const devices = snapshot.devices || [];
+  const total = devices.length || 0;
+
+  const avgHealth = total
+    ? Math.round(devices.reduce((a,d)=> a + calculateHealthScore(d), 0) / total)
+    : 0;
+
+  const offline = devices.filter(d => normalizeStatus(d.connectionStatus) === "offline").length;
+  const offlinePct = total ? Math.round((offline / total) * 100) : 0;
+
+  const point = { day: today, avgHealth, offlinePct, total, ts: Date.now() };
+
+  const idx = list.findIndex(p => p.day === today);
+  if (idx >= 0) list[idx] = point; else list.push(point);
+
+  // Keep last 60 days
+  list.sort((a,b)=> a.day.localeCompare(b.day));
+  const trimmed = list.slice(-60);
+
+  writeJsonLS(keyOrgTrend(orgId), trimmed);
+  return trimmed;
+}
+
+function appendSlaWindow(orgId, slaEval){
+  const list = readJsonLS(keyOrgSla(orgId), []);
+  const entry = { ts: Date.now(), condition: !!slaEval.condition };
+  list.push(entry);
+
+  // Keep last 2 hours to evaluate breach windows safely
+  const cutoff = Date.now() - (2 * 60 * 60 * 1000);
+  const trimmed = list.filter(x => x.ts >= cutoff);
+
+  writeJsonLS(keyOrgSla(orgId), trimmed);
+  return trimmed;
+}
+
+function appendDeviceEvent(orgId, device){
+  if (!device?.id) return;
+
+  const key = keyDeviceEvents(orgId, device.id);
+  const list = readJsonLS(key, []);
+
+  const st = normalizeStatus(device.connectionStatus);
+  const health = calculateHealthScore(device);
+
+  const entry = {
+    ts: Date.now(),
+    status: st,
+    health,
+    lastSeen: device.lastSeen || null
+  };
+
+  // Only append if changed recently to reduce noise
+  const last = list[list.length - 1];
+  const changed =
+    !last ||
+    last.status !== entry.status ||
+    last.health !== entry.health;
+
+  if (changed) list.push(entry);
+
+  // Keep last 500 events
+  const trimmed = list.slice(-500);
+  writeJsonLS(key, trimmed);
+}
+
+/* ======================================================
+   Trend chart (canvas — no external libs)
+====================================================== */
+function drawTrendChart(points){
+  const canvas = $("trendChart");
+  const ctx = canvas.getContext("2d");
+
+  // Make it crisp on HiDPI
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.floor(rect.width * dpr);
+  canvas.height = Math.floor(rect.height * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  const w = rect.width;
+  const h = rect.height;
+
+  ctx.clearRect(0,0,w,h);
+
+  // padding
+  const padL = 44, padR = 14, padT = 14, padB = 28;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  // background grid
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1;
+
+  const gridColor = getComputedStyle(document.documentElement).getPropertyValue("--line").trim() || "rgba(15,23,42,.10)";
+  ctx.strokeStyle = gridColor;
+
+  for (let i=0;i<=4;i++){
+    const y = padT + (plotH * i / 4);
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(padL + plotW, y);
+    ctx.stroke();
+  }
+
+  // No data
+  if (!points || points.length === 0){
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
+    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+    ctx.fillText("No local history yet.", padL, padT + 18);
+    return;
+  }
+
+  // last 30 days
+  const last30 = points.slice(-30);
+
+  // y range 0-100 health
+  const yMin = 0, yMax = 100;
+
+  function xFor(i){
+    if (last30.length === 1) return padL + plotW/2;
+    return padL + (plotW * i / (last30.length - 1));
+  }
+  function yForHealth(v){
+    const t = (v - yMin) / (yMax - yMin);
+    return padT + plotH - (plotH * t);
+  }
+
+  // axis labels
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
+  ctx.font = "11px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+  ctx.fillText("100", 8, padT + 4);
+  ctx.fillText("0", 16, padT + plotH);
+
+  // Line (avgHealth) — using current text color for a neutral enterprise look
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#0f62fe";
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  last30.forEach((p, i)=>{
+    const x = xFor(i);
+    const y = yForHealth(p.avgHealth);
+    if (i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Points
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#0f62fe";
+  last30.forEach((p, i)=>{
+    const x = xFor(i);
+    const y = yForHealth(p.avgHealth);
+    ctx.beginPath();
+    ctx.arc(x,y,2.6,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  // x labels (first/last)
+  const first = last30[0].day;
+  const last = last30[last30.length-1].day;
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
+  ctx.font = "11px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+  ctx.fillText(first, padL, padT + plotH + 20);
+  const lastW = ctx.measureText(last).width;
+  ctx.fillText(last, padL + plotW - lastW, padT + plotH + 20);
+
+  // Secondary: offlinePct as small bars
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--bad").trim() || "#dc2626";
+  last30.forEach((p,i)=>{
+    const x = xFor(i);
+    const barH = Math.min(plotH, (plotH * (p.offlinePct / 100)));
+    ctx.fillRect(x-2, padT + plotH - barH, 4, barH);
+  });
+  ctx.globalAlpha = 1;
+}
+
+/* ======================================================
+   Device sparkline (tiny per-row)
+   - built from local events (online=1, other=0)
+====================================================== */
+function drawSpark(canvas, values){
+  const ctx = canvas.getContext("2d");
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+
+  canvas.width = Math.floor(rect.width * dpr);
+  canvas.height = Math.floor(rect.height * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  const w = rect.width;
+  const h = rect.height;
+  ctx.clearRect(0,0,w,h);
+
+  // backdrop
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(0,0,0,0)";
+
+  if (!values || values.length === 0){
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
+    ctx.font = "10px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+    ctx.fillText("—", 6, 14);
+    return;
+  }
+
+  const min = 0, max = 1;
+  const pad = 3;
+  const plotW = w - pad*2;
+  const plotH = h - pad*2;
+
+  function xFor(i){
+    if (values.length === 1) return pad + plotW/2;
+    return pad + (plotW * i / (values.length - 1));
+  }
+  function yFor(v){
+    const t = (v - min) / (max - min);
+    return pad + plotH - (plotH * t);
+  }
+
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#0f62fe";
+  ctx.lineWidth = 1.6;
+
+  ctx.beginPath();
+  values.forEach((v,i)=>{
+    const x = xFor(i);
+    const y = yFor(v);
+    if (i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+}
+
+function getDeviceEventSeries(orgId, deviceId, maxPoints=24){
+  const key = keyDeviceEvents(orgId, deviceId);
+  const events = readJsonLS(key, []);
+
+  // Take last N events and map online->1 else 0
+  const tail = events.slice(-maxPoints);
+  return tail.map(e => e.status === "online" ? 1 : 0);
+}
+
+/* ======================================================
+   Drill-down chart (deviceSparkChart)
+====================================================== */
+function drawDeviceDetailSpark(orgId, deviceId){
+  const canvas = $("deviceSparkChart");
+  const ctx = canvas.getContext("2d");
+
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.floor(rect.width * dpr);
+  canvas.height = Math.floor(rect.height * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  const w = rect.width;
+  const h = rect.height;
+  ctx.clearRect(0,0,w,h);
+
+  const events = readJsonLS(keyDeviceEvents(orgId, deviceId), []);
+  if (!events.length){
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
+    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+    ctx.fillText("No local history for this device yet.", 14, 22);
+    return;
+  }
+
+  const tail = events.slice(-96); // ~ last 96 changes
+  const padL = 46, padR = 16, padT = 16, padB = 24;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  // grid
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim() || "rgba(15,23,42,.10)";
+  ctx.lineWidth = 1;
+  for (let i=0;i<=2;i++){
+    const y = padT + (plotH * i / 2);
+    ctx.beginPath();
+    ctx.moveTo(padL,y);
+    ctx.lineTo(padL+plotW,y);
+    ctx.stroke();
+  }
+
+  const xs = (i)=> tail.length===1 ? (padL + plotW/2) : (padL + plotW*(i/(tail.length-1)));
+  const ys = (v)=> padT + plotH - (plotH*(v/100));
+
+  // Line: health score
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#0f62fe";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  tail.forEach((e,i)=>{
+    const x = xs(i);
+    const y = ys(e.health);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Label y axis
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
+  ctx.font = "11px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+  ctx.fillText("100", 10, padT + 4);
+  ctx.fillText("0", 18, padT + plotH);
+
+  // Meta
+  const first = new Date(tail[0].ts).toLocaleString();
+  const last = new Date(tail[tail.length-1].ts).toLocaleString();
+  $("deviceSparkMeta").textContent = `Events: ${tail.length} • Range: ${first} → ${last}`;
+}
+
+/* ======================================================
+   CSV Export
+====================================================== */
+function exportCsv(devices){
+  const header = [
+    "deviceId","displayName","model","status","connectionStatus","lastSeen","minutesSinceLastSeen","healthScore","slaFlag"
+  ];
+
+  const rows = (devices || []).map(d=>{
+    const norm = normalizeDevice(d.raw ? d : d); // allow normalized inputs too
+    const st = normalizeStatus(norm.connectionStatus);
+    const mins = minutesSince(norm.lastSeen);
+    const health = calculateHealthScore(norm);
+    const stale = mins >= SLA_RULES.STALE_MINUTES;
+    const slaFlag = (st === "offline") ? "OFFLINE" : (stale ? "STALE" : "OK");
+
+    return [
+      norm.id,
+      norm.displayName,
+      norm.product,
+      st,
+      norm.connectionStatus,
+      norm.lastSeen || "",
+      Number.isFinite(mins) ? mins : "",
+      health,
+      slaFlag
+    ].map(v => `"${String(v ?? "").replaceAll('"','""')}"`).join(",");
+  });
+
+  const csv = [header.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `webex-devices-${SELECTED_ORG_ID || "tenant"}-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  URL.revokeObjectURL(url);
+}
+
+/* ======================================================
+   Tenant helpers
+====================================================== */
+function safeOrgLabel(o){
+  const name = o.displayName || o.name || o.orgName || "Unknown";
+  const id = o.id || o.orgId || "";
+  return `${name}${id ? " — " + id.slice(0,10) + "…" : ""}`;
+}
+
+/* ======================================================
+   Load /api/me
+====================================================== */
+async function loadMe(){
+  const r = await api("/api/me");
+  if (!r.ok) throw new Error("Failed to load /api/me");
+
+  ME = r.data;
+
+  // Customer must have org resolved or redirect to /pin
+  if (ME.role !== "admin" && !ME.orgId){
+    window.location.href = "/pin";
+    return false;
+  }
+
+  $("whoLine").textContent = `${ME.email} (${ME.role})`;
+  $("tenantPill").textContent = `Tenant: ${ME.orgName || "—"}`;
+
+  $("orgContext").textContent = ME.orgName
+    ? `${ME.orgName} (${ME.resolution || "session"} resolution)`
+    : "No tenant resolved";
+
+  $("admin-note").classList.toggle("hidden", ME.role !== "admin");
+
+  $("sideMeta").textContent = `Session: ${ME.sessionExpiresInSeconds ? (ME.sessionExpiresInSeconds + "s left") : "—"}`;
+  return true;
+}
+
+/* ======================================================
+   Load org list (/api/org)
+====================================================== */
+async function loadOrgs(){
+  const r = await api("/api/org");
+  if (!r.ok){
+    if (r.status === 401){
+      setError("Tenant not resolved. Please verify your PIN or contact US Signal.");
+      return false;
     }
+    setError("Failed to load org list.");
+    return false;
+  }
 
-    const summary = data.summary || {};
-    const devices = data.items || [];
+  ORGS = Array.isArray(r.data) ? r.data : [];
+  const sel = $("tenantSelect");
+  sel.innerHTML = "";
 
-    document.getElementById("totalDevices").innerText = summary.totalDevices ?? devices.length;
-    document.getElementById("connectedDevices").innerText = summary.connected ?? 0;
-    document.getElementById("offlineDevices").innerText = summary.offline ?? 0;
+  if (ORGS.length === 0){
+    sel.innerHTML = `<option value="">No organizations available</option>`;
+    sel.disabled = true;
+    $("btnLoad").disabled = true;
+    return false;
+  }
 
-    if (summary.hasOffline) {
-      const alert = document.createElement("div");
-      alert.className = "alert alert-warning";
-      alert.innerText = "Warning: One or more devices are offline.";
-      document.getElementById("alertContainer").appendChild(alert);
-    }
+  for (const o of ORGS){
+    const opt = document.createElement("option");
+    opt.value = o.id || o.orgId || "";
+    opt.textContent = safeOrgLabel(o);
+    sel.appendChild(opt);
+  }
 
-    const tbody = document.getElementById("deviceBody");
+  sel.disabled = false;
+  $("btnLoad").disabled = false;
 
-    devices.sort((a, b) => {
-      if (a.status === "OFFLINE" && b.status !== "OFFLINE") return -1;
-      if (a.status !== "OFFLINE" && b.status === "OFFLINE") return 1;
-      return (a.displayName || "").localeCompare(b.displayName || "");
-    });
+  const defaultOrgId = ME?.orgId || (ORGS[0].id || ORGS[0].orgId);
+  if (defaultOrgId) sel.value = defaultOrgId;
+  SELECTED_ORG_ID = sel.value;
 
-    for (const d of devices) {
-      const tr = document.createElement("tr");
+  return true;
+}
 
-      tr.innerHTML = `
-        <td>${d.displayName || "-"}</td>
-        <td>${d.model || "-"}</td>
-        <td class="${d.status === 'OFFLINE' ? 'status-offline' : 'status-ok'}">
-          ${d.connectionStatus || d.status}
-        </td>
-      `;
+/* ======================================================
+   Load devices (/api/devices?orgId=...)
+====================================================== */
+async function loadDevices(){
+  setError(null);
 
-      tbody.appendChild(tr);
-    }
+  $("deviceLoading").classList.remove("hidden");
+  $("deviceLoading").textContent = "Loading devices…";
+  $("deviceTable").classList.add("hidden");
+  $("deviceRows").innerHTML = "";
 
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("deviceTable").style.display = "table";
+  const orgId = SELECTED_ORG_ID || "";
+  const q = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
+  const r = await api(`/api/devices${q}`);
 
-  } catch (e) {
-    document.getElementById("loading").innerText = "Error loading devices.";
+  if (!r.ok){
+    $("deviceLoading").textContent = "Failed to load devices.";
+    setError((r.data && (r.data.message || r.data.error)) || `Devices API failed (HTTP ${r.status}).`);
+    updateSidebarRag(null, null);
+    return;
+  }
+
+  // Your worker returns:
+  // { orgId, summary, items }
+  const items = Array.isArray(r.data?.items) ? r.data.items : [];
+  DEVICE_CACHE = items.map(d => normalizeDevice(d));
+
+  if (!DEVICE_CACHE.length){
+    $("deviceLoading").textContent = "No devices found.";
+    $("deviceTable").classList.add("hidden");
+    updateSummaryUI([]);
+    updateSlaUI([]);
+    drawTrendChart(upsertTrendPoint(orgId, { devices: [] }).slice(-30));
+    return;
+  }
+
+  // Persist local history (trend + per-device events + SLA window)
+  const snapshot = { devices: DEVICE_CACHE };
+  const trend = upsertTrendPoint(orgId, snapshot);
+
+  const tmpSla = evaluateSla({ devices: DEVICE_CACHE, historyWindow: [] });
+  const windowList = appendSlaWindow(orgId, tmpSla);
+
+  // attach window to compute sustained/breach
+  const slaEval = evaluateSla({ devices: DEVICE_CACHE, historyWindow: windowList });
+
+  // per-device events
+  DEVICE_CACHE.forEach(d => appendDeviceEvent(orgId, d));
+
+  // Update UI
+  $("deviceLoading").classList.add("hidden");
+  $("deviceTable").classList.remove("hidden");
+
+  updateSummaryUI(DEVICE_CACHE);
+  updateSlaUI(DEVICE_CACHE, slaEval);
+  updateSidebarRag(DEVICE_CACHE, slaEval);
+
+  renderDevices(DEVICE_CACHE);
+
+  // Trend chart (last 30)
+  const points = readJsonLS(keyOrgTrend(orgId), []);
+  $("trendMeta").textContent = `Points stored: ${points.length}`;
+  drawTrendChart(points.slice(-30));
+
+  $("lastRefreshPill").textContent = `Last refresh: ${new Date().toLocaleTimeString()}`;
+  $("localStoreState").textContent = `Local history enabled • Trend points: ${readJsonLS(keyOrgTrend(orgId), []).length}`;
+
+  // If deep link exists, open
+  const deep = getDeviceFromUrl();
+  if (deep){
+    const hit = DEVICE_CACHE.find(x => x.id === deep);
+    if (hit) openDeviceModal(hit);
   }
 }
 
-loadDevices();
+/* ======================================================
+   Summary UI + RAG health
+====================================================== */
+function fleetRag(devices){
+  if (!devices || devices.length === 0) return { rag:"grey", score:0, label:"No Data" };
+
+  const avg = Math.round(devices.reduce((a,d)=> a + calculateHealthScore(d), 0) / devices.length);
+
+  let rag = "good";
+  let label = "Green";
+  if (avg < SLA_RULES.HEALTH_GREEN_MIN){ rag="warn"; label="Amber"; }
+  if (avg < SLA_RULES.HEALTH_AMBER_MIN){ rag="bad"; label="Red"; }
+
+  return { rag, score: avg, label };
+}
+
+function updateSummaryUI(devices){
+  const total = devices.length || 0;
+  const online = devices.filter(d => normalizeStatus(d.connectionStatus) === "online").length;
+  const warning = devices.filter(d => normalizeStatus(d.connectionStatus) === "warning").length;
+  const offline = devices.filter(d => normalizeStatus(d.connectionStatus) === "offline").length;
+
+  $("sumOnline").textContent = `${online} Online`;
+  $("sumWarning").textContent = `${warning} Issues`;
+  $("sumOffline").textContent = `${offline} Offline`;
+
+  $("summaryLine").textContent = total
+    ? `${total} devices • ${offline} offline/disconnected • ${warning} with issues`
+    : "—";
+
+  const rag = fleetRag(devices);
+  const hp = $("healthPill");
+
+  hp.classList.remove("health-good","health-mid","health-bad");
+  if (rag.rag === "good") hp.classList.add("health-good");
+  if (rag.rag === "warn") hp.classList.add("health-mid");
+  if (rag.rag === "bad") hp.classList.add("health-bad");
+
+  hp.textContent = total ? `${rag.score}% • ${rag.label}` : "—";
+
+  $("deviceSummary").textContent = total
+    ? `${total} devices • ${offline} offline/disconnected`
+    : "No devices found.";
+}
+
+/* ======================================================
+   SLA UI
+====================================================== */
+function updateSlaUI(devices, slaEval){
+  $("ruleOfflinePct").textContent = SLA_RULES.OFFLINE_PCT_BREACH;
+  $("ruleStaleMin").textContent = SLA_RULES.STALE_MINUTES;
+  $("ruleWindowMin").textContent = SLA_RULES.BREACH_WINDOW_MINUTES;
+
+  if (!devices || devices.length === 0){
+    $("slaPill").classList.remove("health-good","health-mid","health-bad");
+    $("slaPill").textContent = "—";
+    $("slaDetail").textContent = "No data.";
+    $("slaBreaches").textContent = "—";
+    return;
+  }
+
+  const e = slaEval || evaluateSla({ devices, historyWindow: readJsonLS(keyOrgSla(SELECTED_ORG_ID), []) });
+
+  const stalePct = e.total ? Math.round((e.stale / e.total) * 100) : 0;
+
+  const status =
+    e.breach ? "BREACH" :
+    e.condition ? "AT RISK" :
+    "OK";
+
+  const pill = $("slaPill");
+  pill.classList.remove("health-good","health-mid","health-bad");
+  if (status === "OK") pill.classList.add("health-good");
+  if (status === "AT RISK") pill.classList.add("health-mid");
+  if (status === "BREACH") pill.classList.add("health-bad");
+
+  pill.textContent = status;
+
+  $("slaDetail").innerHTML =
+    `<span class="mono">offline=${e.offline}</span> (${e.offlinePct}%), ` +
+    `<span class="mono">stale=${e.stale}</span> (${stalePct}%) ` +
+    `• sustained=${e.sustained ? "yes" : "no"}`;
+
+  // breaches (local approximation)
+  const windowList = readJsonLS(keyOrgSla(SELECTED_ORG_ID), []);
+  const windowMs = SLA_RULES.BREACH_WINDOW_MINUTES * 60_000;
+  const now = Date.now();
+  const recent = windowList.filter(x => (now - x.ts) <= windowMs);
+  const condCount = recent.filter(x => x.condition).length;
+
+  $("slaBreaches").textContent =
+    e.breach
+      ? `Active breach detected (condition samples in window: ${condCount}/${recent.length}).`
+      : e.condition
+        ? `Condition present, monitoring for sustained breach (samples: ${condCount}/${recent.length}).`
+        : `No breach conditions in the current window.`;
+}
+
+/* ======================================================
+   Sidebar R/A/G summary pill + SLA pill
+====================================================== */
+function setDot(el, state){
+  el.classList.remove("good","warn","bad");
+  if (state === "good") el.classList.add("good");
+  else if (state === "warn") el.classList.add("warn");
+  else if (state === "bad") el.classList.add("bad");
+}
+function updateSidebarRag(devices, slaEval){
+  // Health RAG
+  if (!devices || devices.length === 0){
+    $("sideRagText").textContent = "Health: —";
+    setDot($("sideRagDot"), null);
+    $("sideSlaText").textContent = "SLA: —";
+    setDot($("sideSlaDot"), null);
+    return;
+  }
+  const rag = fleetRag(devices);
+  $("sideRagText").textContent = `Health: ${rag.label} (${rag.score}%)`;
+  setDot($("sideRagDot"), rag.rag);
+
+  // SLA
+  const e = slaEval || evaluateSla({ devices, historyWindow: readJsonLS(keyOrgSla(SELECTED_ORG_ID), []) });
+  let s = "good";
+  let label = "OK";
+  if (e.condition) { s = "warn"; label = "At Risk"; }
+  if (e.breach) { s = "bad"; label = "Breach"; }
+  $("sideSlaText").textContent = `SLA: ${label}`;
+  setDot($("sideSlaDot"), s);
+}
+
+/* ======================================================
+   Table render + grouping + sorting
+====================================================== */
+function sortCompare(a,b,key){
+  let va, vb;
+
+  if (key === "health"){
+    va = calculateHealthScore(a);
+    vb = calculateHealthScore(b);
+  } else if (key === "lastSeen"){
+    va = a.lastSeen ? new Date(a.lastSeen).getTime() : 0;
+    vb = b.lastSeen ? new Date(b.lastSeen).getTime() : 0;
+  } else {
+    va = (a[key] ?? "").toString().toLowerCase();
+    vb = (b[key] ?? "").toString().toLowerCase();
+  }
+
+  if (va < vb) return DEVICE_SORT_ASC ? -1 : 1;
+  if (va > vb) return DEVICE_SORT_ASC ? 1 : -1;
+  return 0;
+}
+
+function renderDevices(devices){
+  const filter = $("deviceFilter").value;
+  const search = $("deviceSearch").value.trim().toLowerCase();
+  const group = $("deviceGroup").value;
+
+  let list = [...devices];
+
+  // sort
+  if (DEVICE_SORT_KEY){
+    list.sort((a,b)=> sortCompare(a,b,DEVICE_SORT_KEY));
+  }
+
+  // filter/search
+  list = list.filter(d=>{
+    const st = normalizeStatus(d.connectionStatus);
+    const stale = minutesSince(d.lastSeen) >= SLA_RULES.STALE_MINUTES;
+
+    const matchesFilter =
+      filter === "all" ||
+      (filter === "online" && st === "online") ||
+      (filter === "warning" && st === "warning") ||
+      (filter === "offline" && st === "offline") ||
+      (filter === "stale" && stale);
+
+    const hay =
+      `${d.displayName} ${d.product} ${d.connectionStatus} ${st}`.toLowerCase();
+
+    const matchesSearch = !search || hay.includes(search);
+
+    return matchesFilter && matchesSearch;
+  });
+
+  // grouping
+  if (group !== "none"){
+    const groups = new Map();
+    for (const d of list){
+      const st = normalizeStatus(d.connectionStatus);
+      const key =
+        group === "model" ? (d.product || "—") :
+        group === "status" ? st.toUpperCase() :
+        "—";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(d);
+    }
+
+    // render groups
+    let html = "";
+    for (const [gname, items] of groups.entries()){
+      html += `
+        <tr>
+          <td colspan="8" style="padding:10px 12px; font-weight:1000; background:rgba(15,23,42,.03);">
+            ${escapeHtml(gname)} <span class="muted" style="font-weight:800;">(${items.length})</span>
+          </td>
+        </tr>
+      `;
+      html += items.map(d => renderDeviceRow(d)).join("");
+    }
+    $("deviceRows").innerHTML = html || `<tr><td colspan="8" class="muted">No matches.</td></tr>`;
+    // after DOM inserted, draw sparklines
+    drawRowSparks(list);
+    return;
+  }
+
+  // ungrouped
+  $("deviceRows").innerHTML = list.length
+    ? list.map(d => renderDeviceRow(d)).join("")
+    : `<tr><td colspan="8" class="muted">No matches.</td></tr>`;
+
+  drawRowSparks(list);
+}
+
+function renderDeviceRow(d){
+  const st = normalizeStatus(d.connectionStatus);
+  const mins = minutesSince(d.lastSeen);
+  const stale = mins >= SLA_RULES.STALE_MINUTES;
+
+  const health = calculateHealthScore(d);
+  const healthClass =
+    health >= SLA_RULES.HEALTH_GREEN_MIN ? "health-good" :
+    health >= SLA_RULES.HEALTH_AMBER_MIN ? "health-mid" :
+    "health-bad";
+
+  const badgeClass =
+    st === "online" ? "good" :
+    st === "warning" ? "warn" :
+    "bad";
+
+  const badgeLabel =
+    st === "online" ? "ONLINE" :
+    st === "warning" ? "ISSUES" :
+    "OFFLINE";
+
+  // SLA flag per device
+  const slaFlag =
+    st === "offline" ? { cls:"bad", txt:"OFFLINE" } :
+    stale ? { cls:"warn", txt:"STALE" } :
+    { cls:"good", txt:"OK" };
+
+  const lastSeenLine = d.lastSeen
+    ? `${fmtDate(d.lastSeen)}<div class="small">${timeAgo(d.lastSeen)}</div>`
+    : "—";
+
+  const notes =
+    st === "offline" ? "Power / site outage likely" :
+    stale ? `No recent check-in (>${SLA_RULES.STALE_MINUTES} min)` :
+    "—";
+
+  // Sparkline canvas per-row (id derived)
+  const sparkId = `spark_${escapeHtml(d.id)}`.replaceAll(":","_");
+
+  return `
+    <tr>
+      <td>
+        <a class="link" href="#" data-open="${escapeHtml(d.id)}">${escapeHtml(d.displayName || "—")}</a>
+        <div class="small mono">${escapeHtml(d.id || "").slice(0,12)}…</div>
+      </td>
+      <td>${escapeHtml(d.product || "—")}</td>
+      <td>
+        <span class="badge ${badgeClass}">
+          <span class="dot"></span> ${badgeLabel}
+        </span>
+        ${st === "online" ? `<div class="small">Uptime: ${mins < 60 ? "&lt; 1 hr" : (mins < 1440 ? Math.floor(mins/60)+" hrs" : Math.floor(mins/1440)+" days")}</div>` : ""}
+      </td>
+      <td class="right">${lastSeenLine}</td>
+      <td class="right">
+        <span class="health-pill ${healthClass}">${health}%</span>
+      </td>
+      <td>
+        <span class="badge ${slaFlag.cls}">
+          <span class="dot"></span> ${slaFlag.txt}
+        </span>
+      </td>
+      <td class="right">
+        <canvas class="spark" data-spark="${escapeHtml(d.id)}"></canvas>
+      </td>
+      <td>${escapeHtml(notes)}</td>
+    </tr>
+  `;
+}
+
+function drawRowSparks(renderedList){
+  // Find each spark canvas and draw from local series
+  const canvases = document.querySelectorAll("canvas[data-spark]");
+  canvases.forEach(c=>{
+    const deviceId = c.getAttribute("data-spark");
+    const series = getDeviceEventSeries(SELECTED_ORG_ID, deviceId, 24);
+    drawSpark(c, series);
+  });
+}
+
+/* ======================================================
+   Device drill-down modal
+====================================================== */
+function openDeviceModal(device){
+  const d = device;
+  const st = normalizeStatus(d.connectionStatus);
+  const mins = minutesSince(d.lastSeen);
+  const stale = mins >= SLA_RULES.STALE_MINUTES;
+
+  const health = calculateHealthScore(d);
+  const healthClass =
+    health >= SLA_RULES.HEALTH_GREEN_MIN ? "health-good" :
+    health >= SLA_RULES.HEALTH_AMBER_MIN ? "health-mid" :
+    "health-bad";
+
+  const sla =
+    st === "offline" ? "OFFLINE" :
+    stale ? "STALE" :
+    "OK";
+
+  $("modalTitle").textContent = d.displayName || "Device";
+  $("modalSub").textContent = `${d.product || "—"} • ${st.toUpperCase()} • ${health}%`;
+
+  $("d_id").textContent = d.id || "—";
+  $("d_model").textContent = d.product || "—";
+  $("d_status").innerHTML = `<span class="badge ${st==="online"?"good":st==="warning"?"warn":"bad"}"><span class="dot"></span>${st.toUpperCase()}</span>`;
+  $("d_lastSeen").innerHTML = d.lastSeen ? `${fmtDate(d.lastSeen)} <span class="small">(${timeAgo(d.lastSeen)})</span>` : "—";
+  $("d_health").innerHTML = `<span class="health-pill ${healthClass}">${health}%</span>`;
+  $("d_sla").innerHTML = `<span class="badge ${sla==="OK"?"good":sla==="STALE"?"warn":"bad"}"><span class="dot"></span>${sla}</span>`;
+
+  // events table
+  const events = readJsonLS(keyDeviceEvents(SELECTED_ORG_ID, d.id), []).slice(-25).reverse();
+  $("deviceEventRows").innerHTML = events.length ? events.map(e=>{
+    const badge =
+      e.status === "online" ? "good" :
+      e.status === "warning" ? "warn" :
+      "bad";
+    return `
+      <tr>
+        <td>${new Date(e.ts).toLocaleString()}</td>
+        <td><span class="badge ${badge}"><span class="dot"></span>${escapeHtml(e.status.toUpperCase())}</span></td>
+        <td class="right">${escapeHtml(String(e.health))}%</td>
+        <td>${e.status === "offline" ? "Disconnected/offline observed" : e.status === "warning" ? "Issues observed" : "Online"}</td>
+      </tr>
+    `;
+  }).join("") : `<tr><td colspan="4" class="muted">No local events yet.</td></tr>`;
+
+  // chart
+  drawDeviceDetailSpark(SELECTED_ORG_ID, d.id);
+
+  // set deep-link actions
+  $("btnOpenDeepLink").onclick = ()=>{
+    const url = new URL(window.location.href);
+    url.searchParams.set("device", d.id);
+    window.location.href = url.toString();
+  };
+
+  // show modal
+  $("deviceModal").style.display = "flex";
+  $("deviceModal").setAttribute("aria-hidden","false");
+
+  // update URL in-place (no reload)
+  try{
+    const u = new URL(window.location.href);
+    u.searchParams.set("device", d.id);
+    window.history.replaceState({}, "", u.toString());
+  }catch{}
+}
+
+function closeDeviceModal(){
+  $("deviceModal").style.display = "none";
+  $("deviceModal").setAttribute("aria-hidden","true");
+
+  // remove device param
+  try{
+    const u = new URL(window.location.href);
+    u.searchParams.delete("device");
+    window.history.replaceState({}, "", u.toString());
+  }catch{}
+}
+
+$("btnCloseModal").addEventListener("click", closeDeviceModal);
+$("deviceModal").addEventListener("click", (e)=>{
+  if (e.target === $("deviceModal")) closeDeviceModal();
+});
+document.addEventListener("keydown",(e)=>{
+  if (e.key === "Escape") closeDeviceModal();
+});
+
+function getDeviceFromUrl(){
+  try{
+    const u = new URL(window.location.href);
+    return u.searchParams.get("device");
+  }catch{
+    return null;
+  }
+}
+
+/* ======================================================
+   UI wiring
+====================================================== */
+$("btnRefresh").addEventListener("click", async ()=>{
+  toast("Refreshing", "Fetching latest device data…");
+  await loadDevices();
+});
+$("btnLoad").addEventListener("click", async ()=>{
+  toast("Loading", "Loading devices for selected tenant…");
+  await loadDevices();
+});
+$("btnExportCsv").addEventListener("click", ()=>{
+  if (!DEVICE_CACHE.length){
+    toast("Export CSV", "No devices loaded yet.");
+    return;
+  }
+  exportCsv(DEVICE_CACHE);
+  toast("Export CSV", "Download started.");
+});
+$("btnCopyJson").addEventListener("click", async ()=>{
+  try{
+    await navigator.clipboard.writeText(JSON.stringify(DEVICE_CACHE.map(d=>d.raw || d), null, 2));
+    toast("Copied", "Device JSON copied to clipboard.");
+  }catch{
+    toast("Copy failed", "Clipboard permission blocked.");
+  }
+});
+
+$("deviceFilter").addEventListener("change", ()=> renderDevices(DEVICE_CACHE));
+$("deviceGroup").addEventListener("change", ()=> renderDevices(DEVICE_CACHE));
+$("deviceSearch").addEventListener("input", ()=> renderDevices(DEVICE_CACHE));
+
+$("tenantSelect").addEventListener("change", ()=>{
+  SELECTED_ORG_ID = $("tenantSelect").value;
+  setError(null);
+
+  // clear caches for UI state only (history remains per org)
+  DEVICE_CACHE = [];
+  $("deviceRows").innerHTML = "";
+  $("deviceTable").classList.add("hidden");
+  $("deviceLoading").classList.remove("hidden");
+  $("deviceLoading").textContent = "Select Load Devices to fetch data.";
+
+  // update chart for this org immediately
+  const points = readJsonLS(keyOrgTrend(SELECTED_ORG_ID), []);
+  $("trendMeta").textContent = `Points stored: ${points.length}`;
+  drawTrendChart(points.slice(-30));
+
+  $("localStoreState").textContent = `Local history enabled • Trend points: ${points.length}`;
+});
+
+$("btnClearLocal").addEventListener("click", ()=>{
+  if (!SELECTED_ORG_ID){
+    toast("Reset", "No tenant selected.");
+    return;
+  }
+  clearLocalHistoryForOrg(SELECTED_ORG_ID);
+  toast("Reset local history", "Trend + SLA window cleared for this tenant.");
+  const points = readJsonLS(keyOrgTrend(SELECTED_ORG_ID), []);
+  $("trendMeta").textContent = `Points stored: ${points.length}`;
+  drawTrendChart(points.slice(-30));
+});
+
+/* Sorting by header click */
+document.addEventListener("click", (e)=>{
+  const th = e.target.closest("th[data-sort]");
+  if (th){
+    const key = th.getAttribute("data-sort");
+    if (DEVICE_SORT_KEY === key) DEVICE_SORT_ASC = !DEVICE_SORT_ASC;
+    else { DEVICE_SORT_KEY = key; DEVICE_SORT_ASC = true; }
+    renderDevices(DEVICE_CACHE);
+  }
+
+  const link = e.target.closest("a[data-open]");
+  if (link){
+    e.preventDefault();
+    const id = link.getAttribute("data-open");
+    const hit = DEVICE_CACHE.find(x => x.id === id);
+    if (hit) openDeviceModal(hit);
+  }
+});
+
+/* Auto refresh controls */
+function startAutoRefresh(){
+  stopAutoRefresh();
+  if (!AUTO_REFRESH_ENABLED) return;
+
+  AUTO_REFRESH_TIMER = setInterval(()=>{
+    // only refresh if page visible
+    if (document.hidden) return;
+    // refresh only if a tenant is selected
+    if (!SELECTED_ORG_ID) return;
+    loadDevices();
+  }, AUTO_REFRESH_MS);
+
+  $("btnAutoRefresh").textContent = "Pause";
+  $("autoRefreshLabel").textContent = `${Math.round(AUTO_REFRESH_MS/1000)}s`;
+}
+function stopAutoRefresh(){
+  if (AUTO_REFRESH_TIMER) clearInterval(AUTO_REFRESH_TIMER);
+  AUTO_REFRESH_TIMER = null;
+}
+$("btnAutoRefresh").addEventListener("click", ()=>{
+  AUTO_REFRESH_ENABLED = !AUTO_REFRESH_ENABLED;
+  if (AUTO_REFRESH_ENABLED){
+    startAutoRefresh();
+    toast("Auto refresh", "Enabled.");
+  } else {
+    stopAutoRefresh();
+    $("btnAutoRefresh").textContent = "Resume";
+    toast("Auto refresh", "Paused.");
+  }
+});
+
+/* Logout button (customer session) */
+$("btnLogout").addEventListener("click", async ()=>{
+  try{
+    await api("/api/pin/logout", { method:"POST" });
+  }catch{}
+  // Always go back to PIN page for re-auth
+  window.location.href = "/pin";
+});
+
+/* ======================================================
+   Init
+====================================================== */
+async function init(){
+  try{
+    setError(null);
+
+    const ok = await loadMe();
+    if (!ok) return;
+
+    const okOrgs = await loadOrgs();
+    if (!okOrgs) return;
+
+    // Show existing trend for default org
+    const points = readJsonLS(keyOrgTrend(SELECTED_ORG_ID), []);
+    $("trendMeta").textContent = `Points stored: ${points.length}`;
+    drawTrendChart(points.slice(-30));
+
+    // Initial load
+    await loadDevices();
+
+    // Start auto refresh
+    startAutoRefresh();
+
+    // If deep link exists but device not in cache yet, loadDevices already handles it.
+
+  }catch(e){
+    setError(e?.message || String(e));
+  }
+}
+init();
+
+/* Redraw charts on resize */
+let _rz;
+window.addEventListener("resize", ()=>{
+  clearTimeout(_rz);
+  _rz = setTimeout(()=>{
+    const points = readJsonLS(keyOrgTrend(SELECTED_ORG_ID), []);
+    drawTrendChart(points.slice(-30));
+    // re-draw row sparks
+    drawRowSparks(DEVICE_CACHE);
+    // if modal open, redraw modal chart
+    const deep = getDeviceFromUrl();
+    if (deep) drawDeviceDetailSpark(SELECTED_ORG_ID, deep);
+  }, 120);
+});
 </script>
 
 </body>
