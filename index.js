@@ -3893,16 +3893,20 @@ async scheduled(event, env, ctx) {
 });
 
 // ✅ Global snapshot once per cron run
-try {
-  const globalPayload = await computeGlobalSummary(env);
-  await putGlobalSummarySnapshot(env, globalPayload);
-  console.log("Global summary snapshot rebuilt via cron");
-} catch (e) {
-  console.error("Global summary rebuild failed:", e);
+   try {
+      const globalPayload = await computeGlobalSummary(env);
+      await putGlobalSummarySnapshot(env, globalPayload);
+      console.log("Global summary snapshot rebuilt via cron");
+    } catch (e) {
+      console.error("Global summary rebuild failed:", e);
+    }
+
+    console.log("Health + Quality + PSTN snapshots updated");
+
+  } catch (err) {
+    console.error("Scheduled task failed:", err);
+  }
 }
-
-console.log("Health + Quality + PSTN snapshots updated");
-
   })());
 }
 
