@@ -1,0 +1,2946 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<title>US Signal | Webex Observability Suite</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<style>
+/* ======================================================
+   US SIGNAL | WEBEX OBSERVABILITY SUITE (ENTERPRISE)
+   - Fortune-100 NOC wall ready
+   - Auto-detect Admin vs Customer (like License Intelligence 2.0)
+   - Works with existing Worker APIs (best-effort):
+     GET  /api/me
+     GET  /api/org
+     GET  /api/incidents
+     GET  /api/status
+     GET  /api/maintenance
+     GET  /api/licenses?orgId=...
+     GET  /api/devices?orgId=...
+     GET  /api/pstn?orgId=...            (optional)
+     GET  /api/analytics?orgId=...       (optional)
+     GET  /api/cdr?orgId=...             (optional)
+     POST /api/logout (optional)
+     POST /api/pin/logout (optional)
+     POST /api/incidents/email (optional)
+     POST /api/notify (optional)
+     POST /api/licenses/email (fallback email endpoint you already have)
+====================================================== */
+
+/* ---------- Theme Tokens (LIGHT default) ---------- */
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
+
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+  --info:#2563eb;
+
+  --chip:rgba(15,98,254,.08);
+  --chipText:#1d4ed8;
+
+  --rowHover:rgba(15,98,254,.04);
+  --pillBg:#fff;
+  --pillBorder:rgba(15,23,42,.14);
+
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  --nocBg:#070c16;
+  --nocCard:#0b1220;
+  --nocLine:rgba(226,232,240,.10);
+}
+
+/* ---------- Theme Tokens (DARK) ---------- */
+html[data-theme="dark"]{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --line:rgba(226,232,240,.12);
+  --shadow:0 12px 32px rgba(0,0,0,.35);
+
+  --accent:#3b82f6;
+  --accent2:#60a5fa;
+
+  --good:#22c55e;
+  --warn:#f59e0b;
+  --bad:#ef4444;
+  --info:#60a5fa;
+
+  --chip:rgba(59,130,246,.18);
+  --chipText:#bfdbfe;
+
+  --rowHover:rgba(59,130,246,.10);
+  --pillBg:rgba(15,23,42,.35);
+  --pillBorder:rgba(226,232,240,.14);
+}
+
+/* ---------- Base ---------- */
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  min-height:100vh;
+}
+
+/* ======================================================
+   SIDEBAR (MATCH LICENSES/DEVICES)
+====================================================== */
+.sidebar{
+  width:270px;
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+.brand img{ height:34px; border-radius:8px; }
+.brand .title{ display:flex; flex-direction:column; }
+.brand .title b{ font-size:14px; letter-spacing:.2px; }
+.brand .title span{ font-size:12px; color:var(--muted); }
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
+}
+.nav a:hover{ background:var(--chip); color:var(--accent2); }
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+.sidebarFooter{
+  margin-top:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+}
+
+.ragPill{
+  padding:10px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
+  font-size:12px;
+  font-weight:1000;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.ragDot{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--good);
+  box-shadow:0 0 0 3px rgba(22,163,74,.15);
+}
+.ragPill.amber .ragDot{ background:var(--warn); box-shadow:0 0 0 3px rgba(245,158,11,.15); }
+.ragPill.red .ragDot{ background:var(--bad); box-shadow:0 0 0 3px rgba(239,68,68,.15); }
+.ragText{ display:flex; flex-direction:column; line-height:1.1; }
+.ragText b{ font-size:12px; }
+.ragText span{ font-size:11px; color:var(--muted); font-weight:900; }
+.mono{ font-family:var(--mono); }
+
+.sideBtnRow{ display:flex; gap:10px; }
+.sideBtnRow button{ width:100%; }
+
+/* ======================================================
+   MAIN AREA
+====================================================== */
+.main{
+  flex:1;
+  padding:22px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+/* Top banners */
+.bannerStack{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.banner{
+  background:var(--card);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+  border-radius:16px;
+  padding:12px 14px;
+  display:none;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+}
+.banner.show{ display:flex; }
+.banner .left{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.banner .title{
+  font-weight:1000;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.banner .msg{ font-size:12px; color:var(--muted); font-weight:900; line-height:1.4; }
+.banner .right{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.banner.bad { border-color:rgba(220,38,38,.35); }
+.banner.warn{ border-color:rgba(245,158,11,.35); }
+.banner.info{ border-color:rgba(37,99,235,.35); }
+
+.pill{
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
+  font-size:12px;
+  font-weight:1000;
+  color:var(--muted);
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  font-weight:1000;
+  font-size:11px;
+  background:var(--pillBg);
+}
+.dot{
+  width:8px;height:8px;border-radius:50%;
+  background:currentColor;
+  opacity:.9;
+}
+.badge.good{ color:var(--good); }
+.badge.warn{ color:var(--warn); }
+.badge.bad{ color:var(--bad); }
+.badge.info{ color:var(--info); }
+
+.header-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.header-left{ display:flex; flex-direction:column; gap:6px; }
+.header-left .h{ font-size:16px; font-weight:1000; }
+.header-left .sub{ font-size:12px; color:var(--muted); font-weight:900; line-height:1.4; }
+.header-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+}
+.sectionTitle{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:10px;
+  margin-bottom:10px;
+}
+.sectionTitle h2{ margin:0; font-size:14px; font-weight:1000; }
+.sectionTitle .hint{ font-size:12px; color:var(--muted); font-weight:900; }
+.row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.muted{ font-size:12px; color:var(--muted); font-weight:900; }
+
+.grid2{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:12px;
+}
+.grid3{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:12px;
+}
+.grid4{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:12px;
+}
+@media (max-width: 1280px){
+  .grid4{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 1100px){
+  .grid3{ grid-template-columns:1fr; }
+  .grid2{ grid-template-columns:1fr; }
+}
+@media (max-width: 820px){
+  body{ display:block; }
+  .sidebar{ width:auto; border-right:none; border-bottom:1px solid var(--line); }
+  .main{ padding:14px; }
+}
+
+/* KPI cards */
+.kpi{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(255,255,255,.02);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.kpiTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.kpi .label{ font-size:12px; color:var(--muted); font-weight:1000; }
+.kpi .value{ font-size:18px; font-weight:1000; }
+.kpi .sub{ font-size:12px; color:var(--muted); font-weight:900; line-height:1.4; }
+.sparkWrap{
+  width:120px;
+  height:36px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  overflow:hidden;
+  background:rgba(255,255,255,.02);
+}
+.sparkWrap canvas{ width:120px; height:36px; display:block; }
+
+/* Tables */
+.table-wrap{
+  margin-top:10px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  overflow:auto;
+}
+table{ width:100%; border-collapse:collapse; }
+thead th{
+  padding:12px;
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  text-align:left;
+  white-space:nowrap;
+}
+tbody td{
+  padding:12px;
+  border-top:1px solid rgba(15,23,42,.06);
+  font-size:13px;
+  white-space:nowrap;
+}
+tbody tr:hover{ background:var(--rowHover); }
+.clickable{ cursor:pointer; font-weight:1000; color:var(--accent2); }
+.clickable:hover{ text-decoration:underline; }
+
+/* Controls */
+button{
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:1000;
+  cursor:pointer;
+}
+button:disabled{ opacity:.65; cursor:not-allowed; }
+.btn-outline{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--text);
+}
+input[type="email"], input[type="text"], select{
+  padding:8px 12px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--text);
+  font-size:13px;
+}
+select{ cursor:pointer; }
+.sep{
+  border:none;
+  border-top:1px solid var(--line);
+  margin:12px 0;
+}
+
+/* Charts */
+.chartWrap{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(255,255,255,.02);
+}
+.chartWrap canvas{ width:100%; height:240px; display:block; }
+
+/* Heatmap */
+.heatGrid{
+  display:grid;
+  grid-template-columns:repeat(14, minmax(0, 1fr));
+  gap:6px;
+}
+.heatCell{
+  height:16px;
+  border-radius:5px;
+  border:1px solid var(--line);
+  background:rgba(148,163,184,.18);
+  position:relative;
+}
+.heatCell[data-lvl="1"]{ background:rgba(34,197,94,.20); }
+.heatCell[data-lvl="2"]{ background:rgba(245,158,11,.25); }
+.heatCell[data-lvl="3"]{ background:rgba(239,68,68,.22); }
+.heatLegend{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.legendSwatch{
+  width:14px;height:14px;border-radius:4px;border:1px solid var(--line);
+}
+.legendText{ font-size:12px; color:var(--muted); font-weight:900; }
+
+/* Modal */
+.modalOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+  padding:16px;
+}
+.modalOverlay.show{ display:flex; }
+.modal{
+  background:var(--card);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+  border-radius:16px;
+  width:1050px;
+  max-width:100%;
+  max-height:90vh;
+  overflow:auto;
+}
+.modalHeader{
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
+.modalHeader h3{ margin:0; font-size:15px; font-weight:1000; }
+.modalBody{ padding:16px; }
+.modalFooter{
+  padding:14px 16px;
+  border-top:1px solid var(--line);
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+.small{ font-size:12px; color:var(--muted); font-weight:900; }
+
+/* NOC Wall Mode */
+html[data-noc="true"] body{
+  background:var(--nocBg);
+}
+html[data-noc="true"] .sidebar{
+  display:none;
+}
+html[data-noc="true"] .main{
+  padding:14px;
+}
+html[data-noc="true"] .card,
+html[data-noc="true"] .header-card,
+html[data-noc="true"] .banner{
+  background:var(--nocCard);
+  border-color:var(--nocLine);
+  box-shadow:none;
+}
+html[data-noc="true"] .kpi{
+  background:rgba(255,255,255,.01);
+}
+html[data-noc="true"] .chartWrap,
+html[data-noc="true"] .table-wrap,
+html[data-noc="true"] .sparkWrap{
+  border-color:var(--nocLine);
+}
+html[data-noc="true"] .header-left .h{
+  font-size:18px;
+}
+html[data-noc="true"] .kpi .value{
+  font-size:20px;
+}
+html[data-noc="true"] .banner .title{
+  font-size:14px;
+}
+.nocTicker{
+  display:none;
+}
+html[data-noc="true"] .nocTicker{
+  display:flex;
+  background:var(--nocCard);
+  border:1px solid var(--nocLine);
+  border-radius:16px;
+  padding:10px 12px;
+  gap:10px;
+  align-items:center;
+}
+.tickerLabel{
+  font-weight:1000;
+  color:var(--muted);
+  font-size:12px;
+}
+.tickerScroll{
+  overflow:hidden;
+  white-space:nowrap;
+  flex:1;
+}
+.tickerText{
+  display:inline-block;
+  padding-left:100%;
+  animation:ticker 26s linear infinite;
+  font-weight:1000;
+  font-size:12px;
+}
+@keyframes ticker{
+  0%{ transform:translateX(0); }
+  100%{ transform:translateX(-100%); }
+}
+
+/* Print/PDF friendly */
+@media print{
+  .sidebar, .header-actions, .sideBtnRow, .nav, #btnTheme, #btnLogout, #btnNoc, #btnPrintPdf, #btnRefresh, #btnExportCsv, #btnTestNotify, #tenantControls { display:none !important; }
+  body{ display:block; background:#fff; color:#000; }
+  .main{ padding:0; }
+  .card, .header-card, .banner{ box-shadow:none; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ============================= -->
+<!-- SIDEBAR -->
+<!-- ============================= -->
+<div class="sidebar">
+  <div>
+    <div class="brand">
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" alt="US Signal" />
+      <div class="title">
+        <b>US Signal</b>
+        <span>Customer Portal</span>
+      </div>
+    </div>
+
+    <div class="nav" style="margin-top:12px;">
+      <a href="/customer">Dashboard</a>
+      <a href="/customer/observability" class="active">Observability</a>
+      <a href="/customer/licenses">Licenses</a>
+      <a href="/customer/devices">Devices</a>
+      <a href="/customer/pstn">PSTN</a>
+      <a href="/customer/maintenance">Maintenance</a>
+      <a href="/customer/status">Status</a>
+      <a href="/customer/incidents">Incidents</a>
+    </div>
+  </div>
+
+  <div class="sidebarFooter">
+    <div id="ragPill" class="ragPill">
+      <span class="ragDot" id="ragDot"></span>
+      <div class="ragText">
+        <b id="ragTitle">GREEN</b>
+        <span id="ragSub">All systems nominal</span>
+      </div>
+      <span class="mono" id="ragScore">100</span>
+    </div>
+
+    <div class="sideBtnRow">
+      <button class="btn-outline" id="btnTheme">Dark Mode</button>
+      <button class="btn-outline" id="btnLogout">Logout</button>
+    </div>
+
+    <div class="muted" style="font-weight:1000;">
+      Observability Suite • NOC Wall Mode Ready
+    </div>
+  </div>
+</div>
+
+<!-- ============================= -->
+<!-- MAIN -->
+<!-- ============================= -->
+<div class="main">
+
+  <!-- ALERT BANNERS -->
+  <div class="bannerStack">
+    <div id="bannerSla" class="banner bad">
+      <div class="left">
+        <div class="title">
+          <span class="badge bad"><span class="dot"></span>SLA BREACH RISK</span>
+          <span id="bannerSlaTitle">Potential SLA breach detected</span>
+        </div>
+        <div class="msg" id="bannerSlaMsg">—</div>
+      </div>
+      <div class="right">
+        <span class="pill mono" id="bannerSlaClock">—</span>
+        <button class="btn-outline" onclick="jumpTo('incTableCard')">View Incidents</button>
+      </div>
+    </div>
+
+    <div id="bannerCor" class="banner warn">
+      <div class="left">
+        <div class="title">
+          <span class="badge warn"><span class="dot"></span>CORRELATION</span>
+          <span id="bannerCorTitle">Cross-domain correlation detected</span>
+        </div>
+        <div class="msg" id="bannerCorMsg">—</div>
+      </div>
+      <div class="right">
+        <span class="pill mono" id="bannerCorScore">—</span>
+        <button class="btn-outline" onclick="jumpTo('intelCard')">Open Intelligence</button>
+      </div>
+    </div>
+
+    <div id="bannerConn" class="banner info">
+      <div class="left">
+        <div class="title">
+          <span class="badge info"><span class="dot"></span>LIVE FEED</span>
+          <span id="bannerConnTitle">Live updates enabled</span>
+        </div>
+        <div class="msg" id="bannerConnMsg">—</div>
+      </div>
+      <div class="right">
+        <span class="pill mono" id="connModePill">—</span>
+        <button class="btn-outline" id="btnNoc">NOC Wall Mode</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOC ticker -->
+  <div class="nocTicker">
+    <div class="tickerLabel">NOC</div>
+    <div class="tickerScroll">
+      <div class="tickerText" id="tickerText">Loading telemetry…</div>
+    </div>
+    <span class="pill mono" id="nocClock">—</span>
+  </div>
+
+  <!-- HEADER -->
+  <div class="header-card">
+    <div class="header-left">
+      <div class="h">Webex Observability Suite</div>
+      <div class="sub" id="execSummary">
+        Loading context…
+      </div>
+      <div class="sub" style="margin-top:2px;">
+        <span class="badge info"><span class="dot"></span><span id="whoLine">—</span></span>
+        <span class="badge"><span class="dot"></span><span id="tenantLine">Tenant: —</span></span>
+        <span class="badge"><span class="dot"></span><span id="sessionCountdown">Session: —</span></span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="pill" id="lastRefreshPill">Last refresh: —</div>
+      <button class="btn-outline" id="btnPrintPdf">Executive PDF</button>
+      <button class="btn-outline" id="btnExportCsv">Export CSV</button>
+      <button class="btn-outline" id="btnRefresh">Refresh</button>
+    </div>
+  </div>
+
+  <!-- TENANT CONTEXT -->
+  <div class="card" id="tenantControls">
+    <div class="sectionTitle">
+      <h2>Tenant Context</h2>
+      <div class="hint" id="orgContext">Resolving tenant…</div>
+    </div>
+
+    <div id="adminNote" class="muted" style="display:none;">
+      US Signal Admin View — select a tenant to review observability posture across incidents, status, maintenance, devices, PSTN, and licenses.
+    </div>
+
+    <div class="row">
+      <select id="tenantSelect" disabled>
+        <option>Loading tenants…</option>
+      </select>
+      <button id="btnLoad" disabled>Load Tenant</button>
+
+      <span class="badge" id="resBadge"><span class="dot"></span><span id="resText">Resolution: —</span></span>
+      <span class="badge" id="liveBadge"><span class="dot"></span><span id="liveText">Live: —</span></span>
+      <span class="badge" id="predBadge"><span class="dot"></span><span id="predText">Predictive: —</span></span>
+
+      <span class="muted" id="errBox" style="display:none;"></span>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="notifyToggle" />
+        Notify on new incidents
+      </label>
+
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        Cooldown (minutes):
+        <select id="notifyCooldown">
+          <option value="5">5</option>
+          <option value="15" selected>15</option>
+          <option value="30">30</option>
+          <option value="60">60</option>
+        </select>
+      </label>
+
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        Send to:
+        <input id="notifyEmail" type="email" placeholder="Email address" style="min-width:260px;" />
+      </label>
+
+      <button id="btnTestNotify">Send Test</button>
+      <span id="notifyStatus" class="muted" style="font-weight:1000;"></span>
+    </div>
+  </div>
+
+  <!-- KPI GRID -->
+  <div class="grid4">
+    <div class="kpi">
+      <div class="kpiTop">
+        <div>
+          <div class="label">Enterprise Stability Index</div>
+          <div class="value" id="kStability">—</div>
+          <div class="sub" id="kStabilitySub">Aggregated across incidents, status, maintenance, devices, licenses, PSTN.</div>
+        </div>
+        <div class="sparkWrap"><canvas id="spStability" width="120" height="36"></canvas></div>
+      </div>
+      <div class="row">
+        <span class="badge" id="kStabBadge"><span class="dot"></span><span id="kStabBadgeText">—</span></span>
+        <span class="pill mono" id="kStabTrend">—</span>
+      </div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpiTop">
+        <div>
+          <div class="label">Active Incidents</div>
+          <div class="value" id="kIncActive">—</div>
+          <div class="sub" id="kIncActiveSub">SLA breach detection and blast radius scoring included.</div>
+        </div>
+        <div class="sparkWrap"><canvas id="spInc" width="120" height="36"></canvas></div>
+      </div>
+      <div class="row">
+        <span class="badge" id="kIncBadge"><span class="dot"></span><span id="kIncBadgeText">—</span></span>
+        <span class="pill mono" id="kIncSla">SLA: —</span>
+      </div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpiTop">
+        <div>
+          <div class="label">License Deficit Risk</div>
+          <div class="value" id="kLicRisk">—</div>
+          <div class="sub" id="kLicRiskSub">Correlated to incidents automatically (Calling SKUs prioritized).</div>
+        </div>
+        <div class="sparkWrap"><canvas id="spLic" width="120" height="36"></canvas></div>
+      </div>
+      <div class="row">
+        <span class="badge" id="kLicBadge"><span class="dot"></span><span id="kLicBadgeText">—</span></span>
+        <span class="pill mono" id="kLicVelocity">Velocity: —</span>
+      </div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpiTop">
+        <div>
+          <div class="label">Devices & PSTN Health</div>
+          <div class="value" id="kEdgeHealth">—</div>
+          <div class="sub" id="kEdgeHealthSub">Offline devices and PSTN degradation influence stability index.</div>
+        </div>
+        <div class="sparkWrap"><canvas id="spEdge" width="120" height="36"></canvas></div>
+      </div>
+      <div class="row">
+        <span class="badge" id="kEdgeBadge"><span class="dot"></span><span id="kEdgeBadgeText">—</span></span>
+        <span class="pill mono" id="kEdgeNote">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTELLIGENCE -->
+  <div class="card" id="intelCard">
+    <div class="sectionTitle">
+      <h2>Operational Intelligence</h2>
+      <div class="hint" id="intelHint">Auto-grouping, predictive modeling, blast radius scoring, cross-domain correlation.</div>
+    </div>
+
+    <div class="grid3">
+      <div class="card" style="box-shadow:none;">
+        <div class="sectionTitle" style="margin-bottom:6px;">
+          <h2 style="margin:0;">Predictive Incident Modeling</h2>
+          <div class="hint" id="predWindow">Window: 7 days</div>
+        </div>
+        <div class="row" style="justify-content:space-between;">
+          <div>
+            <div class="muted">Probability of service-impacting event</div>
+            <div style="font-weight:1000; font-size:22px; margin-top:6px;" id="predProb">—</div>
+            <div class="muted" id="predExplain" style="margin-top:6px;">—</div>
+          </div>
+          <span class="badge" id="predBadge2"><span class="dot"></span><span id="predBadge2Text">—</span></span>
+        </div>
+        <hr class="sep" />
+        <div class="muted" style="font-weight:1000;">
+          Drivers:
+          <span class="mono" id="predDrivers">—</span>
+        </div>
+      </div>
+
+      <div class="card" style="box-shadow:none;">
+        <div class="sectionTitle" style="margin-bottom:6px;">
+          <h2 style="margin:0;">Blast Radius Scoring</h2>
+          <div class="hint">Confidence-adjusted exposure</div>
+        </div>
+        <div style="font-weight:1000; font-size:22px;" id="blastScore">—</div>
+        <div class="muted" id="blastExplain" style="margin-top:6px;">—</div>
+        <hr class="sep" />
+        <div class="row">
+          <span class="badge" id="blastBadge"><span class="dot"></span><span id="blastBadgeText">—</span></span>
+          <span class="pill mono" id="blastComp">—</span>
+        </div>
+      </div>
+
+      <div class="card" style="box-shadow:none;">
+        <div class="sectionTitle" style="margin-bottom:6px;">
+          <h2 style="margin:0;">AI Root Cause Grouping</h2>
+          <div class="hint">Heuristic clustering (client-side)</div>
+        </div>
+        <div class="muted" style="font-weight:1000;">Top clusters</div>
+        <div class="table-wrap" style="margin-top:10px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Cluster</th>
+                <th>Count</th>
+                <th>Signals</th>
+              </tr>
+            </thead>
+            <tbody id="rcaRows">
+              <tr><td colspan="3" class="muted">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="muted" style="margin-top:10px;">This grouping is an operational aid, not an official Cisco root cause statement.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 30-DAY TREND -->
+  <div class="card" id="trendCard">
+    <div class="sectionTitle">
+      <h2>30-Day Observability Trend</h2>
+      <div class="hint" id="trendHint">Snapshots: —</div>
+    </div>
+    <div class="chartWrap">
+      <canvas id="trendChart" width="1200" height="300"></canvas>
+      <div class="row" style="margin-top:10px; justify-content:space-between;">
+        <div class="muted" id="trendSummary">Captures daily snapshot locally (per tenant).</div>
+        <div class="row">
+          <span class="badge info"><span class="dot"></span><span>Stability Index</span></span>
+          <span class="badge bad"><span class="dot"></span><span>Active Incidents</span></span>
+          <span class="badge warn"><span class="dot"></span><span>License Deficits</span></span>
+          <span class="badge"><span class="dot"></span><span>Offline Devices</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRODUCT HEATMAP -->
+  <div class="card" id="heatCard">
+    <div class="sectionTitle">
+      <h2>Product Heatmap</h2>
+      <div class="hint" id="heatHint">Impact intensity derived from incidents + status + maintenance</div>
+    </div>
+    <div class="heatLegend" style="margin-bottom:10px;">
+      <span class="legendSwatch" style="background:rgba(148,163,184,.18);"></span><span class="legendText">No signal</span>
+      <span class="legendSwatch" style="background:rgba(34,197,94,.20);"></span><span class="legendText">Low</span>
+      <span class="legendSwatch" style="background:rgba(245,158,11,.25);"></span><span class="legendText">Moderate</span>
+      <span class="legendSwatch" style="background:rgba(239,68,68,.22);"></span><span class="legendText">High</span>
+      <span class="pill mono" id="heatScope">—</span>
+    </div>
+
+    <div class="heatGrid" id="heatGrid"></div>
+    <div class="muted" style="margin-top:10px;" id="heatNarrative">—</div>
+  </div>
+
+  <!-- INCIDENTS TABLE -->
+  <div class="card" id="incTableCard">
+    <div class="sectionTitle">
+      <h2>Incident Radar</h2>
+      <div class="hint">Click an incident to open an intelligence drill-down (timeline, affected products, SLA risk, correlations).</div>
+    </div>
+
+    <div class="row" style="margin-bottom:10px;">
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="activeOnly" />
+        Active only
+      </label>
+
+      <input id="incSearch" type="text" placeholder="Search incidents..." style="min-width:260px;" />
+
+      <select id="incProductFilter">
+        <option value="">All Products</option>
+      </select>
+
+      <select id="incSeverityFilter">
+        <option value="">All Severities</option>
+        <option value="major">Major</option>
+        <option value="partial">Partial</option>
+        <option value="minor">Minor/Other</option>
+      </select>
+
+      <span class="pill mono" id="incCounts">—</span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Reference</th>
+            <th>Status</th>
+            <th>Severity</th>
+            <th>Started</th>
+            <th>Products</th>
+            <th>Headline</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody id="incRows">
+          <tr><td colspan="7" class="muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================= -->
+<!-- INCIDENT MODAL -->
+<!-- ============================= -->
+<div id="incModalOverlay" class="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="incModalTitle">
+  <div class="modal">
+    <div class="modalHeader">
+      <div>
+        <h3 id="incModalTitle">Incident Details</h3>
+        <div class="small" id="incModalSub">—</div>
+      </div>
+      <div class="row">
+        <span class="badge" id="incModalBadge"><span class="dot"></span><span id="incModalBadgeText">—</span></span>
+        <button class="btn-outline" id="btnCloseIncModal">Close</button>
+      </div>
+    </div>
+
+    <div class="modalBody">
+      <div class="grid3">
+        <div class="kpi">
+          <div class="label">Impact Score</div>
+          <div class="value" id="mImpact">—</div>
+          <div class="sub" id="mImpactSub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Blast Radius</div>
+          <div class="value" id="mBlast">—</div>
+          <div class="sub" id="mBlastSub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label">SLA Risk</div>
+          <div class="value" id="mSla">—</div>
+          <div class="sub" id="mSlaSub">—</div>
+        </div>
+      </div>
+
+      <hr class="sep" />
+
+      <div class="sectionTitle">
+        <h2 style="margin:0;">Correlation Engine</h2>
+        <div class="hint">Incident ↔ License ↔ Devices ↔ PSTN</div>
+      </div>
+
+      <div class="card" style="box-shadow:none;">
+        <div class="row" style="justify-content:space-between;">
+          <div>
+            <div class="muted">Correlation Confidence</div>
+            <div style="font-weight:1000; font-size:20px; margin-top:6px;" id="mCor">—</div>
+            <div class="muted" id="mCorSub" style="margin-top:6px;">—</div>
+          </div>
+          <span class="badge" id="mCorBadge"><span class="dot"></span><span id="mCorBadgeText">—</span></span>
+        </div>
+        <hr class="sep" />
+        <div class="muted" id="mCorSignals">—</div>
+      </div>
+
+      <hr class="sep" />
+
+      <div class="sectionTitle">
+        <h2 style="margin:0;">Timeline & Updates</h2>
+        <div class="hint">Pulled from Cisco Webex status feed via your Worker</div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Status</th>
+              <th>Update</th>
+            </tr>
+          </thead>
+          <tbody id="mUpdates">
+            <tr><td colspan="3" class="muted">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="muted" style="margin-top:10px;" id="mNarrative">—</div>
+    </div>
+
+    <div class="modalFooter">
+      <button class="btn-outline" id="btnPrintIncident">Print Incident PDF</button>
+      <button id="btnNotifyIncident">Notify Me on Updates</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======================================================
+   OBSERVABILITY SUITE (SCRIPT)
+====================================================== */
+const $ = (id) => document.getElementById(id);
+
+/* ---------- Theme ---------- */
+function loadTheme(){
+  const saved = localStorage.getItem("uiTheme");
+  const theme = saved === "dark" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  $("btnTheme").textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme") || "light";
+  const next = cur === "dark" ? "light" : "dark";
+  localStorage.setItem("uiTheme", next);
+  loadTheme();
+}
+$("btnTheme").addEventListener("click", toggleTheme);
+loadTheme();
+
+/* ---------- Utils ---------- */
+function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function escapeHtml(str){
+  return String(str ?? "")
+    .replaceAll("&","&amp;").replaceAll("<","&lt;")
+    .replaceAll(">","&gt;").replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function fmtInt(n){
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "—";
+  return Math.trunc(x).toLocaleString();
+}
+function fmtPct(n){
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "—";
+  return `${Math.round(x)}%`;
+}
+function nowClock(){
+  const d = new Date();
+  return d.toLocaleString();
+}
+function dayKey(d=new Date()){
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+function jumpTo(id){
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+/* ---------- API ---------- */
+async function api(path, opts){
+  try{
+    const res = await fetch(path, { cache:"no-store", ...(opts||{}) });
+    const txt = await res.text();
+    let data = null;
+    try{ data = txt ? JSON.parse(txt) : null; } catch { data = { raw: txt }; }
+    return { ok: res.ok, status: res.status, data };
+  } catch (e){
+    return { ok:false, status:0, data:{ error: e?.message || String(e) } };
+  }
+}
+function setError(msg){
+  const box = $("errBox");
+  if (!msg){
+    box.style.display = "none";
+    box.textContent = "";
+    return;
+  }
+  box.style.display = "inline";
+  box.textContent = msg;
+  box.style.fontWeight = "1000";
+}
+
+/* ---------- State ---------- */
+let ME = null;
+let ORGS = [];
+let SELECTED_ORG_ID = null;
+
+let DATA = {
+  incidents: [],
+  status: null,
+  maintenance: null,
+  licenses: null,
+  devices: null,
+  pstn: null,
+  analytics: null,
+  cdr: null,
+};
+
+let SESSION_TIMER = null;
+let WS = null;
+let POLL_TIMER = null;
+let AUTO_SNAPSHOT_TIMER = null;
+let AUTO_NOTIFY_TIMER = null;
+
+let LAST_INCIDENT_IDS = new Set(); // for new-incident detection
+let ACTIVE_INCIDENT = null;
+
+/* ---------- History (local, per org) ---------- */
+function histKey(orgId){ return `OBS_HISTORY::${orgId || "unknown"}`; }
+function loadHistory(orgId){
+  try{
+    const raw = localStorage.getItem(histKey(orgId));
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+function saveHistory(orgId, arr){
+  try{ localStorage.setItem(histKey(orgId), JSON.stringify(arr)); } catch {}
+}
+function pruneHistory(arr){
+  const map = new Map();
+  for (const s of (arr||[])){
+    if (s && s.day) map.set(s.day, s);
+  }
+  const uniq = Array.from(map.values()).sort((a,b)=> (a.day||"").localeCompare(b.day||""));
+  return uniq.slice(Math.max(0, uniq.length - 30));
+}
+
+/* ---------- Notification settings ---------- */
+function notifyKey(orgId){ return `OBS_NOTIFY::${orgId || "unknown"}`; }
+function loadNotify(orgId){
+  try{
+    const raw = localStorage.getItem(notifyKey(orgId));
+    const s = raw ? JSON.parse(raw) : {};
+    return {
+      enabled: !!s.enabled,
+      cooldownMin: Number(s.cooldownMin || 15),
+      lastSentTs: Number(s.lastSentTs || 0),
+      email: String(s.email || ""),
+      lastSeenIds: Array.isArray(s.lastSeenIds) ? s.lastSeenIds : []
+    };
+  } catch {
+    return { enabled:false, cooldownMin:15, lastSentTs:0, email:"", lastSeenIds:[] };
+  }
+}
+function saveNotify(orgId, s){
+  try{ localStorage.setItem(notifyKey(orgId), JSON.stringify(s)); } catch {}
+}
+function syncNotifyUI(){
+  const s = loadNotify(SELECTED_ORG_ID);
+  $("notifyToggle").checked = !!s.enabled;
+  $("notifyCooldown").value = String(s.cooldownMin || 15);
+  if ($("notifyEmail") && !$("notifyEmail").value.trim()){
+    $("notifyEmail").value = s.email || ME?.email || "";
+  }
+}
+
+/* ---------- Session countdown ---------- */
+function startSessionTimer(seconds){
+  if (!seconds || seconds <= 0) {
+    $("sessionCountdown").textContent = "Session: —";
+    return;
+  }
+  let remaining = Number(seconds);
+  const render = ()=>{
+    const m = Math.max(0, Math.floor(remaining/60));
+    const s = Math.max(0, remaining % 60);
+    $("sessionCountdown").textContent = `Session: ${m}:${String(s).padStart(2,"0")}`;
+  };
+  render();
+
+  if (SESSION_TIMER) clearInterval(SESSION_TIMER);
+  SESSION_TIMER = setInterval(()=>{
+    remaining--;
+    render();
+    if (remaining <= 0){
+      clearInterval(SESSION_TIMER);
+      window.location.href = "/pin";
+    }
+  }, 1000);
+}
+
+/* ---------- Load ME / ORGS ---------- */
+function safeOrgLabel(o){
+  const name = o.displayName || o.name || o.orgName || "Unknown";
+  const id = o.id || o.orgId || "";
+  return `${name}${id ? " — " + id.slice(0,10) + "…" : ""}`;
+}
+
+async function loadMe(){
+  const r = await api("/api/me");
+  if (!r.ok){
+    if (r.status === 401) window.location.href = "/pin";
+    throw new Error("Failed to load /api/me");
+  }
+  ME = r.data;
+
+  if (ME.role !== "admin" && !ME.orgId){
+    window.location.href = "/pin";
+    return false;
+  }
+
+  $("whoLine").textContent = `${ME.email} (${ME.role})`;
+  $("tenantLine").textContent = `Tenant: ${ME.orgName || "—"}`;
+  $("orgContext").textContent = ME.orgName
+    ? `${ME.orgName} (${ME.resolution || "pin"} resolution)`
+    : "No tenant resolved";
+
+  $("adminNote").style.display = ME.role === "admin" ? "block" : "none";
+
+  $("resText").textContent = `Resolution: ${ME.resolution || "—"}`;
+  $("resBadge").className = "badge";
+  $("resBadge").classList.add(ME.resolution ? "good" : "warn");
+  $("resBadge").querySelector(".dot").style.color = ME.resolution ? cssVar("--good") : cssVar("--warn");
+
+  $("notifyEmail").value = ME.email || "";
+  if (ME.sessionExpiresInSeconds) startSessionTimer(ME.sessionExpiresInSeconds);
+
+  return true;
+}
+
+async function loadOrgs(){
+  const sel = $("tenantSelect");
+  const r = await api("/api/org");
+  if (!r.ok){
+    // Customer flows might not need org list; keep what we have
+    ORGS = [];
+    sel.innerHTML = `<option value="">Tenant locked</option>`;
+    sel.disabled = true;
+    $("btnLoad").disabled = false; // still allow load using ME.orgId
+    SELECTED_ORG_ID = ME?.orgId || null;
+    return;
+  }
+
+  ORGS = Array.isArray(r.data) ? r.data : [];
+  sel.innerHTML = "";
+
+  if (!ORGS.length){
+    sel.innerHTML = `<option value="">No organizations available</option>`;
+    sel.disabled = true;
+    $("btnLoad").disabled = true;
+    return;
+  }
+
+  for (const o of ORGS){
+    const opt = document.createElement("option");
+    opt.value = o.id || o.orgId || "";
+    opt.textContent = safeOrgLabel(o);
+    sel.appendChild(opt);
+  }
+
+  sel.disabled = false;
+  $("btnLoad").disabled = false;
+
+  const defaultOrgId = ME?.orgId || (ORGS[0].id || ORGS[0].orgId);
+  if (defaultOrgId) sel.value = defaultOrgId;
+  SELECTED_ORG_ID = sel.value;
+}
+
+/* ---------- Load data fan-out ---------- */
+function buildPath(base){
+  if (SELECTED_ORG_ID) return `${base}?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`;
+  return base;
+}
+
+async function loadAll(){
+  setError(null);
+  $("lastRefreshPill").textContent = `Last refresh: ${nowClock()}`;
+
+  const calls = [
+    api("/api/incidents"),
+    api("/api/status"),
+    api("/api/maintenance"),
+    api(buildPath("/api/licenses")),
+    api(buildPath("/api/devices")),
+    api(buildPath("/api/pstn")),      // optional
+    api(buildPath("/api/analytics")), // optional
+    api(buildPath("/api/cdr")),       // optional
+  ];
+
+  const [inc, stat, maint, lic, dev, pstn, an, cdr] = await Promise.all(calls);
+
+  // Hard failures: only for core feeds, but keep page running
+  if (!inc.ok) setError("Some feeds failed to load. Incidents may be unavailable.");
+  if (!stat.ok) {/* status optional */}
+  if (!maint.ok) {/* maintenance optional */}
+
+  DATA.incidents = Array.isArray(inc.data?.incidents) ? inc.data.incidents : [];
+  DATA.status = stat.ok ? stat.data : null;
+  DATA.maintenance = maint.ok ? maint.data : null;
+
+  DATA.licenses = lic.ok ? lic.data : null;
+  DATA.devices = dev.ok ? dev.data : null;
+
+  DATA.pstn = pstn.ok ? pstn.data : null;
+  DATA.analytics = an.ok ? an.data : null;
+  DATA.cdr = cdr.ok ? cdr.data : null;
+
+  // Build derived sets
+  updateProductFilter(DATA.incidents);
+  renderAll();
+  captureSnapshot();
+  renderTrendChart();
+  renderSparklines();
+  updateTicker();
+}
+
+/* ---------- Incident helpers ---------- */
+function isActiveIncident(i){
+  const s = String(i.status || "").toLowerCase();
+  return ["investigating","identified","monitoring"].includes(s);
+}
+function severityClass(i){
+  const impact = String(i.impact || "").toLowerCase();
+  if (impact.includes("major")) return "major";
+  if (impact.includes("partial")) return "partial";
+  if (impact.includes("minor")) return "minor";
+  return "minor";
+}
+function severityScore(i){
+  const cls = severityClass(i);
+  if (cls === "major") return 3;
+  if (cls === "partial") return 2;
+  return 1;
+}
+function incidentAgeMinutes(i){
+  const ts = i.created_at ? new Date(i.created_at).getTime() : null;
+  if (!ts) return null;
+  return Math.max(0, Math.round((Date.now() - ts)/60000));
+}
+function incidentProducts(i){
+  const comps = Array.isArray(i.components) ? i.components : [];
+  const set = new Set();
+  for (const c of comps){
+    const g = c.group || c.name;
+    if (g) set.add(g);
+    if (c.name) set.add(c.name);
+  }
+  if (set.size === 0 && i.name) {
+    // heuristic
+    const nm = String(i.name).toLowerCase();
+    if (nm.includes("calling")) set.add("Webex Calling");
+    if (nm.includes("meeting")) set.add("Webex Meetings");
+    if (nm.includes("messag") || nm.includes("spaces")) set.add("Webex Messaging");
+    if (nm.includes("device")) set.add("Webex Devices");
+  }
+  return Array.from(set);
+}
+
+/* ---------- License helpers ---------- */
+function numOrNull(v){
+  if (v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function safeSkuName(l){
+  return l.name || l.licenseName || l.sku || "Unknown";
+}
+function skuKeyFromName(name){
+  return String(name || "").trim().toLowerCase();
+}
+function computeUtil(total, used){
+  if (total === -1) return null;
+  if (!Number.isFinite(total) || total <= 0) return null;
+  if (!Number.isFinite(used) || used < 0) return 0;
+  return Math.min(999, Math.max(0, Math.round((used/total) * 100)));
+}
+function computeLicenseRisk(licData){
+  const items = Array.isArray(licData?.items) ? licData.items : [];
+  let deficits = 0;
+  let risks = 0;
+  let callingDeficits = 0;
+  let maxUtil = 0;
+
+  for (const l of items){
+    const name = safeSkuName(l);
+    const total = numOrNull(l.total);
+    const used = numOrNull(l.consumed ?? l.assigned ?? 0) ?? 0;
+    const deficit = numOrNull(l.deficit) ?? 0;
+    const util = computeUtil(total, used);
+
+    if (util !== null) maxUtil = Math.max(maxUtil, util);
+
+    if (deficit > 0){
+      deficits++;
+      if (/calling|wxc|wxcall/i.test(name)) callingDeficits++;
+    } else if (util !== null && util >= 90){
+      risks++;
+    }
+  }
+  return { deficits, risks, callingDeficits, maxUtil, items };
+}
+
+/* ---------- Devices helpers ---------- */
+function computeDeviceHealth(devData){
+  const items = Array.isArray(devData?.items) ? devData.items : (Array.isArray(devData) ? devData : []);
+  let offline = 0;
+  let total = items.length;
+  let seen = 0;
+
+  for (const d of items){
+    const st = String(d.connectionStatus || d.status || "").toLowerCase();
+    if (st) seen++;
+    if (st.includes("disconnect") || st.includes("offline") || st.includes("down")) offline++;
+  }
+  return { total, offline, seen };
+}
+
+/* ---------- Status helpers (best effort) ---------- */
+function computeStatusSignals(statData){
+  // Shape differs per implementation; best-effort infer "degraded" count
+  const raw = statData || {};
+  let degraded = 0;
+  let total = 0;
+
+  const candidates = raw.components || raw.data?.components || raw.services || raw.items;
+  if (Array.isArray(candidates)){
+    total = candidates.length;
+    for (const c of candidates){
+      const s = String(c.status || c.state || c.indicator || "").toLowerCase();
+      if (s.includes("degrad") || s.includes("partial") || s.includes("major") || s.includes("down")) degraded++;
+    }
+  }
+  return { degraded, total };
+}
+
+/* ---------- Maintenance helpers (best effort) ---------- */
+function computeMaintenanceSignals(maintData){
+  const raw = maintData || {};
+  const arr = raw.maintenances || raw.items || raw.data || [];
+  const items = Array.isArray(arr) ? arr : [];
+  let upcoming = 0;
+  let active = 0;
+
+  const now = Date.now();
+  for (const m of items){
+    const start = m.start_at ? new Date(m.start_at).getTime() : (m.scheduled_for ? new Date(m.scheduled_for).getTime() : null);
+    const end = m.end_at ? new Date(m.end_at).getTime() : (m.scheduled_until ? new Date(m.scheduled_until).getTime() : null);
+
+    if (start && end){
+      if (now >= start && now <= end) active++;
+      else if (now < start && start - now <= 7*24*60*60*1000) upcoming++;
+    } else if (start && now < start && start - now <= 7*24*60*60*1000){
+      upcoming++;
+    }
+  }
+  return { upcoming, active, total: items.length };
+}
+
+/* ---------- PSTN helpers (optional) ---------- */
+function computePstnSignals(pstnData){
+  // Best effort; if you later expose a structured endpoint, this will immediately benefit
+  if (!pstnData) return { degraded:false, note:"PSTN feed unavailable" };
+  const s = JSON.stringify(pstnData).toLowerCase();
+  const degraded = s.includes("degrad") || s.includes("down") || s.includes("fail") || s.includes("alarm");
+  return { degraded, note: degraded ? "PSTN degradation signal present" : "PSTN nominal (no degradation signals)" };
+}
+
+/* ---------- Stability Index ---------- */
+function computeStabilityIndex(){
+  const inc = DATA.incidents || [];
+  const active = inc.filter(isActiveIncident);
+
+  const lic = computeLicenseRisk(DATA.licenses);
+  const dev = computeDeviceHealth(DATA.devices);
+  const stat = computeStatusSignals(DATA.status);
+  const maint = computeMaintenanceSignals(DATA.maintenance);
+  const pstn = computePstnSignals(DATA.pstn);
+
+  // Weighted scoring: start from 100, subtract penalties
+  let score = 100;
+
+  // Incidents (25%)
+  // Penalty: major active incident heavy, partial moderate
+  let incPenalty = 0;
+  for (const i of active){
+    const sev = severityScore(i);
+    incPenalty += (sev === 3 ? 16 : sev === 2 ? 10 : 6);
+  }
+  incPenalty = Math.min(35, incPenalty);
+  score -= incPenalty;
+
+  // PSTN (25%)
+  if (pstn.degraded) score -= 18;
+
+  // Devices (20%) - scaled by offline rate
+  if (dev.total > 0){
+    const rate = dev.offline / dev.total;
+    score -= Math.min(20, Math.round(rate * 40)); // 50% offline => -20
+  }
+
+  // Licenses (15%)
+  if (lic.deficits > 0) score -= Math.min(18, lic.deficits * 6);
+  else if (lic.risks > 0) score -= Math.min(10, lic.risks * 2);
+
+  // Analytics/CDR anomalies (10%) - best effort
+  const anTxt = DATA.analytics ? JSON.stringify(DATA.analytics).toLowerCase() : "";
+  const cdrTxt = DATA.cdr ? JSON.stringify(DATA.cdr).toLowerCase() : "";
+  const anomaly = (anTxt.includes("anomal") || anTxt.includes("degrad") || cdrTxt.includes("fail") || cdrTxt.includes("error"));
+  if (anomaly) score -= 6;
+
+  // Maintenance (5%)
+  if (maint.active > 0) score -= 5;
+  else if (maint.upcoming > 0) score -= 2;
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  return {
+    score,
+    incActive: active.length,
+    incPenalty,
+    lic,
+    dev,
+    stat,
+    maint,
+    pstn,
+    anomaly
+  };
+}
+
+/* ---------- Predictive modeling ---------- */
+function computePredictive(stab){
+  // Simple transparent model: convert signals into a 7-day probability
+  // Drivers:
+  // - recent incident frequency (last 7 days)
+  // - active incident presence
+  // - license deficits / high utilization
+  // - offline device rate
+  // - PSTN degraded signal
+  const hist = loadHistory(SELECTED_ORG_ID);
+  const last7 = hist.slice(Math.max(0, hist.length - 7));
+
+  const recentIncAvg = last7.length ? (last7.reduce((a,s)=>a + (Number(s.incActive||0)),0) / last7.length) : 0;
+  const offlineAvg = last7.length ? (last7.reduce((a,s)=>a + (Number(s.offlineDevices||0)),0) / last7.length) : 0;
+  const licDefAvg = last7.length ? (last7.reduce((a,s)=>a + (Number(s.licDeficits||0)),0) / last7.length) : 0;
+
+  let p = 0.08; // baseline 8%
+  if (stab.incActive > 0) p += 0.18;
+  p += Math.min(0.22, recentIncAvg * 0.05);
+  p += Math.min(0.18, licDefAvg * 0.06);
+  if (stab.lic.maxUtil >= 95) p += 0.08;
+  if (stab.pstn.degraded) p += 0.12;
+  if (stab.dev.total > 0){
+    const rate = stab.dev.offline / stab.dev.total;
+    p += Math.min(0.14, rate * 0.30);
+  }
+  if (stab.maint.active > 0) p += 0.04;
+
+  p = Math.max(0, Math.min(0.92, p));
+
+  // Driver string
+  const drivers = [];
+  if (stab.incActive > 0) drivers.push("active_incident");
+  if (recentIncAvg >= 1) drivers.push("incident_frequency");
+  if (stab.lic.deficits > 0) drivers.push("license_deficit");
+  if (stab.lic.risks > 0) drivers.push("license_risk");
+  if (stab.lic.maxUtil >= 95) drivers.push("utilization_95");
+  if (stab.pstn.degraded) drivers.push("pstn_degraded");
+  if (stab.dev.total > 0 && (stab.dev.offline / stab.dev.total) >= 0.05) drivers.push("device_offline_rate");
+  if (stab.maint.active > 0) drivers.push("maintenance_active");
+
+  const label = p >= 0.55 ? "High" : p >= 0.28 ? "Moderate" : "Low";
+  return { p, label, drivers };
+}
+
+/* ---------- Blast radius ---------- */
+function computeBlastRadius(stab){
+  // Confidence-adjusted blast radius score: 0–100
+  // Inputs:
+  // - active incident severity
+  // - number of product domains impacted
+  // - device offline rate
+  // - calling license deficit presence
+  const inc = (DATA.incidents || []).filter(isActiveIncident);
+  let base = 8;
+
+  let domains = new Set();
+  let maxSev = 0;
+  for (const i of inc){
+    maxSev = Math.max(maxSev, severityScore(i));
+    for (const p of incidentProducts(i)) domains.add(p);
+  }
+
+  base += (maxSev === 3 ? 28 : maxSev === 2 ? 18 : inc.length ? 10 : 0);
+  base += Math.min(22, domains.size * 6);
+
+  if (stab.dev.total > 0){
+    const rate = stab.dev.offline / stab.dev.total;
+    base += Math.min(18, Math.round(rate * 60));
+  }
+
+  if (stab.lic.callingDeficits > 0) base += 16;
+  else if (stab.lic.deficits > 0) base += 10;
+
+  // confidence: if we have fewer feeds, reduce confidence
+  let feeds = 0;
+  feeds += 1; // incidents
+  if (DATA.licenses) feeds++;
+  if (DATA.devices) feeds++;
+  if (DATA.status) feeds++;
+  if (DATA.maintenance) feeds++;
+  if (DATA.pstn) feeds++;
+
+  const confidence = Math.min(0.90, 0.45 + feeds * 0.08);
+  const score = Math.max(0, Math.min(100, Math.round(base * confidence)));
+
+  const label = score >= 70 ? "MULTI-SITE" : score >= 40 ? "REGIONAL" : score >= 18 ? "LOCALIZED" : "MINIMAL";
+  return { score, label, confidence, domainsCount: domains.size, maxSev };
+}
+
+/* ---------- SLA breach detection ---------- */
+function computeSlaRisk(){
+  // Policy defaults (tune):
+  // - Major active > 120 minutes => breach risk
+  // - Partial active > 240 minutes => breach risk
+  // - Any active > 360 minutes => breach risk
+  const active = (DATA.incidents || []).filter(isActiveIncident);
+  if (!active.length) return { risk:false, msg:"No active incidents.", clock:"—", worst:null };
+
+  let worst = null;
+  for (const i of active){
+    const age = incidentAgeMinutes(i);
+    if (age === null) continue;
+    const sev = severityClass(i);
+    let threshold = 360;
+    if (sev === "major") threshold = 120;
+    else if (sev === "partial") threshold = 240;
+
+    const over = age - threshold;
+    const score = over > 0 ? 100 + over : Math.max(0, 100 - (threshold - age));
+    if (!worst || score > worst.score){
+      worst = { i, age, threshold, over, score, sev };
+    }
+  }
+
+  if (!worst){
+    return { risk:false, msg:"Active incidents detected but timing is unavailable.", clock:"—", worst:null };
+  }
+
+  if (worst.over > 0){
+    return {
+      risk:true,
+      msg:`Active ${worst.sev.toUpperCase()} incident has exceeded SLA threshold by ~${worst.over} minute(s). Immediate escalation recommended.`,
+      clock:`Age: ${worst.age}m (SLA: ${worst.threshold}m)`,
+      worst
+    };
+  }
+
+  const remaining = Math.max(0, worst.threshold - worst.age);
+  return {
+    risk: remaining <= 30, // alert when within 30 minutes of threshold
+    msg:`Active incident approaching SLA threshold. Remaining ~${remaining} minute(s) until threshold.`,
+    clock:`Age: ${worst.age}m (SLA: ${worst.threshold}m)`,
+    worst
+  };
+}
+
+/* ---------- Correlation engine ---------- */
+function computeCorrelation(stab){
+  // Heuristic correlation between incidents and internal signals:
+  // - If incident mentions Calling and calling license deficits exist => strong
+  // - If incident active + device offline spike => moderate
+  // - If incident active + pstn degraded => strong
+  // - If status degraded + incident active => moderate
+  const active = (DATA.incidents || []).filter(isActiveIncident);
+  if (!active.length){
+    return { score:0.08, label:"Low", message:"No active incidents. Correlation engine in monitoring mode.", signals:[] };
+  }
+
+  const signals = [];
+  let score = 0.22;
+
+  // incident domain signals
+  const prodText = active.map(i => (i.name||"") + " " + incidentProducts(i).join(" ")).join(" ").toLowerCase();
+
+  if ((/calling|telephony|pstn|voice/i).test(prodText) && stab.lic.callingDeficits > 0){
+    score += 0.28;
+    signals.push(`Calling-related incident + Calling SKU deficit(s) (${stab.lic.callingDeficits})`);
+  } else if (stab.lic.deficits > 0){
+    score += 0.10;
+    signals.push(`Incident active + license deficit(s) (${stab.lic.deficits})`);
+  } else if (stab.lic.risks > 0){
+    score += 0.06;
+    signals.push(`Incident active + license risk SKU(s) (${stab.lic.risks})`);
+  }
+
+  if (stab.pstn.degraded){
+    score += 0.22;
+    signals.push("PSTN degradation signal present");
+  }
+
+  if (stab.dev.total > 0){
+    const rate = stab.dev.offline / stab.dev.total;
+    if (rate >= 0.05){
+      score += 0.14;
+      signals.push(`Device offline rate elevated (${Math.round(rate*100)}%)`);
+    }
+  }
+
+  if (stab.stat.degraded > 0){
+    score += 0.10;
+    signals.push(`Status feed shows degraded components (${stab.stat.degraded})`);
+  }
+
+  if (stab.maint.active > 0){
+    score += 0.06;
+    signals.push(`Maintenance active (${stab.maint.active})`);
+  }
+
+  score = Math.max(0.05, Math.min(0.95, score));
+  const label = score >= 0.70 ? "High" : score >= 0.40 ? "Moderate" : "Low";
+
+  const message =
+    label === "High"
+      ? "Strong cross-domain indicators suggest the incident is influencing tenant experience. Prioritize remediation and stakeholder communications."
+      : label === "Moderate"
+        ? "Some indicators correlate with the incident. Validate internal telemetry and confirm whether the event is materially impacting users."
+        : "Limited correlation signals detected. Continue monitoring.";
+
+  return { score, label, message, signals };
+}
+
+/* ---------- RCA clustering (heuristic) ---------- */
+function clusterKeyFromIncident(i){
+  const t = String(i.name || "").toLowerCase();
+  if (t.includes("calling") || t.includes("telephony") || t.includes("pstn")) return "Calling/PSTN";
+  if (t.includes("meeting")) return "Meetings";
+  if (t.includes("messag") || t.includes("spaces")) return "Messaging";
+  if (t.includes("device") || t.includes("room") || t.includes("desk")) return "Devices";
+  if (t.includes("login") || t.includes("auth") || t.includes("sso")) return "Identity/Access";
+  if (t.includes("api") || t.includes("webhook")) return "Platform/API";
+  return "General Service Degradation";
+}
+function renderRcaTable(){
+  const inc = DATA.incidents || [];
+  const map = new Map();
+
+  for (const i of inc){
+    const key = clusterKeyFromIncident(i);
+    const cur = map.get(key) || { key, count:0, signals:new Set() };
+    cur.count++;
+    const sev = severityClass(i);
+    cur.signals.add(sev);
+    if (isActiveIncident(i)) cur.signals.add("active");
+    map.set(key, cur);
+  }
+
+  const rows = Array.from(map.values()).sort((a,b)=> b.count - a.count).slice(0, 8);
+  const tbody = $("rcaRows");
+  if (!rows.length){
+    tbody.innerHTML = `<tr><td colspan="3" class="muted">No incident history available.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r=>{
+    const sig = Array.from(r.signals).join(", ");
+    return `<tr>
+      <td style="font-weight:1000;">${escapeHtml(r.key)}</td>
+      <td class="mono">${escapeHtml(String(r.count))}</td>
+      <td class="muted">${escapeHtml(sig || "—")}</td>
+    </tr>`;
+  }).join("");
+}
+
+/* ---------- Product heatmap ---------- */
+function renderHeatmap(stab){
+  // 14x? grid: last 14 days columns, product rows (fixed list)
+  const products = [
+    "Webex Calling",
+    "Webex Meetings",
+    "Webex Messaging",
+    "Webex Devices",
+    "Control Hub / Admin",
+    "PSTN / Telephony",
+    "Platform / API"
+  ];
+
+  // Build daily impact levels from history (or current if no history)
+  const hist = loadHistory(SELECTED_ORG_ID);
+  const days = 14;
+  const slice = hist.slice(Math.max(0, hist.length - days));
+  const grid = $("heatGrid");
+  grid.innerHTML = "";
+
+  // If no history, derive from current incident clusters/status
+  const currentImpact = new Map();
+  const inc = (DATA.incidents || []);
+  for (const i of inc){
+    const cls = clusterKeyFromIncident(i);
+    const sev = severityScore(i);
+    if (cls === "Calling/PSTN"){
+      currentImpact.set("Webex Calling", Math.max(currentImpact.get("Webex Calling")||0, sev));
+      currentImpact.set("PSTN / Telephony", Math.max(currentImpact.get("PSTN / Telephony")||0, sev));
+    } else if (cls === "Meetings"){
+      currentImpact.set("Webex Meetings", Math.max(currentImpact.get("Webex Meetings")||0, sev));
+    } else if (cls === "Messaging"){
+      currentImpact.set("Webex Messaging", Math.max(currentImpact.get("Webex Messaging")||0, sev));
+    } else if (cls === "Devices"){
+      currentImpact.set("Webex Devices", Math.max(currentImpact.get("Webex Devices")||0, sev));
+    } else if (cls === "Identity/Access"){
+      currentImpact.set("Control Hub / Admin", Math.max(currentImpact.get("Control Hub / Admin")||0, sev));
+    } else if (cls === "Platform/API"){
+      currentImpact.set("Platform / API", Math.max(currentImpact.get("Platform / API")||0, sev));
+    } else {
+      currentImpact.set("Control Hub / Admin", Math.max(currentImpact.get("Control Hub / Admin")||0, 1));
+    }
+  }
+  // status degraded influences admin/platform a bit
+  if (stab.stat.degraded > 0){
+    currentImpact.set("Control Hub / Admin", Math.max(currentImpact.get("Control Hub / Admin")||0, 2));
+    currentImpact.set("Platform / API", Math.max(currentImpact.get("Platform / API")||0, 1));
+  }
+  if (stab.pstn.degraded){
+    currentImpact.set("PSTN / Telephony", Math.max(currentImpact.get("PSTN / Telephony")||0, 2));
+  }
+
+  // Render: products rows x days columns
+  // We keep a flat grid, with narrative describing row order
+  // Each cell lvl: 0 none, 1 low, 2 moderate, 3 high
+  // If we have history snapshots, use snapshot cluster hints; else use currentImpact repeated
+  for (const p of products){
+    for (let c=0;c<days;c++){
+      let lvl = 0;
+      if (slice.length){
+        const snap = slice[c] || slice[slice.length-1];
+        // use incident count + stability as proxy
+        // and boost calling/pstn if license deficits exist in snap
+        const incA = Number(snap.incActive||0);
+        const licDef = Number(snap.licDeficits||0);
+        const off = Number(snap.offlineDevices||0);
+
+        // base level from incident activity
+        if (incA >= 2) lvl = 2;
+        if (incA >= 4) lvl = 3;
+        if (incA === 1) lvl = 1;
+
+        // product-specific tweaks (heuristic)
+        if (p === "Webex Calling" || p === "PSTN / Telephony"){
+          if (licDef > 0) lvl = Math.max(lvl, 2);
+        }
+        if (p === "Webex Devices"){
+          if (off >= 5) lvl = Math.max(lvl, 2);
+          if (off >= 15) lvl = Math.max(lvl, 3);
+        }
+
+        // stability low => increase general signal
+        const st = Number(snap.stability||100);
+        if (st < 70) lvl = Math.max(lvl, 2);
+        if (st < 50) lvl = Math.max(lvl, 3);
+      } else {
+        lvl = currentImpact.get(p) || 0;
+      }
+
+      const cell = document.createElement("div");
+      cell.className = "heatCell";
+      cell.dataset.lvl = String(Math.max(0, Math.min(3, lvl)));
+      cell.title = `${p} • Intensity: ${lvl}/3`;
+      grid.appendChild(cell);
+    }
+  }
+
+  $("heatScope").textContent = slice.length
+    ? `Last ${Math.min(days, slice.length)} day(s)`
+    : `No history yet`;
+
+  $("heatNarrative").textContent =
+    "Heatmap intensity is derived from incident posture, license risk, device offline signals, and status/maintenance indicators. " +
+    "It is a customer-facing operational view designed to make it obvious where experience risk is concentrated.";
+}
+
+/* ---------- Trend chart (30-day) ---------- */
+function clearCanvas(ctx, w, h){ ctx.clearRect(0,0,w,h); }
+function drawAxes(ctx, w, h){
+  const line = cssVar("--line");
+  ctx.strokeStyle = line;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(40, 10);
+  ctx.lineTo(40, h-30);
+  ctx.lineTo(w-10, h-30);
+  ctx.stroke();
+}
+function drawText(ctx, text, x, y, opts={}){
+  ctx.fillStyle = opts.color || cssVar("--muted");
+  ctx.font = opts.font || "12px system-ui";
+  ctx.textAlign = opts.align || "left";
+  ctx.fillText(text, x, y);
+}
+function drawLine(ctx, pts, color){
+  if (!pts.length) return;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  pts.forEach((p,i)=>{
+    if (i===0) ctx.moveTo(p.x,p.y);
+    else ctx.lineTo(p.x,p.y);
+  });
+  ctx.stroke();
+}
+function drawBars(ctx, bars, color){
+  ctx.fillStyle = color;
+  for (const b of bars){
+    ctx.globalAlpha = 0.25;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.globalAlpha = 1;
+  }
+}
+function renderTrendChart(){
+  const canvas = $("trendChart");
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+
+  const hist = loadHistory(SELECTED_ORG_ID);
+  $("trendHint").textContent = `Snapshots: ${hist.length} (last 30 days max)`;
+
+  clearCanvas(ctx, w, h);
+  drawAxes(ctx, w, h);
+
+  if (!hist.length){
+    drawText(ctx, "No history captured yet. Use Refresh daily to build the 30-day observability trend.", 60, 60, { font:"13px system-ui" });
+    $("trendSummary").textContent = `No snapshots yet for tenant ${SELECTED_ORG_ID || "—"}.`;
+    return;
+  }
+
+  const st = hist.map(s => Number(s.stability||100));
+  const inc = hist.map(s => Number(s.incActive||0));
+  const lic = hist.map(s => Number(s.licDeficits||0));
+  const off = hist.map(s => Number(s.offlineDevices||0));
+
+  const plotW = w - 60;
+  const plotH = h - 50;
+  const left = 45;
+  const bottom = h - 30;
+
+  const xs = hist.map((_,i)=> left + (plotW * (hist.length === 1 ? 0 : i/(hist.length-1))));
+
+  // Stability line (0–100)
+  const stYs = st.map(v => bottom - (plotH * (Math.max(0,Math.min(100,v))/100)));
+
+  // Bars scaled
+  const maxInc = Math.max(1, ...inc);
+  const maxLic = Math.max(1, ...lic);
+  const maxOff = Math.max(1, ...off);
+
+  const incYs = inc.map(v => bottom - (plotH * (v/maxInc)));
+  const licYs = lic.map(v => bottom - (plotH * (v/maxLic)));
+  const offYs = off.map(v => bottom - (plotH * (v/maxOff)));
+
+  // labels
+  drawText(ctx, "100", 10, 18, { font:"10px system-ui" });
+  drawText(ctx, "0", 22, bottom, { font:"10px system-ui" });
+
+  // Stability
+  drawLine(ctx, xs.map((x,i)=>({x, y:stYs[i]})), cssVar("--info"));
+
+  // Bars: incidents red, license amber, offline muted
+  const bw = Math.max(6, Math.min(14, plotW / Math.max(10, hist.length)));
+
+  const incBars = xs.map((x,i)=>({ x:x-bw/2, y:incYs[i], w:bw, h:bottom-incYs[i] }));
+  drawBars(ctx, incBars, cssVar("--bad"));
+
+  const licBars = xs.map((x,i)=>({ x:x-bw/2, y:licYs[i], w:Math.max(4, bw-2), h:bottom-licYs[i] }));
+  drawBars(ctx, licBars, cssVar("--warn"));
+
+  // Offline line dashed
+  ctx.setLineDash([5,4]);
+  drawLine(ctx, xs.map((x,i)=>({x, y:offYs[i]})), cssVar("--muted"));
+  ctx.setLineDash([]);
+
+  // date ticks
+  const tickEvery = Math.max(1, Math.floor(hist.length / 6));
+  for (let i=0;i<hist.length;i+=tickEvery){
+    drawText(ctx, hist[i].day.slice(5), xs[i], bottom + 18, { align:"center", font:"10px system-ui" });
+  }
+
+  $("trendSummary").textContent =
+    `Stability Index (blue line), Active Incidents (red bars), License Deficits (amber bars), Offline Devices (dashed line). ` +
+    `Stored locally per tenant (${SELECTED_ORG_ID || "—"}).`;
+}
+
+/* ---------- Sparklines ---------- */
+function drawSpark(canvasId, values, color){
+  const c = document.getElementById(canvasId);
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  const w = c.width, h = c.height;
+  ctx.clearRect(0,0,w,h);
+
+  if (!values || values.length < 2){
+    // tiny baseline
+    ctx.strokeStyle = cssVar("--line");
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(2, h-8);
+    ctx.lineTo(w-2, h-8);
+    ctx.stroke();
+    return;
+  }
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = (max-min) || 1;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  values.forEach((v,i)=>{
+    const x = 2 + ((w-4) * (i/(values.length-1)));
+    const y = (h-4) - ((h-8) * ((v-min)/span));
+    if (i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+}
+function renderSparklines(){
+  const hist = loadHistory(SELECTED_ORG_ID);
+  const last30 = hist.slice(Math.max(0, hist.length - 30));
+  const st = last30.map(s=>Number(s.stability||100));
+  const inc = last30.map(s=>Number(s.incActive||0));
+  const lic = last30.map(s=>Number(s.licDeficits||0));
+  const edge = last30.map(s=>Number(s.edgeScore||0));
+
+  drawSpark("spStability", st, cssVar("--info"));
+  drawSpark("spInc", inc, cssVar("--bad"));
+  drawSpark("spLic", lic, cssVar("--warn"));
+  drawSpark("spEdge", edge, cssVar("--muted"));
+}
+
+/* ---------- Snapshot capture ---------- */
+function captureSnapshot(){
+  if (!SELECTED_ORG_ID) return;
+
+  const stab = computeStabilityIndex();
+  const day = dayKey();
+  const hist = loadHistory(SELECTED_ORG_ID);
+
+  // Edge score: combine offline devices + pstn degraded
+  let edgeScore = 0;
+  if (stab.dev.total > 0){
+    edgeScore += Math.min(60, Math.round((stab.dev.offline / stab.dev.total) * 120));
+  }
+  if (stab.pstn.degraded) edgeScore += 20;
+  edgeScore = Math.max(0, Math.min(100, edgeScore));
+
+  const snap = {
+    day,
+    ts: Date.now(),
+    orgId: SELECTED_ORG_ID,
+    stability: stab.score,
+    incActive: stab.incActive,
+    licDeficits: stab.lic.deficits,
+    licRisks: stab.lic.risks,
+    offlineDevices: stab.dev.offline,
+    totalDevices: stab.dev.total,
+    edgeScore
+  };
+
+  const merged = pruneHistory([...(hist||[]), snap]);
+  saveHistory(SELECTED_ORG_ID, merged);
+}
+
+/* ---------- Render everything ---------- */
+function setRag(color, score, sub){
+  const rag = $("ragPill");
+  rag.classList.remove("red","amber");
+  $("ragTitle").textContent = color;
+  $("ragSub").textContent = sub;
+  $("ragScore").textContent = String(score);
+
+  if (color === "RED") rag.classList.add("red");
+  else if (color === "AMBER") rag.classList.add("amber");
+
+  const dot = $("ragDot");
+  dot.style.background = color === "RED" ? cssVar("--bad") : color === "AMBER" ? cssVar("--warn") : cssVar("--good");
+}
+
+function setBanner(id, show, title, msg, right1, right2){
+  const el = $(id);
+  if (!el) return;
+  if (!show){
+    el.classList.remove("show");
+    return;
+  }
+  el.classList.add("show");
+  if (title && $(id+"Title")) $(id+"Title").textContent = title;
+  if (msg && $(id+"Msg")) $(id+"Msg").textContent = msg;
+  if (right1 && $(right1.id)) $(right1.id).textContent = right1.text;
+  if (right2 && $(right2.id)) $(right2.id).textContent = right2.text;
+}
+
+function renderExecutiveSummary(stab, pred, cor, sla, blast){
+  // Fortune-100 exec paragraph: clear + actionable
+  const tenant = ME?.orgName || "this tenant";
+  const s = stab.score;
+
+  const posture =
+    s >= 85 ? "stable"
+    : s >= 65 ? "caution"
+    : "elevated risk";
+
+  const incidentPhrase =
+    stab.incActive > 0
+      ? `${stab.incActive} active incident(s) currently in-flight`
+      : "no active incidents detected";
+
+  const licensePhrase =
+    stab.lic.deficits > 0
+      ? `${stab.lic.deficits} license deficit SKU(s) identified (procurement or rebalancing recommended)`
+      : (stab.lic.risks > 0 ? `${stab.lic.risks} SKU(s) at-risk (≥90% utilization)` : "no license deficit pressure observed");
+
+  const edgePhrase =
+    (stab.dev.total > 0 && stab.dev.offline > 0)
+      ? `${stab.dev.offline} device(s) reporting offline/disconnected`
+      : "device connectivity appears nominal";
+
+  const slaPhrase =
+    sla.risk ? "SLA breach risk is elevated; accelerate incident communications and mitigation."
+    : "SLA exposure is within acceptable thresholds.";
+
+  const corPhrase =
+    cor.label === "High" ? "Strong cross-domain correlation suggests a measurable end-user impact vector."
+    : cor.label === "Moderate" ? "Some correlation signals detected; validate internal telemetry for customer-impact confirmation."
+    : "Correlation signals are limited; continue monitoring posture.";
+
+  const predPhrase =
+    `7-day predictive risk is ${pred.label.toUpperCase()} (${fmtPct(pred.p*100)}).`;
+
+  const blastPhrase =
+    `Estimated blast radius: ${blast.label} (score ${blast.score}/100, confidence ${Math.round(blast.confidence*100)}%).`;
+
+  $("execSummary").textContent =
+    `For ${tenant}, current observability posture is ${posture} with a Stability Index of ${s}/100. ` +
+    `We see ${incidentPhrase}; ${licensePhrase}; and ${edgePhrase}. ` +
+    `${predPhrase} ${blastPhrase} ${corPhrase} ${slaPhrase}`;
+}
+
+function renderKpis(stab, pred, cor, sla, blast){
+  // Stability
+  $("kStability").textContent = `${stab.score}/100`;
+  $("kStability").style.color = stab.score >= 85 ? cssVar("--good") : stab.score >= 65 ? cssVar("--warn") : cssVar("--bad");
+  $("kStabTrend").textContent = `Index: ${stab.score}`;
+
+  $("kStabBadge").className = "badge " + (stab.score >= 85 ? "good" : stab.score >= 65 ? "warn" : "bad");
+  $("kStabBadge").querySelector(".dot").style.color = stab.score >= 85 ? cssVar("--good") : stab.score >= 65 ? cssVar("--warn") : cssVar("--bad");
+  $("kStabBadgeText").textContent = stab.score >= 85 ? "GREEN" : stab.score >= 65 ? "AMBER" : "RED";
+
+  // Incidents
+  $("kIncActive").textContent = String(stab.incActive);
+  $("kIncBadge").className = "badge " + (stab.incActive > 0 ? "bad" : "good");
+  $("kIncBadge").querySelector(".dot").style.color = stab.incActive > 0 ? cssVar("--bad") : cssVar("--good");
+  $("kIncBadgeText").textContent = stab.incActive > 0 ? "ACTIVE" : "CLEAR";
+
+  $("kIncSla").textContent = sla.clock || "SLA: —";
+  $("kIncActiveSub").textContent = sla.risk
+    ? "SLA breach risk elevated. Escalation readiness recommended."
+    : "No SLA breach risk detected from active incident timers.";
+
+  // Licenses
+  const lic = stab.lic;
+  const licText = lic.deficits > 0 ? `${lic.deficits} deficit` : lic.risks > 0 ? `${lic.risks} at-risk` : "Healthy";
+  $("kLicRisk").textContent = licText;
+  $("kLicRisk").style.color = lic.deficits > 0 ? cssVar("--bad") : lic.risks > 0 ? cssVar("--warn") : cssVar("--good");
+
+  $("kLicBadge").className = "badge " + (lic.deficits > 0 ? "bad" : lic.risks > 0 ? "warn" : "good");
+  $("kLicBadge").querySelector(".dot").style.color = lic.deficits > 0 ? cssVar("--bad") : lic.risks > 0 ? cssVar("--warn") : cssVar("--good");
+  $("kLicBadgeText").textContent = lic.deficits > 0 ? "DEFICIT" : lic.risks > 0 ? "AT RISK" : "OK";
+
+  // License velocity from history (used as an executive hint)
+  const hist = loadHistory(SELECTED_ORG_ID);
+  let vel = "—";
+  if (hist.length >= 2){
+    const a = hist[0], b = hist[hist.length-1];
+    const days = Math.max(1, Math.round((new Date(b.day)-new Date(a.day))/86400000));
+    const defDelta = (Number(b.licDeficits||0) - Number(a.licDeficits||0));
+    const perDay = defDelta / days;
+    if (Number.isFinite(perDay)) vel = `${perDay.toFixed(2)}/day`;
+  }
+  $("kLicVelocity").textContent = `Velocity: ${vel}`;
+
+  // Devices & PSTN
+  let edgeVal = "Nominal";
+  if (stab.pstn.degraded) edgeVal = "PSTN Degraded";
+  if (stab.dev.total > 0 && stab.dev.offline > 0) edgeVal = `${stab.dev.offline} Offline`;
+  $("kEdgeHealth").textContent = edgeVal;
+  $("kEdgeHealth").style.color = (stab.pstn.degraded || (stab.dev.total>0 && stab.dev.offline>0)) ? cssVar("--warn") : cssVar("--good");
+
+  $("kEdgeBadge").className = "badge " + ((stab.pstn.degraded || (stab.dev.total>0 && stab.dev.offline>0)) ? "warn" : "good");
+  $("kEdgeBadge").querySelector(".dot").style.color = (stab.pstn.degraded || (stab.dev.total>0 && stab.dev.offline>0)) ? cssVar("--warn") : cssVar("--good");
+  $("kEdgeBadgeText").textContent = (stab.pstn.degraded || (stab.dev.total>0 && stab.dev.offline>0)) ? "ATTENTION" : "OK";
+
+  const note = stab.pstn.note || "—";
+  $("kEdgeNote").textContent = note.length > 42 ? note.slice(0,42) + "…" : note;
+
+  // Sidebar RAG
+  if (stab.score < 65 || sla.risk || cor.label === "High"){
+    setRag("RED", stab.score, (sla.risk ? "SLA breach risk detected" : "Instability signals present"));
+  } else if (stab.score < 85 || cor.label === "Moderate" || lic.deficits > 0 || lic.risks > 0){
+    setRag("AMBER", stab.score, "Elevated risk signals — monitor closely");
+  } else {
+    setRag("GREEN", stab.score, "All systems nominal");
+  }
+
+  // Predictive
+  $("predProb").textContent = `${Math.round(pred.p*100)}%`;
+  $("predProb").style.color = pred.label === "High" ? cssVar("--bad") : pred.label === "Moderate" ? cssVar("--warn") : cssVar("--good");
+  $("predExplain").textContent =
+    pred.label === "High"
+      ? "Conditions suggest a higher probability of continued service disruption without mitigation."
+      : pred.label === "Moderate"
+        ? "Risk signals exist; proactive monitoring and comms recommended."
+        : "Low risk profile based on recent signals.";
+  $("predDrivers").textContent = pred.drivers.length ? pred.drivers.join(", ") : "baseline_only";
+
+  $("predBadge2").className = "badge " + (pred.label === "High" ? "bad" : pred.label === "Moderate" ? "warn" : "good");
+  $("predBadge2").querySelector(".dot").style.color = pred.label === "High" ? cssVar("--bad") : pred.label === "Moderate" ? cssVar("--warn") : cssVar("--good");
+  $("predBadge2Text").textContent = pred.label.toUpperCase();
+
+  $("predText").textContent = `Predictive: ${pred.label.toUpperCase()} (${Math.round(pred.p*100)}%)`;
+  $("predBadge").className = "badge " + (pred.label === "High" ? "bad" : pred.label === "Moderate" ? "warn" : "good");
+  $("predBadge").querySelector(".dot").style.color = pred.label === "High" ? cssVar("--bad") : pred.label === "Moderate" ? cssVar("--warn") : cssVar("--good");
+
+  // Blast
+  $("blastScore").textContent = `${blast.label} (${blast.score}/100)`;
+  $("blastScore").style.color = blast.score >= 70 ? cssVar("--bad") : blast.score >= 40 ? cssVar("--warn") : cssVar("--good");
+  $("blastExplain").textContent =
+    `Blast radius estimates impact concentration across product domains and internal signals. Confidence: ${Math.round(blast.confidence*100)}%.`;
+  $("blastBadge").className = "badge " + (blast.score >= 70 ? "bad" : blast.score >= 40 ? "warn" : "good");
+  $("blastBadge").querySelector(".dot").style.color = blast.score >= 70 ? cssVar("--bad") : blast.score >= 40 ? cssVar("--warn") : cssVar("--good");
+  $("blastBadgeText").textContent = blast.score >= 70 ? "CRITICAL" : blast.score >= 40 ? "ELEVATED" : "LOW";
+  $("blastComp").textContent = `Domains: ${blast.domainsCount} • Sev: ${blast.maxSev}/3`;
+
+  // Correlation banner
+  const corScorePct = Math.round(cor.score * 100);
+  $("bannerCorScore").textContent = `Confidence: ${corScorePct}%`;
+
+  // Live badge
+  $("liveText").textContent = WS && WS.readyState === 1 ? "Live: WebSocket" : "Live: Polling";
+  $("liveBadge").className = "badge " + ((WS && WS.readyState === 1) ? "good" : "warn");
+  $("liveBadge").querySelector(".dot").style.color = (WS && WS.readyState === 1) ? cssVar("--good") : cssVar("--warn");
+}
+
+function renderBanners(stab, pred, cor, sla){
+  // SLA banner
+  if (sla.risk){
+    $("bannerSla").classList.add("show");
+    $("bannerSlaMsg").textContent = sla.msg;
+    $("bannerSlaClock").textContent = sla.clock || "—";
+  } else {
+    $("bannerSla").classList.remove("show");
+  }
+
+  // Correlation banner if moderate/high
+  if (cor.label === "High" || cor.label === "Moderate"){
+    $("bannerCor").classList.add("show");
+    $("bannerCorTitle").textContent = `Correlation: ${cor.label.toUpperCase()}`;
+    $("bannerCorMsg").textContent = cor.message;
+    $("bannerCorScore").textContent = `Confidence: ${Math.round(cor.score*100)}%`;
+  } else {
+    $("bannerCor").classList.remove("show");
+  }
+
+  // Connection banner always on
+  $("bannerConn").classList.add("show");
+  $("connModePill").textContent = (WS && WS.readyState === 1) ? "WebSocket" : "Polling";
+  $("bannerConnMsg").textContent = (WS && WS.readyState === 1)
+    ? "True live mode enabled. Dashboard will refresh on server events."
+    : "WebSocket not available. Dashboard uses hardened polling to refresh data.";
+
+  // Footer ticker clock
+  $("nocClock").textContent = new Date().toLocaleTimeString();
+}
+
+function updateProductFilter(incidents){
+  const select = $("incProductFilter");
+  const prev = select.value;
+  const set = new Set();
+  for (const i of (incidents||[])){
+    for (const p of incidentProducts(i)) set.add(p);
+  }
+  const arr = Array.from(set).sort((a,b)=>a.localeCompare(b)).slice(0, 200);
+  select.innerHTML = `<option value="">All Products</option>` + arr.map(p=>`<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
+  if (arr.includes(prev)) select.value = prev;
+}
+
+function renderIncidentTable(){
+  const incidents = DATA.incidents || [];
+  const activeOnly = $("activeOnly").checked;
+  const q = $("incSearch").value.trim().toLowerCase();
+  const prod = $("incProductFilter").value;
+  const sev = $("incSeverityFilter").value;
+
+  let items = incidents.slice();
+
+  if (activeOnly) items = items.filter(isActiveIncident);
+
+  if (q){
+    items = items.filter(i=>{
+      const ref = String(i.external_id || i.id || "");
+      const nm = String(i.name || "");
+      return ref.toLowerCase().includes(q) || nm.toLowerCase().includes(q);
+    });
+  }
+
+  if (prod){
+    items = items.filter(i => incidentProducts(i).includes(prod));
+  }
+
+  if (sev){
+    items = items.filter(i => severityClass(i) === sev);
+  }
+
+  const activeCount = incidents.filter(isActiveIncident).length;
+  $("incCounts").textContent = `Active: ${activeCount} • Total: ${incidents.length}`;
+
+  const tbody = $("incRows");
+  if (!items.length){
+    tbody.innerHTML = `<tr><td colspan="7" class="muted">No incidents match filters.</td></tr>`;
+    return;
+  }
+
+  // Compute per-incident score: severity + age + product breadth
+  const rows = items.map(i=>{
+    const ref = i.external_id || i.id || "—";
+    const active = isActiveIncident(i);
+    const cls = severityClass(i);
+    const age = incidentAgeMinutes(i);
+    const prods = incidentProducts(i);
+    const breadth = prods.length;
+
+    let score = severityScore(i) * 25;
+    if (active) score += 18;
+    if (Number.isFinite(age)){
+      if (age > 240) score += 18;
+      else if (age > 120) score += 10;
+      else if (age > 60) score += 6;
+    }
+    score += Math.min(18, breadth * 4);
+    score = Math.max(0, Math.min(100, Math.round(score)));
+
+    const sevLabel = cls.toUpperCase();
+    const sevBadge = cls === "major" ? "bad" : cls === "partial" ? "warn" : "info";
+
+    const stBadge = active ? "bad" : "good";
+    const stText = active ? "Active" : "Resolved";
+
+    const started = i.created_at ? new Date(i.created_at).toLocaleString() : "—";
+
+    return `
+      <tr>
+        <td class="clickable" data-inc="${escapeHtml(String(i.id||ref))}">${escapeHtml(String(ref))}</td>
+        <td><span class="badge ${stBadge}"><span class="dot"></span>${escapeHtml(stText)}</span></td>
+        <td><span class="badge ${sevBadge}"><span class="dot"></span>${escapeHtml(sevLabel)}</span></td>
+        <td class="mono">${escapeHtml(started)}</td>
+        <td class="muted" style="font-weight:1000;">${escapeHtml(prods.slice(0,4).join(", "))}${prods.length>4 ? "…" : ""}</td>
+        <td>${escapeHtml(String(i.name || "—"))}</td>
+        <td class="mono" style="font-weight:1000; color:${score>=70 ? cssVar("--bad") : score>=40 ? cssVar("--warn") : cssVar("--good")}">${score}</td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = rows.join("");
+
+  // click wiring
+  tbody.querySelectorAll("[data-inc]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.getAttribute("data-inc");
+      const found = (DATA.incidents || []).find(x => String(x.id||x.external_id||"") === id || String(x.external_id||"")===id);
+      if (found) openIncidentModal(found);
+    });
+  });
+}
+
+/* ---------- Incident modal ---------- */
+function closeIncidentModal(){
+  $("incModalOverlay").classList.remove("show");
+  ACTIVE_INCIDENT = null;
+}
+$("btnCloseIncModal").addEventListener("click", closeIncidentModal);
+$("incModalOverlay").addEventListener("click", (e)=>{
+  if (e.target && e.target.id === "incModalOverlay") closeIncidentModal();
+});
+document.addEventListener("keydown", (e)=>{
+  if (e.key === "Escape") closeIncidentModal();
+});
+
+function openIncidentModal(inc){
+  ACTIVE_INCIDENT = inc;
+  $("incModalOverlay").classList.add("show");
+
+  const ref = inc.external_id || inc.id || "—";
+  const started = inc.created_at ? new Date(inc.created_at).toLocaleString() : "—";
+  const products = incidentProducts(inc);
+
+  $("incModalTitle").textContent = `Incident ${ref}`;
+  $("incModalSub").textContent = `Started: ${started} • Products: ${products.join(", ") || "—"} • Tenant: ${ME?.orgName || "—"} (${SELECTED_ORG_ID || "—"})`;
+
+  const active = isActiveIncident(inc);
+  const sev = severityClass(inc);
+  const badgeClass = active ? "bad" : "good";
+  $("incModalBadge").className = "badge " + badgeClass;
+  $("incModalBadge").querySelector(".dot").style.color = active ? cssVar("--bad") : cssVar("--good");
+  $("incModalBadgeText").textContent = active ? "ACTIVE" : "RESOLVED";
+
+  // Impact score
+  const age = incidentAgeMinutes(inc);
+  const breadth = products.length;
+  let impact = severityScore(inc) * 25 + (active ? 18 : 0) + Math.min(18, breadth*4);
+  if (Number.isFinite(age)){
+    if (age > 240) impact += 18;
+    else if (age > 120) impact += 10;
+    else if (age > 60) impact += 6;
+  }
+  impact = Math.max(0, Math.min(100, Math.round(impact)));
+
+  $("mImpact").textContent = `${impact}/100`;
+  $("mImpact").style.color = impact >= 70 ? cssVar("--bad") : impact >= 40 ? cssVar("--warn") : cssVar("--good");
+  $("mImpactSub").textContent = `Derived from severity (${sev}), duration, and product breadth (${breadth}).`;
+
+  // Blast radius (reuse global computation but bias toward incident)
+  const stab = computeStabilityIndex();
+  const blast = computeBlastRadius(stab);
+  $("mBlast").textContent = `${blast.label} (${blast.score}/100)`;
+  $("mBlast").style.color = blast.score >= 70 ? cssVar("--bad") : blast.score >= 40 ? cssVar("--warn") : cssVar("--good");
+  $("mBlastSub").textContent = `Domains: ${blast.domainsCount} • Confidence: ${Math.round(blast.confidence*100)}%.`;
+
+  // SLA risk
+  const sla = computeSlaRisk();
+  $("mSla").textContent = sla.risk ? "ELEVATED" : "NORMAL";
+  $("mSla").style.color = sla.risk ? cssVar("--bad") : cssVar("--good");
+  $("mSlaSub").textContent = sla.clock ? `${sla.clock} • ${sla.msg}` : (sla.msg || "—");
+
+  // Correlation
+  const cor = computeCorrelation(stab);
+  $("mCor").textContent = `${Math.round(cor.score*100)}% (${cor.label.toUpperCase()})`;
+  $("mCor").style.color = cor.label === "High" ? cssVar("--bad") : cor.label === "Moderate" ? cssVar("--warn") : cssVar("--good");
+  $("mCorSub").textContent = cor.message;
+
+  $("mCorBadge").className = "badge " + (cor.label === "High" ? "bad" : cor.label === "Moderate" ? "warn" : "good");
+  $("mCorBadge").querySelector(".dot").style.color = cor.label === "High" ? cssVar("--bad") : cor.label === "Moderate" ? cssVar("--warn") : cssVar("--good");
+  $("mCorBadgeText").textContent = cor.label.toUpperCase();
+
+  $("mCorSignals").textContent =
+    cor.signals && cor.signals.length
+      ? `Signals: ${cor.signals.join(" • ")}`
+      : "Signals: None";
+
+  // Updates / timeline
+  const updates = Array.isArray(inc.updates) ? inc.updates.slice() : [];
+  updates.sort((a,b)=> new Date(b.created_at) - new Date(a.created_at));
+
+  const rows = updates.length
+    ? updates.map(u=>{
+        const t = u.created_at ? new Date(u.created_at).toLocaleString() : "—";
+        const st = String(u.status || "").toUpperCase() || "UPDATE";
+        const body = u.body_html || u.body || "";
+        return `<tr>
+          <td class="mono">${escapeHtml(t)}</td>
+          <td style="font-weight:1000;">${escapeHtml(st)}</td>
+          <td>${body}</td>
+        </tr>`;
+      }).join("")
+    : `<tr><td colspan="3" class="muted">No update history available for this incident.</td></tr>`;
+
+  $("mUpdates").innerHTML = rows;
+
+  // Narrative
+  const narrative = [];
+  if (active){
+    narrative.push("This incident is currently active and may be impacting tenant experience depending on product usage and geographic scope.");
+    narrative.push("US Signal is monitoring Cisco updates and correlating with tenant signals to identify any measurable impact.");
+  } else {
+    narrative.push("This incident is marked resolved. Residual impact may persist briefly due to client-side reconnection or cached signaling.");
+  }
+  if (stab.lic.deficits > 0){
+    narrative.push(`License deficit posture detected (${stab.lic.deficits} SKU deficit). While not caused by Cisco incidents, deficits can amplify experience issues (e.g., provisioning failures).`);
+  }
+  if (stab.pstn.degraded){
+    narrative.push("PSTN degradation indicators are present. Voice calling experience may be influenced by carrier/SBC/Gateway behavior in addition to Cisco cloud status.");
+  }
+  $("mNarrative").textContent = narrative.join(" ");
+
+  // Buttons
+  $("btnPrintIncident").onclick = ()=> window.print();
+  $("btnNotifyIncident").onclick = async ()=>{
+    await notifyNow({ reason:`Incident update watch: ${ref}`, incident: inc });
+  };
+}
+
+/* ---------- Render master ---------- */
+function renderAll(){
+  const stab = computeStabilityIndex();
+  const pred = computePredictive(stab);
+  const blast = computeBlastRadius(stab);
+  const sla = computeSlaRisk();
+  const cor = computeCorrelation(stab);
+
+  // Render headline blocks
+  renderExecutiveSummary(stab, pred, cor, sla, blast);
+  renderKpis(stab, pred, cor, sla, blast);
+  renderBanners(stab, pred, cor, sla);
+
+  // RCA and heatmap and table
+  renderRcaTable();
+  renderHeatmap(stab);
+  renderIncidentTable();
+
+  // Correlation banner content
+  $("bannerCorTitle").textContent = `Correlation: ${cor.label.toUpperCase()}`;
+  $("bannerCorMsg").textContent = cor.message;
+
+  // SLA banner details
+  if (sla.risk){
+    $("bannerSlaTitle").textContent = "SLA breach detection integration";
+    $("bannerSlaMsg").textContent = sla.msg;
+    $("bannerSlaClock").textContent = sla.clock || "—";
+  }
+
+  // Live connection pills
+  $("connModePill").textContent = (WS && WS.readyState === 1) ? "WebSocket" : "Polling";
+  $("liveText").textContent = (WS && WS.readyState === 1) ? "Live: WebSocket" : "Live: Polling";
+  $("liveBadge").className = "badge " + ((WS && WS.readyState === 1) ? "good" : "warn");
+  $("liveBadge").querySelector(".dot").style.color = (WS && WS.readyState === 1) ? cssVar("--good") : cssVar("--warn");
+
+  // Predictive badge in tenant context
+  $("predText").textContent = `Predictive: ${pred.label.toUpperCase()} (${Math.round(pred.p*100)}%)`;
+}
+
+/* ---------- Ticker ---------- */
+function updateTicker(){
+  const stab = computeStabilityIndex();
+  const pred = computePredictive(stab);
+  const sla = computeSlaRisk();
+  const cor = computeCorrelation(stab);
+
+  const bits = [];
+  bits.push(`Tenant: ${(ME?.orgName || "—")}`);
+  bits.push(`Stability: ${stab.score}/100`);
+  bits.push(`Active Incidents: ${stab.incActive}`);
+  bits.push(`License Deficits: ${stab.lic.deficits}`);
+  bits.push(`Offline Devices: ${stab.dev.offline}/${stab.dev.total || 0}`);
+  bits.push(`Predictive 7d: ${Math.round(pred.p*100)}% (${pred.label})`);
+  bits.push(`Correlation: ${Math.round(cor.score*100)}% (${cor.label})`);
+  bits.push(sla.risk ? `SLA RISK: ${sla.clock}` : "SLA: normal");
+
+  $("tickerText").textContent = bits.join("  •  ");
+  $("nocClock").textContent = new Date().toLocaleTimeString();
+}
+
+/* ---------- Controls wiring ---------- */
+$("activeOnly").addEventListener("change", renderIncidentTable);
+$("incSearch").addEventListener("input", renderIncidentTable);
+$("incProductFilter").addEventListener("change", renderIncidentTable);
+$("incSeverityFilter").addEventListener("change", renderIncidentTable);
+
+$("tenantSelect").addEventListener("change", ()=>{
+  SELECTED_ORG_ID = $("tenantSelect").value || ME?.orgId || null;
+  setError(null);
+  syncNotifyUI();
+  // Immediately refresh trend UI
+  renderTrendChart();
+  renderSparklines();
+});
+
+/* Load tenant button */
+$("btnLoad").addEventListener("click", async ()=>{
+  SELECTED_ORG_ID = $("tenantSelect").disabled ? (ME?.orgId || null) : $("tenantSelect").value;
+  setError(null);
+  syncNotifyUI();
+  await loadAll();
+});
+
+/* Refresh */
+$("btnRefresh").addEventListener("click", loadAll);
+
+/* Export CSV (observability snapshot view) */
+function safeFile(name){
+  return String(name || "export").replaceAll(/[^a-zA-Z0-9_\-]+/g, "_").slice(0,80);
+}
+function downloadCsv(filename, rows){
+  const csv = rows.map(r => r.map(v=>{
+    const s = String(v ?? "");
+    const needs = s.includes(",") || s.includes('"') || s.includes("\n");
+    if (!needs) return s;
+    return `"${s.replaceAll('"','""')}"`;
+  }).join(",")).join("\n");
+
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+$("btnExportCsv").addEventListener("click", ()=>{
+  const stab = computeStabilityIndex();
+  const pred = computePredictive(stab);
+  const blast = computeBlastRadius(stab);
+  const cor = computeCorrelation(stab);
+  const sla = computeSlaRisk();
+
+  const rows = [
+    ["Field","Value"],
+    ["Tenant", ME?.orgName || ""],
+    ["OrgId", SELECTED_ORG_ID || ""],
+    ["StabilityIndex", stab.score],
+    ["ActiveIncidents", stab.incActive],
+    ["LicenseDeficits", stab.lic.deficits],
+    ["LicenseRisks", stab.lic.risks],
+    ["OfflineDevices", stab.dev.offline],
+    ["TotalDevices", stab.dev.total],
+    ["PstnDegraded", stab.pstn.degraded ? "true":"false"],
+    ["Predictive7dProbability", Math.round(pred.p*100)+"%"],
+    ["PredictiveLabel", pred.label],
+    ["BlastRadius", blast.label],
+    ["BlastScore", blast.score],
+    ["CorrelationConfidence", Math.round(cor.score*100)+"%"],
+    ["CorrelationLabel", cor.label],
+    ["SlaRisk", sla.risk ? "true":"false"],
+    ["SlaClock", sla.clock || ""],
+    ["GeneratedAt", nowClock()]
+  ];
+
+  downloadCsv(`observability_${safeFile(SELECTED_ORG_ID)}_${dayKey()}.csv`, rows);
+});
+
+/* Executive PDF (Print-to-PDF) */
+$("btnPrintPdf").addEventListener("click", ()=> window.print());
+
+/* NOC mode */
+function setNocMode(on){
+  document.documentElement.setAttribute("data-noc", on ? "true" : "false");
+  localStorage.setItem("OBS_NOC_MODE", on ? "true" : "false");
+  updateTicker();
+}
+$("btnNoc").addEventListener("click", ()=>{
+  const cur = document.documentElement.getAttribute("data-noc") === "true";
+  setNocMode(!cur);
+  $("btnNoc").textContent = !cur ? "Exit NOC" : "NOC Wall Mode";
+});
+(function initNocFromStorage(){
+  const on = localStorage.getItem("OBS_NOC_MODE") === "true";
+  setNocMode(on);
+  $("btnNoc").textContent = on ? "Exit NOC" : "NOC Wall Mode";
+})();
+
+/* Logout */
+$("btnLogout").addEventListener("click", async ()=>{
+  try{ await fetch("/api/logout", { method:"POST" }); } catch {}
+  try{ await fetch("/api/pin/logout", { method:"POST" }); } catch {}
+  window.location.href = "/pin";
+});
+
+/* ---------- Notifications ---------- */
+function persistNotifyFromUI(){
+  const s = loadNotify(SELECTED_ORG_ID);
+  s.enabled = $("notifyToggle").checked;
+  s.cooldownMin = Number($("notifyCooldown").value || 15);
+  const email = $("notifyEmail").value.trim();
+  if (email) s.email = email;
+  saveNotify(SELECTED_ORG_ID, s);
+}
+$("notifyToggle").addEventListener("change", persistNotifyFromUI);
+$("notifyCooldown").addEventListener("change", persistNotifyFromUI);
+$("notifyEmail").addEventListener("input", ()=>{/* kept light */});
+
+async function notifyNow({ reason, incident }={}){
+  const status = $("notifyStatus");
+  status.textContent = "";
+  const s = loadNotify(SELECTED_ORG_ID);
+  const email = ($("notifyEmail").value.trim() || s.email || ME?.email || "").trim();
+
+  if (!email || !email.includes("@")){
+    status.textContent = "Enter a valid email address.";
+    return;
+  }
+
+  // Cooldown
+  const cooldownMs = Math.max(1, s.cooldownMin) * 60 * 1000;
+  if (Date.now() - (s.lastSentTs || 0) < cooldownMs){
+    status.textContent = `Cooldown active. Next send allowed in ~${Math.ceil((cooldownMs - (Date.now() - s.lastSentTs))/60000)} minute(s).`;
+    return;
+  }
+
+  const payload = {
+    email,
+    orgId: SELECTED_ORG_ID || null,
+    type: "observability",
+    reason: reason || "New incident detected",
+    incident: incident ? {
+      id: incident.id || incident.external_id,
+      reference: incident.external_id || incident.id,
+      status: incident.status,
+      impact: incident.impact,
+      name: incident.name,
+      created_at: incident.created_at,
+      products: incidentProducts(incident)
+    } : null,
+    generatedAt: new Date().toISOString()
+  };
+
+  // Try dedicated endpoints first, then fallback to your known email endpoint
+  const endpoints = ["/api/incidents/email", "/api/notify", "/api/licenses/email"];
+  let ok = false;
+  let lastErr = "";
+
+  for (const ep of endpoints){
+    const r = await api(ep, {
+      method:"POST",
+      headers:{ "content-type":"application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (r.ok){
+      ok = true;
+      break;
+    } else {
+      lastErr = (r.data && (r.data.error || r.data.message)) || `HTTP ${r.status}`;
+    }
+  }
+
+  if (!ok){
+    status.textContent = `Notification could not be sent (backend endpoint not available). Last error: ${lastErr}`;
+    return;
+  }
+
+  s.lastSentTs = Date.now();
+  s.email = email;
+  saveNotify(SELECTED_ORG_ID, s);
+
+  status.textContent = "✅ Notification sent.";
+}
+
+$("btnTestNotify").addEventListener("click", async ()=>{
+  await notifyNow({ reason:"Test notification from Observability Suite" });
+});
+
+/* Auto-detect new incidents */
+async function autoNotifyCheck(){
+  if (!SELECTED_ORG_ID) return;
+  const s = loadNotify(SELECTED_ORG_ID);
+  if (!s.enabled) return;
+
+  const currentIds = new Set((DATA.incidents || []).map(i => String(i.id || i.external_id || "")));
+  const old = new Set(s.lastSeenIds || []);
+  const newOnes = [];
+
+  for (const id of currentIds){
+    if (!id) continue;
+    if (!old.has(id)) newOnes.push(id);
+  }
+
+  if (!newOnes.length){
+    // refresh baseline, but keep it stable
+    s.lastSeenIds = Array.from(currentIds).slice(0, 800);
+    saveNotify(SELECTED_ORG_ID, s);
+    return;
+  }
+
+  // Notify on the first new incident (keep noise down)
+  const inc = (DATA.incidents || []).find(i => String(i.id||i.external_id||"") === newOnes[0]) || null;
+  await notifyNow({ reason:`New incident detected (${newOnes.length})`, incident: inc });
+
+  // Update baseline
+  s.lastSeenIds = Array.from(currentIds).slice(0, 800);
+  saveNotify(SELECTED_ORG_ID, s);
+}
+
+/* ---------- WebSocket live mode ---------- */
+function wsUrl(){
+  // Attempts a conventional endpoint. If you expose it later, this page will instantly use it.
+  // Example: wss://<host>/ws/observability?orgId=...
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  const base = `${proto}//${location.host}/ws/observability`;
+  if (SELECTED_ORG_ID) return `${base}?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`;
+  return base;
+}
+
+function connectWebSocket(){
+  try{
+    if (WS) { try{ WS.close(); } catch {} }
+    WS = new WebSocket(wsUrl());
+
+    WS.onopen = ()=>{
+      $("bannerConnTitle").textContent = "Live updates enabled";
+      $("bannerConnMsg").textContent = "True live mode enabled. Dashboard will refresh on server events.";
+      renderAll();
+    };
+
+    WS.onmessage = async (ev)=>{
+      // Expected message shapes:
+      // - { type:"refresh" }
+      // - { type:"incidents" } or any domain event
+      // We keep it simple: reload the feeds.
+      try{
+        const msg = JSON.parse(ev.data);
+        if (msg && (msg.type === "refresh" || msg.type === "incidents" || msg.type === "telemetry")){
+          await loadAll();
+          return;
+        }
+      } catch {}
+      // If unknown, still refresh (safe)
+      await loadAll();
+    };
+
+    WS.onclose = ()=>{
+      // Fall back to polling
+      startPolling();
+      renderAll();
+    };
+
+    WS.onerror = ()=>{
+      // Fall back to polling
+      startPolling();
+    };
+
+  } catch (e){
+    startPolling();
+  }
+}
+
+function startPolling(){
+  if (POLL_TIMER) clearInterval(POLL_TIMER);
+  // NOC-friendly: 60s default; in NOC mode use 20s
+  const freq = (document.documentElement.getAttribute("data-noc") === "true") ? 20000 : 60000;
+  POLL_TIMER = setInterval(loadAll, freq);
+}
+
+/* ---------- Live + Snapshot timers ---------- */
+function startTimers(){
+  // Daily snapshot capture at refresh time is already done; also do periodic snapshots every 10 minutes
+  if (AUTO_SNAPSHOT_TIMER) clearInterval(AUTO_SNAPSHOT_TIMER);
+  AUTO_SNAPSHOT_TIMER = setInterval(()=>{
+    captureSnapshot();
+    renderTrendChart();
+    renderSparklines();
+  }, 10 * 60 * 1000);
+
+  // Auto notify check
+  if (AUTO_NOTIFY_TIMER) clearInterval(AUTO_NOTIFY_TIMER);
+  AUTO_NOTIFY_TIMER = setInterval(autoNotifyCheck, 60 * 1000);
+}
+
+/* ---------- Buttons ---------- */
+$("btnPrintPdf").title = "Uses browser Print-to-PDF (Executive Summary)";
+$("btnRefresh").title = "Refresh all feeds now";
+
+/* ---------- Initialize ---------- */
+async function init(){
+  try{
+    setError(null);
+
+    const ok = await loadMe();
+    if (!ok) return;
+
+    await loadOrgs();
+
+    // Decide selected org
+    SELECTED_ORG_ID = (ME.role === "admin")
+      ? ($("tenantSelect").value || ME.orgId || null)
+      : (ME.orgId || null);
+
+    // Prefill notify settings
+    syncNotifyUI();
+    // Apply stored settings if present
+    const s = loadNotify(SELECTED_ORG_ID);
+    if (s.email) $("notifyEmail").value = s.email;
+    $("notifyToggle").checked = !!s.enabled;
+    $("notifyCooldown").value = String(s.cooldownMin || 15);
+
+    // First load
+    await loadAll();
+
+    // Establish baseline incident ids for notification comparisons
+    const baseline = loadNotify(SELECTED_ORG_ID);
+    baseline.lastSeenIds = (DATA.incidents || []).map(i=>String(i.id||i.external_id||"")).filter(Boolean).slice(0, 800);
+    saveNotify(SELECTED_ORG_ID, baseline);
+
+    // Live mode: try WS first, fall back to polling
+    connectWebSocket();
+    // Start polling immediately as a safety net; WS onopen will keep it fresh anyway
+    startPolling();
+
+    // Start timers
+    startTimers();
+
+    // Mark "Live" badge on load
+    $("bannerConn").classList.add("show");
+    $("bannerConnTitle").textContent = "Live updates enabled";
+    $("bannerConnMsg").textContent = "Attempting WebSocket live feed; polling fallback enabled.";
+    renderAll();
+
+  } catch (e){
+    setError(e?.message || String(e));
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>
