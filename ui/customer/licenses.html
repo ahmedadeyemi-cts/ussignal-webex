@@ -2,15 +2,17 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8" />
-<title>US Signal | Webex Calling License Management</title>
+<title>US Signal | License Intelligence 2.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
-
 /* ======================================================
-   THEME (MATCH INDEX)
+   LICENSE INTELLIGENCE 2.0 (ENTERPRISE)
+   - Layout + Theme aligns to Devices.html architecture
+   - Dark/Light works via html[data-theme] tokens
 ====================================================== */
 
+/* ---------- Theme Tokens (LIGHT default) ---------- */
 :root{
   --bg:#f6f8fb;
   --card:#ffffff;
@@ -25,8 +27,42 @@
   --good:#16a34a;
   --warn:#f59e0b;
   --bad:#dc2626;
+
+  --chip:rgba(15,98,254,.08);
+  --chipText:#1d4ed8;
+
+  --rowHover:rgba(15,98,254,.04);
+  --pillBg:#fff;
+  --pillBorder:rgba(15,23,42,.14);
+
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
+/* ---------- Theme Tokens (DARK) ---------- */
+html[data-theme="dark"]{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --line:rgba(226,232,240,.12);
+  --shadow:0 12px 32px rgba(0,0,0,.35);
+
+  --accent:#3b82f6;
+  --accent2:#60a5fa;
+
+  --good:#22c55e;
+  --warn:#f59e0b;
+  --bad:#ef4444;
+
+  --chip:rgba(59,130,246,.18);
+  --chipText:#bfdbfe;
+
+  --rowHover:rgba(59,130,246,.10);
+  --pillBg:rgba(15,23,42,.35);
+  --pillBorder:rgba(226,232,240,.14);
+}
+
+/* ---------- Base ---------- */
 *{ box-sizing:border-box; }
 
 body{
@@ -34,12 +70,12 @@ body{
   font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
   background:var(--bg);
   color:var(--text);
-  display:flex;                 /* 🔴 CRITICAL */
+  display:flex;
   min-height:100vh;
 }
 
 /* ======================================================
-   SIDEBAR (IDENTICAL TO INDEX)
+   SIDEBAR (MATCH DEVICES)
 ====================================================== */
 
 .sidebar{
@@ -59,25 +95,16 @@ body{
   padding-bottom:14px;
   border-bottom:1px solid var(--line);
 }
-
-.brand img{ height:34px; }
-
-.brand .title{
-  display:flex;
-  flex-direction:column;
-}
-.brand .title b{ font-size:14px; }
-.brand .title span{
-  font-size:12px;
-  color:var(--muted);
-}
+.brand img{ height:34px; border-radius:8px; }
+.brand .title{ display:flex; flex-direction:column; }
+.brand .title b{ font-size:14px; letter-spacing:.2px; }
+.brand .title span{ font-size:12px; color:var(--muted); }
 
 .nav{
   display:flex;
   flex-direction:column;
   gap:6px;
 }
-
 .nav a{
   padding:10px;
   border-radius:12px;
@@ -86,16 +113,47 @@ body{
   text-decoration:none;
   color:var(--text);
 }
-
-.nav a:hover{
-  background:rgba(15,98,254,.08);
-  color:var(--accent2);
-}
-
+.nav a:hover{ background:var(--chip); color:var(--accent2); }
 .nav a.active{
   background:rgba(15,98,254,.12);
   border:1px solid rgba(15,98,254,.20);
 }
+
+/* Sidebar bottom */
+.sidebarFooter{
+  margin-top:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+}
+
+.ragPill{
+  padding:10px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
+  font-size:12px;
+  font-weight:1000;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.ragDot{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--good);
+  box-shadow:0 0 0 3px rgba(22,163,74,.15);
+}
+.ragPill.amber .ragDot{ background:var(--warn); box-shadow:0 0 0 3px rgba(245,158,11,.15); }
+.ragPill.red .ragDot{ background:var(--bad); box-shadow:0 0 0 3px rgba(239,68,68,.15); }
+.ragText{ display:flex; flex-direction:column; line-height:1.1; }
+.ragText b{ font-size:12px; }
+.ragText span{ font-size:11px; color:var(--muted); font-weight:800; }
+
+.sideBtnRow{ display:flex; gap:10px; }
+.sideBtnRow button{ width:100%; }
 
 /* ======================================================
    MAIN AREA
@@ -106,9 +164,10 @@ body{
   padding:22px;
   display:flex;
   flex-direction:column;
+  gap:18px;
 }
 
-/* Header Card (MATCH INDEX) */
+/* Header Card */
 .header-card{
   background:var(--card);
   border:1px solid var(--line);
@@ -145,19 +204,14 @@ body{
 .pill{
   padding:8px 10px;
   border-radius:999px;
-  border:1px solid rgba(15,23,42,.14);
-  background:#fff;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
   font-size:12px;
   font-weight:900;
   color:var(--muted);
 }
 
-/* ======================================================
-   CONTENT SECTIONS
-====================================================== */
-
-.section{ margin-top:18px; }
-
+/* Cards */
 .card{
   background:var(--card);
   border:1px solid var(--line);
@@ -166,17 +220,25 @@ body{
   padding:16px;
 }
 
-h2{
-  margin:0 0 10px 0;
+.sectionTitle{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:10px;
+  margin-bottom:10px;
+}
+.sectionTitle h2{
+  margin:0;
   font-size:14px;
   font-weight:1000;
 }
-
-.muted{
+.sectionTitle .hint{
   font-size:12px;
   color:var(--muted);
+  font-weight:900;
 }
 
+.muted{ font-size:12px; color:var(--muted); }
 .row{
   display:flex;
   gap:10px;
@@ -184,30 +246,26 @@ h2{
   align-items:center;
 }
 
-.tabs{
-  display:flex;
-  gap:8px;
-  margin-top:18px;
-  border-bottom:1px solid var(--line);
+.grid3{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:12px;
+}
+@media (max-width: 1100px){
+  .grid3{ grid-template-columns:1fr; }
 }
 
-.tab{
-  padding:10px 16px;
-  background:transparent;
-  border:none;
-  cursor:pointer;
-  font-weight:900;
-  border-bottom:3px solid transparent;
-  color:var(--muted);
+.kpi{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(255,255,255,.02);
 }
+.kpi .label{ font-size:12px;color:var(--muted);font-weight:900; }
+.kpi .value{ font-size:18px;font-weight:1000;margin-top:6px; }
+.kpi .sub{ font-size:12px;color:var(--muted);margin-top:6px; font-weight:800; }
 
-.tab.active{
-  border-bottom:3px solid var(--accent);
-  color:var(--accent);
-}
-
-.tabpanel.hidden{ display:none; }
-
+/* Table */
 .table-wrap{
   margin-top:10px;
   border:1px solid var(--line);
@@ -224,119 +282,166 @@ thead th{
   font-size:12px;
   color:var(--muted);
   text-transform:uppercase;
+  text-align:right;
+  white-space:nowrap;
 }
+thead th:first-child{ text-align:left; }
 tbody td{
   padding:12px;
   border-top:1px solid rgba(15,23,42,.06);
   font-size:13px;
+  text-align:right;
+  white-space:nowrap;
 }
-tbody tr:hover{
-  background:rgba(15,98,254,.04);
+tbody td:first-child{ text-align:left; }
+tbody tr:hover{ background:var(--rowHover); }
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  font-weight:1000;
+  font-size:11px;
+  background:var(--pillBg);
+}
+.badge.good{ color:var(--good); }
+.badge.warn{ color:var(--warn); }
+.badge.bad{ color:var(--bad); }
+
+.dot{
+  width:8px;height:8px;border-radius:50%;
+  background:currentColor;
+  opacity:.9;
 }
 
-.hidden{ display:none !important; }
-body {
-  display: flex;
-  min-height: 100vh;
-}
-
-.app {
-  display: contents;
-}
-/* Spinner */
-.spinner {
-  width:14px;
-  height:14px;
-  border:2px solid rgba(255,255,255,.4);
-  border-top:2px solid #fff;
-  border-radius:50%;
-  animation: spin .6s linear infinite;
-  display:inline-block;
-  vertical-align:middle;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Button polish */
-button {
+/* Buttons / inputs */
+button{
   background:var(--accent);
   color:#fff;
   border:none;
   padding:8px 14px;
   border-radius:10px;
-  font-weight:800;
+  font-weight:900;
   cursor:pointer;
 }
-
-button:disabled {
-  opacity:.65;
-  cursor:not-allowed;
-}
-   /* Smooth status message */
-.status-message {
-  opacity:0;
-  transition:opacity .25s ease;
+button:disabled{ opacity:.65; cursor:not-allowed; }
+.btn-outline{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--text);
 }
 
-.status-message.show {
-  opacity:1;
-}
-
-/* Success state */
-button.success {
-  background:var(--good);
-}
-
-/* Input validation */
-input.error {
-  border:1px solid var(--bad);
-}
-
-/* Better input styling */
-input[type="email"] {
+input[type="email"], input[type="text"], select{
   padding:8px 12px;
   border-radius:10px;
   border:1px solid var(--line);
+  background:transparent;
+  color:var(--text);
   font-size:13px;
 }
-   .right {
-  text-align: right;
+select{ cursor:pointer; }
+
+.spinner{
+  width:14px;height:14px;
+  border:2px solid rgba(255,255,255,.4);
+  border-top:2px solid #fff;
+  border-radius:50%;
+  animation:spin .6s linear infinite;
+  display:inline-block;
+  vertical-align:middle;
 }
-   .right { text-align:right; }
-   thead th {
-  padding:12px;
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.status-message{ opacity:0; transition:opacity .25s ease; }
+.status-message.show{ opacity:1; }
+
+.health-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:1000;
   font-size:12px;
-  color:var(--muted);
-  text-transform:uppercase;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
 }
-   /* Align numeric columns properly */
-#licenseTable thead th:nth-child(2),
-#licenseTable thead th:nth-child(3),
-#licenseTable thead th:nth-child(4),
-#licenseTable thead th:nth-child(5),
-#licenseTable tbody td:nth-child(2),
-#licenseTable tbody td:nth-child(3),
-#licenseTable tbody td:nth-child(4),
-#licenseTable tbody td:nth-child(5) {
-  text-align: right;
-}
+.health-good{ color:var(--good); }
+.health-mid{ color:var(--warn); }
+.health-bad{ color:var(--bad); }
 
-/* SKU column */
-#licenseTable thead th:nth-child(1),
-#licenseTable tbody td:nth-child(1) {
-  text-align: left;
-}
+.mono{ font-family:var(--mono); }
 
-/* Status column */
-#licenseTable thead th:nth-child(6),
-#licenseTable tbody td:nth-child(6) {
-  text-align: left;
+/* Clickable rows */
+.clickable{
+  cursor:pointer;
+  font-weight:900;
+  color:var(--accent2);
 }
-   #licenseTable tbody td:nth-child(5) {
-  font-weight: 700;
+.clickable:hover{ text-decoration:underline; }
+
+/* Charts */
+.chartWrap{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(255,255,255,.02);
 }
+canvas{ width:100%; height:220px; display:block; }
+
+/* Modal */
+.modalOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+  padding:16px;
+}
+.modal{
+  background:var(--card);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+  border-radius:16px;
+  width:980px;
+  max-width:100%;
+  max-height:90vh;
+  overflow:auto;
+}
+.modalHeader{
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
+.modalHeader h3{
+  margin:0;
+  font-size:15px;
+  font-weight:1000;
+}
+.modalBody{
+  padding:16px;
+}
+.modalFooter{
+  padding:14px 16px;
+  border-top:1px solid var(--line);
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+hr.sep{
+  border:none;
+  border-top:1px solid var(--line);
+  margin:14px 0;
+}
+.small{ font-size:12px; color:var(--muted); font-weight:800; }
 </style>
 </head>
 
@@ -345,26 +450,47 @@ input[type="email"] {
 <!-- ============================= -->
 <!-- SIDEBAR -->
 <!-- ============================= -->
-
 <div class="sidebar">
 
-  <div class="brand">
-    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
-    <div class="title">
-      <b>US Signal</b>
-      <span>Customer Portal</span>
+  <div>
+    <div class="brand">
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" alt="US Signal" />
+      <div class="title">
+        <b>US Signal</b>
+        <span>Customer Portal</span>
+      </div>
+    </div>
+
+    <div class="nav" style="margin-top:12px;">
+      <a href="/customer">Dashboard</a>
+      <a href="/customer/licenses" class="active">Licenses</a>
+      <a href="/customer/devices">Devices</a>
+      <a href="/customer/analytics">Analytics</a>
+      <a href="/customer/cdr">CDR</a>
+      <a href="/customer/maintenance">Maintenance</a>
+      <a href="/customer/status">Status</a>
+      <a href="/customer/incidents">Incidents</a>
     </div>
   </div>
 
-  <div class="nav">
-    <a href="/customer">Dashboard</a>
-    <a href="/customer/licenses" class="active">Licenses</a>
-    <a href="/customer/devices">Devices</a>
-    <a href="/customer/analytics">Analytics</a>
-    <a href="/customer/cdr">CDR</a>
-    <a href="/customer/maintenance">Maintenance</a>
-    <a href="/customer/status">Status</a>
-    <a href="/customer/incidents">Incidents</a>
+  <div class="sidebarFooter">
+    <div id="ragPill" class="ragPill">
+      <span class="ragDot" id="ragDot"></span>
+      <div class="ragText">
+        <b id="ragTitle">GREEN</b>
+        <span id="ragSub">No deficits detected</span>
+      </div>
+      <span class="mono" id="ragScore">100</span>
+    </div>
+
+    <div class="sideBtnRow">
+      <button class="btn-outline" id="btnTheme">Dark Mode</button>
+      <button class="btn-outline" id="btnLogout">Logout</button>
+    </div>
+
+    <div class="muted" id="buildHint" style="font-weight:900;">
+      License Intelligence 2.0
+    </div>
   </div>
 
 </div>
@@ -372,843 +498,1556 @@ input[type="email"] {
 <!-- ============================= -->
 <!-- MAIN -->
 <!-- ============================= -->
-
 <div class="main">
 
   <!-- HEADER -->
   <div class="header-card">
     <div class="header-left">
-      <div class="h">Webex Calling — License Management</div>
+      <div class="h">Webex Calling — License Intelligence 2.0</div>
       <div class="sub" id="whoLine">Loading…</div>
     </div>
 
     <div class="header-actions">
       <div class="pill" id="tenantPill">Tenant: —</div>
-      <button class="btn-outline" id="btnTheme">Dark Mode</button>
+      <div class="pill" id="lastRefreshPill">Last refresh: —</div>
       <button class="btn-outline" id="btnRefresh">Refresh</button>
     </div>
   </div>
 
-  <!-- ============================= -->
   <!-- TENANT CONTEXT -->
-  <!-- ============================= -->
-
-  <div class="section">
-
-    <div id="admin-note" class="card hidden">
-      <b>US Signal Admin View</b>
-      <div class="muted">
-        You can switch tenants using the selector below.
-      </div>
-    </div>
-
-    <div class="card">
+  <div class="card">
+    <div class="sectionTitle">
       <h2>Tenant Context</h2>
-      <div class="muted" id="orgContext">Loading…</div>
-
-      <div style="height:12px"></div>
-
-      <div class="row">
-        <select id="tenantSelect" disabled>
-          <option>Loading tenants…</option>
-        </select>
-        <button id="btnLoad">Load Licenses</button>
-      </div>
-
-      <div class="muted hidden" id="errBox"></div>
+      <div class="hint" id="orgContext">Loading…</div>
     </div>
 
+    <div id="adminNote" class="muted" style="display:none; font-weight:900; margin-bottom:10px;">
+      US Signal Admin View — select a tenant to review license posture.
+    </div>
+
+    <div class="row">
+      <select id="tenantSelect" disabled>
+        <option>Loading tenants…</option>
+      </select>
+
+      <button id="btnLoad">Load Licenses</button>
+
+      <span class="muted" id="errBox" style="display:none; font-weight:900;"></span>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <div class="row">
+      <span class="badge" id="resolutionBadge"><span class="dot"></span><span id="resolutionText">Resolution: —</span></span>
+      <span class="badge" id="snapshotBadge"><span class="dot"></span><span id="snapshotText">History: —</span></span>
+      <span class="badge" id="alertBadge"><span class="dot"></span><span id="alertText">Auto-alert: —</span></span>
+    </div>
   </div>
 
-  <!-- ============================= -->
-  <!-- TABS -->
-  <!-- ============================= -->
+  <!-- KPI / HEALTH -->
+  <div class="grid3">
+    <div class="kpi">
+      <div class="label">License Health Score</div>
+      <div class="value" id="healthScore">—</div>
+      <div class="sub" id="healthScoreSub">Calculating…</div>
+    </div>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="licenses">Licenses</button>
-    <button class="tab" data-tab="devices">Devices</button>
-    <button class="tab" data-tab="analytics">Analytics</button>
-    <button class="tab" data-tab="cdr">CDR</button>
-     <button class="tab" data-tab="pstn">PSTN</button>
+    <div class="kpi">
+      <div class="label">Deficits & Risk</div>
+      <div class="value" id="defRisk">—</div>
+      <div class="sub" id="defRiskSub">Waiting for data…</div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">Capacity Velocity</div>
+      <div class="value" id="velocity">—</div>
+      <div class="sub" id="velocitySub">30-day usage growth modeling</div>
+    </div>
   </div>
 
-  <!-- ============================= -->
-  <!-- LICENSES TAB -->
-  <!-- ============================= -->
+  <!-- ACTIONS -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>Actions</h2>
+      <div class="hint">Exports, alerts, and audit controls</div>
+    </div>
 
-  <section id="tab-licenses" class="tabpanel">
+    <div class="row" style="margin-bottom:12px;">
+      <button id="btnExportCsv" class="btn-outline">Export CSV</button>
+      <button id="btnExportHistory" class="btn-outline">Export 30-Day History CSV</button>
+      <button id="btnClearHistory" class="btn-outline">Clear Local History</button>
+      <span class="muted" style="font-weight:900;">Local history stored in browser (no worker changes required).</span>
+    </div>
 
-    <div class="section">
-      <div class="card">
-        <h2>Deficient SKUs</h2>
+    <div class="row">
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="autoAlertToggle" />
+        Enable auto-email when deficits are detected
+      </label>
+
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="riskAlertToggle" />
+        Also email when SKUs are at risk (≥ 90% utilization)
+      </label>
+
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        Cooldown (minutes):
+        <select id="alertCooldown">
+          <option value="15">15</option>
+          <option value="30" selected>30</option>
+          <option value="60">60</option>
+          <option value="180">180</option>
+          <option value="720">720</option>
+        </select>
+      </label>
+
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        Send to:
+        <input id="reportEmail" type="email" placeholder="Email address" style="min-width:260px;" />
+      </label>
+
+      <button id="btnSendNow">Send Report Now</button>
+      <span id="emailStatus" class="muted status-message" style="font-weight:900;"></span>
+    </div>
+  </div>
+
+  <!-- 30-DAY LICENSE HEALTH TREND -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>Historical 30-Day License Health Trend</h2>
+      <div class="hint" id="trendHint">Snapshots: —</div>
+    </div>
+
+    <div class="chartWrap">
+      <canvas id="trendChart" width="1200" height="300"></canvas>
+      <div class="row" style="margin-top:10px; justify-content:space-between;">
+        <div class="muted" style="font-weight:900;" id="trendSummary">
+          Captures daily snapshot of license posture per tenant (stored locally).
+        </div>
+        <div class="row">
+          <span class="badge"><span class="dot" style="color:var(--accent);"></span><span>Health Score</span></span>
+          <span class="badge"><span class="dot" style="color:var(--bad);"></span><span>Deficit Count</span></span>
+          <span class="badge"><span class="dot" style="color:var(--warn);"></span><span>At Risk Count</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEFICITS TABLE -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>Deficient SKUs</h2>
+      <div class="hint">Prioritize procurement, assignment cleanup, and tiering alignment</div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Available</th>
+            <th>Total</th>
+            <th>Used</th>
+            <th>Needed</th>
+            <th>Util%</th>
+            <th>Severity</th>
+          </tr>
+        </thead>
+        <tbody id="deficitRows">
+          <tr><td colspan="7" class="muted" style="text-align:left;">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FULL LICENSE TABLE -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>License Inventory & Utilization</h2>
+      <div class="hint">Click any SKU for drill-down details</div>
+    </div>
+
+    <div class="row" style="margin-bottom:12px;">
+      <select id="filterMode">
+        <option value="all">Show: All</option>
+        <option value="deficit">Show: Deficit only</option>
+        <option value="risk">Show: At risk (≥ 90%)</option>
+        <option value="healthy">Show: Healthy</option>
+      </select>
+
+      <input id="skuSearch" type="text" placeholder="Search SKU..." style="min-width:260px;" />
+
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        Sort:
+        <select id="sortKey">
+          <option value="name">SKU</option>
+          <option value="util">Utilization</option>
+          <option value="deficit">Deficit</option>
+          <option value="used">Used</option>
+          <option value="total">Total</option>
+          <option value="available">Available</option>
+        </select>
+      </label>
+
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        Order:
+        <select id="sortDir">
+          <option value="desc" selected>High → Low</option>
+          <option value="asc">Low → High</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="muted" id="licenseLoading" style="font-weight:900;">Loading…</div>
+
+    <div class="table-wrap">
+      <table id="licenseTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Total</th>
+            <th>Used</th>
+            <th>Available</th>
+            <th>Util%</th>
+            <th>Deficit</th>
+            <th>Status</th>
+            <th>Forecast</th>
+            <th>Mapping</th>
+          </tr>
+        </thead>
+        <tbody id="licenseRows"></tbody>
+      </table>
+    </div>
+
+    <div class="muted" id="tableFootnote" style="margin-top:10px; font-weight:900;">
+      Forecast is a heuristic based on 30-day velocity when historical snapshots exist.
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================= -->
+<!-- SKU DRILL-DOWN MODAL -->
+<!-- ============================= -->
+<div id="skuModalOverlay" class="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="skuModalTitle">
+    <div class="modalHeader">
+      <div>
+        <h3 id="skuModalTitle">SKU Drill-down</h3>
+        <div class="small" id="skuModalSub">—</div>
+      </div>
+      <div class="row">
+        <span class="badge" id="skuStatusBadge"><span class="dot"></span><span id="skuStatusText">—</span></span>
+        <button class="btn-outline" id="btnCloseSkuModal">Close</button>
+      </div>
+    </div>
+
+    <div class="modalBody">
+      <div class="grid3">
+        <div class="kpi">
+          <div class="label">Utilization</div>
+          <div class="value" id="mUtil">—</div>
+          <div class="sub" id="mUtilSub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Capacity</div>
+          <div class="value" id="mCap">—</div>
+          <div class="sub" id="mCapSub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Forecast</div>
+          <div class="value" id="mForecast">—</div>
+          <div class="sub" id="mForecastSub">—</div>
+        </div>
+      </div>
+
+      <hr class="sep"/>
+
+      <div class="sectionTitle">
+        <h2 style="margin:0;">30-day SKU Trend</h2>
+        <div class="hint" id="skuTrendHint">Based on local snapshots</div>
+      </div>
+      <div class="chartWrap">
+        <canvas id="skuTrendChart" width="1200" height="260"></canvas>
+        <div class="muted" style="font-weight:900; margin-top:10px;" id="skuTrendSummary">—</div>
+      </div>
+
+      <hr class="sep"/>
+
+      <div class="sectionTitle">
+        <h2 style="margin:0;">Webex SKU Mapping Intelligence</h2>
+        <div class="hint">Heuristics + curated patterns (no worker changes)</div>
+      </div>
+
+      <div class="card" style="box-shadow:none;">
+        <div class="row" style="justify-content:space-between;">
+          <div>
+            <div class="muted" style="font-weight:1000;">Normalized Category</div>
+            <div style="font-weight:1000; margin-top:6px;" id="mapCategory">—</div>
+          </div>
+          <div>
+            <div class="muted" style="font-weight:1000;">Likely Product Family</div>
+            <div style="font-weight:1000; margin-top:6px;" id="mapFamily">—</div>
+          </div>
+          <div>
+            <div class="muted" style="font-weight:1000;">Confidence</div>
+            <div style="font-weight:1000; margin-top:6px;" id="mapConfidence">—</div>
+          </div>
+        </div>
+
+        <div style="height:10px"></div>
+        <div class="muted" style="font-weight:900;" id="mapNotes">—</div>
+
+        <div style="height:12px"></div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>SKU</th>
-                <th>Available</th>
-                <th>Total</th>
-                <th>Used</th>
-                <th>Needed</th>
+                <th style="text-align:left;">Rule</th>
+                <th>Match</th>
+                <th style="text-align:left;">Interpretation</th>
               </tr>
             </thead>
-            <tbody id="deficitRows">
-              <tr><td colspan="5" class="muted">Loading…</td></tr>
+            <tbody id="mapRuleRows">
+              <tr><td colspan="3" class="muted" style="text-align:left;">—</td></tr>
             </tbody>
           </table>
         </div>
       </div>
-    </div>
 
-    <div class="section">
-      <div class="card">
-        <h2>Current License Usage</h2>
-        <div id="licenseLoading" class="muted">Loading…</div>
-        <div class="table-wrap">
-          <table id="licenseTable" class="hidden">
-            <thead>
-              <tr>
-                <th>SKU</th>
-                <th>Total</th>
-                <th>Used</th>
-                <th>Available</th>
-                <th>Deficit</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="licenseRows"></tbody>
-          </table>
-        </div>
+      <hr class="sep"/>
+
+      <div class="sectionTitle">
+        <h2 style="margin:0;">Operational Guidance</h2>
+        <div class="hint">What to do next</div>
       </div>
-    </div>
-     <div class="section">
-  <div class="card">
-    <h2>Email License Report</h2>
+      <div class="muted" style="font-weight:900;" id="opsGuidance">—</div>
 
-    <div class="row">
-      <input
-        id="reportEmail"
-        type="email"
-        placeholder="Enter email address"
-        style="min-width:260px;"
-      />
-      <button id="btnSendEmail">Send Report</button>
     </div>
 
-    <div id="emailStatus" class="muted status-message" style="margin-top:8px;"></div>
-  </div>
-</div>
-  </section>  
-
-
-      <!-- DEVICES TAB -->
-      <section id="tab-devices" class="tabpanel hidden">
-        <div class="card">
-
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h2 style="margin:0;">Devices</h2>
-            <div class="muted" id="deviceSummary">—</div>
-          </div>
-
-          <div class="card" style="margin-bottom:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <strong>Organization Health</strong>
-              <div id="orgHealthScore">—</div>
-            </div>
-          </div>
-
-          <div class="row" style="margin-bottom:12px;">
-            <select id="deviceFilter">
-              <option value="all">All</option>
-              <option value="offline">Offline / Disconnected</option>
-              <option value="online">Online</option>
-            </select>
-
-            <input id="deviceSearch" placeholder="Search devices..." style="min-width:260px;" />
-          </div>
-
-          <div id="deviceLoading" class="muted">Loading devices…</div>
-
-          <table id="deviceTable" style="display:none">
-            <thead>
-              <tr>
-                <th onclick="sortDevices('displayName')">Name</th>
-                <th onclick="sortDevices('product')">Model</th>
-                <th onclick="sortDevices('connectionStatus')">Status</th>
-                <th onclick="sortDevices('lastSeen')">Last Seen</th>
-                <th onclick="sortDevices('health')">Health</th>
-                <th>Location</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody id="deviceRows"></tbody>
-          </table>
-
-        </div>
-      </section>
-
-      <!-- ANALYTICS TAB -->
-      <section id="tab-analytics" class="tabpanel hidden">
-        <div class="card">
-          <h2>Calling Analytics (7 Day Summary)</h2>
-          <div id="analyticsLoading" class="muted">Loading analytics…</div>
-          <div id="analyticsData"></div>
-        </div>
-      </section>
-
-      <!-- CDR TAB -->
-      <section id="tab-cdr" class="tabpanel hidden">
-        <div class="card">
-          <h2>Call Detail Records</h2>
-          <div id="cdrLoading" class="muted">Loading CDR…</div>
-
-          <table id="cdrTable" style="display:none">
-            <thead>
-              <tr>
-                <th>Start Time</th>
-                <th>Caller</th>
-                <th>Callee</th>
-                <th>Duration</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody id="cdrRows"></tbody>
-          </table>
-        </div>
-      </section>
-
+    <div class="modalFooter">
+      <button class="btn-outline" id="btnExportSkuCsv">Export SKU CSV</button>
+      <button id="btnSendSkuAlert">Email Alert for this SKU</button>
     </div>
   </div>
 </div>
 
-<!-- ============================= -->
-<!-- DEVICE MODAL (UNCHANGED) -->
-<!-- ============================= -->
-<div id="deviceModal" style="
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.5);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:999;
-">
-  <div style="
-    background:var(--card);
-    padding:24px;
-    border-radius:14px;
-    width:500px;
-    max-width:90%;
-  ">
-    <h3 id="modalTitle"></h3>
-    <div id="modalContent" class="muted" style="margin-top:10px;"></div>
-    <div style="margin-top:16px; text-align:right;">
-      <button onclick="closeDeviceModal()">Close</button>
-    </div>
-  </div>
-</div>
 <script>
-  const $ = (id) => document.getElementById(id);
+/* ======================================================
+   LICENSE INTELLIGENCE 2.0 (SCRIPT)
+   - Uses existing worker APIs:
+     - GET /api/me
+     - GET /api/org
+     - GET /api/licenses?orgId=...
+     - POST /api/licenses/email  {email, orgId}
+   - Optional logout endpoint used if present:
+     - POST /api/logout (safe fallback)
+   - 30-day history stored locally (per tenant orgId)
+====================================================== */
 
-  // -----------------------------
-  // Theme (default light, persisted)
-  // -----------------------------
-  function loadTheme() {
-    const saved = localStorage.getItem("uiTheme");
-    const theme = saved === "dark" ? "dark" : "light";
-    document.documentElement.setAttribute("data-theme", theme);
-    $("btnTheme").textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
-  }
+const $ = (id) => document.getElementById(id);
 
-  function toggleTheme() {
-    const cur = document.documentElement.getAttribute("data-theme") || "light";
-    const next = cur === "dark" ? "light" : "dark";
-    localStorage.setItem("uiTheme", next);
-    loadTheme();
-  }
-
-  $("btnTheme").addEventListener("click", toggleTheme);
+/* -----------------------------
+   THEME
+----------------------------- */
+function loadTheme(){
+  const saved = localStorage.getItem("uiTheme");
+  const theme = saved === "dark" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  const b = $("btnTheme");
+  if (b) b.textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme") || "light";
+  const next = cur === "dark" ? "light" : "dark";
+  localStorage.setItem("uiTheme", next);
   loadTheme();
+}
+$("btnTheme").addEventListener("click", toggleTheme);
+loadTheme();
 
-  // -----------------------------
-  // Helpers
-  // -----------------------------
-  function setError(msg) {
-    const box = $("errBox");
-    if (!msg) {
-      box.style.display = "none";
-      box.textContent = "";
-      return;
-    }
-    box.style.display = "block";
-    box.textContent = msg;
-  }
+/* -----------------------------
+   API helper
+----------------------------- */
+async function api(path, opts){
+  const res = await fetch(path, opts);
+  const txt = await res.text();
+  let data = null;
+  try { data = txt ? JSON.parse(txt) : null; }
+  catch { data = { raw: txt }; }
+  return { ok: res.ok, status: res.status, data };
+}
 
-  async function api(path, opts) {
-    const res = await fetch(path, opts);
-    const txt = await res.text();
-    let data = null;
-    try { data = txt ? JSON.parse(txt) : null; } catch { data = { raw: txt }; }
-    return { ok: res.ok, status: res.status, data };
-  }
-
- async function loadDevices() {
-  $("deviceLoading").style.display = "block";
-  $("deviceTable").style.display = "none";
-
-  const orgId = SELECTED_ORG_ID || "";
-  const q = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
-  const r = await api(`/api/devices${q}`);
-
-  if (!r.ok) {
-    $("deviceLoading").textContent = "Failed to load devices.";
+/* -----------------------------
+   Error handling
+----------------------------- */
+function setError(msg){
+  const box = $("errBox");
+  if (!msg){
+    box.style.display = "none";
+    box.textContent = "";
     return;
   }
-
-  const items = r.data.items || [];
-
-if (!items.length) {
-  $("deviceLoading").textContent = "No devices found.";
-  $("deviceTable").style.display = "none";   // 👈 ADD THIS
-  DEVICE_CACHE = [];
-  return;
+  box.style.display = "inline";
+  box.textContent = msg;
 }
 
-  $("deviceLoading").style.display = "none";
-  $("deviceTable").style.display = "table";
+/* -----------------------------
+   State
+----------------------------- */
+let ME = null;
+let ORGS = [];
+let SELECTED_ORG_ID = null;
 
-  DEVICE_CACHE = items;
-renderDevices(items);
+let LICENSE_CACHE = [];
+let LICENSE_SUMMARY = null;
 
+let SNAPSHOT_TIMER = null;
+let AUTO_REFRESH_TIMER = null;
+
+/* -----------------------------
+   History storage (local)
+   - per orgId, keep last 30 days of snapshots
+   - snapshot shape:
+     { day: "YYYY-MM-DD", ts, orgId, healthScore, deficits, risks, usedTotal, totalTotal, items: { skuKey: {used,total,available,deficit,util,status} } }
+----------------------------- */
+function todayKey(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  return `${yyyy}-${mm}-${dd}`;
 }
-function normalizeStatus(status) {
-  if (!status) return "offline";
+function histKey(orgId){ return `LI2_LICENSE_HISTORY::${orgId || "unknown"}`; }
 
-  const s = status.toLowerCase();
-
-  if (s.includes("issue")) return "warning";
-  if (s.includes("connected") && !s.includes("disconnected")) return "online";
-  return "offline";
+function loadHistory(orgId){
+  try{
+    const raw = localStorage.getItem(histKey(orgId));
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+function saveHistory(orgId, arr){
+  try{
+    localStorage.setItem(histKey(orgId), JSON.stringify(arr));
+  } catch {}
+}
+function pruneHistory(arr){
+  const map = new Map();
+  for (const s of (arr||[])){
+    if (s && s.day) map.set(s.day, s);
+  }
+  const uniq = Array.from(map.values()).sort((a,b)=> (a.day||"").localeCompare(b.day||""));
+  const last30 = uniq.slice(Math.max(0, uniq.length - 30));
+  return last30;
 }
 
-function renderDevices(devices) {
-  const filter = $("deviceFilter").value;
-  const search = $("deviceSearch").value.toLowerCase();
-
-  let working = [...devices];
-
-if (DEVICE_SORT_KEY) {
-  working.sort((a, b) => {
-
-  let valA;
-let valB;
-
-if (DEVICE_SORT_KEY === "health") {
-  valA = calculateHealthScore(a);
-  valB = calculateHealthScore(b);
-} else {
-  valA = a[DEVICE_SORT_KEY];
-  valB = b[DEVICE_SORT_KEY];
+/* -----------------------------
+   License normalizers
+----------------------------- */
+function numOrNull(v){
+  if (v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function fmtInt(n){
+  if (!Number.isFinite(n)) return "—";
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(Math.trunc(n));
+  return sign + abs.toLocaleString();
+}
+function escapeHtml(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function safeSkuName(l){
+  return l.name || l.licenseName || l.sku || "Unknown";
+}
+function skuKeyFromName(name){
+  return String(name || "").trim().toLowerCase();
+}
+function computeUtil(total, used){
+  if (total === -1) return null;        // unlimited
+  if (!Number.isFinite(total) || total <= 0) return null;
+  if (!Number.isFinite(used) || used < 0) return 0;
+  return Math.min(999, Math.max(0, Math.round((used/total) * 100)));
 }
 
+/* -----------------------------
+   Enterprise scoring
+   - Health Score (0–100)
+   - Penalties:
+     - deficits weighted heavy
+     - risks (>=90%) moderate
+     - data quality missing totals moderate
+----------------------------- */
+function computeHealthScore(items){
+  let deficits = 0;
+  let risks = 0;
+  let unknowns = 0;
 
-    if (DEVICE_SORT_KEY === "lastSeen") {
-      valA = valA ? new Date(valA).getTime() : 0;
-      valB = valB ? new Date(valB).getTime() : 0;
-    } else {
-      valA = (valA || "").toString().toLowerCase();
-      valB = (valB || "").toString().toLowerCase();
+  for (const l of items){
+    const name = safeSkuName(l);
+    const total = numOrNull(l.total);
+    const used = numOrNull(l.consumed ?? l.assigned ?? 0) ?? 0;
+    const deficit = numOrNull(l.deficit) ?? 0;
+    const util = computeUtil(total, used);
+
+    if (deficit > 0) deficits++;
+    else if (util !== null && util >= 90) risks++;
+
+    if (total === null) unknowns++;
+    if (!name || name === "Unknown") unknowns++;
+  }
+
+  // Weighted score
+  let score = 100;
+
+  // deficit penalty: 18 points each, capped
+  score -= Math.min(90, deficits * 18);
+
+  // risk penalty: 6 points each, capped
+  score -= Math.min(40, risks * 6);
+
+  // unknown penalty: 1 point each, capped
+  score -= Math.min(15, unknowns * 1);
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  return { score, deficits, risks, unknowns };
+}
+
+/* -----------------------------
+   Velocity modeling
+   - Use history snapshots to compute 30-day growth in USED counts (aggregate)
+   - Also compute per-SKU velocity for forecasting
+----------------------------- */
+function calcVelocity(history){
+  if (!history || history.length < 2){
+    return { daily: null, monthly: null, note: "Insufficient history (need at least 2 snapshots)." };
+  }
+  const first = history[0];
+  const last = history[history.length - 1];
+  const days = Math.max(1, Math.round((new Date(last.day) - new Date(first.day)) / 86400000));
+  const usedDelta = (Number(last.usedTotal||0) - Number(first.usedTotal||0));
+  const daily = usedDelta / days;
+  const monthly = daily * 30;
+
+  return {
+    daily: Number.isFinite(daily) ? daily : null,
+    monthly: Number.isFinite(monthly) ? monthly : null,
+    note: `Based on ${history.length} snapshots over ~${days} day(s).`
+  };
+}
+
+function forecastSkuDaysUntilDeficit(orgId, skuKey, current){
+  // If total unlimited or missing -> no forecast
+  const total = current.total;
+  const used = current.used;
+  const available = current.available;
+  const deficit = current.deficit;
+
+  if (total === -1) return { days: null, reason: "Unlimited" };
+  if (!Number.isFinite(total) || total <= 0) return { days: null, reason: "Unknown total" };
+  if (!Number.isFinite(used)) return { days: null, reason: "Unknown used" };
+  if (deficit > 0) return { days: 0, reason: "Already deficit" };
+
+  const hist = loadHistory(orgId);
+  if (hist.length < 2) return { days: null, reason: "No velocity history" };
+
+  // Find usage points for this SKU across snapshots
+  const points = [];
+  for (const s of hist){
+    const rec = s.items && s.items[skuKey];
+    if (rec && Number.isFinite(rec.used)){
+      points.push({ day: s.day, used: rec.used });
     }
+  }
+  if (points.length < 2) return { days: null, reason: "No SKU history" };
 
-    if (valA < valB) return DEVICE_SORT_ASC ? -1 : 1;
-    if (valA > valB) return DEVICE_SORT_ASC ? 1 : -1;
-    return 0;
+  points.sort((a,b)=> a.day.localeCompare(b.day));
+  const a = points[0];
+  const b = points[points.length - 1];
+  const daysSpan = Math.max(1, Math.round((new Date(b.day) - new Date(a.day)) / 86400000));
+  const delta = (b.used - a.used);
+  const daily = delta / daysSpan;
+
+  if (!Number.isFinite(daily) || daily <= 0){
+    return { days: null, reason: daily === 0 ? "Stable usage" : "Usage decreasing" };
+  }
+
+  const remaining = Math.max(0, total - used);
+  const daysTo = Math.floor(remaining / daily);
+  return { days: Math.max(0, daysTo), reason: `~${daily.toFixed(2)}/day` };
+}
+
+/* -----------------------------
+   SKU mapping intelligence
+   - Heuristic mapping patterns (customize over time)
+   - No external calls required
+----------------------------- */
+const SKU_RULES = [
+  { id:"calling",   re:/calling|wxcall|wxc/i,                 category:"Calling", family:"Webex Calling", confidence:0.72, meaning:"Typically a Webex Calling subscription or Calling entitlement." },
+  { id:"meetings",  re:/meeting|meet|webex\s?meet/i,         category:"Meetings", family:"Webex Meetings", confidence:0.70, meaning:"Meeting entitlements; check meeting site settings & host assignments." },
+  { id:"cc",        re:/contact\s?center|cc|wcc|cjp/i,       category:"Contact Center", family:"Webex Contact Center", confidence:0.74, meaning:"Contact center seat types; validate user licensing and queue assignments." },
+  { id:"devices",   re:/device|desk\s?pro|room|board|codec/i, category:"Devices", family:"Webex Devices", confidence:0.62, meaning:"Device-related entitlements; correlate with devices inventory." },
+  { id:"pstn",      re:/pstn|calling\s?plan|telephony/i,      category:"PSTN", family:"PSTN / Calling Plans", confidence:0.68, meaning:"Telephony/PSTN plan; validate PSTN provider and location calling plan." },
+  { id:"messaging", re:/messag|teams?|spaces?/i,             category:"Messaging", family:"Webex App", confidence:0.58, meaning:"Messaging entitlements; often bundled." },
+  { id:"security",  re:/pro\s?pack|security|compliance/i,    category:"Security", family:"Control Hub", confidence:0.62, meaning:"Org-level features such as Pro Pack; validate org entitlements." },
+];
+
+function mapSku(name){
+  const s = String(name || "");
+  const matched = [];
+  for (const r of SKU_RULES){
+    if (r.re.test(s)) matched.push(r);
+  }
+  if (!matched.length){
+    return {
+      category:"Unclassified",
+      family:"Unknown",
+      confidence:0.35,
+      notes:"No mapping rule matched. Consider adding a custom rule once SKU naming is confirmed in Control Hub.",
+      rules:[]
+    };
+  }
+  matched.sort((a,b)=> b.confidence - a.confidence);
+  const best = matched[0];
+  const conf = Math.min(0.95, best.confidence + (matched.length-1)*0.05);
+  return {
+    category: best.category,
+    family: best.family,
+    confidence: conf,
+    notes: best.meaning,
+    rules: matched
+  };
+}
+
+function confLabel(c){
+  if (c >= 0.85) return "High";
+  if (c >= 0.65) return "Medium";
+  return "Low";
+}
+
+/* -----------------------------
+   Charts: simple canvas charts
+   - No external libraries
+   - Uses CSS variables via computed styles
+----------------------------- */
+function cssVar(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function clearCanvas(ctx, w, h){
+  ctx.clearRect(0,0,w,h);
+}
+
+function drawAxes(ctx, w, h){
+  const line = cssVar("--line");
+  ctx.strokeStyle = line;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(40, 10);
+  ctx.lineTo(40, h-30);
+  ctx.lineTo(w-10, h-30);
+  ctx.stroke();
+}
+
+function drawText(ctx, text, x, y, opts={}){
+  ctx.fillStyle = opts.color || cssVar("--muted");
+  ctx.font = opts.font || "12px system-ui";
+  ctx.textAlign = opts.align || "left";
+  ctx.fillText(text, x, y);
+}
+
+function scalePoints(values, min, max, height){
+  const span = (max - min) || 1;
+  return values.map(v => {
+    const t = (v - min) / span;
+    return Math.max(0, Math.min(height, t * height));
   });
 }
 
+function drawLineSeries(ctx, points, color, w, h){
+  if (!points.length) return;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i=0;i<points.length;i++){
+    const p = points[i];
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  }
+  ctx.stroke();
+}
 
-const filtered = working.filter(d => {
+function drawBarSeries(ctx, bars, color){
+  ctx.fillStyle = color;
+  for (const b of bars){
+    ctx.globalAlpha = 0.25;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.globalAlpha = 1;
+  }
+}
 
-    const normalized = normalizeStatus(d.connectionStatus);
-    const matchesFilter =
-      filter === "all" ||
-      (filter === "online" && normalized === "online") ||
-      (filter === "offline" && normalized !== "online");
+function renderTrendChart(orgId){
+  const canvas = $("trendChart");
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
 
-    const matchesSearch =
-      !search ||
-      (d.displayName || "").toLowerCase().includes(search) ||
-      (d.product || "").toLowerCase().includes(search);
+  const hist = loadHistory(orgId);
+  $("trendHint").textContent = `Snapshots: ${hist.length} (last 30 days max)`;
+  $("snapshotText").textContent = `History: ${hist.length} snapshot(s)`;
+  $("snapshotBadge").className = "badge";
+  $("snapshotBadge").classList.add(hist.length >= 2 ? "good" : "warn");
+  $("snapshotBadge").querySelector(".dot").style.color = hist.length >= 2 ? cssVar("--good") : cssVar("--warn");
 
-    return matchesFilter && matchesSearch;
+  clearCanvas(ctx, w, h);
+  drawAxes(ctx, w, h);
+
+  if (!hist.length){
+    drawText(ctx, "No history captured yet. Click Refresh to capture today's snapshot.", 60, 60, { color: cssVar("--muted"), font:"13px system-ui" });
+    return;
+  }
+
+  const scores = hist.map(s => Number(s.healthScore||0));
+  const deficits = hist.map(s => Number(s.deficits||0));
+  const risks = hist.map(s => Number(s.risks||0));
+
+  // Scale
+  const scoreMin = 0;
+  const scoreMax = 100;
+
+  const maxDef = Math.max(1, ...deficits);
+  const maxRisk = Math.max(1, ...risks);
+
+  // Points layout
+  const plotW = w - 60;
+  const plotH = h - 50;
+  const left = 45;
+  const bottom = h - 30;
+
+  const xs = hist.map((_,i)=> left + (plotW * (hist.length === 1 ? 0 : i/(hist.length-1))));
+  const scoreYs = scores.map(v => bottom - (plotH * ((v - scoreMin)/(scoreMax-scoreMin))));
+  const deficitYs = deficits.map(v => bottom - (plotH * (v/maxDef)));
+  const riskYs = risks.map(v => bottom - (plotH * (v/maxRisk)));
+
+  // draw labels
+  drawText(ctx, "Score", 12, 22, { align:"left", font:"11px system-ui" });
+  drawText(ctx, "0", 18, bottom, { align:"left", font:"10px system-ui" });
+  drawText(ctx, "100", 12, 18, { align:"left", font:"10px system-ui" });
+
+  // Score line
+  const scoreColor = cssVar("--accent");
+  const pts = xs.map((x,i)=>({x, y:scoreYs[i]}));
+  drawLineSeries(ctx, pts, scoreColor, w, h);
+
+  // Deficit bars (red-ish)
+  const bad = cssVar("--bad");
+  const defBars = xs.map((x,i)=>{
+    const bw = Math.max(6, Math.min(18, plotW / Math.max(10, hist.length)));
+    const bx = x - bw/2;
+    const by = deficitYs[i];
+    const bh = bottom - by;
+    return { x: bx, y: by, w: bw, h: bh };
   });
+  drawBarSeries(ctx, defBars, bad);
 
-  const offlineCount = devices.filter(d =>
-    normalizeStatus(d.connectionStatus) !== "online"
-  ).length;
+  // Risk line (warn)
+  const warn = cssVar("--warn");
+  const rpts = xs.map((x,i)=>({x, y:riskYs[i]}));
+  ctx.setLineDash([5,4]);
+  drawLineSeries(ctx, rpts, warn, w, h);
+  ctx.setLineDash([]);
 
-  $("deviceSummary").textContent =
-    `${devices.length} devices • ${offlineCount} offline/disconnected`;
-updateOrgHealth(devices);
-  
-  $("deviceRows").innerHTML = filtered.map(d => {
-    const normalized = normalizeStatus(d.connectionStatus);
-
-    const statusClass =
-      normalized === "online"
-        ? "status-online"
-        : normalized === "warning"
-        ? "status-warning"
-        : "status-offline";
-
-    const statusLabel =
-      normalized === "online"
-        ? "ONLINE"
-        : normalized === "warning"
-        ? "ISSUES"
-        : "OFFLINE";
-    const healthScore = calculateHealthScore(d);
-
-let healthClass =
-  healthScore >= 85 ? "health-good" :
-  healthScore >= 60 ? "health-mid" :
-  "health-bad";
-
-
-   return `
-  <tr>
-    <td>
-      <span style="cursor:pointer; font-weight:600;"
-        onclick="openDeviceModalById('${escapeHtml(d.id || "")}')">
-        ${escapeHtml(d.displayName || "—")}
-      </span>
-    </td>
-    <td>${escapeHtml(d.product || "—")}</td>
-    <td>
-      <span class="status-badge ${statusClass}">
-        ${statusLabel}
-      </span>
-      ${normalized === "online" ? `
-        <div class="muted" style="font-size:11px;">
-          Uptime: ${calculateUptime(d.lastSeen, d.connectionStatus)}
-        </div>
-      ` : ""}
-    </td>
-    <td>
-      ${d.lastSeen ? `
-        ${new Date(d.lastSeen).toLocaleString()}
-        <div class="muted" style="font-size:11px;">
-          ${timeAgo(d.lastSeen)}
-        </div>
-      ` : "—"}
-    </td>
-
-    <!-- HEALTH COLUMN -->
-    <td>
-      <span class="health-pill ${healthClass}">
-        ${healthScore}%
-      </span>
-    </td>
-
-    <td>${normalized === "offline" ? "Power / site outage likely" : "—"}</td>
-  </tr>
-`;
-  }).join("");
-}
-
-  function openDeviceModalById(id) {
-  const device = DEVICE_CACHE.find(d => d.id === id);
-  if (!device) return;
-  openDeviceModal(device);
-}
-
-  function safeOrgLabel(o) {
-    const name = o.displayName || o.name || o.orgName || "Unknown";
-    const id = o.id || o.orgId || "";
-    return `${name}${id ? " — " + id.slice(0, 10) + "…" : ""}`;
+  // Date ticks (sparse)
+  const tickEvery = Math.max(1, Math.floor(hist.length / 6));
+  for (let i=0;i<hist.length;i+=tickEvery){
+    const day = hist[i].day;
+    drawText(ctx, day.slice(5), xs[i], bottom + 18, { align:"center", font:"10px system-ui", color: cssVar("--muted") });
   }
-async function loadAnalytics() {
-  $("analyticsLoading").style.display = "block";
-  $("analyticsData").innerHTML = "";
 
-  const orgId = SELECTED_ORG_ID || "";
-  const r = await api(`/api/analytics?orgId=${encodeURIComponent(orgId)}`);
+  $("trendSummary").textContent = `Trend shows Health Score (line), Deficits (bars), and At Risk (dashed). Captured locally per tenant (${orgId || "—"}).`;
+}
 
-  if (!r.ok) {
-    $("analyticsLoading").textContent = "Failed to load analytics.";
+/* SKU trend chart in modal */
+function renderSkuTrend(orgId, skuKey){
+  const canvas = $("skuTrendChart");
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+
+  const hist = loadHistory(orgId);
+  const points = [];
+  for (const s of hist){
+    const rec = s.items && s.items[skuKey];
+    if (rec && Number.isFinite(rec.used)){
+      points.push({ day: s.day, used: rec.used, util: rec.util });
+    }
+  }
+
+  clearCanvas(ctx, w, h);
+  drawAxes(ctx, w, h);
+
+  if (points.length < 2){
+    drawText(ctx, "Not enough SKU history yet. Capture at least 2 daily snapshots.", 60, 60, { color: cssVar("--muted"), font:"13px system-ui" });
+    $("skuTrendSummary").textContent = "Tip: refresh once daily to build a 30-day SKU trend.";
     return;
   }
 
-  $("analyticsLoading").style.display = "none";
+  points.sort((a,b)=> a.day.localeCompare(b.day));
+  const usedVals = points.map(p=>p.used);
+  const maxUsed = Math.max(1, ...usedVals);
 
-  const d = r.data;
+  const plotW = w - 60;
+  const plotH = h - 50;
+  const left = 45;
+  const bottom = h - 30;
 
-  const total = d?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
+  const xs = points.map((_,i)=> left + (plotW * (points.length === 1 ? 0 : i/(points.length-1))));
+  const ys = usedVals.map(v => bottom - (plotH * (v/maxUsed)));
 
-  $("analyticsData").innerHTML = `
-    <p><strong>Total Calls (7 days):</strong> ${total}</p>
-  `;
-}
-async function loadCDR() {
-  $("cdrLoading").style.display = "block";
-  $("cdrTable").style.display = "none";
+  // line
+  const c = cssVar("--accent");
+  const lpts = xs.map((x,i)=>({x, y:ys[i]}));
+  drawLineSeries(ctx, lpts, c, w, h);
 
-  const orgId = SELECTED_ORG_ID || "";
-  const r = await api(`/api/cdr?orgId=${encodeURIComponent(orgId)}`);
+  // annotate max
+  const last = points[points.length-1];
+  drawText(ctx, `Used (max scale): ${maxUsed}`, 60, 18, { font:"11px system-ui" });
 
-  if (!r.ok) {
-    $("cdrLoading").textContent = "Failed to load CDR.";
-    return;
+  // ticks
+  const tickEvery = Math.max(1, Math.floor(points.length / 6));
+  for (let i=0;i<points.length;i+=tickEvery){
+    drawText(ctx, points[i].day.slice(5), xs[i], bottom + 18, { align:"center", font:"10px system-ui" });
   }
 
-  const items = r.data.items || [];
+  const first = points[0], end = points[points.length-1];
+  const daysSpan = Math.max(1, Math.round((new Date(end.day) - new Date(first.day)) / 86400000));
+  const delta = (end.used - first.used);
+  const daily = delta / daysSpan;
 
-  if (!items.length) {
-    $("cdrLoading").textContent = "No CDR records found.";
-    return;
-  }
-
-  $("cdrLoading").style.display = "none";
-  $("cdrTable").style.display = "table";
-
-  $("cdrRows").innerHTML = items.map(c => `
-    <tr>
-      <td>${new Date(c.startTime).toLocaleString()}</td>
-      <td>${escapeHtml(c.localNumber || "—")}</td>
-      <td>${escapeHtml(c.remoteNumber || "—")}</td>
-      <td>${fmtInt(c.duration || 0)}s</td>
-      <td>${escapeHtml(c.callResult || "—")}</td>
-    </tr>
-  `).join("");
+  $("skuTrendSummary").textContent =
+    `SKU used changed from ${first.used} → ${end.used} over ~${daysSpan} day(s). ` +
+    `Estimated velocity: ${daily.toFixed(2)}/day.`;
 }
 
-  // -----------------------------
-  // State
-  // -----------------------------
-  let ME = null;
-  let ORGS = [];
-  let SELECTED_ORG_ID = null;
-  
-// Load guards (prevents repeated API calls)
-let ANALYTICS_LOADED = false;
-let CDR_LOADED = false;
-let DEVICE_CACHE = [];
+/* -----------------------------
+   Tenant / me
+----------------------------- */
+function safeOrgLabel(o){
+  const name = o.displayName || o.name || o.orgName || "Unknown";
+  const id = o.id || o.orgId || "";
+  return `${name}${id ? " — " + id.slice(0,10) + "…" : ""}`;
+}
 
-let DEVICE_SORT_KEY = null;
-let DEVICE_SORT_ASC = true;
-
-  let DEVICE_REFRESH_INTERVAL = null;
-  let DEVICES_LOADED = false;
-
-
-  // -----------------------------
-  // Load /api/me
-  // -----------------------------
-async function loadMe() {
+async function loadMe(){
   const r = await api("/api/me");
   if (!r.ok) throw new Error("Failed to load /api/me");
-
   ME = r.data;
 
-if (ME.role !== "admin" && !ME.orgId) {
-  window.location.href = "/pin";
-  return;
-}
+  if (ME.role !== "admin" && !ME.orgId){
+    window.location.href = "/pin";
+    return false;
+  }
 
   $("whoLine").textContent = `${ME.email} (${ME.role})`;
   $("tenantPill").textContent = `Tenant: ${ME.orgName || "—"}`;
-
   $("orgContext").textContent = ME.orgName
     ? `${ME.orgName} (${ME.resolution} resolution)`
     : "No tenant resolved";
 
-const reportEmail = $("reportEmail");
-if (reportEmail) {
-  reportEmail.value = ME.email || "";
-}
-  $("admin-note").style.display = ME.role === "admin" ? "block" : "none";
+  $("adminNote").style.display = ME.role === "admin" ? "block" : "none";
+  $("resolutionText").textContent = `Resolution: ${ME.resolution || "—"}`;
+  $("resolutionBadge").className = "badge";
+  $("resolutionBadge").classList.add(ME.resolution ? "good" : "warn");
+  $("resolutionBadge").querySelector(".dot").style.color = ME.resolution ? cssVar("--good") : cssVar("--warn");
 
-  return true; // ✅ OK to continue
+  // Pre-fill report email
+  const reportEmail = $("reportEmail");
+  if (reportEmail) reportEmail.value = ME.email || "";
+
+  return true;
 }
 
-  // -----------------------------
-  // Load org list (admin: all, customer: one)
-  // Uses your existing /api/org route
-  // -----------------------------
-  async function loadOrgs() {
-    const r = await api("/api/org");
-    if (!r.ok) {
-      // If tenant not resolved (customer), show helpful message
-     if (r.status === 401) {
-  setError("Tenant not resolved. Please verify your PIN or contact US Signal.");
-$("licenseLoading").textContent = "Tenant not resolved.";
-return;
-
-}
- else {
-        setError("Failed to load org list.");
-      }
+async function loadOrgs(){
+  const r = await api("/api/org");
+  if (!r.ok){
+    if (r.status === 401){
+      setError("Tenant not resolved. Please verify your PIN or contact US Signal.");
+      $("licenseLoading").textContent = "Tenant not resolved.";
       return;
     }
-
-    ORGS = Array.isArray(r.data) ? r.data : [];
-    const sel = $("tenantSelect");
-    sel.innerHTML = "";
-
-    if (ORGS.length === 0) {
-      sel.innerHTML = `<option value="">No organizations available</option>`;
-      sel.disabled = true;
-      $("btnLoad").disabled = true;
-      return;
-    }
-
-    // Build options
-    for (const o of ORGS) {
-      const opt = document.createElement("option");
-      opt.value = o.id || o.orgId || "";
-      opt.textContent = safeOrgLabel(o);
-      sel.appendChild(opt);
-    }
-
-    sel.disabled = false;
-    $("btnLoad").disabled = false;
-
-    // Choose default
-    const defaultOrgId = ME?.orgId || (ORGS[0].id || ORGS[0].orgId);
-    if (defaultOrgId) sel.value = defaultOrgId;
-    SELECTED_ORG_ID = sel.value;
+    setError("Failed to load org list.");
+    return;
   }
 
- $("tenantSelect").addEventListener("change", () => {
-  SELECTED_ORG_ID = $("tenantSelect").value;
+  ORGS = Array.isArray(r.data) ? r.data : [];
+  const sel = $("tenantSelect");
+  sel.innerHTML = "";
+
+  if (!ORGS.length){
+    sel.innerHTML = `<option value="">No organizations available</option>`;
+    sel.disabled = true;
+    $("btnLoad").disabled = true;
+    return;
+  }
+
+  for (const o of ORGS){
+    const opt = document.createElement("option");
+    opt.value = o.id || o.orgId || "";
+    opt.textContent = safeOrgLabel(o);
+    sel.appendChild(opt);
+  }
+
+  sel.disabled = false;
+  $("btnLoad").disabled = false;
+
+  const defaultOrgId = ME?.orgId || (ORGS[0].id || ORGS[0].orgId);
+  if (defaultOrgId) sel.value = defaultOrgId;
+  SELECTED_ORG_ID = sel.value;
+
+  // sync history indicator for default
+  const hist = loadHistory(SELECTED_ORG_ID);
+  $("snapshotText").textContent = `History: ${hist.length} snapshot(s)`;
+}
+
+/* -----------------------------
+   Licensing data load
+----------------------------- */
+function setLastRefresh(){
+  const t = new Date().toLocaleString();
+  $("lastRefreshPill").textContent = `Last refresh: ${t}`;
+}
+
+async function loadLicenses(){
   setError(null);
+  $("licenseLoading").style.display = "block";
+  $("licenseLoading").textContent = "Loading license data…";
+  $("licenseTable").style.display = "none";
+  $("licenseRows").innerHTML = "";
 
-  // Reset tab load states for new tenant
-  ANALYTICS_LOADED = false;
-  CDR_LOADED = false;
-  DEVICE_CACHE = [];
-  DEVICES_LOADED = false;
-});
-function initTabs() {
-  const tabs = document.querySelectorAll(".tab");
+  const orgId = SELECTED_ORG_ID || "";
+  const q = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
+  const r = await api(`/api/licenses${q}`);
 
-  tabs.forEach(btn => {
-    btn.addEventListener("click", async () => {
-      tabs.forEach(t => t.classList.remove("active"));
-      btn.classList.add("active");
-
-      document
-        .querySelectorAll(".tabpanel")
-        .forEach(p => p.classList.add("hidden"));
-
-      const target = document.getElementById("tab-" + btn.dataset.tab);
-      target.classList.remove("hidden");
-if (btn.dataset.tab === "analytics" && !ANALYTICS_LOADED) {
-  await loadAnalytics();
-  ANALYTICS_LOADED = true;
-}
-
-if (btn.dataset.tab === "cdr" && !CDR_LOADED) {
-  await loadCDR();
-  CDR_LOADED = true;
-}
-
-if (btn.dataset.tab === "devices" && !DEVICES_LOADED) {
-  await loadDevices();
-  DEVICES_LOADED = true;
-}
-
-    });
-  });
-}
-
-  // -----------------------------
-  // Load licenses (calls /api/licenses?orgId=...)
-  // -----------------------------
-  async function loadLicenses() {
-    setError(null);
-    $("licenseLoading").style.display = "block";
-    $("licenseLoading").textContent = "Loading license data…";
-    $("licenseTable").classList.add("hidden");
-    $("licenseRows").innerHTML = "";
-
-    const orgId = SELECTED_ORG_ID || "";
-    const q = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
-    const r = await api(`/api/licenses${q}`);
-
-   if (!r.ok) {
- if (r.status === 401) {
-  setError("Tenant not resolved. Please verify your PIN.");
-  $("licenseLoading").textContent = "Unauthorized.";
-  return;
-}
-
-  const msg =
-    (r.data && (r.data.message || r.data.error)) ||
-    `Failed to load licenses (HTTP ${r.status}).`;
-  $("licenseLoading").textContent = msg;
-  return;
-}
-
-const items = Array.isArray(r.data?.items) ? r.data.items : [];
-
-// Always hide loading
-$("licenseLoading").style.display = "none";
-$("licenseTable").classList.remove("hidden");
-
-// If no items, show empty state row instead of exiting
-if (items.length === 0) {
-  $("licenseRows").innerHTML = `
-    <tr>
-      <td colspan="6" class="muted">No license data available for this tenant.</td>
-    </tr>
-  `;
-  renderDeficits([]);
-  return;
-}
-
-    $("licenseLoading").style.display = "none";
-    $("licenseTable").classList.remove("hidden");
-
-    // Expected item shape:
-    // { name, consumed, available, status }
-  const rows = items.map(l => {
-  const name = l.name || l.licenseName || "Unknown";
-
-  const totalRaw = l.total;
-  const usedRaw = l.consumed ?? l.assigned ?? 0;
-
-  const total = (totalRaw === null || totalRaw === undefined) ? null : Number(totalRaw);
-  const used = Number(usedRaw ?? 0);
-
-  // available: -1 means Unlimited (per your worker)
-  const available = (l.available === null || l.available === undefined) ? null : Number(l.available);
-
-  // deficit is already normalized in the worker (0+). If missing, compute safely.
-  const deficit = Number.isFinite(Number(l.deficit))
-    ? Number(l.deficit)
-    : (Number.isFinite(total) && total !== -1 ? Math.max(0, used - total) : 0);
-
-  const status = l.status || "OK";
-
-  const isDeficit = deficit > 0 || status === "DEFICIT";
-  const deficitCellClass = isDeficit ? "danger" : "";
-
-  const totalDisplay = (total === -1) ? "Unlimited" : (Number.isFinite(total) ? fmtInt(total) : "—");
-  const availDisplay = (available === -1) ? "Unlimited" : (Number.isFinite(available) ? fmtInt(available) : "—");
-
-  return `
-    <tr>
-      <td>${escapeHtml(name)}</td>
-      <td class="right">${totalDisplay}</td>
-      <td class="right">${fmtInt(used)}</td>
-      <td class="right">${availDisplay}</td>
-      <td class="right ${deficitCellClass}">${fmtInt(deficit)}</td>
-      <td>${escapeHtml(String(status))}</td>
-    </tr>
-  `;
-}).join("");
-
-
-    $("licenseRows").innerHTML = rows;
-    renderDeficits(items);
+  if (!r.ok){
+    if (r.status === 401){
+      setError("Tenant not resolved. Please verify your PIN.");
+      $("licenseLoading").textContent = "Unauthorized.";
+      return;
+    }
+    const msg = (r.data && (r.data.message || r.data.error)) || `Failed to load licenses (HTTP ${r.status}).`;
+    setError(msg);
+    $("licenseLoading").textContent = msg;
+    return;
   }
-function renderDeficits(items) {
-  const tbody = $("deficitRows");
-  if (!tbody) return;
 
-  // Only show deficit > 0
+  const items = Array.isArray(r.data?.items) ? r.data.items : [];
+  LICENSE_CACHE = items;
+
+  $("licenseLoading").style.display = "none";
+  $("licenseTable").style.display = "table";
+  setLastRefresh();
+
+  // Build summary + snapshot
+  LICENSE_SUMMARY = computeHealthScore(items);
+  updateRagAndKpis(items);
+  renderDeficits(items);
+  renderLicenseTable(items);
+  captureDailySnapshot(items);
+  renderTrendChart(SELECTED_ORG_ID);
+
+  // update alert badge
+  syncAlertBadge();
+}
+
+/* -----------------------------
+   Capture daily snapshot (local)
+----------------------------- */
+function captureDailySnapshot(items){
+  const orgId = SELECTED_ORG_ID || "";
+  if (!orgId) return;
+
+  const day = todayKey();
+  const hist = loadHistory(orgId);
+
+  const { score, deficits, risks } = LICENSE_SUMMARY || computeHealthScore(items);
+
+  // aggregate used/total totals (excluding unlimited)
+  let usedTotal = 0;
+  let totalTotal = 0;
+
+  const skuMap = {};
+  for (const l of items){
+    const name = safeSkuName(l);
+    const key = skuKeyFromName(name);
+
+    const total = numOrNull(l.total);
+    const used = numOrNull(l.consumed ?? l.assigned ?? 0) ?? 0;
+    const available = numOrNull(l.available);
+    const deficit = numOrNull(l.deficit) ?? 0;
+    const util = computeUtil(total, used);
+
+    skuMap[key] = {
+      name,
+      total: Number.isFinite(total) ? total : null,
+      used: Number.isFinite(used) ? used : 0,
+      available: Number.isFinite(available) ? available : null,
+      deficit: Number.isFinite(deficit) ? deficit : 0,
+      util: util,
+      status: deficit > 0 ? "DEFICIT" : (util !== null && util >= 90 ? "AT_RISK" : "OK")
+    };
+
+    if (total !== -1 && Number.isFinite(total)){
+      totalTotal += total;
+      usedTotal += used;
+    }
+  }
+
+  const snap = {
+    day,
+    ts: Date.now(),
+    orgId,
+    healthScore: score,
+    deficits,
+    risks,
+    usedTotal,
+    totalTotal,
+    items: skuMap
+  };
+
+  // overwrite today's if exists
+  const merged = pruneHistory([...(hist||[]), snap]);
+  saveHistory(orgId, merged);
+
+  $("trendHint").textContent = `Snapshots: ${merged.length} (last 30 days max)`;
+}
+
+/* -----------------------------
+   RAG + KPIs
+----------------------------- */
+function updateRagAndKpis(items){
+  const { score, deficits, risks } = LICENSE_SUMMARY || computeHealthScore(items);
+
+  // Health score display
+  $("healthScore").textContent = `${score}/100`;
+  if (score >= 85) $("healthScore").style.color = cssVar("--good");
+  else if (score >= 65) $("healthScore").style.color = cssVar("--warn");
+  else $("healthScore").style.color = cssVar("--bad");
+
+  let scoreMsg = "Healthy posture. Maintain monitoring and forecast planning.";
+  if (deficits > 0) scoreMsg = "Deficits detected. Immediate remediation required.";
+  else if (risks > 0) scoreMsg = "At-risk SKUs detected. Plan procurement or rebalance assignments.";
+  $("healthScoreSub").textContent = scoreMsg;
+
+  $("defRisk").textContent = `${deficits} deficit • ${risks} risk`;
+  $("defRiskSub").textContent = deficits > 0
+    ? "Shortage exists. Users/features may be out of compliance."
+    : (risks > 0 ? "Approaching exhaustion. Forecast and notify stakeholders." : "No deficit and no high-risk SKUs.");
+
+  // Velocity modeling from history
+  const hist = loadHistory(SELECTED_ORG_ID);
+  const vel = calcVelocity(hist);
+  if (vel.daily === null){
+    $("velocity").textContent = "—";
+    $("velocitySub").textContent = vel.note;
+  } else {
+    const daily = vel.daily;
+    const monthly = vel.monthly;
+    $("velocity").textContent = `${daily.toFixed(2)}/day`;
+    const trendText = monthly >= 0 ? `~${monthly.toFixed(0)} seats / 30 days` : `~${monthly.toFixed(0)} seats / 30 days`;
+    $("velocitySub").textContent = `${trendText}. ${vel.note}`;
+  }
+
+  // Sidebar RAG
+  const rag = $("ragPill");
+  rag.classList.remove("red","amber");
+  $("ragDot").style.background = cssVar("--good");
+  $("ragTitle").textContent = "GREEN";
+  $("ragSub").textContent = "No deficits detected";
+  $("ragScore").textContent = String(score);
+
+  if (deficits > 0){
+    rag.classList.add("red");
+    $("ragTitle").textContent = "RED";
+    $("ragSub").textContent = `${deficits} deficit SKU(s) detected`;
+    $("ragDot").style.background = cssVar("--bad");
+  } else if (risks > 0){
+    rag.classList.add("amber");
+    $("ragTitle").textContent = "AMBER";
+    $("ragSub").textContent = `${risks} at-risk SKU(s) (≥90%)`;
+    $("ragDot").style.background = cssVar("--warn");
+  }
+}
+
+/* -----------------------------
+   Deficit table
+----------------------------- */
+function renderDeficits(items){
+  const tbody = $("deficitRows");
   const deficient = (items || []).filter(l => Number(l.deficit || 0) > 0);
 
-  if (!deficient.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="muted">No deficient SKUs 🎉</td></tr>`;
+  if (!deficient.length){
+    tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:left;">No deficient SKUs 🎉</td></tr>`;
     return;
   }
 
   tbody.innerHTML = deficient.map(l => {
-    const name = l.name || l.licenseName || "Unknown";
+    const name = safeSkuName(l);
+    const total = numOrNull(l.total);
+    const used = numOrNull(l.consumed ?? l.assigned ?? 0) ?? 0;
+    const available = numOrNull(l.available);
+    const deficit = numOrNull(l.deficit) ?? 0;
+    const util = computeUtil(total, used);
 
-    const total = (l.total === -1) ? "Unlimited" : (Number.isFinite(Number(l.total)) ? fmtInt(Number(l.total)) : "—");
-    const used = fmtInt(Number(l.consumed ?? 0));
-    const available = (l.available === -1) ? "Unlimited" : (Number.isFinite(Number(l.available)) ? fmtInt(Number(l.available)) : "—");
-    const needed = fmtInt(Number(l.deficit || 0));
+    const sev = deficit >= 25 ? "Critical" : deficit >= 10 ? "High" : "Moderate";
+    const sevClass = deficit >= 25 ? "bad" : deficit >= 10 ? "warn" : "warn";
+
+    const tDisp = (total === -1) ? "Unlimited" : (Number.isFinite(total) ? fmtInt(total) : "—");
+    const aDisp = (available === -1) ? "Unlimited" : (Number.isFinite(available) ? fmtInt(available) : "—");
 
     return `
       <tr>
-<td>${escapeHtml(name)}</td>
-<td class="right">${available}</td>
-<td class="right">${total}</td>
-<td class="right">${used}</td>
-<td class="right"><strong style="color:var(--bad)">${needed}</strong></td>
+        <td><span class="clickable" data-sku="${escapeHtml(name)}">${escapeHtml(name)}</span></td>
+        <td>${aDisp}</td>
+        <td>${tDisp}</td>
+        <td>${fmtInt(used)}</td>
+        <td style="color:var(--bad); font-weight:1000;">${fmtInt(deficit)}</td>
+        <td style="font-weight:1000; color:var(--bad);">${util === null ? "—" : util + "%"}</td>
+        <td>
+          <span class="badge ${sevClass === "bad" ? "bad" : "warn"}">
+            <span class="dot"></span>${sev.toUpperCase()}
+          </span>
+        </td>
       </tr>
     `;
   }).join("");
-}
 
-  const btnEmailAlert = $("btnEmailAlert");
-if (btnEmailAlert) {
-  btnEmailAlert.addEventListener("click", async () => {
-    // Sends to the email in the field (defaulted to ME.email)
-    await sendReport();
+  // wire click
+  tbody.querySelectorAll("[data-sku]").forEach(el=>{
+    el.addEventListener("click", ()=> openSkuModal(el.getAttribute("data-sku")));
   });
 }
-$("deviceFilter").addEventListener("change", () => {
-  renderDevices(DEVICE_CACHE);
-});
 
-$("deviceSearch").addEventListener("input", () => {
-  renderDevices(DEVICE_CACHE);
-});
+/* -----------------------------
+   Main license table (filter/sort/search)
+----------------------------- */
+function deriveStatusRow(l){
+  const total = numOrNull(l.total);
+  const used = numOrNull(l.consumed ?? l.assigned ?? 0) ?? 0;
+  const deficit = numOrNull(l.deficit) ?? 0;
+  const util = computeUtil(total, used);
 
-  function updateOrgHealth(devices) {
-  if (!devices.length) {
-    $("orgHealthScore").textContent = "No Data";
-    return;
-  }
-
-  const avg =
-    devices.reduce((sum, d) => sum + calculateHealthScore(d), 0) /
-    devices.length;
-
-  const rounded = Math.round(avg);
-
-  let label =
-    rounded >= 85 ? "Excellent" :
-    rounded >= 70 ? "Good" :
-    rounded >= 50 ? "Fair" :
-    "Critical";
-
-  $("orgHealthScore").innerHTML = `
-    <span class="health-pill ${
-      rounded >= 85 ? "health-good" :
-      rounded >= 60 ? "health-mid" :
-      "health-bad"
-    }">
-      ${rounded}% — ${label}
-    </span>
-  `;
+  if (deficit > 0) return { label:"DEFICIT", cls:"bad" };
+  if (util !== null && util >= 95) return { label:"AT RISK (95%+)", cls:"warn" };
+  if (util !== null && util >= 90) return { label:"AT RISK (90%+)", cls:"warn" };
+  return { label:"OK", cls:"good" };
 }
 
-  // -----------------------------
-  // Send email (calls /api/licenses/email)
-  // -----------------------------
-async function sendReport() {
+function renderLicenseTable(items){
+  const mode = $("filterMode").value;
+  const q = $("skuSearch").value.trim().toLowerCase();
+  const sortKey = $("sortKey").value;
+  const sortDir = $("sortDir").value;
+
+  const rows = [];
+  for (const l of (items||[])){
+    const name = safeSkuName(l);
+    const total = numOrNull(l.total);
+    const used = numOrNull(l.consumed ?? l.assigned ?? 0) ?? 0;
+    const available = numOrNull(l.available);
+    const deficit = numOrNull(l.deficit) ?? 0;
+    const util = computeUtil(total, used);
+    const st = deriveStatusRow(l);
+
+    // filter
+    const isDef = deficit > 0;
+    const isRisk = !isDef && util !== null && util >= 90;
+    const isHealthy = !isDef && !isRisk;
+
+    if (mode === "deficit" && !isDef) continue;
+    if (mode === "risk" && !isRisk) continue;
+    if (mode === "healthy" && !isHealthy) continue;
+
+    if (q && !name.toLowerCase().includes(q)) continue;
+
+    // mapping intelligence
+    const map = mapSku(name);
+    const mapLabel = `${map.category} (${confLabel(map.confidence)})`;
+
+    // forecast
+    const forecast = forecastSkuDaysUntilDeficit(
+      SELECTED_ORG_ID,
+      skuKeyFromName(name),
+      { total, used, available, deficit }
+    );
+    const forecastDisp = forecast.days === null ? `— (${forecast.reason})` : `${forecast.days} day(s)`;
+
+    rows.push({
+      name,
+      total,
+      used,
+      available,
+      deficit,
+      util,
+      status: st.label,
+      statusCls: st.cls,
+      forecastDisp,
+      mapLabel
+    });
+  }
+
+  // sort
+  rows.sort((a,b)=>{
+    const dir = sortDir === "asc" ? 1 : -1;
+
+    function v(x){
+      if (sortKey === "name") return (x.name || "").toLowerCase();
+      if (sortKey === "util") return x.util === null ? -1 : x.util;
+      if (sortKey === "deficit") return x.deficit || 0;
+      if (sortKey === "used") return x.used || 0;
+      if (sortKey === "total") return x.total === -1 ? Number.MAX_SAFE_INTEGER : (x.total || 0);
+      if (sortKey === "available") return x.available === -1 ? Number.MAX_SAFE_INTEGER : (x.available || 0);
+      return 0;
+    }
+
+    const va = v(a), vb = v(b);
+    if (typeof va === "string"){
+      return va.localeCompare(vb) * dir;
+    }
+    if (va < vb) return -1 * dir;
+    if (va > vb) return 1 * dir;
+    return a.name.localeCompare(b.name) * dir;
+  });
+
+  // render
+  $("licenseRows").innerHTML = rows.map(r=>{
+    const totalDisp = (r.total === -1) ? "Unlimited" : (Number.isFinite(r.total) ? fmtInt(r.total) : "—");
+    const availDisp = (r.available === -1) ? "Unlimited" : (Number.isFinite(r.available) ? fmtInt(r.available) : "—");
+    const utilDisp = r.util === null ? "—" : r.util + "%";
+
+    const badgeClass = r.statusCls === "bad" ? "bad" : r.statusCls === "warn" ? "warn" : "good";
+
+    const deficitStyle = (r.deficit > 0) ? `style="color:var(--bad); font-weight:1000;"` : `style="color:var(--muted); font-weight:900;"`;
+
+    return `
+      <tr>
+        <td>
+          <span class="clickable" data-sku="${escapeHtml(r.name)}">${escapeHtml(r.name)}</span>
+        </td>
+        <td>${totalDisp}</td>
+        <td>${fmtInt(r.used)}</td>
+        <td>${availDisp}</td>
+        <td style="font-weight:1000; color:${r.statusCls === "bad" ? "var(--bad)" : r.statusCls === "warn" ? "var(--warn)" : "var(--good)"}">${utilDisp}</td>
+        <td ${deficitStyle}>${fmtInt(r.deficit)}</td>
+        <td>
+          <span class="badge ${badgeClass}">
+            <span class="dot"></span>${escapeHtml(r.status)}
+          </span>
+        </td>
+        <td class="muted" style="font-weight:900;">${escapeHtml(r.forecastDisp)}</td>
+        <td class="muted" style="font-weight:900;">${escapeHtml(r.mapLabel)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  // hook click
+  $("licenseRows").querySelectorAll("[data-sku]").forEach(el=>{
+    el.addEventListener("click", ()=> openSkuModal(el.getAttribute("data-sku")));
+  });
+}
+
+/* -----------------------------
+   SKU Modal
+----------------------------- */
+let ACTIVE_SKU_NAME = null;
+
+function openSkuModal(skuName){
+  ACTIVE_SKU_NAME = skuName;
+  const overlay = $("skuModalOverlay");
+  overlay.style.display = "flex";
+
+  // Find current record
+  const rec = (LICENSE_CACHE || []).find(l => safeSkuName(l) === skuName) || null;
+
+  const total = rec ? numOrNull(rec.total) : null;
+  const used = rec ? (numOrNull(rec.consumed ?? rec.assigned ?? 0) ?? 0) : 0;
+  const available = rec ? numOrNull(rec.available) : null;
+  const deficit = rec ? (numOrNull(rec.deficit) ?? 0) : 0;
+  const util = computeUtil(total, used);
+
+  const st = rec ? deriveStatusRow(rec) : { label:"UNKNOWN", cls:"warn" };
+
+  $("skuModalTitle").textContent = skuName || "SKU Drill-down";
+  $("skuModalSub").textContent = `Tenant orgId: ${SELECTED_ORG_ID || "—"} • Data source: /api/licenses`;
+
+  // status badge
+  const badge = $("skuStatusBadge");
+  badge.className = "badge " + (st.cls === "bad" ? "bad" : st.cls === "warn" ? "warn" : "good");
+  badge.querySelector(".dot").style.color = st.cls === "bad" ? cssVar("--bad") : st.cls === "warn" ? cssVar("--warn") : cssVar("--good");
+  $("skuStatusText").textContent = st.label;
+
+  // KPI blocks
+  const totalDisp = (total === -1) ? "Unlimited" : (Number.isFinite(total) ? fmtInt(total) : "—");
+  const availDisp = (available === -1) ? "Unlimited" : (Number.isFinite(available) ? fmtInt(available) : "—");
+
+  $("mUtil").textContent = util === null ? "—" : `${util}%`;
+  $("mUtil").style.color = st.cls === "bad" ? cssVar("--bad") : st.cls === "warn" ? cssVar("--warn") : cssVar("--good");
+  $("mUtilSub").textContent = util === null ? "Unlimited/unknown totals" : (util >= 90 ? "Approaching exhaustion threshold" : "Within normal utilization band");
+
+  $("mCap").textContent = `${fmtInt(used)} used`;
+  $("mCapSub").textContent = `Total: ${totalDisp} • Available: ${availDisp} • Deficit: ${fmtInt(deficit)}`;
+
+  const forecast = forecastSkuDaysUntilDeficit(
+    SELECTED_ORG_ID,
+    skuKeyFromName(skuName),
+    { total, used, available, deficit }
+  );
+  $("mForecast").textContent = forecast.days === null ? "—" : `${forecast.days} day(s)`;
+  $("mForecastSub").textContent = forecast.reason;
+
+  // Trend chart
+  renderSkuTrend(SELECTED_ORG_ID, skuKeyFromName(skuName));
+
+  // mapping intelligence
+  const map = mapSku(skuName);
+  $("mapCategory").textContent = map.category;
+  $("mapFamily").textContent = map.family;
+  $("mapConfidence").textContent = `${confLabel(map.confidence)} (${Math.round(map.confidence*100)}%)`;
+  $("mapNotes").textContent = map.notes;
+
+  const ruleRows = $("mapRuleRows");
+  if (!map.rules.length){
+    ruleRows.innerHTML = `<tr><td colspan="3" class="muted" style="text-align:left;">No matching rules. Add custom mapping rules for this SKU pattern.</td></tr>`;
+  } else {
+    ruleRows.innerHTML = map.rules.map(r=>`
+      <tr>
+        <td style="text-align:left; font-weight:1000;">${escapeHtml(r.id)}</td>
+        <td class="mono">${escapeHtml(String(r.re))}</td>
+        <td style="text-align:left;" class="muted">${escapeHtml(r.meaning)}</td>
+      </tr>
+    `).join("");
+  }
+
+  // ops guidance
+  const guidance = [];
+  if (deficit > 0){
+    guidance.push("Deficit detected: validate user assignment counts, remove unused entitlements, and initiate procurement or tier upgrades.");
+    guidance.push("Confirm Control Hub license allocation policies and validate any automated provisioning rules.");
+  } else if (util !== null && util >= 90){
+    guidance.push("At risk: plan procurement within the forecast window, or rebalance by removing unused assignments.");
+    guidance.push("Review seasonal usage patterns and planned onboarding to avoid sudden deficits.");
+  } else {
+    guidance.push("Healthy: keep monitoring velocity, confirm entitlement aligns with user provisioning strategy.");
+  }
+  if (map.category === "Calling"){
+    guidance.push("Calling category: validate user calling entitlements, workspace licensing, and any location-level license requirements.");
+  }
+  if (map.category === "Contact Center"){
+    guidance.push("Contact Center category: ensure agent profiles/roles match seat types and validate queue assignment counts.");
+  }
+  $("opsGuidance").textContent = guidance.join(" ");
+
+  // buttons
+  $("btnExportSkuCsv").onclick = ()=> exportSkuCsv(skuName);
+  $("btnSendSkuAlert").onclick = ()=> sendReportNow({ onlySku: skuName });
+}
+
+function closeSkuModal(){
+  $("skuModalOverlay").style.display = "none";
+  ACTIVE_SKU_NAME = null;
+}
+
+$("btnCloseSkuModal").addEventListener("click", closeSkuModal);
+$("skuModalOverlay").addEventListener("click", (e)=>{
+  if (e.target && e.target.id === "skuModalOverlay") closeSkuModal();
+});
+document.addEventListener("keydown", (e)=>{
+  if (e.key === "Escape") closeSkuModal();
+});
+
+function exportSkuCsv(skuName){
+  const rec = (LICENSE_CACHE || []).find(l => safeSkuName(l) === skuName) || null;
+  if (!rec) return;
+
+  const total = numOrNull(rec.total);
+  const used = numOrNull(rec.consumed ?? rec.assigned ?? 0) ?? 0;
+  const available = numOrNull(rec.available);
+  const deficit = numOrNull(rec.deficit) ?? 0;
+  const util = computeUtil(total, used);
+
+  const rows = [
+    ["SKU","Total","Used","Available","Deficit","Util%","Status"],
+    [
+      skuName,
+      (total === -1 ? "Unlimited" : (Number.isFinite(total) ? total : "")),
+      used,
+      (available === -1 ? "Unlimited" : (Number.isFinite(available) ? available : "")),
+      deficit,
+      (util === null ? "" : util),
+      (deficit > 0 ? "DEFICIT" : (util !== null && util >= 90 ? "AT_RISK" : "OK"))
+    ]
+  ];
+  downloadCsv(`sku_${safeFile(skuName)}.csv`, rows);
+}
+
+/* -----------------------------
+   CSV Export helpers
+----------------------------- */
+function safeFile(name){
+  return String(name || "export").replaceAll(/[^a-zA-Z0-9_\-]+/g, "_").slice(0,80);
+}
+function downloadCsv(filename, rows){
+  const csv = rows.map(r => r.map(v=>{
+    const s = String(v ?? "");
+    const needs = s.includes(",") || s.includes('"') || s.includes("\n");
+    if (!needs) return s;
+    return `"${s.replaceAll('"','""')}"`;
+  }).join(",")).join("\n");
+
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/* Export current license table */
+$("btnExportCsv").addEventListener("click", ()=>{
+  const rows = [["SKU","Total","Used","Available","Util%","Deficit","Status"]];
+  for (const l of (LICENSE_CACHE||[])){
+    const name = safeSkuName(l);
+    const total = numOrNull(l.total);
+    const used = numOrNull(l.consumed ?? l.assigned ?? 0) ?? 0;
+    const available = numOrNull(l.available);
+    const deficit = numOrNull(l.deficit) ?? 0;
+    const util = computeUtil(total, used);
+    const status = deriveStatusRow(l).label;
+
+    rows.push([
+      name,
+      (total === -1 ? "Unlimited" : (Number.isFinite(total) ? total : "")),
+      used,
+      (available === -1 ? "Unlimited" : (Number.isFinite(available) ? available : "")),
+      (util === null ? "" : util),
+      deficit,
+      status
+    ]);
+  }
+  downloadCsv(`licenses_${safeFile(SELECTED_ORG_ID)}_${todayKey()}.csv`, rows);
+});
+
+/* Export history */
+$("btnExportHistory").addEventListener("click", ()=>{
+  const hist = loadHistory(SELECTED_ORG_ID);
+  const rows = [["Day","HealthScore","Deficits","Risks","UsedTotal","TotalTotal"]];
+  for (const s of hist){
+    rows.push([s.day, s.healthScore, s.deficits, s.risks, s.usedTotal, s.totalTotal]);
+  }
+  downloadCsv(`license_history_${safeFile(SELECTED_ORG_ID)}_${todayKey()}.csv`, rows);
+});
+
+/* Clear history */
+$("btnClearHistory").addEventListener("click", ()=>{
+  if (!SELECTED_ORG_ID) return;
+  try{
+    localStorage.removeItem(histKey(SELECTED_ORG_ID));
+  } catch {}
+  renderTrendChart(SELECTED_ORG_ID);
+  updateRagAndKpis(LICENSE_CACHE);
+});
+
+/* -----------------------------
+   Alerting / email notification logic
+   - Uses /api/licenses/email with { email, orgId }
+   - Implements:
+     - toggle enable
+     - risk alerts optional
+     - cooldown enforcement
+     - auto-run while page open
+----------------------------- */
+function settingsKey(orgId){ return `LI2_LICENSE_SETTINGS::${orgId || "unknown"}`; }
+function loadSettings(orgId){
+  try{
+    const raw = localStorage.getItem(settingsKey(orgId));
+    const s = raw ? JSON.parse(raw) : {};
+    return {
+      auto: !!s.auto,
+      risk: !!s.risk,
+      cooldownMin: Number(s.cooldownMin || 30),
+      lastSentTs: Number(s.lastSentTs || 0),
+      email: String(s.email || "")
+    };
+  } catch {
+    return { auto:false, risk:false, cooldownMin:30, lastSentTs:0, email:"" };
+  }
+}
+function saveSettings(orgId, s){
+  try{ localStorage.setItem(settingsKey(orgId), JSON.stringify(s)); } catch {}
+}
+function syncAlertBadge(){
+  const s = loadSettings(SELECTED_ORG_ID);
+  const enabled = s.auto;
+  $("alertText").textContent = `Auto-alert: ${enabled ? "Enabled" : "Disabled"}`;
+  $("alertBadge").className = "badge";
+  $("alertBadge").classList.add(enabled ? "good" : "warn");
+  $("alertBadge").querySelector(".dot").style.color = enabled ? cssVar("--good") : cssVar("--warn");
+}
+
+function loadSettingsToUI(){
+  const s = loadSettings(SELECTED_ORG_ID);
+  $("autoAlertToggle").checked = !!s.auto;
+  $("riskAlertToggle").checked = !!s.risk;
+  $("alertCooldown").value = String(s.cooldownMin || 30);
+
+  // email default: UI value overrides if present
+  const emailInput = $("reportEmail");
+  if (emailInput && !emailInput.value.trim()){
+    emailInput.value = s.email || (ME?.email || "");
+  }
+
+  $("alertText").textContent = `Auto-alert: ${s.auto ? "Enabled" : "Disabled"}`;
+}
+
+function persistSettingsFromUI(){
+  const s = loadSettings(SELECTED_ORG_ID);
+  s.auto = $("autoAlertToggle").checked;
+  s.risk = $("riskAlertToggle").checked;
+  s.cooldownMin = Number($("alertCooldown").value || 30);
+  const email = $("reportEmail").value.trim();
+  if (email) s.email = email;
+  saveSettings(SELECTED_ORG_ID, s);
+  syncAlertBadge();
+}
+
+$("autoAlertToggle").addEventListener("change", persistSettingsFromUI);
+$("riskAlertToggle").addEventListener("change", persistSettingsFromUI);
+$("alertCooldown").addEventListener("change", persistSettingsFromUI);
+$("reportEmail").addEventListener("input", ()=>{
+  // don’t spam writes too often; lightweight: just on change
+});
+
+async function sendReportNow(opts={}){
   setError(null);
 
   const emailStatus = $("emailStatus");
   const emailInput = $("reportEmail");
-  const btn = $("btnSendEmail");
+  const btn = $("btnSendNow");
 
-  const email = emailInput.value.trim();
-
-  // Reset states
-  emailInput.classList.remove("error");
+  const email = (emailInput?.value || "").trim();
   emailStatus.textContent = "";
   emailStatus.classList.remove("show");
 
-  // Inline validation
-  if (!email || !email.includes("@")) {
-    emailInput.classList.add("error");
+  if (!email || !email.includes("@")){
     emailStatus.textContent = "Please enter a valid email address.";
     emailStatus.classList.add("show");
     return;
@@ -1216,166 +2055,146 @@ async function sendReport() {
 
   const orgId = SELECTED_ORG_ID || null;
 
-  // Disable + spinner
   btn.disabled = true;
   btn.dataset.originalText = btn.innerHTML;
   btn.innerHTML = `<span class="spinner"></span> Sending`;
 
-  try {
+  try{
+    // If worker supports payload, keep consistent with existing pattern
+    const payload = { email, orgId };
+
+    // For SKU-only alert we still send standard report (worker unchanged),
+    // but we annotate client-side status for clarity.
+    if (opts.onlySku){
+      payload.onlySku = opts.onlySku; // harmless if ignored by worker
+    }
+
     const r = await api("/api/licenses/email", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, orgId }),
+      method:"POST",
+      headers:{ "content-type":"application/json" },
+      body: JSON.stringify(payload),
     });
 
-    if (!r.ok) {
-      const msg =
-        (r.data && (r.data.message || r.data.error)) ||
-        `Email send failed (HTTP ${r.status}).`;
-
+    if (!r.ok){
+      const msg = (r.data && (r.data.message || r.data.error)) || `Email send failed (HTTP ${r.status}).`;
+      setError(msg);
       emailStatus.textContent = "Failed to send report.";
       emailStatus.classList.add("show");
-      setError(msg);
       return;
     }
 
-    // Success
-    btn.classList.add("success");
-    emailStatus.textContent = "✅ License report sent successfully.";
+    // Update cooldown state
+    const s = loadSettings(SELECTED_ORG_ID);
+    s.lastSentTs = Date.now();
+    s.email = email;
+    saveSettings(SELECTED_ORG_ID, s);
+    syncAlertBadge();
+
+    emailStatus.textContent = opts.onlySku
+      ? `✅ Alert sent (SKU focus: ${opts.onlySku}).`
+      : "✅ License report sent successfully.";
     emailStatus.classList.add("show");
 
-    // Auto clear after 5s
-    setTimeout(() => {
+    setTimeout(()=>{
       emailStatus.classList.remove("show");
       emailStatus.textContent = "";
-      btn.classList.remove("success");
     }, 5000);
 
-  } catch (err) {
+  } catch (e){
+    setError(e?.message || String(e));
     emailStatus.textContent = "Unexpected error occurred.";
     emailStatus.classList.add("show");
-    setError(err.message || "Unexpected error.");
   } finally {
     btn.disabled = false;
-    btn.innerHTML = btn.dataset.originalText || "Send Report";
+    btn.innerHTML = btn.dataset.originalText || "Send Report Now";
   }
 }
-  // -----------------------------
-  // Utilities
-  // -----------------------------
-  function openDeviceModal(device) {
-  $("modalTitle").textContent = device.displayName || "Device";
 
-  $("modalContent").innerHTML = `
-    <strong>Model:</strong> ${escapeHtml(device.product || "—")}<br>
-    <strong>Status:</strong> ${escapeHtml(device.connectionStatus || "—")}<br>
-    <strong>Last Seen:</strong> ${
-      device.lastSeen
-        ? new Date(device.lastSeen).toLocaleString()
-        : "—"
-    }
-  `;
+$("btnSendNow").addEventListener("click", ()=> sendReportNow());
 
-  $("deviceModal").style.display = "flex";
-}
+async function autoAlertCheck(){
+  if (!SELECTED_ORG_ID || !LICENSE_SUMMARY) return;
 
-function closeDeviceModal() {
-  $("deviceModal").style.display = "none";
-}
-  // Close modal when clicking outside inner card
-const modalEl = $("deviceModal");
-if (modalEl) {
-  modalEl.addEventListener("click", (e) => {
-    if (e.target.id === "deviceModal") {
-      closeDeviceModal();
-    }
-  });
-}
+  const s = loadSettings(SELECTED_ORG_ID);
+  if (!s.auto) return;
 
-// ESC key support (add ONCE globally)
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    closeDeviceModal();
+  const cooldownMs = Math.max(1, s.cooldownMin) * 60 * 1000;
+  if (Date.now() - (s.lastSentTs || 0) < cooldownMs){
+    return;
   }
+
+  const deficits = LICENSE_SUMMARY.deficits || 0;
+  const risks = LICENSE_SUMMARY.risks || 0;
+
+  const should = deficits > 0 || (s.risk && risks > 0);
+  if (!should) return;
+
+  // Send using existing worker email endpoint
+  // Use email in settings OR UI OR ME
+  const email = (s.email || $("reportEmail").value.trim() || ME?.email || "").trim();
+  if (!email || !email.includes("@")) return;
+
+  await sendReportNow();
+}
+
+/* -----------------------------
+   Filters / sort / search events
+----------------------------- */
+$("filterMode").addEventListener("change", ()=> renderLicenseTable(LICENSE_CACHE));
+$("skuSearch").addEventListener("input", ()=> renderLicenseTable(LICENSE_CACHE));
+$("sortKey").addEventListener("change", ()=> renderLicenseTable(LICENSE_CACHE));
+$("sortDir").addEventListener("change", ()=> renderLicenseTable(LICENSE_CACHE));
+
+/* -----------------------------
+   Refresh controls
+----------------------------- */
+$("btnLoad").addEventListener("click", async ()=>{
+  SELECTED_ORG_ID = $("tenantSelect").value;
+  setError(null);
+
+  // load settings + refresh UI indicators
+  loadSettingsToUI();
+  await loadLicenses();
 });
 
+$("btnRefresh").addEventListener("click", async ()=>{
+  await loadLicenses();
+});
 
-function calculateUptime(lastSeen, status) {
-  if (!lastSeen || normalizeStatus(status) !== "online") return "—";
+/* -----------------------------
+   Tenant switch
+----------------------------- */
+$("tenantSelect").addEventListener("change", ()=>{
+  SELECTED_ORG_ID = $("tenantSelect").value;
+  setError(null);
+  loadSettingsToUI();
 
-  const minutes = Math.floor((Date.now() - new Date(lastSeen)) / 60000);
+  // refresh charts / history indicator immediately
+  renderTrendChart(SELECTED_ORG_ID);
+  syncAlertBadge();
+});
 
-  if (minutes < 60) return "< 1 hr";
-  if (minutes < 1440) return `${Math.floor(minutes / 60)} hrs`;
-  return `${Math.floor(minutes / 1440)} days`;
-}
+/* -----------------------------
+   Logout
+   - Prefer /api/logout if present
+   - Safe fallback: redirect /pin
+----------------------------- */
+$("btnLogout").addEventListener("click", async ()=>{
+  try{
+    await fetch("/api/logout", { method:"POST" });
+  } catch {}
+  try{
+    // Optional local cleanup
+    localStorage.removeItem("USER_SESSION");
+  } catch {}
+  window.location.href = "/pin";
+});
 
-  function calculateHealthScore(device) {
-  const status = normalizeStatus(device.connectionStatus);
-
-  if (status === "offline") return 20;
-  if (status === "warning") return 60;
-
-  if (!device.lastSeen) return 70;
-
-  const minutes = Math.floor((Date.now() - new Date(device.lastSeen)) / 60000);
-
-  if (minutes < 5) return 100;
-  if (minutes < 30) return 90;
-  if (minutes < 120) return 80;
-  if (minutes < 1440) return 70;
-
-  return 50;
-}
-
-
-  function fmtInt(n) {
-    if (!Number.isFinite(n)) return "0";
-    const sign = n < 0 ? "-" : "";
-    const abs = Math.abs(Math.trunc(n));
-    return sign + abs.toLocaleString();
-  }
-
-  function escapeHtml(str) {
-    return String(str)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-  
-function timeAgo(dateString) {
-  if (!dateString) return "—";
-
-  const diffMs = Date.now() - new Date(dateString).getTime();
-  const minutes = Math.floor(diffMs / 60000);
-
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} min ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hr ago`;
-
-  const days = Math.floor(hours / 24);
-  return `${days} day${days !== 1 ? "s" : ""} ago`;
-}
-  
-function sortDevices(key) {
-  if (DEVICE_SORT_KEY === key) {
-    DEVICE_SORT_ASC = !DEVICE_SORT_ASC;
-  } else {
-    DEVICE_SORT_KEY = key;
-    DEVICE_SORT_ASC = true;
-  }
-  renderDevices(DEVICE_CACHE);
-}
-
-  // -----------------------------
-  // Init
-  // -----------------------------
-async function init() {
-  try {
+/* -----------------------------
+   Init
+----------------------------- */
+async function init(){
+  try{
     setError(null);
 
     const ok = await loadMe();
@@ -1383,32 +2202,32 @@ async function init() {
 
     await loadOrgs();
     SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
-    initTabs();
+
+    // load settings for current tenant into UI
+    loadSettingsToUI();
+    syncAlertBadge();
+
     await loadLicenses();
 
-    // 🔁 Auto refresh devices every 60 seconds
-   if (DEVICE_REFRESH_INTERVAL) {
-  clearInterval(DEVICE_REFRESH_INTERVAL);
-}
+    // Auto refresh every 5 minutes (NOC friendly)
+    if (AUTO_REFRESH_TIMER) clearInterval(AUTO_REFRESH_TIMER);
+    AUTO_REFRESH_TIMER = setInterval(async ()=>{
+      await loadLicenses();
+    }, 5 * 60 * 1000);
 
-DEVICE_REFRESH_INTERVAL = setInterval(() => {
+    // Auto alert check every 60 seconds (respects cooldown)
+    if (SNAPSHOT_TIMER) clearInterval(SNAPSHOT_TIMER);
+    SNAPSHOT_TIMER = setInterval(async ()=>{
+      await autoAlertCheck();
+    }, 60 * 1000);
 
-      const active = document.querySelector(".tab.active");
-      if (active && active.dataset.tab === "devices") {
-        loadDevices();
-      }
-    }, 60000);
-
-  } catch (e) {
+  } catch (e){
     setError(e?.message || String(e));
   }
 }
 
-
-  init();
+init();
 </script>
 
-
 </body>
-  
 </html>
