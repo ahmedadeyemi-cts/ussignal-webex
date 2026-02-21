@@ -1,269 +1,294 @@
+<!-- =========================================================
+     INCIDENT INTELLIGENCE 3.0
+     Fortune-100 NOC Architecture
+     Fully aligned with License Intelligence 2.0 layout
+========================================================= -->
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8"/>
-<title>US Signal | Incident Intelligence</title>
+<title>US Signal | Incident Intelligence 3.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
 <style>
+/* ========= EXACT SAME TOKEN SYSTEM AS LICENSE 2.0 ========= */
 :root{
-  --bg:#f8fafc;
+  --bg:#f6f8fb;
   --card:#ffffff;
   --text:#0f172a;
   --muted:#64748b;
   --line:rgba(15,23,42,.10);
   --shadow:0 8px 24px rgba(15,23,42,.08);
-  --accent:#2563eb;
+  --accent:#0f62fe;
   --good:#16a34a;
   --warn:#f59e0b;
   --bad:#dc2626;
+  --pillBg:#fff;
+  --pillBorder:rgba(15,23,42,.14);
 }
 html[data-theme="dark"]{
   --bg:#0b1220;
   --card:#0f172a;
   --text:#e5e7eb;
   --muted:#94a3b8;
-  --line:rgba(148,163,184,.18);
-  --shadow:0 12px 30px rgba(0,0,0,.45);
+  --line:rgba(226,232,240,.12);
+  --shadow:0 12px 32px rgba(0,0,0,.35);
   --accent:#3b82f6;
+  --good:#22c55e;
+  --warn:#f59e0b;
+  --bad:#ef4444;
+  --pillBg:rgba(15,23,42,.35);
+  --pillBorder:rgba(226,232,240,.14);
 }
 *{box-sizing:border-box;font-family:system-ui;}
-body{margin:0;background:var(--bg);color:var(--text);display:flex;height:100vh;}
+body{margin:0;background:var(--bg);color:var(--text);display:flex;min-height:100vh;}
+
+/* ===== SIDEBAR IDENTICAL STRUCTURE ===== */
 .sidebar{
-  width:260px;background:var(--card);
+  width:270px;background:var(--card);
   border-right:1px solid var(--line);
-  padding:18px;display:flex;
-  flex-direction:column;justify-content:space-between;
+  padding:18px 14px;
+  display:flex;flex-direction:column;gap:14px;
 }
+.brand{display:flex;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line);}
+.brand img{height:34px;}
+.nav{display:flex;flex-direction:column;gap:6px;}
 .nav a{
-  display:block;padding:10px;border-radius:12px;
-  text-decoration:none;color:var(--text);
-  font-weight:800;margin-bottom:6px;
+  padding:10px;border-radius:12px;
+  text-decoration:none;font-weight:800;
+  font-size:13px;color:var(--text);
 }
-.nav a:hover{background:rgba(37,99,235,.12);}
-.nav a.active{
-  background:rgba(37,99,235,.18);
-  border:1px solid rgba(37,99,235,.35);
+.nav a:hover{background:rgba(15,98,254,.12);}
+.nav a.active{background:rgba(15,98,254,.18);border:1px solid rgba(15,98,254,.25);}
+.sidebarFooter{margin-top:auto;padding-top:12px;border-top:1px solid var(--line);}
+.ragPill{
+  padding:10px;border-radius:999px;
+  border:1px solid var(--pillBorder);
+  display:flex;justify-content:space-between;
+  font-weight:1000;
 }
-.rag{padding:8px 12px;border-radius:999px;text-align:center;font-weight:900;}
-.rag.green{background:rgba(22,163,74,.15);color:var(--good);}
-.rag.amber{background:rgba(245,158,11,.15);color:var(--warn);}
-.rag.red{background:rgba(220,38,38,.15);color:var(--bad);}
-.main{flex:1;display:flex;flex-direction:column;}
-.header{
-  background:var(--card);
-  border-bottom:1px solid var(--line);
-  padding:18px;
-  display:flex;justify-content:space-between;align-items:center;
-}
-.header h1{margin:0;font-size:18px;}
-.actions button{
-  padding:8px 14px;border-radius:12px;
-  border:1px solid var(--line);
-  font-weight:800;cursor:pointer;
-}
-.actions .primary{background:var(--accent);color:white;border:none;}
-.content{padding:18px;overflow:auto;}
-.kpi-grid{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:14px;margin-bottom:20px;
-}
-.kpi{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;padding:18px;
-  box-shadow:var(--shadow);
-}
-.kpi h3{margin:0;font-size:12px;text-transform:uppercase;color:var(--muted);}
-.kpi .value{font-size:26px;font-weight:1000;margin-top:6px;}
-.chartCard{
+.ragDot{width:10px;height:10px;border-radius:50%;background:var(--good);}
+.sideBtnRow{display:flex;gap:10px;margin-top:10px;}
+.sideBtnRow button{width:100%;}
+
+/* ===== MAIN LAYOUT ===== */
+.main{flex:1;padding:22px;display:flex;flex-direction:column;gap:18px;}
+.header-card{
   background:var(--card);
   border:1px solid var(--line);
   border-radius:16px;
-  padding:18px;margin-bottom:20px;
   box-shadow:var(--shadow);
-}
-canvas{max-width:100%;}
-.panel{
-  background:var(--card);
-  border-radius:16px;
-  border:1px solid var(--line);
-  overflow:hidden;
-}
-table{width:100%;border-collapse:collapse;}
-thead th{
-  font-size:12px;text-transform:uppercase;color:var(--muted);
-  padding:14px;border-bottom:1px solid var(--line);
-  text-align:left;
-}
-tbody td{
-  padding:14px;border-bottom:1px solid var(--line);
-}
-.row:hover{background:rgba(37,99,235,.08);cursor:pointer;}
-.banner{
-  background:rgba(220,38,38,.12);
-  border:1px solid rgba(220,38,38,.35);
-  padding:12px 16px;
-  border-radius:12px;
-  margin-bottom:16px;
-  font-weight:800;
-  color:var(--bad);
-}
-.summaryBlock{
-  background:var(--card);
   padding:16px;
-  border-radius:12px;
+  display:flex;justify-content:space-between;
+}
+.card{
+  background:var(--card);
   border:1px solid var(--line);
-  margin-bottom:20px;
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+}
+.kpi-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+.kpi{border:1px solid var(--line);border-radius:16px;padding:12px;}
+.kpi .label{font-size:12px;color:var(--muted);font-weight:900;}
+.kpi .value{font-size:18px;font-weight:1000;margin-top:6px;}
+.banner{
+  padding:12px;border-radius:12px;
+  font-weight:900;
+}
+.banner.bad{background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.35);color:var(--bad);}
+.banner.warn{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:var(--warn);}
+.table-wrap{border:1px solid var(--line);border-radius:16px;overflow:auto;}
+table{width:100%;border-collapse:collapse;}
+th,td{padding:12px;border-top:1px solid rgba(15,23,42,.06);}
+th{text-align:left;font-size:12px;color:var(--muted);}
+tr:hover{background:rgba(15,98,254,.05);cursor:pointer;}
+.badge{padding:6px 10px;border-radius:999px;font-size:11px;font-weight:900;}
+.badge.good{color:var(--good);}
+.badge.warn{color:var(--warn);}
+.badge.bad{color:var(--bad);}
+button{
+  background:var(--accent);color:#fff;border:none;
+  padding:8px 14px;border-radius:10px;font-weight:900;cursor:pointer;
+}
+.btn-outline{background:transparent;border:1px solid var(--line);color:var(--text);}
+canvas{width:100%;height:220px;}
+.modalOverlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);
+  display:none;align-items:center;justify-content:center;
+}
+.modal{
+  background:var(--card);
+  width:900px;max-width:95%;
+  border-radius:16px;border:1px solid var(--line);
+  padding:18px;max-height:90vh;overflow:auto;
 }
 </style>
 </head>
 
 <body>
 
+<!-- SIDEBAR -->
 <div class="sidebar">
   <div>
-    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" style="height:32px;">
-    <div class="nav" style="margin-top:20px;">
+    <div class="brand">
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg"/>
+      <div>
+        <b>US Signal</b><br/>
+        <span style="font-size:12px;color:var(--muted);">Customer Portal</span>
+      </div>
+    </div>
+    <div class="nav">
       <a href="/customer">Dashboard</a>
-      <a href="/customer/devices">Devices</a>
-      <a href="/customer/pstn">PSTN</a>
       <a href="/customer/licenses">Licenses</a>
+      <a href="/customer/devices">Devices</a>
+      <a href="/customer/analytics">Analytics</a>
+      <a href="/customer/cdr">CDR</a>
+      <a href="/customer/pstn">PSTN</a>
       <a href="/customer/incidents" class="active">Incidents</a>
     </div>
   </div>
-  <div id="rag" class="rag green">HEALTHY</div>
-</div>
-
-<div class="main">
-<div class="header">
-  <h1>Incident Intelligence 2.0</h1>
-  <div class="actions">
-    <button onclick="exportPDF()">Export PDF</button>
-    <button onclick="scheduleNotify()">Schedule Alerts</button>
-    <button class="primary" onclick="load()">Refresh</button>
+  <div class="sidebarFooter">
+    <div class="ragPill">
+      <span id="ragText">GREEN</span>
+      <span id="ragScore">100</span>
+    </div>
+    <div class="sideBtnRow">
+      <button class="btn-outline" onclick="toggleTheme()">Theme</button>
+      <button class="btn-outline" onclick="logout()">Logout</button>
+    </div>
   </div>
 </div>
 
-<div class="content">
+<!-- MAIN -->
+<div class="main">
+
+<div class="header-card">
+  <div>
+    <div style="font-weight:1000;font-size:16px;">Webex Incident Intelligence 3.0</div>
+    <div style="font-size:12px;color:var(--muted);" id="execSummary"></div>
+  </div>
+  <div>
+    <button class="btn-outline" onclick="exportPDF()">Export PDF</button>
+    <button onclick="refreshData()">Refresh</button>
+  </div>
+</div>
 
 <div id="slaBanner"></div>
 
 <div class="kpi-grid">
-  <div class="kpi"><h3>Active</h3><div class="value" id="activeCount">0</div></div>
-  <div class="kpi"><h3>Major</h3><div class="value" id="majorCount">0</div></div>
-  <div class="kpi"><h3>MTTR</h3><div class="value" id="mttr">0h</div></div>
-  <div class="kpi"><h3>Impact Score</h3><div class="value" id="impactScore">0</div></div>
+  <div class="kpi"><div class="label">Active</div><div class="value" id="kActive">0</div></div>
+  <div class="kpi"><div class="label">Major</div><div class="value" id="kMajor">0</div></div>
+  <div class="kpi"><div class="label">MTTR</div><div class="value" id="kMTTR">0h</div></div>
+  <div class="kpi"><div class="label">Impact Index</div><div class="value" id="kImpact">0</div></div>
 </div>
 
-<div class="summaryBlock" id="executiveSummary"></div>
-
-<div class="chartCard">
+<div class="card">
   <h3>30-Day Incident Trend</h3>
-  <canvas id="trendChart" height="100"></canvas>
+  <canvas id="trendChart"></canvas>
 </div>
 
-<div class="chartCard">
-  <h3>Product Impact Heatmap</h3>
-  <canvas id="heatmapChart" height="120"></canvas>
-</div>
-
-<div class="panel">
-<table>
-<thead>
-<tr>
-<th>ID</th>
-<th>Status</th>
-<th>Impact</th>
-<th>Start</th>
-<th>Products</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody id="incidentBody"></tbody>
-</table>
+<div class="card">
+  <h3>Incident Inventory</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Status</th>
+          <th>Severity</th>
+          <th>Start</th>
+          <th>Products</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody id="incidentRows"></tbody>
+    </table>
+  </div>
 </div>
 
 </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- MODAL -->
+<div class="modalOverlay" id="incidentModal">
+  <div class="modal">
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody"></div>
+    <div style="margin-top:10px;text-align:right;">
+      <button class="btn-outline" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
 
 <script>
-let incidents=[];
+let INCIDENTS=[];
 
-async function load(){
-  const res=await fetch("/api/incidents",{cache:"no-store"});
-  if(!res.ok) return;
-  const data=await res.json();
-  incidents=data.incidents||[];
-  render();
-  correlateWithInfra();
-}
-
-function render(){
-  const active=incidents.filter(i=>i.status!=="resolved");
-  const major=incidents.filter(i=>(i.impact||"").toLowerCase().includes("major"));
-
-  document.getElementById("activeCount").textContent=active.length;
-  document.getElementById("majorCount").textContent=major.length;
-
-  calculateMTTR();
-  calculateImpactScore(active.length,major.length);
-  renderTrend();
-  renderHeatmap();
+async function refreshData(){
+  const r=await fetch("/api/incidents",{cache:"no-store"});
+  const data=await r.json();
+  INCIDENTS=data.incidents||[];
+  computeMetrics();
   renderTable();
-  buildExecutiveNarrative(active.length,major.length);
 }
 
-function calculateMTTR(){
-  const resolved=incidents.filter(i=>i.status==="resolved");
-  if(!resolved.length){document.getElementById("mttr").textContent="0h";return;}
-  const avg=resolved.reduce((sum,i)=>{
+function computeMetrics(){
+  const active=INCIDENTS.filter(i=>i.status!=="resolved");
+  const major=INCIDENTS.filter(i=>(i.impact||"").toLowerCase().includes("major"));
+  document.getElementById("kActive").textContent=active.length;
+  document.getElementById("kMajor").textContent=major.length;
+
+  let impact=0;
+  active.forEach(i=>{
+    const sev=(i.impact||"").toLowerCase();
+    if(sev.includes("major")) impact+=5;
+    else if(sev.includes("partial")) impact+=3;
+    else impact+=1;
+  });
+  document.getElementById("kImpact").textContent=impact;
+
+  let mttr=0,count=0;
+  INCIDENTS.filter(i=>i.status==="resolved").forEach(i=>{
     const start=new Date(i.created_at);
     const end=new Date(i.resolved_at||i.updated_at||Date.now());
-    return sum+(end-start);
-  },0)/resolved.length;
-  document.getElementById("mttr").textContent=Math.round(avg/3600000)+"h";
-}
-
-function calculateImpactScore(active,major){
-  const score=(major*5)+(active*2);
-  document.getElementById("impactScore").textContent=score;
-  const rag=document.getElementById("rag");
-  if(score>10){rag.className="rag red";rag.textContent="CRITICAL";}
-  else if(score>3){rag.className="rag amber";rag.textContent="DEGRADED";}
-  else{rag.className="rag green";rag.textContent="HEALTHY";}
-}
-
-function renderTrend(){
-  const ctx=document.getElementById("trendChart");
-  const last30=[...Array(30)].map((_,i)=>i);
-  const counts=last30.map(()=>Math.floor(Math.random()*3));
-  new Chart(ctx,{
-    type:"line",
-    data:{labels:last30,datasets:[{data:counts}]},
-    options:{plugins:{legend:{display:false}}}
+    mttr+=(end-start);
+    count++;
   });
+  if(count>0){
+    mttr=Math.round((mttr/count)/3600000);
+  }
+  document.getElementById("kMTTR").textContent=mttr+"h";
+
+  updateRAG(impact);
+  buildExecutive(active.length,major.length,impact);
 }
 
-function renderHeatmap(){
-  const ctx=document.getElementById("heatmapChart");
-  const products=[...new Set(incidents.flatMap(i=>(i.components||[]).map(c=>c.name)))];
-  const values=products.map(()=>Math.floor(Math.random()*5));
-  new Chart(ctx,{
-    type:"bar",
-    data:{labels:products,datasets:[{data:values}]},
-    options:{plugins:{legend:{display:false}}}
-  });
+function updateRAG(score){
+  const rag=document.getElementById("ragText");
+  const ragScore=document.getElementById("ragScore");
+  ragScore.textContent=score;
+  if(score>12){rag.textContent="RED";}
+  else if(score>4){rag.textContent="AMBER";}
+  else{rag.textContent="GREEN";}
+}
+
+function buildExecutive(a,m,impact){
+  let txt="System operating normally.";
+  if(a>0){
+    txt=`${a} active incident(s). `;
+    if(m>0) txt+=`${m} major severity. `;
+    txt+=`Impact index ${impact}. Service degradation possible depending on tenant configuration.`;
+  }
+  document.getElementById("execSummary").textContent=txt;
 }
 
 function renderTable(){
-  const tbody=document.getElementById("incidentBody");
+  const tbody=document.getElementById("incidentRows");
   tbody.innerHTML="";
-  incidents.forEach(i=>{
+  INCIDENTS.forEach(i=>{
     const row=document.createElement("tr");
-    row.className="row";
     row.innerHTML=`
       <td>${i.external_id||i.id}</td>
       <td>${i.status}</td>
@@ -272,39 +297,37 @@ function renderTable(){
       <td>${(i.components||[]).map(c=>c.name).join(", ")}</td>
       <td>${i.name}</td>
     `;
+    row.onclick=()=>openModal(i);
     tbody.appendChild(row);
   });
 }
 
-function buildExecutiveNarrative(active,major){
-  const text=active>0
-    ?`There are currently ${active} active incidents across Webex services. ${major>0?major+" of these are major severity events requiring immediate attention.":""} Service reliability may be impacted depending on tenant configuration and PSTN routing.`
-    :"No active Webex incidents detected. Service posture remains stable.";
-  document.getElementById("executiveSummary").textContent=text;
+function openModal(i){
+  document.getElementById("incidentModal").style.display="flex";
+  document.getElementById("modalTitle").textContent=i.name;
+  document.getElementById("modalBody").innerHTML=`
+    <b>Status:</b> ${i.status}<br/>
+    <b>Impact:</b> ${i.impact}<br/>
+    <b>Created:</b> ${new Date(i.created_at).toLocaleString()}<br/><br/>
+    ${(i.updates||[]).map(u=>`
+      <div style="margin-bottom:10px;">
+        <b>${u.status}</b><br/>
+        ${u.body_html||u.body||""}<br/>
+        <span style="font-size:11px;color:var(--muted);">${new Date(u.created_at).toLocaleString()}</span>
+      </div>
+    `).join("")}
+  `;
 }
 
-async function correlateWithInfra(){
-  const dev=await fetch("/api/devices").then(r=>r.ok?r.json():null);
-  const pstn=await fetch("/api/pstn").then(r=>r.ok?r.json():null);
-  if(dev && pstn){
-    if(incidents.some(i=>i.status!=="resolved")){
-      document.getElementById("slaBanner").innerHTML=
-        '<div class="banner">⚠ Correlated incident detected. Device/PSTN degradation possible.</div>';
-    }
-  }
+function closeModal(){document.getElementById("incidentModal").style.display="none";}
+function exportPDF(){window.print();}
+function toggleTheme(){
+  const html=document.documentElement;
+  html.setAttribute("data-theme",html.getAttribute("data-theme")==="dark"?"light":"dark");
 }
+function logout(){window.location.href="/pin";}
 
-function exportPDF(){
-  window.print();
-}
-
-function scheduleNotify(){
-  const email=prompt("Enter email for incident alerts:");
-  if(!email)return;
-  alert("Alert scheduled for "+email+" (Worker hook ready)");
-}
-
-load();
+refreshData();
 </script>
 
 </body>
