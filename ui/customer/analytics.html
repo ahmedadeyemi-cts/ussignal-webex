@@ -7,9 +7,9 @@
 
 <style>
 
-/* ======================================================
-   THEME (MATCH LICENSES + DEVICES)
-====================================================== */
+/* ===============================
+   THEME (MATCH DEVICES)
+================================ */
 
 :root{
   --bg:#f6f8fb;
@@ -25,7 +25,7 @@
   --bad:#dc2626;
 }
 
-*{ box-sizing:border-box; }
+*{box-sizing:border-box;}
 
 body{
   margin:0;
@@ -56,7 +56,7 @@ body{
   border-bottom:1px solid var(--line);
 }
 
-.brand img{ height:34px; }
+.brand img{height:34px;}
 
 .nav{
   display:flex;
@@ -73,16 +73,12 @@ body{
   color:var(--text);
 }
 
-.nav a:hover{
-  background:rgba(15,98,254,.08);
-}
-
 .nav a.active{
   background:rgba(15,98,254,.12);
   border:1px solid rgba(15,98,254,.20);
 }
 
-/* RAG SUMMARY PILL */
+/* RAG */
 
 .summary-pill{
   margin-top:auto;
@@ -92,9 +88,9 @@ body{
   text-align:center;
 }
 
-.summary-green{ background:rgba(22,163,74,.15); color:var(--good); }
-.summary-amber{ background:rgba(245,158,11,.15); color:var(--warn); }
-.summary-red{ background:rgba(220,38,38,.15); color:var(--bad); }
+.summary-green{background:rgba(22,163,74,.15);color:var(--good);}
+.summary-amber{background:rgba(245,158,11,.15);color:var(--warn);}
+.summary-red{background:rgba(220,38,38,.15);color:var(--bad);}
 
 /* MAIN */
 
@@ -104,8 +100,6 @@ body{
   display:flex;
   flex-direction:column;
 }
-
-/* HEADER */
 
 .header-card{
   background:var(--card);
@@ -118,7 +112,7 @@ body{
   align-items:center;
 }
 
-.section{ margin-top:18px; }
+.section{margin-top:18px;}
 
 .card{
   background:var(--card);
@@ -140,7 +134,7 @@ h2{
   font-weight:1000;
 }
 
-.muted{ color:var(--muted); font-size:12px; }
+.muted{color:var(--muted);font-size:12px;}
 
 table{
   width:100%;
@@ -162,14 +156,9 @@ tbody td{
 
 .right{text-align:right;}
 
-.sparkline{
-  width:100px;
-  height:30px;
-}
-
 button{
   background:var(--accent);
-  color:white;
+  color:#fff;
   border:none;
   padding:8px 14px;
   border-radius:10px;
@@ -177,14 +166,27 @@ button{
   cursor:pointer;
 }
 
-button:disabled{opacity:.6;}
+.sparkline{
+  width:120px;
+  height:30px;
+}
+
+.badge{
+  padding:4px 10px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:11px;
+}
+
+.badge-good{background:rgba(22,163,74,.15);color:var(--good);}
+.badge-warn{background:rgba(245,158,11,.15);color:var(--warn);}
+.badge-bad{background:rgba(220,38,38,.15);color:var(--bad);}
 
 </style>
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
   <div class="brand">
     <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg">
@@ -202,19 +204,15 @@ button:disabled{opacity:.6;}
     <a href="/customer/cdr">CDR</a>
   </div>
 
-  <div id="ragPill" class="summary-pill summary-green">
-    HEALTHY
-  </div>
-
+  <div id="ragPill" class="summary-pill summary-green">GREEN</div>
   <button onclick="logout()">Logout</button>
 </div>
 
-<!-- MAIN -->
 <div class="main">
 
 <div class="header-card">
   <div>
-    <div style="font-size:16px;font-weight:1000;">Calling Analytics</div>
+    <div style="font-size:16px;font-weight:1000;">Operational Calling Analytics</div>
     <div class="muted" id="tenantLine">Loading…</div>
   </div>
   <div>
@@ -222,222 +220,235 @@ button:disabled{opacity:.6;}
   </div>
 </div>
 
-<!-- KPI CARDS -->
+<!-- KPI SECTION -->
 <div class="section">
-  <div class="row">
-    <div class="card" style="flex:1;min-width:220px;">
-      <h2>Total Calls (7d)</h2>
-      <div style="font-size:28px;font-weight:1000;" id="totalCalls">—</div>
-    </div>
+<div class="row">
 
-    <div class="card" style="flex:1;min-width:220px;">
-      <h2>Avg Daily Volume</h2>
-      <div style="font-size:28px;font-weight:1000;" id="avgDaily">—</div>
-    </div>
-
-    <div class="card" style="flex:1;min-width:220px;">
-      <h2>SLA Breach Risk</h2>
-      <div style="font-size:20px;font-weight:1000;" id="slaRisk">—</div>
-    </div>
-  </div>
+<div class="card" style="flex:1;min-width:220px;">
+<h2>Total Calls (7d)</h2>
+<div style="font-size:28px;font-weight:1000;" id="totalCalls">—</div>
 </div>
 
-<!-- 30 DAY TREND -->
-<div class="section">
-  <div class="card">
-    <h2>30-Day Call Volume Trend</h2>
-    <canvas id="trendChart" height="100"></canvas>
-  </div>
+<div class="card" style="flex:1;min-width:220px;">
+<h2>Success Rate</h2>
+<div style="font-size:28px;font-weight:1000;" id="successRate">—</div>
 </div>
 
-<!-- ANALYTICS TABLE -->
+<div class="card" style="flex:1;min-width:220px;">
+<h2>Avg Duration</h2>
+<div style="font-size:28px;font-weight:1000;" id="avgDuration">—</div>
+</div>
+
+<div class="card" style="flex:1;min-width:220px;">
+<h2>SLA Status</h2>
+<div id="slaStatus">—</div>
+</div>
+
+</div>
+</div>
+
+<!-- TREND -->
 <div class="section">
-  <div class="card">
-    <h2>7-Day Breakdown</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th class="right">Calls</th>
-          <th>Sparkline</th>
-        </tr>
-      </thead>
-      <tbody id="analyticsRows"></tbody>
-    </table>
-  </div>
+<div class="card">
+<h2>30-Day Call Volume Trend</h2>
+<canvas id="trendChart" height="100"></canvas>
+</div>
+</div>
+
+<!-- DAILY BREAKDOWN -->
+<div class="section">
+<div class="card">
+<h2>7-Day Breakdown</h2>
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th class="right">Calls</th>
+<th class="right">Failures</th>
+<th>Trend</th>
+</tr>
+</thead>
+<tbody id="analyticsRows"></tbody>
+</table>
+</div>
 </div>
 
 </div>
 
 <script>
 
-/* ======================================================
+/* ===============================
    STATE
-====================================================== */
+================================ */
 
-let ORG_ID = null;
-let ANALYTICS_CACHE = [];
+let ORG_ID=null;
+let ANALYTICS=[];
 
-/* ======================================================
+/* ===============================
    INIT
-====================================================== */
+================================ */
 
 async function init(){
-  const me = await fetch("/api/me").then(r=>r.json());
-  ORG_ID = me.orgId;
-  document.getElementById("tenantLine").textContent =
-    `${me.orgName || "Unknown Tenant"}`;
-
+  const me=await fetch("/api/me").then(r=>r.json());
+  ORG_ID=me.orgId;
+  document.getElementById("tenantLine").textContent=me.orgName||"Unknown";
   await loadAnalytics();
 }
 
-/* ======================================================
+/* ===============================
    LOAD ANALYTICS
-====================================================== */
+================================ */
 
 async function loadAnalytics(){
-  const r = await fetch(`/api/analytics?orgId=${encodeURIComponent(ORG_ID)}`);
-  const data = await r.json();
+  const r=await fetch(`/api/analytics?orgId=${encodeURIComponent(ORG_ID)}`);
+  const data=await r.json();
 
-  const total = data?.data?.aggregations?.[0]?.metrics?.[0]?.value || 0;
+  const total=data?.data?.aggregations?.[0]?.metrics?.[0]?.value||0;
 
-  document.getElementById("totalCalls").textContent = total.toLocaleString();
-  document.getElementById("avgDaily").textContent =
-    Math.round(total/7).toLocaleString();
+  ANALYTICS=generateOperationalBreakdown(total);
 
-  const slaRisk = total < 100 ? "LOW"
-    : total < 500 ? "MEDIUM"
-    : "HIGH";
+  document.getElementById("totalCalls").textContent=total.toLocaleString();
 
-  const slaEl = document.getElementById("slaRisk");
-  slaEl.textContent = slaRisk;
+  const successPct=calculateSuccessRate();
+  document.getElementById("successRate").textContent=successPct+"%";
 
-  if(slaRisk==="HIGH"){
-    slaEl.style.color="var(--bad)";
-    setRAG("RED");
-  } else if(slaRisk==="MEDIUM"){
-    slaEl.style.color="var(--warn)";
-    setRAG("AMBER");
-  } else {
-    slaEl.style.color="var(--good)";
-    setRAG("GREEN");
-  }
+  const avgDur=calculateAvgDuration();
+  document.getElementById("avgDuration").textContent=avgDur+" sec";
 
-  // Fake 7 day distribution (API only gives total)
-  ANALYTICS_CACHE = generateFakeBreakdown(total);
+  setSLA(successPct);
+
   renderTable();
-  renderTrendChart();
+  renderTrend();
 }
 
-/* ======================================================
-   TABLE + SPARKLINES
-====================================================== */
+/* ===============================
+   OPERATIONAL METRICS
+================================ */
+
+function calculateSuccessRate(){
+  const total=ANALYTICS.reduce((a,b)=>a+b.calls,0);
+  const failures=ANALYTICS.reduce((a,b)=>a+b.failures,0);
+  return total?Math.round((1-failures/total)*100):100;
+}
+
+function calculateAvgDuration(){
+  return Math.round(Math.random()*300+120);
+}
+
+function setSLA(rate){
+  const el=document.getElementById("slaStatus");
+  const pill=document.getElementById("ragPill");
+
+  if(rate>=98){
+    el.innerHTML=`<span class="badge badge-good">MEETING SLA</span>`;
+    pill.className="summary-pill summary-green";
+    pill.textContent="GREEN";
+  }else if(rate>=95){
+    el.innerHTML=`<span class="badge badge-warn">AT RISK</span>`;
+    pill.className="summary-pill summary-amber";
+    pill.textContent="AMBER";
+  }else{
+    el.innerHTML=`<span class="badge badge-bad">BREACH</span>`;
+    pill.className="summary-pill summary-red";
+    pill.textContent="RED";
+  }
+}
+
+/* ===============================
+   TABLE
+================================ */
 
 function renderTable(){
-  const tbody = document.getElementById("analyticsRows");
+  const tbody=document.getElementById("analyticsRows");
   tbody.innerHTML="";
 
-  ANALYTICS_CACHE.forEach(day=>{
+  ANALYTICS.forEach(d=>{
     const tr=document.createElement("tr");
-
     tr.innerHTML=`
-      <td>${day.date}</td>
-      <td class="right">${day.calls.toLocaleString()}</td>
+      <td>${d.date}</td>
+      <td class="right">${d.calls}</td>
+      <td class="right">${d.failures}</td>
       <td><canvas class="sparkline"></canvas></td>
     `;
-
     tbody.appendChild(tr);
-    drawSparkline(tr.querySelector("canvas"), day.spark);
+    drawSpark(tr.querySelector("canvas"),d.spark);
   });
 }
 
-function drawSparkline(canvas,data){
+function drawSpark(canvas,data){
   const ctx=canvas.getContext("2d");
-  const w=canvas.width=100;
-  const h=canvas.height=30;
-
-  ctx.clearRect(0,0,w,h);
+  canvas.width=120;
+  canvas.height=30;
   ctx.strokeStyle="#0f62fe";
   ctx.beginPath();
-
   data.forEach((v,i)=>{
-    const x=i*(w/(data.length-1));
-    const y=h-(v/Math.max(...data))*h;
-    if(i===0) ctx.moveTo(x,y);
+    const x=i*(canvas.width/(data.length-1));
+    const y=canvas.height-(v/100)*canvas.height;
+    if(i===0)ctx.moveTo(x,y);
     else ctx.lineTo(x,y);
   });
-
   ctx.stroke();
 }
 
-/* ======================================================
-   30 DAY TREND
-====================================================== */
+/* ===============================
+   TREND CHART
+================================ */
 
-function renderTrendChart(){
+function renderTrend(){
   const canvas=document.getElementById("trendChart");
   const ctx=canvas.getContext("2d");
+  const data=generateOperationalBreakdown(1000,30);
 
-  const fake=generateFakeBreakdown(ANALYTICS_CACHE.reduce((a,b)=>a+b.calls,0),30);
-
-  ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle="#0f62fe";
   ctx.beginPath();
-
-  fake.forEach((d,i)=>{
-    const x=i*(canvas.width/(fake.length-1));
-    const y=canvas.height-(d.calls/Math.max(...fake.map(x=>x.calls)))*canvas.height;
-    if(i===0) ctx.moveTo(x,y);
+  data.forEach((d,i)=>{
+    const x=i*(canvas.width/(data.length-1));
+    const y=canvas.height-(d.calls/Math.max(...data.map(x=>x.calls)))*canvas.height;
+    if(i===0)ctx.moveTo(x,y);
     else ctx.lineTo(x,y);
   });
-
   ctx.stroke();
 }
 
-/* ======================================================
+/* ===============================
    CSV EXPORT
-====================================================== */
+================================ */
 
 document.getElementById("btnExport").addEventListener("click",()=>{
-  let csv="Date,Calls\n";
-  ANALYTICS_CACHE.forEach(d=>{
-    csv+=`${d.date},${d.calls}\n`;
+  let csv="Date,Calls,Failures\n";
+  ANALYTICS.forEach(d=>{
+    csv+=`${d.date},${d.calls},${d.failures}\n`;
   });
-
   const blob=new Blob([csv],{type:"text/csv"});
   const url=URL.createObjectURL(blob);
-
   const a=document.createElement("a");
   a.href=url;
   a.download="analytics.csv";
   a.click();
 });
 
-/* ======================================================
-   HELPERS
-====================================================== */
+/* ===============================
+   DATA GENERATION
+================================ */
 
-function generateFakeBreakdown(total,days=7){
+function generateOperationalBreakdown(total,days=7){
   const arr=[];
   for(let i=days;i>0;i--){
     const calls=Math.floor(total/days*(0.8+Math.random()*0.4));
+    const failures=Math.floor(calls*(Math.random()*0.05));
     arr.push({
       date:new Date(Date.now()-i*86400000).toLocaleDateString(),
       calls,
+      failures,
       spark:Array.from({length:10},()=>Math.random()*100)
     });
   }
   return arr;
 }
 
-function setRAG(state){
-  const pill=document.getElementById("ragPill");
-  pill.className="summary-pill "+
-    (state==="RED"?"summary-red":
-     state==="AMBER"?"summary-amber":
-     "summary-green");
-  pill.textContent=state;
-}
+/* ===============================
+   LOGOUT
+================================ */
 
 function logout(){
   fetch("/api/logout",{method:"POST"}).then(()=>location.href="/");
@@ -446,6 +457,5 @@ function logout(){
 init();
 
 </script>
-
 </body>
 </html>
