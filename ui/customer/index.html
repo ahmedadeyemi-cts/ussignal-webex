@@ -6,11 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
 <style>
-
 /* ======================================================
    ENTERPRISE THEME SYSTEM (MATCH DEVICES / LICENSES)
 ====================================================== */
-
 :root{
   --bg:#f8fafc;
   --card:#ffffff;
@@ -23,6 +21,9 @@
   --good:#16a34a;
   --warn:#f59e0b;
   --bad:#dc2626;
+
+  --pill-bg:rgba(37,99,235,.10);
+  --pill-fg:#1d4ed8;
 }
 
 html[data-theme="dark"]{
@@ -37,6 +38,9 @@ html[data-theme="dark"]{
   --good:#22c55e;
   --warn:#f59e0b;
   --bad:#ef4444;
+
+  --pill-bg:rgba(59,130,246,.18);
+  --pill-fg:#93c5fd;
 }
 
 *{box-sizing:border-box;}
@@ -52,188 +56,424 @@ body{
 /* ======================================================
    SIDEBAR
 ====================================================== */
-
 .sidebar{
-  width:260px;
+  width:270px;
   background:var(--card);
   border-right:1px solid var(--line);
-  padding:20px;
+  padding:18px 14px;
   display:flex;
   flex-direction:column;
   justify-content:space-between;
+  gap:14px;
 }
-
-.sidebar h2{
-  margin:0 0 20px 0;
-  font-size:15px;
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
 }
+.brand img{height:34px;}
+.brand .title{display:flex;flex-direction:column;}
+.brand .title b{font-size:14px;}
+.brand .title span{font-size:12px;color:var(--muted);}
 
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
 .nav a{
   display:block;
   padding:10px;
-  border-radius:10px;
+  border-radius:12px;
   text-decoration:none;
   color:var(--text);
   font-size:13px;
-  font-weight:700;
+  font-weight:850;
 }
-
 .nav a:hover{background:rgba(15,23,42,.06);}
+html[data-theme="dark"] .nav a:hover{background:rgba(255,255,255,.08);}
 .nav a.active{
   background:rgba(37,99,235,.12);
   border:1px solid rgba(37,99,235,.25);
 }
 
-/* RAG Pill */
+.sidebarFooter{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.ragWrap{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
 .rag{
-  padding:8px;
+  flex:1;
+  padding:8px 10px;
   border-radius:999px;
   text-align:center;
-  font-weight:900;
+  font-weight:950;
   font-size:12px;
+  border:1px solid var(--line);
 }
-.rag.green{background:rgba(22,163,74,.2);color:var(--good);}
-.rag.amber{background:rgba(245,158,11,.2);color:var(--warn);}
-.rag.red{background:rgba(220,38,38,.2);color:var(--bad);}
+.rag.green{background:rgba(22,163,74,.15);color:var(--good);border-color:rgba(22,163,74,.25);}
+.rag.amber{background:rgba(245,158,11,.16);color:var(--warn);border-color:rgba(245,158,11,.30);}
+.rag.red{background:rgba(220,38,38,.16);color:var(--bad);border-color:rgba(220,38,38,.30);}
+
+.pill{
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:var(--card);
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+}
+.pill strong{color:var(--text);}
+
+.btn{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:var(--card);
+  cursor:pointer;
+  font-weight:900;
+}
+.btn.primary{
+  background:var(--accent);
+  color:#fff;
+  border:none;
+}
+.btn:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
 
 /* ======================================================
    MAIN
 ====================================================== */
-
-.main{flex:1;display:flex;flex-direction:column;}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;}
 
 .header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:18px 28px;
   background:var(--card);
   border-bottom:1px solid var(--line);
-}
-
-.brand{
+  padding:16px 18px;
   display:flex;
-  align-items:center;
-  gap:16px;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
 }
-
-.brand img{height:32px;}
-
-.header-actions{
+.headerLeft{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.headerTitle{
+  font-size:16px;
+  font-weight:1000;
+}
+.headerSub{
+  font-size:12px;
+  color:var(--muted);
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.headerSub .dot{opacity:.6;}
+.headerActions{
   display:flex;
   gap:10px;
   align-items:center;
+  flex-wrap:wrap;
+  justify-content:flex-end;
 }
-
-button{
-  padding:8px 14px;
-  border-radius:8px;
+.headerActions button{
+  padding:8px 12px;
+  border-radius:12px;
   border:1px solid var(--line);
   background:var(--card);
   cursor:pointer;
-  font-weight:700;
+  font-weight:900;
 }
-
-button.primary{
+.headerActions button.primary{
   background:var(--accent);
-  color:white;
+  color:#fff;
   border:none;
 }
 
 .content{
-  padding:28px;
+  padding:18px;
   overflow:auto;
 }
 
 /* ======================================================
-   KPI GRID
+   ALERT BANNERS (TOP)
 ====================================================== */
+.alertStack{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-bottom:14px;
+}
+.alert{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:12px 14px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.alert .left{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:0;
+}
+.alert .title{
+  font-weight:1000;
+  font-size:13px;
+}
+.alert .body{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.35;
+}
+.alert .actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.alert .actions button{
+  padding:7px 10px;
+  border-radius:10px;
+  font-size:12px;
+}
+.alert.bad{border-color:rgba(220,38,38,.35);}
+.alert.warn{border-color:rgba(245,158,11,.35);}
+.alert.good{border-color:rgba(22,163,74,.35);}
 
+.banner{
+  display:none;
+}
+.banner.show{display:flex;}
+
+/* ======================================================
+   ADMIN TENANT SWITCHER
+====================================================== */
+.tenantBar{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:12px 14px;
+  display:none;
+  margin-bottom:14px;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+}
+.tenantBar.show{display:flex;}
+.tenantBar .left{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.tenantBar .left b{font-size:13px;}
+.tenantBar .left span{font-size:12px;color:var(--muted);}
+.tenantBar .right{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+select{
+  padding:9px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:var(--card);
+  color:var(--text);
+  font-weight:800;
+  font-size:12px;
+  min-width:320px;
+}
+
+/* ======================================================
+   EXEC SUMMARY
+====================================================== */
+.summaryCard{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:14px 16px;
+  margin-bottom:14px;
+}
+.summaryCard .headline{
+  font-weight:1000;
+  font-size:14px;
+  margin:0 0 6px 0;
+}
+.summaryCard .text{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.45;
+  margin:0;
+}
+.summaryMeta{
+  margin-top:10px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.badge{
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:var(--card);
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+}
+.badge strong{color:var(--text);}
+
+/* ======================================================
+   KPI GRID + SPARKLINES
+====================================================== */
 .kpi-grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-  gap:20px;
+  gap:14px;
 }
-
 .kpi{
   background:var(--card);
   border:1px solid var(--line);
   border-radius:16px;
-  padding:20px;
+  padding:14px 14px 12px 14px;
   box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width:0;
 }
-
+.kpiTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
 .kpi h3{
-  margin:0 0 6px 0;
+  margin:0;
   font-size:12px;
   text-transform:uppercase;
   color:var(--muted);
+  letter-spacing:.4px;
 }
-
-.kpi-value{
-  font-size:28px;
-  font-weight:900;
+.kpiValue{
+  font-size:26px;
+  font-weight:1000;
+  margin-top:2px;
+  line-height:1;
 }
-
-.kpi-sub{
-  font-size:12px;
+.kpiSub{
   color:var(--muted);
-  margin-top:4px;
+  font-size:12px;
+}
+.kpiRight{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:6px;
+}
+.kpiMini{
+  padding:6px 9px;
+  border-radius:999px;
+  background:var(--pill-bg);
+  color:var(--pill-fg);
+  font-weight:900;
+  font-size:11px;
+  border:1px solid rgba(37,99,235,.18);
+  white-space:nowrap;
+}
+.sparkWrap{
+  height:36px;
+  width:100%;
+  border:1px solid rgba(15,23,42,.08);
+  border-radius:12px;
+  overflow:hidden;
+}
+html[data-theme="dark"] .sparkWrap{border-color:rgba(148,163,184,.18);}
+.spark{
+  width:100%;
+  height:36px;
+  display:block;
 }
 
 /* ======================================================
-   NAVIGATION CARDS
+   QUICK ACCESS
 ====================================================== */
-
+.sectionTitle{
+  margin:18px 0 10px 0;
+  font-size:14px;
+  font-weight:1000;
+}
 .nav-grid{
-  margin-top:28px;
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:20px;
+  gap:14px;
 }
-
 .nav-card{
   background:var(--card);
   border:1px solid var(--line);
   border-radius:16px;
-  padding:22px;
+  padding:16px;
   cursor:pointer;
-  transition:.2s ease;
+  transition:.15s ease;
+  box-shadow:var(--shadow);
 }
-
-.nav-card:hover{
-  transform:translateY(-4px);
-  border-color:var(--accent);
-}
-
-.nav-card h3{
-  margin:0 0 6px 0;
-  font-size:15px;
-}
-
-.nav-card p{
-  margin:0;
-  font-size:13px;
-  color:var(--muted);
-}
-
-.section-title{
-  margin:32px 0 12px 0;
+.nav-card:hover{transform:translateY(-3px);border-color:rgba(37,99,235,.28);}
+.nav-card h4{margin:0 0 6px 0;font-size:14px;font-weight:1000;}
+.nav-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.35;}
+.smallRow{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
+.smallPill{
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  font-size:12px;
   font-weight:900;
-  font-size:15px;
+  color:var(--muted);
+  background:var(--card);
 }
 
+/* ======================================================
+   FOOTER HELPERS
+====================================================== */
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;}
+.hidden{display:none !important;}
 </style>
 </head>
 
 <body>
 
 <div class="sidebar">
-
   <div>
-    <h2>Customer Portal</h2>
+    <div class="brand">
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" alt="US Signal"/>
+      <div class="title">
+        <b>US Signal</b>
+        <span>Customer Portal</span>
+      </div>
+    </div>
 
-    <div class="nav">
+    <div class="nav" style="margin-top:10px;">
       <a href="/customer" class="active">Dashboard</a>
       <a href="/customer/licenses">Licenses</a>
       <a href="/customer/devices">Devices</a>
@@ -246,230 +486,1101 @@ button.primary{
     </div>
   </div>
 
-  <div>
-    <div id="orgRag" class="rag green">HEALTHY</div>
-    <button style="margin-top:10px;width:100%;" onclick="logout()">Logout</button>
-  </div>
+  <div class="sidebarFooter">
+    <div class="ragWrap">
+      <div id="orgRag" class="rag green">HEALTHY</div>
+    </div>
 
+    <div class="pill" id="tenantPill">Tenant: <strong>—</strong></div>
+    <div class="pill" id="sessionPill">Session: <strong>—</strong></div>
+    <div class="pill" id="livePill">Live: <strong>Polling</strong></div>
+
+    <button class="btn primary" id="btnLogout">Logout</button>
+  </div>
 </div>
 
 <div class="main">
 
-<div class="header">
-  <div class="brand">
-    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg"/>
-    <div>
-      <div style="font-weight:900;">Customer Command Center</div>
-      <div id="welcomeLine" style="font-size:12px;color:var(--muted);">Loading...</div>
+  <div class="header">
+    <div class="headerLeft">
+      <div class="headerTitle">Customer Command Center</div>
+      <div class="headerSub">
+        <span id="welcomeLine">Loading…</span>
+        <span class="dot">•</span>
+        <span id="roleLine">—</span>
+        <span class="dot">•</span>
+        <span id="lastRefresh">Last refresh: —</span>
+      </div>
+    </div>
+
+    <div class="headerActions">
+      <button id="btnTheme">Dark Mode</button>
+      <button class="primary" id="btnRefresh">Refresh</button>
     </div>
   </div>
 
-  <div class="header-actions">
-    <button id="btnTheme">Dark Mode</button>
+  <div class="content">
+
+    <!-- ALERT BANNERS (TOP) -->
+    <div class="alertStack" id="alertStack"></div>
+
+    <!-- SLA BREACH BANNER -->
+    <div class="alert banner bad" id="slaBanner">
+      <div class="left">
+        <div class="title">SLA Breach Detected</div>
+        <div class="body" id="slaText">—</div>
+      </div>
+      <div class="actions">
+        <button class="primary" onclick="go('/customer/incidents')">View Incidents</button>
+        <button onclick="dismissBanner('slaBanner')">Dismiss</button>
+      </div>
+    </div>
+
+    <!-- ADMIN TENANT SWITCHER -->
+    <div class="tenantBar" id="tenantBar">
+      <div class="left">
+        <b>Admin Tenant Switcher</b>
+        <span>Select a tenant to refresh all KPIs and tiles.</span>
+      </div>
+      <div class="right">
+        <select id="tenantSelect" disabled>
+          <option>Loading tenants…</option>
+        </select>
+        <button class="primary" id="btnApplyTenant" disabled>Apply</button>
+      </div>
+    </div>
+
+    <!-- EXEC SUMMARY -->
+    <div class="summaryCard">
+      <div class="headline">Executive Summary</div>
+      <p class="text" id="execSummary">
+        Loading operational summary…
+      </p>
+      <div class="summaryMeta" id="summaryMeta"></div>
+    </div>
+
+    <!-- KPI GRID -->
+    <div class="kpi-grid">
+
+      <div class="kpi">
+        <div class="kpiTop">
+          <div>
+            <h3>License Health</h3>
+            <div class="kpiValue" id="licenseHealth">—</div>
+            <div class="kpiSub" id="licenseSub">Utilization & deficits</div>
+          </div>
+          <div class="kpiRight">
+            <div class="kpiMini" id="licenseMini">30d</div>
+          </div>
+        </div>
+        <div class="sparkWrap"><svg class="spark" id="sparkLicense" viewBox="0 0 100 36" preserveAspectRatio="none"></svg></div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpiTop">
+          <div>
+            <h3>Device Health</h3>
+            <div class="kpiValue" id="deviceHealth">—</div>
+            <div class="kpiSub" id="deviceSub">Online vs offline</div>
+          </div>
+          <div class="kpiRight">
+            <div class="kpiMini" id="deviceMini">30d</div>
+          </div>
+        </div>
+        <div class="sparkWrap"><svg class="spark" id="sparkDevice" viewBox="0 0 100 36" preserveAspectRatio="none"></svg></div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpiTop">
+          <div>
+            <h3>Call Volume (7d)</h3>
+            <div class="kpiValue" id="callVolume">—</div>
+            <div class="kpiSub" id="callSub">Enterprise usage</div>
+          </div>
+          <div class="kpiRight">
+            <div class="kpiMini" id="callMini">30d</div>
+          </div>
+        </div>
+        <div class="sparkWrap"><svg class="spark" id="sparkCalls" viewBox="0 0 100 36" preserveAspectRatio="none"></svg></div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpiTop">
+          <div>
+            <h3>PSTN Trunks</h3>
+            <div class="kpiValue" id="pstnHealth">—</div>
+            <div class="kpiSub" id="pstnSub">Capacity & status</div>
+          </div>
+          <div class="kpiRight">
+            <div class="kpiMini" id="pstnMini">30d</div>
+          </div>
+        </div>
+        <div class="sparkWrap"><svg class="spark" id="sparkPstn" viewBox="0 0 100 36" preserveAspectRatio="none"></svg></div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpiTop">
+          <div>
+            <h3>Open Incidents</h3>
+            <div class="kpiValue" id="incidentCount">—</div>
+            <div class="kpiSub" id="incidentSub">Active tickets</div>
+          </div>
+          <div class="kpiRight">
+            <div class="kpiMini" id="incidentMini">30d</div>
+          </div>
+        </div>
+        <div class="sparkWrap"><svg class="spark" id="sparkIncidents" viewBox="0 0 100 36" preserveAspectRatio="none"></svg></div>
+      </div>
+
+    </div>
+
+    <!-- QUICK ACCESS -->
+    <div class="sectionTitle">Quick Access</div>
+    <div class="nav-grid">
+      <div class="nav-card" onclick="go('/customer/licenses')">
+        <h4>License Intelligence</h4>
+        <p>Forecasting, deficits, allocation, and notifications.</p>
+        <div class="smallRow">
+          <div class="smallPill" id="qaLicPill">—</div>
+          <div class="smallPill" id="qaLicDefPill">—</div>
+        </div>
+      </div>
+
+      <div class="nav-card" onclick="go('/customer/devices')">
+        <h4>Device Operations</h4>
+        <p>Health scoring, SLA tracking, offline alerts, and drilldowns.</p>
+        <div class="smallRow">
+          <div class="smallPill" id="qaDevPill">—</div>
+          <div class="smallPill" id="qaDevOffPill">—</div>
+        </div>
+      </div>
+
+      <div class="nav-card" onclick="go('/customer/pstn')">
+        <h4>PSTN Engineering</h4>
+        <p>Routing, failover validation, DID reconciliation, and audits.</p>
+        <div class="smallRow">
+          <div class="smallPill" id="qaPstnPill">—</div>
+          <div class="smallPill" id="qaPstnWarnPill">—</div>
+        </div>
+      </div>
+
+      <div class="nav-card" onclick="go('/customer/analytics')">
+        <h4>Call Analytics</h4>
+        <p>Trends, call quality, adoption, and troubleshooting views.</p>
+        <div class="smallRow">
+          <div class="smallPill" id="qaAnPill">—</div>
+          <div class="smallPill" id="qaAn7dPill">—</div>
+        </div>
+      </div>
+
+      <div class="nav-card" onclick="go('/customer/cdr')">
+        <h4>CDR</h4>
+        <p>Deep call records, filtering, exportable logs, and diagnostics.</p>
+        <div class="smallRow">
+          <div class="smallPill" id="qaCdrPill">—</div>
+          <div class="smallPill" id="qaCdrErrPill">—</div>
+        </div>
+      </div>
+
+      <div class="nav-card" onclick="go('/customer/incidents')">
+        <h4>Incidents</h4>
+        <p>Timeline view, service-impact analysis, and resolution updates.</p>
+        <div class="smallRow">
+          <div class="smallPill" id="qaIncPill">—</div>
+          <div class="smallPill" id="qaIncOpenPill">—</div>
+        </div>
+      </div>
+    </div>
+
   </div>
-</div>
-
-<div class="content">
-
-<div class="kpi-grid">
-
-  <div class="kpi">
-    <h3>License Health</h3>
-    <div class="kpi-value" id="licenseHealth">—</div>
-    <div class="kpi-sub">Utilization & Deficits</div>
-  </div>
-
-  <div class="kpi">
-    <h3>Device Health</h3>
-    <div class="kpi-value" id="deviceHealth">—</div>
-    <div class="kpi-sub">Online vs Offline</div>
-  </div>
-
-  <div class="kpi">
-    <h3>Call Volume (7d)</h3>
-    <div class="kpi-value" id="callVolume">—</div>
-    <div class="kpi-sub">Enterprise Usage</div>
-  </div>
-
-  <div class="kpi">
-    <h3>PSTN Trunks</h3>
-    <div class="kpi-value" id="pstnHealth">—</div>
-    <div class="kpi-sub">Capacity & Status</div>
-  </div>
-
-  <div class="kpi">
-    <h3>Open Incidents</h3>
-    <div class="kpi-value" id="incidentCount">—</div>
-    <div class="kpi-sub">Active Tickets</div>
-  </div>
-
-</div>
-
-<div class="section-title">Quick Access</div>
-
-<div class="nav-grid">
-
-  <div class="nav-card" onclick="go('/customer/licenses')">
-    <h3>License Intelligence</h3>
-    <p>Advanced forecasting, deficits & alerts.</p>
-  </div>
-
-  <div class="nav-card" onclick="go('/customer/devices')">
-    <h3>Device Operations</h3>
-    <p>Health scoring, SLA tracking & offline alerts.</p>
-  </div>
-
-  <div class="nav-card" onclick="go('/customer/pstn')">
-    <h3>PSTN Engineering</h3>
-    <p>Routing, failover & DID inventory intelligence.</p>
-  </div>
-
-  <div class="nav-card" onclick="go('/customer/analytics')">
-    <h3>Call Analytics</h3>
-    <p>Trend analysis & quality monitoring.</p>
-  </div>
-
-  <div class="nav-card" onclick="go('/customer/cdr')">
-    <h3>Call Detail Records</h3>
-    <p>Deep troubleshooting & exportable logs.</p>
-  </div>
-
-</div>
-
-</div>
 </div>
 
 <script>
-const $ = id=>document.getElementById(id);
+/* ======================================================
+   CORE UTILITIES (KEEP ALL PREVIOUS FUNCTIONS + HARDEN)
+====================================================== */
+const $ = (id) => document.getElementById(id);
 
-let SELECTED_ORG_ID=null;
-let ME=null;
+let ME = null;
+let SELECTED_ORG_ID = null;
+let ORGS = [];
+let SESSION_TIMER = null;
 
-/* ===========================
-   THEME
-=========================== */
-function loadTheme(){
-  const t=localStorage.getItem("uiTheme")||"light";
-  document.documentElement.setAttribute("data-theme",t);
-  $("btnTheme").textContent=t==="dark"?"Light Mode":"Dark Mode";
-}
-$("btnTheme").onclick=()=>{
-  const cur=document.documentElement.getAttribute("data-theme");
-  const next=cur==="dark"?"light":"dark";
-  localStorage.setItem("uiTheme",next);
-  loadTheme();
+let AUTO_TIMER = null;
+let LIVE_MODE = "Polling";  // "WebSocket" if connected
+let WS = null;
+let WS_OK = false;
+
+let LAST_SNAPSHOT = {
+  licenseDeficit: null,
+  licenseHealthy: null,
+  devicesOffline: null,
+  devicesTotal: null,
+  calls7d: null,
+  pstnTrunks: null,
+  incidentsOpen: null,
+  lastOk: null
 };
+
+/* ======================================================
+   THEME (matches devices.html behavior)
+====================================================== */
+function loadTheme(){
+  const saved = localStorage.getItem("uiTheme");
+  const theme = saved === "dark" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  $("btnTheme").textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme") || "light";
+  const next = cur === "dark" ? "light" : "dark";
+  localStorage.setItem("uiTheme", next);
+  loadTheme();
+}
+$("btnTheme").addEventListener("click", toggleTheme);
 loadTheme();
 
-/* ===========================
-   API
-=========================== */
-async function api(path){
-  const r=await fetch(path);
-  if(r.status===401){location.href="/pin";return null;}
-  if(!r.ok)return null;
-  return await r.json();
-}
+/* ======================================================
+   API HELPER (previous behavior + safe parsing)
+====================================================== */
+async function api(path, opts){
+  try{
+    const res = await fetch(path, Object.assign({ cache:"no-store" }, opts || {}));
+    const txt = await res.text();
+    let data = null;
+    try{ data = txt ? JSON.parse(txt) : null; } catch { data = { raw: txt }; }
 
-function build(path){
-  return SELECTED_ORG_ID
-    ? `${path}?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`
-    : path;
-}
-
-/* ===========================
-   LOAD DATA
-=========================== */
-
-async function loadMe(){
-  const me=await api("/api/me");
-  if(!me)return;
-  ME=me;
-  SELECTED_ORG_ID=me.orgId||null;
-
-  $("welcomeLine").textContent=
-    `${me.email} • ${me.orgName||"Admin View"}`;
-}
-
-async function loadKPIs(){
-
-  /* LICENSE */
-  const lic=await api(build("/api/licenses"));
-  if(lic?.summary){
-    const deficit=lic.summary.totalDeficit||0;
-    $("licenseHealth").textContent=
-      deficit>0?`${deficit} Deficit`:"Healthy";
-  }
-
-  /* DEVICES */
-  const dev=await api(build("/api/devices"));
-  if(dev?.items){
-    const off=dev.items.filter(d=>
-      (d.connectionStatus||"").toLowerCase().includes("disconnected")
-    ).length;
-    $("deviceHealth").textContent=
-      off>0?`${off} Offline`:"All Online";
-  }
-
-  /* ANALYTICS */
-  const an=await api(build("/api/analytics"));
-  if(an?.data){
-    const total=
-      an.data?.aggregations?.[0]?.metrics?.[0]?.value||0;
-    $("callVolume").textContent=Number(total).toLocaleString();
-  }
-
-  /* PSTN */
-  const pstn=await api(build("/api/pstn"));
-  if(pstn?.trunks){
-    $("pstnHealth").textContent=`${pstn.trunks.length} Trunks`;
-  } else {
-    $("pstnHealth").textContent="—";
-  }
-
-  /* INCIDENTS */
-  const inc=await api("/api/incidents");
-  if(inc?.incidents){
-    const open=inc.incidents.filter(i=>
-      (i.status||"").toLowerCase()!=="resolved"
-    ).length;
-    $("incidentCount").textContent=open;
-  }
-
-  computeRAG();
-}
-
-function computeRAG(){
-  const text=$("licenseHealth").textContent;
-  const rag=$("orgRag");
-
-  if(text.includes("Deficit")){
-    rag.className="rag red";
-    rag.textContent="CRITICAL";
-  } else {
-    rag.className="rag green";
-    rag.textContent="HEALTHY";
+    if (res.status === 401){
+      window.location.href = "/pin";
+      return { ok:false, status:401, data };
+    }
+    return { ok: res.ok, status: res.status, data };
+  }catch(e){
+    return { ok:false, status:0, data:{ error: e?.message || String(e) } };
   }
 }
 
-/* ===========================
-   UTIL
-=========================== */
-function go(p){location.href=p;}
+function buildPath(base){
+  if (SELECTED_ORG_ID){
+    const glue = base.includes("?") ? "&" : "?";
+    return `${base}${glue}orgId=${encodeURIComponent(SELECTED_ORG_ID)}`;
+  }
+  return base;
+}
+
+function safeOrgLabel(o){
+  const name = o.displayName || o.name || o.orgName || "Unknown";
+  const id = o.id || o.orgId || "";
+  return `${name}${id ? " — " + id.slice(0,10) + "…" : ""}`;
+}
+
+function fmtInt(n){
+  const num = Number(n);
+  if(!Number.isFinite(num)) return "0";
+  return Math.trunc(num).toLocaleString();
+}
+
+function nowStamp(){
+  const d = new Date();
+  return d.toLocaleString();
+}
+
+function dismissBanner(id){
+  const el = $(id);
+  if(el) el.classList.remove("show");
+}
+
+/* ======================================================
+   ALERT STACK
+====================================================== */
+function clearAlerts(){
+  $("alertStack").innerHTML = "";
+}
+
+function pushAlert({severity, title, body, primaryText, primaryHref}){
+  const stack = $("alertStack");
+  const cls = severity === "bad" ? "bad" : (severity === "warn" ? "warn" : "good");
+
+  const wrap = document.createElement("div");
+  wrap.className = `alert ${cls}`;
+
+  wrap.innerHTML = `
+    <div class="left">
+      <div class="title">${escapeHtml(title)}</div>
+      <div class="body">${escapeHtml(body)}</div>
+    </div>
+    <div class="actions">
+      ${primaryHref ? `<button class="primary" onclick="go('${primaryHref}')">${escapeHtml(primaryText || "Open")}</button>` : ""}
+      <button onclick="this.closest('.alert').remove()">Dismiss</button>
+    </div>
+  `;
+  stack.appendChild(wrap);
+}
+
+function escapeHtml(str){
+  return String(str ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+/* ======================================================
+   SESSION EXPIRATION COUNTDOWN
+====================================================== */
+function startSessionTimer(seconds){
+  if(!seconds || seconds <= 0) return;
+
+  let remaining = seconds;
+
+  if (SESSION_TIMER) clearInterval(SESSION_TIMER);
+
+  const tick = () => {
+    const mm = Math.max(0, Math.floor(remaining / 60));
+    const ss = Math.max(0, remaining % 60);
+    $("sessionPill").innerHTML = `Session: <strong>${mm}:${String(ss).padStart(2,"0")}</strong>`;
+    remaining--;
+    if (remaining < 0){
+      clearInterval(SESSION_TIMER);
+      window.location.href = "/pin";
+    }
+  };
+
+  tick();
+  SESSION_TIMER = setInterval(tick, 1000);
+}
+
+/* ======================================================
+   LOGOUT (keeps previous behavior)
+====================================================== */
 async function logout(){
-  await fetch("/api/pin/logout",{method:"POST"});
-  location.href="/pin";
+  await api("/api/pin/logout", { method:"POST" });
+  window.location.href = "/pin";
+}
+$("btnLogout").addEventListener("click", logout);
+
+/* ======================================================
+   ADMIN TENANT SWITCHER
+====================================================== */
+async function loadOrgs(){
+  const r = await api("/api/org");
+  if(!r.ok){
+    return;
+  }
+
+  ORGS = Array.isArray(r.data) ? r.data : [];
+  const sel = $("tenantSelect");
+  sel.innerHTML = "";
+
+  if(!ORGS.length){
+    sel.innerHTML = `<option value="">No organizations available</option>`;
+    sel.disabled = true;
+    $("btnApplyTenant").disabled = true;
+    return;
+  }
+
+  for(const o of ORGS){
+    const opt = document.createElement("option");
+    opt.value = o.id || o.orgId || "";
+    opt.textContent = safeOrgLabel(o);
+    sel.appendChild(opt);
+  }
+
+  sel.disabled = false;
+  $("btnApplyTenant").disabled = false;
+
+  // default to current orgId (if present) otherwise first
+  const defaultOrgId = ME?.orgId || (ORGS[0].id || ORGS[0].orgId);
+  if(defaultOrgId) sel.value = defaultOrgId;
 }
 
-/* ===========================
+$("btnApplyTenant").addEventListener("click", async () => {
+  const sel = $("tenantSelect");
+  const next = sel.value || null;
+  if(!next) return;
+
+  SELECTED_ORG_ID = next;
+  $("tenantPill").innerHTML = `Tenant: <strong>${escapeHtml(sel.options[sel.selectedIndex].text)}</strong>`;
+
+  clearAlerts();
+  await refreshAll("Tenant switch");
+});
+
+$("tenantSelect").addEventListener("change", () => {
+  // no auto-apply, safer for admins
+});
+
+/* ======================================================
+   SPARKLINE + LOCAL 30-DAY HISTORY (NO WORKER CHANGES)
+   Stores daily snapshots in localStorage per org.
+====================================================== */
+function histKey(){
+  const org = SELECTED_ORG_ID || "no_org";
+  return `hub_hist_v1::${org}`;
+}
+
+function loadHistory(){
+  try{
+    const raw = localStorage.getItem(histKey());
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch{
+    return [];
+  }
+}
+
+function saveHistory(arr){
+  try{
+    localStorage.setItem(histKey(), JSON.stringify(arr));
+  }catch{}
+}
+
+function upsertTodaySnapshot(snap){
+  const today = new Date();
+  const dayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+
+  const arr = loadHistory();
+  const idx = arr.findIndex(x => x.day === dayKey);
+  const record = Object.assign({ day: dayKey }, snap);
+
+  if(idx >= 0) arr[idx] = Object.assign(arr[idx], record);
+  else arr.push(record);
+
+  // keep last 30 days only
+  arr.sort((a,b)=> (a.day||"").localeCompare(b.day||""));
+  const trimmed = arr.slice(Math.max(0, arr.length - 30));
+
+  saveHistory(trimmed);
+  return trimmed;
+}
+
+function seriesFromHistory(hist, key){
+  const vals = (hist || []).map(x => Number(x[key]));
+  // Replace non-finite with nulls to avoid spikes
+  return vals.map(v => (Number.isFinite(v) ? v : null));
+}
+
+function sparkline(svgEl, values){
+  const svg = typeof svgEl === "string" ? $(svgEl) : svgEl;
+  if(!svg) return;
+
+  // clear
+  svg.innerHTML = "";
+
+  const w = 100, h = 36;
+  const vals = (values || []).filter(v => v !== null);
+  if(vals.length < 2){
+    // subtle baseline
+    svg.innerHTML = `<path d="M0 ${h-10} L${w} ${h-10}" fill="none" stroke="rgba(148,163,184,.35)" stroke-width="2"/>`;
+    return;
+  }
+
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = (max - min) || 1;
+
+  const pts = (values || []).map((v, i) => {
+    const x = (i / Math.max(1, (values.length - 1))) * w;
+    if(v === null) return null;
+    const y = h - ((v - min) / range) * (h - 6) - 3;
+    return [x,y];
+  }).filter(Boolean);
+
+  if(pts.length < 2){
+    svg.innerHTML = `<path d="M0 ${h-10} L${w} ${h-10}" fill="none" stroke="rgba(148,163,184,.35)" stroke-width="2"/>`;
+    return;
+  }
+
+  // build path
+  const d = pts.map((p, idx) => `${idx===0?"M":"L"}${p[0].toFixed(2)} ${p[1].toFixed(2)}`).join(" ");
+
+  // area fill
+  const area = `${d} L${pts[pts.length-1][0].toFixed(2)} ${h} L${pts[0][0].toFixed(2)} ${h} Z`;
+
+  // color (neutral; no hard-coded theme colors)
+  svg.innerHTML = `
+    <path d="${area}" fill="rgba(37,99,235,.10)"></path>
+    <path d="${d}" fill="none" stroke="rgba(37,99,235,.75)" stroke-width="2.2" stroke-linecap="round"></path>
+  `;
+}
+
+function delta30(values){
+  const clean = (values || []).filter(v => v !== null);
+  if(clean.length < 2) return null;
+  const first = clean[0];
+  const last = clean[clean.length - 1];
+  if(!Number.isFinite(first) || !Number.isFinite(last)) return null;
+  return last - first;
+}
+
+function setMiniDelta(elId, series, formatter){
+  const d = delta30(series);
+  const el = $(elId);
+  if(!el) return;
+
+  if(d === null){
+    el.textContent = "30d";
+    return;
+  }
+
+  const sign = d > 0 ? "+" : "";
+  el.textContent = `30d ${sign}${formatter ? formatter(d) : d}`;
+}
+
+/* ======================================================
+   SLA BREACH DETECTION (BANNER + ALERTS)
+   Heuristics (client-side; no worker changes):
+   - License deficit > 0 => breach
+   - Devices offline ratio > 5% OR offline >= 3 => breach
+   - PSTN unavailable OR trunks == 0 => breach
+   - Incidents open >= 1 => warning/breach
+====================================================== */
+function slaEvaluate(){
+  const breaches = [];
+
+  const deficit = Number(LAST_SNAPSHOT.licenseDeficit || 0);
+  if(deficit > 0){
+    breaches.push(`License deficit detected (${fmtInt(deficit)} seats short).`);
+  }
+
+  const offline = Number(LAST_SNAPSHOT.devicesOffline ?? 0);
+  const total = Number(LAST_SNAPSHOT.devicesTotal ?? 0);
+  const ratio = total > 0 ? (offline / total) : 0;
+  if(total > 0 && (ratio > 0.05 || offline >= 3)){
+    breaches.push(`Device availability risk (${fmtInt(offline)} offline of ${fmtInt(total)}).`);
+  }
+
+  const trunks = LAST_SNAPSHOT.pstnTrunks;
+  if(trunks === null){
+    // no data, don't breach automatically
+  }else{
+    const t = Number(trunks);
+    if(!Number.isFinite(t) || t <= 0){
+      breaches.push(`PSTN trunk visibility indicates 0 trunks (verify PSTN configuration and permissions).`);
+    }
+  }
+
+  const openInc = Number(LAST_SNAPSHOT.incidentsOpen ?? 0);
+  if(openInc >= 1){
+    breaches.push(`${fmtInt(openInc)} open incident(s) detected.`);
+  }
+
+  const banner = $("slaBanner");
+  if(breaches.length){
+    $("slaText").textContent = breaches.join(" ");
+    banner.classList.add("show");
+  }else{
+    banner.classList.remove("show");
+  }
+}
+
+/* ======================================================
+   RAG COMPUTATION (Sidebar)
+====================================================== */
+function computeRAG(){
+  const rag = $("orgRag");
+
+  const deficit = Number(LAST_SNAPSHOT.licenseDeficit || 0);
+  const openInc = Number(LAST_SNAPSHOT.incidentsOpen || 0);
+
+  const offline = Number(LAST_SNAPSHOT.devicesOffline ?? 0);
+  const total = Number(LAST_SNAPSHOT.devicesTotal ?? 0);
+  const ratio = total > 0 ? (offline / total) : 0;
+
+  // simple but practical enterprise RAG
+  if(deficit > 0 || openInc >= 2 || (total > 0 && ratio > 0.10)){
+    rag.className = "rag red";
+    rag.textContent = "CRITICAL";
+    return;
+  }
+  if(openInc >= 1 || (total > 0 && ratio > 0.05)){
+    rag.className = "rag amber";
+    rag.textContent = "DEGRADED";
+    return;
+  }
+  rag.className = "rag green";
+  rag.textContent = "HEALTHY";
+}
+
+/* ======================================================
+   EXECUTIVE SUMMARY (Auto narrative)
+====================================================== */
+function buildExecutiveSummary(){
+  const deficit = Number(LAST_SNAPSHOT.licenseDeficit || 0);
+  const offline = Number(LAST_SNAPSHOT.devicesOffline ?? 0);
+  const totalDev = Number(LAST_SNAPSHOT.devicesTotal ?? 0);
+  const openInc = Number(LAST_SNAPSHOT.incidentsOpen ?? 0);
+  const calls7d = Number(LAST_SNAPSHOT.calls7d ?? 0);
+  const trunks = LAST_SNAPSHOT.pstnTrunks;
+
+  const health = $("orgRag")?.textContent || "HEALTHY";
+
+  const pieces = [];
+
+  pieces.push(`Overall posture is ${health.toLowerCase()}.`);
+
+  if(deficit > 0) pieces.push(`Licensing shows a deficit of ${fmtInt(deficit)} seat(s), which can impact user onboarding and feature enablement.`);
+  else pieces.push(`Licensing is within capacity and shows no active deficits.`);
+
+  if(totalDev > 0){
+    if(offline > 0) pieces.push(`Devices show ${fmtInt(offline)} offline/disconnected out of ${fmtInt(totalDev)} total, which may indicate site outages, power events, or network reachability issues.`);
+    else pieces.push(`Devices appear fully online with no offline indicators.`);
+  }else{
+    pieces.push(`Device inventory is not currently available for this tenant.`);
+  }
+
+  if(Number.isFinite(calls7d)) pieces.push(`Call volume in the last 7 days is ${fmtInt(calls7d)} total calls, reflecting adoption and usage demand.`);
+  else pieces.push(`Call analytics are not currently available for this tenant.`);
+
+  if(trunks === null){
+    pieces.push(`PSTN trunk visibility is unavailable in this view; confirm PSTN permissions and configuration.`);
+  }else{
+    pieces.push(`PSTN visibility indicates ${fmtInt(trunks)} trunk(s) configured for calling services.`);
+  }
+
+  if(openInc > 0) pieces.push(`There are ${fmtInt(openInc)} open incident(s) requiring attention; review incident timeline for active impact and mitigation status.`);
+  else pieces.push(`No open incidents are detected at this time.`);
+
+  $("execSummary").textContent = pieces.join(" ");
+
+  // meta badges
+  const meta = $("summaryMeta");
+  meta.innerHTML = `
+    <div class="badge">Tenant: <strong>${escapeHtml(ME?.orgName || (ME?.role==="admin" ? "Admin View" : "—"))}</strong></div>
+    <div class="badge">Role: <strong>${escapeHtml(ME?.role || "—")}</strong></div>
+    <div class="badge">Last refresh: <strong>${escapeHtml($("lastRefresh").textContent.replace("Last refresh: ","") || "—")}</strong></div>
+  `;
+}
+
+/* ======================================================
+   KPI RENDERING + QUICK ACCESS PILLS
+====================================================== */
+function setLastRefresh(){
+  $("lastRefresh").textContent = `Last refresh: ${nowStamp()}`;
+}
+
+function setTenantPill(){
+  const label = ME?.orgName || (ME?.role === "admin" ? "Admin (select tenant)" : "—");
+  $("tenantPill").innerHTML = `Tenant: <strong>${escapeHtml(label)}</strong>`;
+}
+
+function updateQuickAccess(){
+  // licenses
+  const deficit = Number(LAST_SNAPSHOT.licenseDeficit || 0);
+  $("qaLicPill").textContent = `Licenses: ${deficit > 0 ? "Deficit" : "Healthy"}`;
+  $("qaLicDefPill").textContent = `Deficit: ${fmtInt(deficit)}`;
+
+  // devices
+  const offline = Number(LAST_SNAPSHOT.devicesOffline ?? 0);
+  const total = Number(LAST_SNAPSHOT.devicesTotal ?? 0);
+  $("qaDevPill").textContent = `Devices: ${total ? fmtInt(total) : "—"}`;
+  $("qaDevOffPill").textContent = `Offline: ${fmtInt(offline)}`;
+
+  // pstn
+  const trunks = LAST_SNAPSHOT.pstnTrunks;
+  $("qaPstnPill").textContent = `Trunks: ${trunks === null ? "—" : fmtInt(trunks)}`;
+  $("qaPstnWarnPill").textContent = `PSTN: ${trunks === null ? "Unknown" : (Number(trunks) > 0 ? "OK" : "Check")}`;
+
+  // analytics/cdr (we only have analytics in KPI; CDR quick pill is diagnostic placeholder)
+  const calls7d = LAST_SNAPSHOT.calls7d;
+  $("qaAnPill").textContent = `Analytics: ${calls7d === null ? "—" : "OK"}`;
+  $("qaAn7dPill").textContent = `Calls (7d): ${calls7d === null ? "—" : fmtInt(calls7d)}`;
+
+  $("qaCdrPill").textContent = `CDR: Ready`;
+  $("qaCdrErrPill").textContent = `Diagnostics: Live`;
+
+  // incidents
+  const openInc = Number(LAST_SNAPSHOT.incidentsOpen ?? 0);
+  $("qaIncPill").textContent = `Incidents: ${openInc ? "Active" : "Clear"}`;
+  $("qaIncOpenPill").textContent = `Open: ${fmtInt(openInc)}`;
+}
+
+/* ======================================================
+   KPI LOADERS (KEEP PREVIOUS FUNCTIONALITY)
+====================================================== */
+async function loadMe(){
+  const r = await api("/api/me");
+  if(!r.ok) throw new Error("Failed to load /api/me");
+
+  ME = r.data;
+
+  // customers must have orgId
+  if (ME.role !== "admin" && !ME.orgId){
+    window.location.href = "/pin";
+    return false;
+  }
+
+  SELECTED_ORG_ID = ME.orgId || null;
+
+  $("welcomeLine").textContent = ME.email || "—";
+  $("roleLine").textContent = ME.role ? `Role: ${ME.role}` : "Role: —";
+
+  setTenantPill();
+
+  if (ME.sessionExpiresInSeconds){
+    startSessionTimer(ME.sessionExpiresInSeconds);
+  }else{
+    $("sessionPill").innerHTML = `Session: <strong>—</strong>`;
+  }
+
+  // Admin tenant bar
+  if (ME.role === "admin"){
+    $("tenantBar").classList.add("show");
+    await loadOrgs();
+  }else{
+    $("tenantBar").classList.remove("show");
+  }
+
+  return true;
+}
+
+async function loadLicenseHealth(){
+  const r = await api(buildPath("/api/licenses"));
+  if(!r.ok || !r.data){
+    $("licenseHealth").textContent = "Unavailable";
+    $("licenseSub").textContent = "License API unavailable";
+    LAST_SNAPSHOT.licenseDeficit = null;
+    LAST_SNAPSHOT.licenseHealthy = null;
+    return;
+  }
+
+  // Your worker sometimes returns {items:[...], summary:{...}}
+  const summary = r.data.summary || {};
+  const items = Array.isArray(r.data.items) ? r.data.items : [];
+
+  const deficit = Number(summary.totalDeficit ?? items.reduce((s,x)=> s + Number(x.deficit||0), 0)) || 0;
+
+  LAST_SNAPSHOT.licenseDeficit = deficit;
+  LAST_SNAPSHOT.licenseHealthy = deficit <= 0;
+
+  $("licenseHealth").textContent = deficit > 0 ? `${fmtInt(deficit)} Deficit` : "Healthy";
+  $("licenseSub").textContent = deficit > 0 ? "Capacity shortfall detected" : "No deficits detected";
+}
+
+async function loadDeviceHealth(){
+  const r = await api(buildPath("/api/devices"));
+  if(!r.ok || !r.data){
+    $("deviceHealth").textContent = "Unavailable";
+    $("deviceSub").textContent = "Device API unavailable";
+    LAST_SNAPSHOT.devicesOffline = null;
+    LAST_SNAPSHOT.devicesTotal = null;
+    return;
+  }
+
+  const items = Array.isArray(r.data.items) ? r.data.items : [];
+  const total = items.length;
+
+  const offline = items.filter(d => {
+    const s = String(d.connectionStatus || "").toLowerCase();
+    if(!s) return true;
+    if(s.includes("disconnected")) return true;
+    if(s.includes("offline")) return true;
+    if(s.includes("not")) return false;
+    return false;
+  }).length;
+
+  LAST_SNAPSHOT.devicesTotal = total;
+  LAST_SNAPSHOT.devicesOffline = offline;
+
+  if(!total){
+    $("deviceHealth").textContent = "—";
+    $("deviceSub").textContent = "No devices reported";
+  }else{
+    $("deviceHealth").textContent = offline > 0 ? `${fmtInt(offline)} Offline` : "All Online";
+    $("deviceSub").textContent = `${fmtInt(total)} total devices`;
+  }
+}
+
+async function loadAnalytics7d(){
+  const r = await api(buildPath("/api/analytics"));
+  if(!r.ok || !r.data){
+    $("callVolume").textContent = "Unavailable";
+    $("callSub").textContent = "Analytics API unavailable";
+    LAST_SNAPSHOT.calls7d = null;
+    return;
+  }
+
+  const total = r.data?.data?.aggregations?.[0]?.metrics?.[0]?.value;
+  const calls = Number(total);
+
+  LAST_SNAPSHOT.calls7d = Number.isFinite(calls) ? calls : 0;
+
+  $("callVolume").textContent = Number.isFinite(calls) ? fmtInt(calls) : "0";
+  $("callSub").textContent = "Total calls (7d)";
+}
+
+async function loadPstn(){
+  // Your worker may or may not have /api/pstn right now.
+  const r = await api(buildPath("/api/pstn"));
+  if(!r.ok || !r.data){
+    $("pstnHealth").textContent = "—";
+    $("pstnSub").textContent = "PSTN API unavailable";
+    LAST_SNAPSHOT.pstnTrunks = null;
+    return;
+  }
+
+  // Normalize various shapes
+  const trunksArr = Array.isArray(r.data.trunks) ? r.data.trunks : (Array.isArray(r.data.items) ? r.data.items : null);
+  const trunkCount = trunksArr ? trunksArr.length : (Number.isFinite(Number(r.data.trunkCount)) ? Number(r.data.trunkCount) : null);
+
+  LAST_SNAPSHOT.pstnTrunks = trunkCount;
+
+  $("pstnHealth").textContent = trunkCount === null ? "—" : fmtInt(trunkCount);
+  $("pstnSub").textContent = trunkCount === null ? "No trunk summary returned" : "Configured trunks";
+}
+
+async function loadIncidents(){
+  const r = await api("/api/incidents");
+  if(!r.ok || !r.data){
+    $("incidentCount").textContent = "Unavailable";
+    $("incidentSub").textContent = "Incidents API unavailable";
+    LAST_SNAPSHOT.incidentsOpen = null;
+    return;
+  }
+
+  const incidents = Array.isArray(r.data.incidents) ? r.data.incidents : [];
+  const open = incidents.filter(i => String(i.status || "").toLowerCase() !== "resolved").length;
+
+  LAST_SNAPSHOT.incidentsOpen = open;
+
+  $("incidentCount").textContent = fmtInt(open);
+  $("incidentSub").textContent = open ? "Active incidents detected" : "No active incidents";
+}
+
+/* ======================================================
+   SPARKLINES UPDATE (after KPI snapshot saved)
+====================================================== */
+function updateSparklines(){
+  // store into 30-day history (no worker changes)
+  const hist = upsertTodaySnapshot({
+    licenseDeficit: LAST_SNAPSHOT.licenseDeficit ?? null,
+    devicesOffline: LAST_SNAPSHOT.devicesOffline ?? null,
+    calls7d: LAST_SNAPSHOT.calls7d ?? null,
+    pstnTrunks: LAST_SNAPSHOT.pstnTrunks ?? null,
+    incidentsOpen: LAST_SNAPSHOT.incidentsOpen ?? null
+  });
+
+  const sLic = seriesFromHistory(hist, "licenseDeficit");
+  const sDev = seriesFromHistory(hist, "devicesOffline");
+  const sCalls = seriesFromHistory(hist, "calls7d");
+  const sPstn = seriesFromHistory(hist, "pstnTrunks");
+  const sInc = seriesFromHistory(hist, "incidentsOpen");
+
+  sparkline("sparkLicense", sLic);
+  sparkline("sparkDevice", sDev);
+  sparkline("sparkCalls", sCalls);
+  sparkline("sparkPstn", sPstn);
+  sparkline("sparkIncidents", sInc);
+
+  setMiniDelta("licenseMini", sLic, (d)=> fmtInt(d));
+  setMiniDelta("deviceMini", sDev, (d)=> fmtInt(d));
+  setMiniDelta("callMini", sCalls, (d)=> fmtInt(d));
+  setMiniDelta("pstnMini", sPstn, (d)=> fmtInt(d));
+  setMiniDelta("incidentMini", sInc, (d)=> fmtInt(d));
+}
+
+/* ======================================================
+   LIVE REFRESH: WebSocket (best-effort) + Poll fallback
+   - No worker changes required; if WS endpoint doesn't exist,
+     it will fall back silently to polling.
+====================================================== */
+function setLiveMode(label){
+  LIVE_MODE = label;
+  $("livePill").innerHTML = `Live: <strong>${escapeHtml(label)}</strong>`;
+}
+
+function wsUrl(){
+  try{
+    const u = new URL(window.location.href);
+    u.protocol = (u.protocol === "https:") ? "wss:" : "ws:";
+    // common patterns: /ws or /api/ws or /events
+    // We'll try /ws first. If your worker later implements it, it will auto work.
+    u.pathname = "/ws";
+    u.search = "";
+    u.hash = "";
+    return u.toString();
+  }catch{
+    return null;
+  }
+}
+
+function startWebSocket(){
+  const url = wsUrl();
+  if(!url) return false;
+
+  try{
+    WS = new WebSocket(url);
+  }catch{
+    return false;
+  }
+
+  WS_OK = false;
+
+  WS.onopen = () => {
+    WS_OK = true;
+    setLiveMode("WebSocket");
+    // Optionally announce tenant context
+    const hello = { type:"hello", orgId: SELECTED_ORG_ID || null };
+    try{ WS.send(JSON.stringify(hello)); }catch{}
+  };
+
+  WS.onmessage = async (evt) => {
+    // If server ever emits "refresh" or "incident" events, we refresh KPIs
+    let msg = null;
+    try{ msg = JSON.parse(evt.data); }catch{ msg = { raw: evt.data }; }
+
+    if(msg && (msg.type === "refresh" || msg.type === "update")){
+      await refreshAll("Live update");
+    }
+  };
+
+  WS.onclose = () => {
+    WS_OK = false;
+    setLiveMode("Polling");
+  };
+
+  WS.onerror = () => {
+    WS_OK = false;
+    setLiveMode("Polling");
+  };
+
+  return true;
+}
+
+function startPolling(){
+  if(AUTO_TIMER) clearInterval(AUTO_TIMER);
+
+  // Poll every 60s; pause when tab hidden to reduce load
+  const intervalMs = 60000;
+
+  const tick = async () => {
+    if(document.hidden) return;
+    await refreshAll("Auto refresh");
+  };
+
+  AUTO_TIMER = setInterval(tick, intervalMs);
+}
+
+document.addEventListener("visibilitychange", () => {
+  // If user comes back, refresh quickly
+  if(!document.hidden){
+    refreshAll("Focus refresh");
+  }
+});
+
+/* ======================================================
+   REFRESH PIPELINE (single source of truth)
+====================================================== */
+async function refreshAll(reason){
+  // Alert banners at top
+  clearAlerts();
+
+  // Optional informational banner
+  pushAlert({
+    severity:"good",
+    title:"Operational View",
+    body:`KPIs reflect the latest Control Hub data available to this portal. (${reason})`,
+    primaryText:"Open Devices",
+    primaryHref:"/customer/devices"
+  });
+
+  // Load all KPIs in parallel
+  await Promise.allSettled([
+    loadLicenseHealth(),
+    loadDeviceHealth(),
+    loadAnalytics7d(),
+    loadPstn(),
+    loadIncidents()
+  ]);
+
+  setLastRefresh();
+  computeRAG();
+  slaEvaluate();
+  updateSparklines();
+  buildExecutiveSummary();
+  updateQuickAccess();
+
+  // SLA banner is separate, but add an extra alert when critical
+  const rag = $("orgRag")?.textContent || "HEALTHY";
+  if(rag === "CRITICAL"){
+    pushAlert({
+      severity:"bad",
+      title:"Action Required",
+      body:"Critical conditions detected. Review License deficits, offline device indicators, and open incidents.",
+      primaryText:"Open Licenses",
+      primaryHref:"/customer/licenses"
+    });
+  }else if(rag === "DEGRADED"){
+    pushAlert({
+      severity:"warn",
+      title:"Degraded Signals",
+      body:"Some risk indicators are present. Consider validating device connectivity and reviewing incidents.",
+      primaryText:"Open Incidents",
+      primaryHref:"/customer/incidents"
+    });
+  }
+}
+
+/* ======================================================
+   NAV
+====================================================== */
+function go(path){ window.location.href = path; }
+
+/* ======================================================
    INIT
-=========================== */
-async function init(){
-  await loadMe();
-  await loadKPIs();
-}
-init();
+====================================================== */
+$("btnRefresh").addEventListener("click", () => refreshAll("Manual refresh"));
 
+async function init(){
+  try{
+    const ok = await loadMe();
+    if(!ok) return;
+
+    // If admin and no org selected, set it from dropdown for initial KPIs
+    if(ME.role === "admin"){
+      const sel = $("tenantSelect");
+      if(sel && sel.value){
+        SELECTED_ORG_ID = sel.value;
+      }
+    }
+
+    setTenantPill();
+    setLastRefresh();
+
+    // Alerts: welcome banner
+    clearAlerts();
+    pushAlert({
+      severity:"good",
+      title:"Welcome",
+      body:"Use this dashboard to quickly assess tenant health and drill into troubleshooting pages for deeper analysis.",
+      primaryText:"Open PSTN",
+      primaryHref:"/customer/pstn"
+    });
+
+    await refreshAll("Initial load");
+
+    // Live mode: try WS, then poll
+    const wsStarted = startWebSocket();
+    if(!wsStarted){
+      setLiveMode("Polling");
+    }
+    startPolling();
+
+  }catch(e){
+    clearAlerts();
+    pushAlert({
+      severity:"bad",
+      title:"Dashboard Error",
+      body: e?.message || String(e),
+      primaryText:"Re-authenticate",
+      primaryHref:"/pin"
+    });
+  }
+}
+
+init();
 </script>
+
 </body>
 </html>
