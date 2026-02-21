@@ -1,345 +1,1244 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>US Signal | Status Intelligence 5.0</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>US Signal | Webex Status</title>
 
-<style>
-:root{
-  --bg:#f6f8fb;
-  --card:#ffffff;
-  --text:#0f172a;
-  --muted:#64748b;
-  --line:rgba(15,23,42,.08);
-  --shadow:0 10px 30px rgba(15,23,42,.08);
+  <style>
+    /* =========================================================
+       Enterprise Dashboard Theme (matches other portal pages)
+       - Light/Dark via html[data-theme]
+    ========================================================= */
+    html[data-theme="light"]{
+      --bg:#f6f8fb;
+      --panel:#ffffff;
+      --panel2:#fbfcfe;
+      --text:#0f172a;
+      --muted:#64748b;
+      --line:rgba(15,23,42,.10);
+      --shadow:0 10px 30px rgba(15,23,42,.08);
 
-  --accent:#0f62fe;
-  --good:#16a34a;
-  --warn:#f59e0b;
-  --bad:#dc2626;
-}
-html[data-theme="dark"]{
-  --bg:#0b1220;
-  --card:#0f172a;
-  --text:#e5e7eb;
-  --muted:#94a3b8;
-  --line:rgba(226,232,240,.10);
-  --shadow:0 12px 36px rgba(0,0,0,.35);
+      --accent:#0f62fe;
+      --accent2:#0b4bd4;
 
-  --accent:#3b82f6;
-  --good:#22c55e;
-  --warn:#fbbf24;
-  --bad:#ef4444;
-}
-*{box-sizing:border-box;font-family:system-ui;}
-body{margin:0;background:var(--bg);color:var(--text);}
+      --good:#16a34a;
+      --warn:#f59e0b;
+      --bad:#dc2626;
 
-.app{
-  display:grid;
-  grid-template-columns:260px 1fr;
-  min-height:100vh;
-}
-.sidebar{
-  background:var(--card);
-  border-right:1px solid var(--line);
-  padding:18px 14px;
-}
-.brand{
-  display:flex;gap:12px;align-items:center;
-  padding-bottom:14px;border-bottom:1px solid var(--line);
-}
-.brand img{height:38px;}
-.nav{margin-top:14px;display:flex;flex-direction:column;gap:6px;}
-.nav a{
-  padding:10px;border-radius:12px;font-weight:800;
-}
-.nav a.active{
-  background:rgba(15,98,254,.12);
-  border:1px solid rgba(15,98,254,.25);
-}
-.nav a:hover{background:rgba(15,98,254,.08);}
+      --pillGoodBg:rgba(22,163,74,.12);
+      --pillWarnBg:rgba(245,158,11,.14);
+      --pillBadBg:rgba(220,38,38,.14);
+      --pillNeutralBg:rgba(100,116,139,.14);
 
-.main{
-  padding:22px;
-  display:flex;
-  flex-direction:column;
-  gap:16px;
-}
+      --rowHover: rgba(15,98,254,.06);
+      --focus: rgba(15,98,254,.14);
+      --chipBg: rgba(15,98,254,.08);
+      --chipBd: rgba(15,98,254,.18);
+    }
+    html[data-theme="dark"]{
+      --bg:#0b1220;
+      --panel:#0f172a;
+      --panel2:#111c33;
+      --text:#e5e7eb;
+      --muted:#9aa6b2;
+      --line:rgba(226,232,240,.12);
+      --shadow:0 14px 36px rgba(0,0,0,.35);
 
-.card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  padding:16px;
-}
+      --accent:#60a5fa;
+      --accent2:#3b82f6;
 
-.headerCard{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
+      --good:#22c55e;
+      --warn:#fbbf24;
+      --bad:#ef4444;
 
-.title{font-size:18px;font-weight:1000;}
-.meta{font-size:12px;color:var(--muted);margin-top:4px;}
+      --pillGoodBg:rgba(34,197,94,.14);
+      --pillWarnBg:rgba(251,191,36,.16);
+      --pillBadBg:rgba(239,68,68,.18);
+      --pillNeutralBg:rgba(148,163,184,.16);
 
-button{
-  background:var(--accent);
-  border:none;
-  color:white;
-  padding:8px 14px;
-  border-radius:10px;
-  font-weight:900;
-  cursor:pointer;
-}
-.btn-outline{
-  background:transparent;
-  border:1px solid var(--line);
-  color:var(--text);
-}
+      --rowHover: rgba(96,165,250,.10);
+      --focus: rgba(96,165,250,.20);
+      --chipBg: rgba(96,165,250,.12);
+      --chipBd: rgba(96,165,250,.20);
+    }
 
-.banner{
-  padding:14px;
-  border-radius:14px;
-  font-weight:900;
-}
-.banner.bad{background:rgba(220,38,38,.14);color:var(--bad);}
-.banner.warn{background:rgba(245,158,11,.14);color:var(--warn);}
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    a{ color:inherit; text-decoration:none; }
+    button, input{ font-family:inherit; }
 
-.kpiRow{
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  gap:12px;
-}
-.kpi{
-  border:1px solid var(--line);
-  border-radius:14px;
-  padding:12px;
-}
-.kpi .label{font-size:12px;color:var(--muted);font-weight:900;}
-.kpi .value{font-size:20px;font-weight:1000;margin-top:6px;}
+    /* =========================================================
+       Layout
+       - Maximize usable width for readability (your ask)
+    ========================================================= */
+    .app{
+      display:grid;
+      grid-template-columns: 260px 1fr;
+      min-height:100vh;
+    }
+    .sidebar{
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      border-right:1px solid var(--line);
+      padding:18px 16px;
+      position:sticky;
+      top:0;
+      height:100vh;
+    }
+    .brand{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:10px 10px 14px;
+      border-bottom:1px solid var(--line);
+      margin-bottom:14px;
+    }
+    .brand img{ flex:0 0 auto; }
+    .brand h1{
+      font-size:14px;
+      line-height:1.2;
+      margin:0;
+      letter-spacing:.2px;
+    }
+    .brand .sub{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      margin-top:2px;
+      font-weight:500;
+    }
 
-.pill{
-  padding:6px 12px;
-  border-radius:999px;
-  font-weight:900;
-  font-size:12px;
-}
-.good{background:rgba(22,163,74,.12);color:var(--good);}
-.warn{background:rgba(245,158,11,.14);color:var(--warn);}
-.bad{background:rgba(220,38,38,.14);color:var(--bad);}
+    .nav{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-top:10px;
+    }
+    .nav a{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 10px;
+      border-radius:12px;
+      color:var(--text);
+      border:1px solid transparent;
+    }
+    .nav a:hover{
+      background:rgba(15,98,254,.08);
+      border-color:rgba(15,98,254,.16);
+    }
+    .nav a.active{
+      background:rgba(15,98,254,.12);
+      border-color:rgba(15,98,254,.22);
+      color:var(--text);
+      font-weight:800;
+    }
+    .nav .hint{
+      font-size:12px;
+      color:var(--muted);
+      padding:8px 10px 0;
+      line-height:1.35;
+    }
 
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
-  gap:12px;
-}
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:var(--chipBg);
+      font-size:12px;
+      font-weight:800;
+      color:var(--text);
+      max-width:100%;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
 
-.serviceCard{
-  border:1px solid var(--line);
-  border-radius:14px;
-  padding:14px;
-  background:var(--card);
-}
-.serviceName{
-  font-weight:1000;
-  font-size:14px;
-  margin-bottom:8px;
-}
-.component{
-  font-size:12px;
-  margin-bottom:6px;
-  display:flex;
-  justify-content:space-between;
-}
-.execBlock{
-  font-size:14px;
-  line-height:1.5;
-}
-</style>
+    .main{
+      padding:18px 20px 34px;
+    }
+
+    /* "Maximize" content area: allow very wide screens to use space */
+    .wrap{
+      width:100%;
+      max-width: 1680px;
+      margin:0 auto;
+    }
+
+    /* =========================================================
+       Top Bar
+    ========================================================= */
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:14px 16px;
+      box-shadow:var(--shadow);
+    }
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+      min-width: 240px;
+    }
+    .title .h{
+      font-size:16px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+    .title .meta{
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .meta .dot{
+      width:6px; height:6px; border-radius:99px;
+      background:var(--muted);
+      opacity:.6;
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
+
+    .btn{
+      appearance:none;
+      border:1px solid var(--line);
+      background:transparent;
+      color:var(--text);
+      padding:9px 12px;
+      border-radius:12px;
+      font-weight:800;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      transition: box-shadow .15s ease, border-color .15s ease, transform .05s ease;
+      user-select:none;
+    }
+    .btn:hover{
+      border-color:rgba(15,98,254,.25);
+      box-shadow:0 0 0 3px var(--focus);
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      background: linear-gradient(180deg, var(--accent), var(--accent2));
+      color:white;
+      border-color:transparent;
+    }
+    .btn.primary:hover{ box-shadow:0 0 0 3px rgba(15,98,254,.20); }
+    .btn.danger{
+      background: linear-gradient(180deg, var(--bad), #b91c1c);
+      color:white;
+      border-color:transparent;
+    }
+    .btn.link{
+      background:var(--chipBg);
+      border-color:var(--chipBd);
+      color:var(--text);
+    }
+
+    /* =========================================================
+       Summary + Controls Row
+    ========================================================= */
+    .row{
+      display:grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap:12px;
+      margin-top:12px;
+      align-items:start;
+    }
+    @media (max-width: 1150px){
+      .row{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      padding:14px 14px;
+    }
+    .card h2{
+      margin:0 0 10px;
+      font-size:12px;
+      color:var(--muted);
+      letter-spacing:.25px;
+      text-transform:uppercase;
+      font-weight:900;
+    }
+
+    .overallRow{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .overallLeft{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-width:0;
+    }
+    .overallBig{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-size:18px;
+      font-weight:950;
+      letter-spacing:.2px;
+      flex-wrap:wrap;
+    }
+    .snippet{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      max-width: 70ch;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 12px;
+      border-radius:999px;
+      font-weight:950;
+      font-size:12px;
+      letter-spacing:.25px;
+      border:1px solid var(--line);
+      white-space:nowrap;
+    }
+    .pill.good{ background:var(--pillGoodBg); color:var(--good); }
+    .pill.warn{ background:var(--pillWarnBg); color:var(--warn); }
+    .pill.bad{ background:var(--pillBadBg); color:var(--bad); }
+    .pill.neutral{ background:var(--pillNeutralBg); color:var(--muted); }
+
+    .miniStats{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:10px;
+      margin-top:12px;
+    }
+    @media (max-width: 980px){
+      .miniStats{ grid-template-columns: repeat(2, 1fr); }
+    }
+    .stat{
+      background:var(--panel2);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px 12px;
+    }
+    .stat .k{
+      color:var(--muted);
+      font-size:12px;
+      font-weight:900;
+    }
+    .stat .v{
+      margin-top:6px;
+      font-size:18px;
+      font-weight:950;
+    }
+
+    .controls{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .searchBox{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .searchBox input{
+      width:100%;
+      padding:11px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:transparent;
+      color:var(--text);
+      outline:none;
+      font-weight:650;
+    }
+    .searchBox input:focus{
+      border-color:rgba(15,98,254,.35);
+      box-shadow:0 0 0 3px var(--focus);
+    }
+
+    .toggleRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:var(--panel2);
+      font-weight:900;
+      font-size:12px;
+      color:var(--text);
+      user-select:none;
+    }
+    .chip small{ color:var(--muted); font-weight:900; }
+
+    .seg{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .seg .btn{ padding:8px 10px; }
+
+    .footerNote{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.35;
+    }
+
+    /* =========================================================
+       Grouping layout (Cisco-like)
+       - Cards show group header + always-visible children list
+       - Header is clickable to collapse/expand (default expanded)
+    ========================================================= */
+    .groupsGrid{
+      margin-top:12px;
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:12px;
+      align-items:start;
+    }
+    @media (max-width: 1200px){
+      .groupsGrid{ grid-template-columns: 1fr; }
+    }
+
+    .groupCard{
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .groupHead{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 14px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .groupHead:hover{ background: var(--rowHover); }
+    .groupTitle{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+    .groupTitle .icon{
+      width:34px; height:34px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      display:grid;
+      place-items:center;
+      background: rgba(15,98,254,.08);
+      flex:0 0 auto;
+    }
+    .groupTitle .icon svg{ opacity:.9; }
+    .groupTitle .nameWrap{ min-width:0; }
+    .groupName{
+      font-weight:950;
+      font-size:15px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      letter-spacing:.15px;
+    }
+    .groupSub{
+      margin-top:2px;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:750;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .groupSub b{ color:var(--text); }
+
+    .groupRight{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex:0 0 auto;
+    }
+    .chev{
+      width:30px;
+      height:30px;
+      border-radius:12px;
+      display:grid;
+      place-items:center;
+      border:1px solid var(--line);
+      background:transparent;
+    }
+    .groupCard.collapsed .chev svg{ transform: rotate(-90deg); }
+
+    .groupBody{
+      border-top:1px solid var(--line);
+      padding:8px 12px 12px;
+    }
+    .groupCard.collapsed .groupBody{ display:none; }
+
+    .childTable{
+      display:grid;
+      grid-template-columns: 1fr 180px;
+      gap:8px 10px;
+      align-items:center;
+    }
+    @media (max-width: 520px){
+      .childTable{ grid-template-columns: 1fr; }
+    }
+
+    .childName{
+      padding:10px 10px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:var(--panel);
+      font-weight:800;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      min-width:0;
+    }
+    .childStatus{
+      padding:10px 10px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:var(--panel);
+      display:flex;
+      justify-content:flex-end;
+      align-items:center;
+    }
+    @media (max-width: 520px){
+      .childName{ white-space:normal; }
+      .childStatus{ justify-content:flex-start; }
+    }
+
+    .impactTag{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:5px 9px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(220,38,38,.08);
+      color:var(--bad);
+      font-size:12px;
+      font-weight:950;
+    }
+    .okTag{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:5px 9px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(22,163,74,.08);
+      color:var(--good);
+      font-size:12px;
+      font-weight:950;
+    }
+
+    /* =========================================================
+       Mobile / Sidebar collapse
+    ========================================================= */
+    @media (max-width: 980px){
+      .app{ grid-template-columns: 1fr; }
+      .sidebar{ position:relative; height:auto; }
+      .main{ padding:16px 14px 28px; }
+      .wrap{ max-width: 100%; }
+    }
+
+    /* Utility */
+    .muted{ color:var(--muted); }
+    .sr{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+  </style>
 </head>
 
 <body>
-<div class="app">
+  <div class="app">
 
-<div class="sidebar">
-  <div class="brand">
-    <img src="/assets/ussignal-logo.jpg"/>
-    <div>
-      <b>US Signal</b><br/>
-      <span style="font-size:12px;color:var(--muted);">Customer Portal</span>
-    </div>
-  </div>
-  <div class="nav">
-    <a href="/customer">Dashboard</a>
-    <a href="/customer/maintenance">Maintenance</a>
-    <a class="active" href="/customer/status">Status</a>
-    <a href="/customer/incidents">Incidents</a>
-  </div>
-</div>
-
-<div class="main">
-
-<div class="card headerCard">
-  <div>
-    <div class="title">Webex Global Status Intelligence</div>
-    <div class="meta">
-      Last Updated: <span id="lastUpdated">—</span>
-    </div>
-  </div>
-  <div>
-    <button class="btn-outline" onclick="toggleTheme()">Theme</button>
-    <button onclick="refreshData()">Refresh</button>
-  </div>
-</div>
-
-<div id="alertBanner"></div>
-
-<div class="kpiRow">
-  <div class="kpi">
-    <div class="label">Overall</div>
-    <div class="value"><span id="overallPill" class="pill">—</span></div>
-  </div>
-  <div class="kpi">
-    <div class="label">Total Services</div>
-    <div class="value" id="kServices">0</div>
-  </div>
-  <div class="kpi">
-    <div class="label">Impacted Services</div>
-    <div class="value" id="kImpacted">0</div>
-  </div>
-  <div class="kpi">
-    <div class="label">Impacted Components</div>
-    <div class="value" id="kComponents">0</div>
-  </div>
-  <div class="kpi">
-    <div class="label">SLA Exposure Index</div>
-    <div class="value" id="kRisk">0</div>
-  </div>
-</div>
-
-<div class="card">
-  <div class="execBlock" id="execSummary"></div>
-</div>
-
-<div class="card">
-  <div class="grid" id="servicesGrid"></div>
-</div>
-
-</div>
-</div>
-
-<script>
-let STATUS=null;
-
-function toggleTheme(){
-  const html=document.documentElement;
-  html.setAttribute("data-theme",
-    html.getAttribute("data-theme")==="dark"?"light":"dark");
-}
-
-async function refreshData(){
-  const r=await fetch("/api/status",{cache:"no-store"});
-  const data=await r.json();
-  STATUS=data;
-  render();
-}
-
-function render(){
-  const groups=STATUS.components||[];
-
-  document.getElementById("lastUpdated").textContent=
-    new Date(STATUS.lastUpdated).toLocaleString();
-
-  document.getElementById("kServices").textContent=groups.length;
-
-  let impacted=0;
-  let impactedComponents=0;
-
-  groups.forEach(g=>{
-    if(g.status!=="operational") impacted++;
-    (g.children||[]).forEach(c=>{
-      if(c.status!=="operational") impactedComponents++;
-    });
-  });
-
-  document.getElementById("kImpacted").textContent=impacted;
-  document.getElementById("kComponents").textContent=impactedComponents;
-
-  const risk=(impacted*15)+(impactedComponents*3);
-  document.getElementById("kRisk").textContent=risk;
-
-  const overall=STATUS.overall||"operational";
-  const pill=document.getElementById("overallPill");
-  pill.textContent=overall.toUpperCase();
-  pill.className="pill "+
-    (overall==="operational"?"good":
-     overall==="degraded_performance"?"warn":"bad");
-
-  const banner=document.getElementById("alertBanner");
-  banner.innerHTML="";
-  if(overall!=="operational"){
-    banner.innerHTML=`<div class="banner ${
-      risk>50?"bad":"warn"}">
-      Webex service degradation detected.
-    </div>`;
-  }
-
-  buildExecutive(overall, impacted, impactedComponents, risk);
-  renderServices(groups);
-}
-
-function buildExecutive(o,s,c,r){
-  let text="All Webex services operational.";
-  if(o!=="operational"){
-    text=`${s} services degraded impacting ${c} components. `;
-    text+=`SLA exposure index ${r}. Customer impact may vary by workload.`;
-  }
-  document.getElementById("execSummary").textContent=text;
-}
-
-function renderServices(groups){
-  const host=document.getElementById("servicesGrid");
-  host.innerHTML="";
-
-  groups.sort((a,b)=>{
-    if(a.status==="operational" && b.status!=="operational") return 1;
-    if(a.status!=="operational" && b.status==="operational") return -1;
-    return 0;
-  });
-
-  groups.forEach(g=>{
-    const card=document.createElement("div");
-    card.className="serviceCard";
-
-    const pillClass=
-      g.status==="operational"?"good":
-      g.status==="degraded_performance"?"warn":"bad";
-
-    card.innerHTML=`
-      <div class="serviceName">
-        ${g.name}
-        <span class="pill ${pillClass}">${g.status}</span>
+    <!-- =========================
+         SIDEBAR
+    ========================== -->
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" style="height:38px;width:auto;" alt="US Signal" />
+        <div>
+          <h1>US Signal</h1>
+          <span class="sub">Webex Partner Portal</span>
+        </div>
       </div>
-      ${(g.children||[]).map(c=>`
-        <div class="component">
-          <span>${c.name}</span>
-          <span class="pill ${
-            c.status==="operational"?"good":
-            c.status==="degraded_performance"?"warn":"bad"}">
-            ${c.status}
+
+      <nav class="nav">
+        <a href="/customer">Dashboard</a>
+        <a href="/customer/maintenance">Maintenance</a>
+        <a class="active" href="/customer/status">Status</a>
+        <a href="/customer/incidents">Incidents</a>
+
+        <div class="hint">
+          Status is global (Webex). Tenant context is shown for visibility.
+        </div>
+      </nav>
+
+      <div style="margin-top:16px;">
+        <div id="tenantBadge" class="badge" style="display:none;"></div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div id="envBadge" class="badge" style="display:none;"></div>
+      </div>
+    </aside>
+
+    <!-- =========================
+         MAIN
+    ========================== -->
+    <main class="main">
+      <div class="wrap">
+
+        <!-- Topbar -->
+        <div class="topbar">
+          <div class="title">
+            <div class="h">Webex Platform Status</div>
+            <div class="meta">
+              Last updated: <span id="lastUpdated">—</span>
+              <span class="dot" aria-hidden="true"></span>
+              Source: <span class="muted">status.webex.com</span>
+            </div>
+          </div>
+
+          <div class="actions">
+            <a class="btn link" href="https://status.webex.com/commercial/status?lang=en_US" target="_blank" rel="noopener">
+              Webex Status Page
+            </a>
+            <button class="btn" id="themeBtn" type="button" title="Toggle theme">Toggle Theme</button>
+            <button class="btn" id="collapseAllBtn" type="button" title="Collapse all group cards">Collapse All</button>
+            <button class="btn" id="expandAllBtn" type="button" title="Expand all group cards">Expand All</button>
+            <button class="btn primary" id="refreshBtn" type="button" title="Refresh status">Refresh</button>
+            <button class="btn" id="logoutBtn" type="button" title="Log out">Logout</button>
+          </div>
+        </div>
+
+        <!-- Summary + Controls -->
+        <div class="row">
+          <section class="card">
+            <h2>Overall Health</h2>
+
+            <div class="overallRow">
+              <div class="overallLeft">
+                <div class="overallBig">
+                  <span id="overallPill" class="pill neutral">LOADING</span>
+                  <span id="overallText">Checking services…</span>
+                </div>
+                <div id="overallSnippet" class="snippet">—</div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;">
+                <button id="emailBtn" class="btn danger" type="button" style="display:none;">
+                  Email US Signal
+                </button>
+              </div>
+            </div>
+
+            <div class="miniStats">
+              <div class="stat">
+                <div class="k">Service Groups</div>
+                <div class="v" id="statGroups">—</div>
+              </div>
+              <div class="stat">
+                <div class="k">Total Components</div>
+                <div class="v" id="statChildren">—</div>
+              </div>
+              <div class="stat">
+                <div class="k">Affected Groups</div>
+                <div class="v" id="statBad">—</div>
+              </div>
+              <div class="stat">
+                <div class="k">Affected Components</div>
+                <div class="v" id="statBadChildren">—</div>
+              </div>
+            </div>
+
+            <div class="footerNote">
+              Groups are displayed Cisco-style: group header + components beneath. Group headers are clickable if you want to collapse sections, but everything loads expanded by default.
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Find & Focus</h2>
+
+            <div class="controls">
+              <div class="searchBox">
+                <label class="sr" for="filterInput">Filter services</label>
+                <input id="filterInput" type="search" placeholder="Filter groups or components (example: Calling, Meetings, Slido, Control Hub)" />
+              </div>
+
+              <div class="toggleRow">
+                <div class="seg">
+                  <button class="btn" id="showAllBtn" type="button">Show All</button>
+                  <button class="btn" id="showImpactedBtn" type="button">Show Impacted Only</button>
+                  <button class="btn" id="showOperationalBtn" type="button">Show Operational Only</button>
+                </div>
+
+                <div class="seg">
+                  <span class="chip" title="Groups currently visible based on filters">
+                    Visible Groups: <small id="visibleGroups">—</small>
+                  </span>
+                  <span class="chip" title="Components currently visible based on filters">
+                    Visible Components: <small id="visibleComponents">—</small>
+                  </span>
+                </div>
+              </div>
+
+              <div class="footerNote">
+                Tip: Use “Show Impacted Only” during an incident to immediately isolate impacted service areas without hunting through accordion clicks.
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Cisco-style Group Cards (2 columns on wide screens) -->
+        <div id="groupsGrid" class="groupsGrid" aria-live="polite"></div>
+
+        <div style="margin-top:10px;" class="muted">
+          <span style="font-size:12px;">
+            If the portal shows “ERROR”, validate authentication (PIN/session) and confirm the Worker’s <code>/api/status</code> route is returning JSON.
           </span>
         </div>
-      `).join("")}
-    `;
+      </div>
+    </main>
 
-    host.appendChild(card);
-  });
-}
+  </div>
 
-setInterval(refreshData,60000);
-refreshData();
-</script>
+  <script>
+    /* ============================
+       Auth-safe API fetch
+    ============================ */
+    async function apiFetchJson(url) {
+      const res = await fetch(url, { credentials: "include" });
+
+      if (res.status === 401) {
+        window.location.href = "/pin";
+        return null;
+      }
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        return { ok:false, error:"bad_json" };
+      }
+
+      if (data && (data.error === "pin_required" || data.error === "pin_required_or_expired")) {
+        window.location.href = "/pin";
+        return null;
+      }
+
+      return data;
+    }
+
+    /* ============================
+       Theme
+    ============================ */
+    function setTheme(theme){
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("theme", theme);
+    }
+    function toggleTheme(){
+      const cur = document.documentElement.getAttribute("data-theme") || "light";
+      setTheme(cur === "light" ? "dark" : "light");
+    }
+    (function initTheme(){
+      const saved = localStorage.getItem("theme");
+      if (saved === "dark" || saved === "light") setTheme(saved);
+    })();
+    document.getElementById("themeBtn").addEventListener("click", toggleTheme);
+
+    /* ============================
+       Helpers
+    ============================ */
+    function fmt(dt){
+      if (!dt) return "—";
+      const d = new Date(dt);
+      if (Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleString();
+    }
+
+    function escapeHtml(s){
+      return String(s || "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function normalizeStatus(s){
+      return String(s || "").trim().toLowerCase();
+    }
+
+    function pillForStatus(status){
+      const s = normalizeStatus(status);
+
+      if (s === "operational" || s === "none") return { cls:"good", label:"OPERATIONAL" };
+
+      if (s === "degraded_performance" || s === "partial_outage" || s === "under_maintenance" || s === "minor") {
+        return { cls:"warn", label:(s === "minor" ? "MINOR" : s.replaceAll("_"," ").toUpperCase()) };
+      }
+
+      if (s === "major_outage" || s === "critical" || s === "major") {
+        return { cls:"bad", label:(s === "major" ? "MAJOR" : s.replaceAll("_"," ").toUpperCase()) };
+      }
+
+      return { cls:"neutral", label:(s ? s.replaceAll("_"," ").toUpperCase() : "UNKNOWN") };
+    }
+
+    function isOperational(status){
+      const s = normalizeStatus(status);
+      return s === "operational" || s === "none";
+    }
+
+    function computeGroupStatus(group){
+      if (group && group.status) return normalizeStatus(group.status);
+      const kids = Array.isArray(group.children) ? group.children : [];
+      if (!kids.length) return "unknown";
+
+      let worst = "operational";
+      for (const c of kids){
+        const s = normalizeStatus(c.status);
+        if (!s) continue;
+        if (s === "major_outage" || s === "critical") return "major_outage";
+        if (s === "partial_outage") worst = "partial_outage";
+        else if (s === "degraded_performance" && worst === "operational") worst = "degraded_performance";
+        else if (s === "under_maintenance" && worst === "operational") worst = "under_maintenance";
+        else if (s !== "operational" && worst === "operational") worst = s;
+      }
+      return worst || "unknown";
+    }
+
+    function computeOverall(data){
+      const raw = normalizeStatus(data && (data.overall || data.globalIndicator || data.globalStatus));
+      if (raw && raw !== "unknown") return raw;
+
+      const groups = Array.isArray(data.components) ? data.components : [];
+      let worst = "operational";
+      for (const g of groups){
+        const s = computeGroupStatus(g);
+        if (s === "major_outage" || s === "critical") return "major_outage";
+        if (s === "partial_outage") worst = "partial_outage";
+        else if (s === "degraded_performance" && worst === "operational") worst = "degraded_performance";
+        else if (s === "under_maintenance" && worst === "operational") worst = "under_maintenance";
+        else if (s !== "operational" && worst === "operational") worst = s;
+      }
+      return worst || "unknown";
+    }
+
+    function buildSnippet(nonOperationalGroups){
+      if (!nonOperationalGroups.length) return "All services are operational.";
+      const top = nonOperationalGroups.slice(0, 5).map(x => x.name).join(", ");
+      const extra = nonOperationalGroups.length > 5 ? ` (+${nonOperationalGroups.length - 5} more)` : "";
+      return `Some services are reporting issues: ${top}${extra}.`;
+    }
+
+    /* ============================
+       Icons (simple inline SVGs)
+       - If you want different icons later, swap mappings here.
+    ============================ */
+    function iconForGroupName(name){
+      const n = String(name || "").toLowerCase();
+      // Lightweight heuristics to mimic Cisco sections (Meetings, App, Calling, Control Hub, etc.)
+      if (n.includes("meeting")) return svgIcon("camera");
+      if (n.includes("calling") || n.includes("pstn")) return svgIcon("phone");
+      if (n.includes("control hub") || n.includes("admin") || n.includes("user hub")) return svgIcon("shield");
+      if (n.includes("device")) return svgIcon("device");
+      if (n.includes("contact center")) return svgIcon("headset");
+      if (n.includes("slido")) return svgIcon("spark");
+      if (n.includes("developer") || n.includes("api") || n.includes("webhook")) return svgIcon("code");
+      if (n.includes("hybrid")) return svgIcon("link");
+      if (n.includes("broadcloud") || n.includes("carrier")) return svgIcon("cloud");
+      if (n.includes("events") || n.includes("socio")) return svgIcon("calendar");
+      return svgIcon("grid");
+    }
+
+    function svgIcon(kind){
+      // Keep them simple, consistent, and theme-aware (currentColor)
+      const base = 'width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+      if (kind === "phone") return `<svg ${base}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72c.12.86.31 1.7.57 2.5a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.58-1.09a2 2 0 0 1 2.11-.45c.8.26 1.64.45 2.5.57A2 2 0 0 1 22 16.92Z"/></svg>`;
+      if (kind === "camera") return `<svg ${base}><path d="M23 7l-7 5 7 5V7Z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`;
+      if (kind === "shield") return `<svg ${base}><path d="M12 2l8 4v6c0 5-3.4 9.4-8 10-4.6-.6-8-5-8-10V6l8-4Z"/></svg>`;
+      if (kind === "device") return `<svg ${base}><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8"/></svg>`;
+      if (kind === "headset") return `<svg ${base}><path d="M4 12a8 8 0 0 1 16 0"/><rect x="2" y="12" width="5" height="7" rx="2"/><rect x="17" y="12" width="5" height="7" rx="2"/><path d="M7 19a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3"/></svg>`;
+      if (kind === "spark") return `<svg ${base}><path d="M12 2l1.5 6L20 10l-6.5 2L12 20l-1.5-8L4 10l6.5-2L12 2Z"/></svg>`;
+      if (kind === "code") return `<svg ${base}><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/><path d="M14 4l-4 16"/></svg>`;
+      if (kind === "link") return `<svg ${base}><path d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1"/><path d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1"/></svg>`;
+      if (kind === "cloud") return `<svg ${base}><path d="M20 17.5a4.5 4.5 0 0 0-1-8.9A6 6 0 0 0 7 7a4 4 0 0 0 0 8h13Z"/></svg>`;
+      if (kind === "calendar") return `<svg ${base}><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>`;
+      return `<svg ${base}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`;
+    }
+
+    /* ============================
+       Tenant badge
+    ============================ */
+    async function loadTenant(){
+      const me = await apiFetchJson("/api/me");
+      if (!me) return;
+
+      if (me && me.orgName){
+        const el = document.getElementById("tenantBadge");
+        el.style.display = "inline-flex";
+        el.textContent = `Tenant: ${me.orgName}`;
+        el.title = el.textContent;
+      }
+
+      // Optional environment marker if you ever pass it
+      if (me && me.env){
+        const envEl = document.getElementById("envBadge");
+        envEl.style.display = "inline-flex";
+        envEl.textContent = `Env: ${me.env}`;
+        envEl.title = envEl.textContent;
+      }
+    }
+
+    /* ============================
+       Filters / modes
+    ============================ */
+    const MODE_ALL = "all";
+    const MODE_IMPACTED = "impacted";
+    const MODE_OPERATIONAL = "operational";
+
+    let currentMode = MODE_ALL;
+    let lastPayload = null;
+
+    const filterInput = document.getElementById("filterInput");
+    filterInput.addEventListener("input", applyFilters);
+
+    document.getElementById("showAllBtn").addEventListener("click", () => {
+      currentMode = MODE_ALL;
+      applyFilters(true);
+    });
+    document.getElementById("showImpactedBtn").addEventListener("click", () => {
+      currentMode = MODE_IMPACTED;
+      applyFilters(true);
+    });
+    document.getElementById("showOperationalBtn").addEventListener("click", () => {
+      currentMode = MODE_OPERATIONAL;
+      applyFilters(true);
+    });
+
+    function modeAllowsGroup(groupStatus){
+      const op = isOperational(groupStatus);
+      if (currentMode === MODE_ALL) return true;
+      if (currentMode === MODE_IMPACTED) return !op;
+      if (currentMode === MODE_OPERATIONAL) return op;
+      return true;
+    }
+
+    /* ============================
+       Expand/Collapse controls
+    ============================ */
+    function setAllCollapsed(collapsed){
+      const cards = Array.from(document.querySelectorAll(".groupCard"));
+      for (const c of cards){
+        c.classList.toggle("collapsed", !!collapsed);
+        const head = c.querySelector(".groupHead");
+        if (head) head.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      }
+    }
+    document.getElementById("collapseAllBtn").addEventListener("click", () => setAllCollapsed(true));
+    document.getElementById("expandAllBtn").addEventListener("click", () => setAllCollapsed(false));
+
+    /* ============================
+       Logout (safe fallback)
+    ============================ */
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      try {
+        // If you already have /api/logout, this will work.
+        // If not, it will throw and we fall back to /pin.
+        await fetch("/api/logout", { method: "POST", credentials: "include" });
+      } catch (e) {}
+      window.location.href = "/pin";
+    });
+
+    /* ============================
+       Rendering (Cisco-like grouping)
+    ============================ */
+    function render(data){
+      lastPayload = data;
+
+      document.getElementById("lastUpdated").textContent = fmt(data.lastUpdated);
+
+      const overall = computeOverall(data);
+      const overallP = pillForStatus(overall);
+
+      const overallPill = document.getElementById("overallPill");
+      overallPill.className = `pill ${overallP.cls}`;
+      overallPill.textContent = overallP.label;
+
+      const overallText = document.getElementById("overallText");
+      overallText.textContent = overallP.cls === "good" ? "All systems normal" : "Attention required";
+
+      const groups = Array.isArray(data.components) ? data.components : [];
+
+      // Identify non-operational + stats
+      const nonOpGroups = [];
+      let badChildren = 0;
+      let totalChildren = 0;
+
+      for (const g of groups){
+        const kids = Array.isArray(g.children) ? g.children : [];
+        totalChildren += kids.length;
+
+        const gs = computeGroupStatus(g);
+        if (!isOperational(gs)){
+          nonOpGroups.push({ name: g.name || "Unnamed", status: gs, group: g });
+        }
+        for (const c of kids){
+          if (!isOperational(c.status)) badChildren++;
+        }
+      }
+
+      document.getElementById("overallSnippet").textContent = buildSnippet(nonOpGroups);
+
+      document.getElementById("statGroups").textContent = String(groups.length);
+      document.getElementById("statChildren").textContent = String(totalChildren);
+      document.getElementById("statBad").textContent = String(nonOpGroups.length);
+      document.getElementById("statBadChildren").textContent = String(badChildren);
+
+      // Email button if anything not operational
+      const emailBtn = document.getElementById("emailBtn");
+      if (overallP.cls !== "good"){
+        emailBtn.style.display = "inline-flex";
+      } else {
+        emailBtn.style.display = "none";
+      }
+
+      emailBtn.onclick = () => {
+        const subject = encodeURIComponent("Webex Status Alert (US Signal Portal)");
+        const lines = [];
+
+        lines.push(`Time: ${fmt(data.lastUpdated)}`);
+        lines.push(`Overall: ${overallP.label}`);
+        lines.push("");
+
+        if (!nonOpGroups.length){
+          lines.push("No non-operational groups were detected, but overall was not operational.");
+        } else {
+          lines.push("Non-operational service groups:");
+          for (const x of nonOpGroups){
+            lines.push(`- ${x.name}: ${x.status}`);
+            const kids = Array.isArray(x.group.children) ? x.group.children : [];
+            const badKids = kids.filter(k => !isOperational(k.status));
+            for (const k of badKids.slice(0, 20)){
+              lines.push(`   • ${k.name}: ${k.status}`);
+            }
+            if (badKids.length > 20) lines.push(`   • (+${badKids.length - 20} more)`);
+          }
+        }
+
+        const body = encodeURIComponent(lines.join("\n"));
+        window.location.href = `mailto:it@ussignal.com?subject=${subject}&body=${body}`;
+      };
+
+      renderGroups(groups);
+      applyFilters(true); // update visible counts immediately
+    }
+
+    function renderGroups(groups){
+      const host = document.getElementById("groupsGrid");
+      host.innerHTML = "";
+
+      for (const g of groups){
+        const kids = Array.isArray(g.children) ? g.children : [];
+        const gs = computeGroupStatus(g);
+        const gpill = pillForStatus(gs);
+
+        const nonOpKids = kids.filter(k => !isOperational(k.status)).length;
+
+        const card = document.createElement("section");
+        card.className = "groupCard";
+        card.dataset.group = (g.name || "").toLowerCase();
+        card.dataset.status = gs;
+
+        // search haystack includes group + children
+        card.dataset.search = (String(g.name || "") + " " + kids.map(k => k.name).join(" ")).toLowerCase();
+
+        const icon = iconForGroupName(g.name);
+
+        const subBits = [];
+        subBits.push(`<span><b>${kids.length}</b> components</span>`);
+        if (nonOpKids){
+          subBits.push(`<span class="impactTag" title="Components reporting non-operational status">${nonOpKids} impacted</span>`);
+        } else {
+          subBits.push(`<span class="okTag" title="No impacted components">0 impacted</span>`);
+        }
+
+        card.innerHTML = `
+          <div class="groupHead" role="button" tabindex="0" aria-expanded="true" title="Click to collapse/expand this group">
+            <div class="groupTitle">
+              <div class="icon" aria-hidden="true">${icon}</div>
+              <div class="nameWrap">
+                <div class="groupName">${escapeHtml(g.name || "Unnamed Group")}</div>
+                <div class="groupSub">
+                  ${subBits.join(" ")}
+                </div>
+              </div>
+            </div>
+
+            <div class="groupRight">
+              <span class="pill ${gpill.cls}">${gpill.label}</span>
+              <span class="chev" aria-hidden="true" title="Collapse/expand">
+                <svg width="16" height="16" viewBox="0 0 24 24">
+                  <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="groupBody">
+            <div class="childTable">
+              ${kids.map(k => {
+                const kp = pillForStatus(k.status);
+                const nm = escapeHtml(k.name || "Unnamed");
+                return `
+                  <div class="childName" title="${nm}">${nm}</div>
+                  <div class="childStatus"><span class="pill ${kp.cls}">${kp.label}</span></div>
+                `;
+              }).join("")}
+            </div>
+          </div>
+        `;
+
+        const head = card.querySelector(".groupHead");
+        const toggle = () => {
+          const willCollapse = !card.classList.contains("collapsed") ? true : false;
+          card.classList.toggle("collapsed", willCollapse);
+          head.setAttribute("aria-expanded", willCollapse ? "false" : "true");
+        };
+
+        head.addEventListener("click", toggle);
+        head.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        });
+
+        host.appendChild(card);
+      }
+
+      // Default: expanded everywhere (your ask)
+      setAllCollapsed(false);
+    }
+
+    function applyFilters(updateCounts){
+      const q = String(filterInput.value || "").trim().toLowerCase();
+      const cards = Array.from(document.querySelectorAll(".groupCard"));
+
+      let visibleGroups = 0;
+      let visibleComponents = 0;
+
+      for (const c of cards){
+        const hay = c.dataset.search || "";
+        const groupStatus = c.dataset.status || "unknown";
+
+        const matchesText = !q || hay.includes(q);
+        const matchesMode = modeAllowsGroup(groupStatus);
+
+        const show = matchesText && matchesMode;
+        c.style.display = show ? "" : "none";
+
+        if (show){
+          visibleGroups++;
+          // Count children visible: if filtering, count only those whose name matches OR group matches.
+          const groupName = c.dataset.group || "";
+          const body = c.querySelector(".groupBody");
+          const rows = body ? Array.from(body.querySelectorAll(".childName")) : [];
+
+          if (!q){
+            visibleComponents += rows.length;
+          } else {
+            // if query matches group name, count all children; else count matching children
+            if (groupName.includes(q)){
+              visibleComponents += rows.length;
+            } else {
+              for (const r of rows){
+                const t = (r.textContent || "").toLowerCase();
+                if (t.includes(q)) visibleComponents++;
+              }
+            }
+          }
+        }
+      }
+
+      if (updateCounts){
+        document.getElementById("visibleGroups").textContent = String(visibleGroups);
+        document.getElementById("visibleComponents").textContent = String(visibleComponents);
+      }
+    }
+
+    /* ============================
+       Load
+    ============================ */
+    async function load(){
+      const data = await apiFetchJson("/api/status");
+      if (!data) return;
+
+      if (data.error){
+        document.getElementById("overallPill").className = "pill bad";
+        document.getElementById("overallPill").textContent = "ERROR";
+        document.getElementById("overallText").textContent = "Failed to load status";
+        document.getElementById("overallSnippet").textContent = data.message || data.error;
+
+        // Clear grid for clarity
+        document.getElementById("groupsGrid").innerHTML = "";
+        document.getElementById("visibleGroups").textContent = "0";
+        document.getElementById("visibleComponents").textContent = "0";
+        return;
+      }
+
+      render(data);
+    }
+
+    document.getElementById("refreshBtn").addEventListener("click", load);
+
+    // init
+    loadTenant();
+    load();
+  </script>
 </body>
 </html>
