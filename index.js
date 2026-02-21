@@ -489,6 +489,13 @@ function getCurrentUser(request) {
   };
 }
 
+function requireUser(request) {
+  const user = getCurrentUser(request);
+  if (!user?.email) {
+    return { ok: false, res: json({ error: "access_required" }, 401) };
+  }
+  return { ok: true, user };
+}
     /* =====================================================
        Session helpers
     ===================================================== */
@@ -2858,15 +2865,7 @@ if (url.pathname.startsWith("/api/customer/")) {
     if (!result.ok) return json({ ok:false, error:"webex_pstn_failed" }, 500);
     return json({ ok:true, locations: result.data.items || [] });
   }
-   // ----------------------------------------------------
-  // NEW: PSTN deep (best-effort, never breaks UI)
-  // GET /api/customer/:key/pstn-deep
-  // ----------------------------------------------------
-  if (action === "pstn-deep") {
-    const pstn = await buildPstnDeep(env, resolvedOrgId);
-    return json({ ok: true, pstn }, 200);
-  }
-   // ----------------------------------------------------
+    // ----------------------------------------------------
   // OPTIONAL: PSTN snapshot
   // GET /api/customer/:key/pstn
   // ----------------------------------------------------
@@ -2875,6 +2874,15 @@ if (url.pathname.startsWith("/api/customer/")) {
     if (!snap) return json({ ok: false, error: "pstn_not_available" }, 404);
     return json({ ok: true, pstn: snap }, 200);
   }
+   // ----------------------------------------------------
+  // NEW: PSTN deep (best-effort, never breaks UI)
+  // GET /api/customer/:key/pstn-deep
+  // ----------------------------------------------------
+  if (action === "pstn-deep") {
+    const pstn = await buildPstnDeep(env, resolvedOrgId);
+    return json({ ok: true, pstn }, 200);
+  }
+
   // -------------------------------------------------------------------
   // NEW: tenant "health" snapshot (written by scheduled() into WEBEX KV)
   // GET /api/customer/:key/health
