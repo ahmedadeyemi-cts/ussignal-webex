@@ -799,7 +799,20 @@ async function renderAdminMonitoringHTML() {
   if (!res.ok) throw new Error("Failed to load admin monitoring UI");
   return await res.text();
 }
-
+async function renderCustomerPSTNHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/pstn.html"
+  );
+  if (!res.ok) throw new Error("Failed to load customer PSTN UI");
+  return await res.text();
+}
+async function renderCustomerObservabilityHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/observability.html"
+  );
+  if (!res.ok) throw new Error("Failed to load customer Observability UI");
+  return await res.text();
+}
 async function renderAdminSupportHTML() {
   const res = await fetch(
     "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/support.html"
@@ -1674,7 +1687,22 @@ if (url.pathname === "/customer/cdr" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
-
+/* -----------------------------
+   Customer UI: PSTN
+----------------------------- */
+if (url.pathname === "/customer/pstn" && request.method === "GET") {
+  return text(await renderCustomerPSTNHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+     /* -----------------------------
+   Customer UI: PSTN
+----------------------------- */
+if (url.pathname === "/customer/observability" && request.method === "GET") {
+  return text(await renderCustomerObservabilityHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
 /* -----------------------------
    Customer UI: Maintenance
 ----------------------------- */
