@@ -58,6 +58,13 @@ async function storeHealth(env, health) {
     { expirationTtl: 60 * 30 }
   );
 }
+async function storePstnSnapshot(env, orgId, payload) {
+  await env.WEBEX.put(
+    `pstn:${orgId}`,
+    JSON.stringify(payload),
+    { expirationTtl: 60 * 30 } // 30 minutes
+  );
+}
 async function resolveOrgIdForAdmin(env, key) {
   // If they passed orgId directly, accept it
   if (looksLikeWebexOrgId(key)) return key;
@@ -163,7 +170,55 @@ async function webexFetch(env, path, orgId = null) {
     return { ok: false, status: res.status, error: "not_json", preview };
   }
 }
+// =====================================================
+// PSTN helpers (SAFE)
+// Place directly AFTER webexFetch()
+// =====================================================
+function asArray(v) {
+  return Array.isArray(v) ? v : [];
+}
 
+function pickItems(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload.items)) return payload.items;
+  if (Array.isArray(payload)) return payload;
+  return [];
+}
+
+// Safe wrapper: never throws, returns ok/status/data/preview/error
+async function webexFetchSafe(env, path, orgId) {
+  try {
+    const r = await webexFetch(env, path, orgId);
+    if (!r.ok) {
+      return {
+        ok: false,
+        status: r.status,
+        error: "webex_failed",
+        preview: r.preview,
+        data: null
+      };
+    }
+    return { ok: true, status: r.status, data: r.data, preview: r.preview };
+  } catch (e) {
+    return {
+      ok: false,
+      status: 0,
+      error: "exception",
+      preview: String(e?.message || e),
+      data: null
+    };
+  }
+}
+
+function diag(name, result) {
+  return {
+    name,
+    ok: !!result?.ok,
+    status: result?.status ?? 0,
+    error: result?.ok ? null : (result?.error || "failed"),
+    preview: result?.ok ? null : String(result?.preview || "").slice(0, 220)
+  };
+}
 async function auditLog(env, userEmail, path, metadata = {}) {
   try {
     await env.WEBEX.put(
@@ -1014,7 +1069,179 @@ async function computeCallQuality(env, orgId) {
     worstExamples: poor.slice(0,5)
   };
 }
+// =====================================================
+// PSTN Deep Builder
+// Place directly AFTER computeCallQuality()
+// =====================================================
+async function buildPstnDeep(env, orgId) {
+  const diagnostics = [];
 
+  // 1) Locations (baseline)
+  const rLocations = await webexFetchSafe(env, "/telephony/config/locations", orgId);
+  diagnostics.push(diag("telephony/config/locations", rLocations));
+
+  const locations = pickItems(rLocations.data);
+  const locationById = {};
+  for (const loc of locations) {
+    if (loc?.id) locationById[loc.id] = loc;
+  }
+
+  // 2) Numbers (best-effort)
+  const rNumbers = await webexFetchSafe(env, "/telephony/config/numbers?max=1000", orgId);
+  diagnostics.push(diag("telephony/config/numbers", rNumbers));
+  const numbers = pickItems(rNumbers.data);
+
+  // 3) Trunks / PSTN connections (best-effort)
+  const rTrunks = await webexFetchSafe(env, "/telephony/config/trunks?max=1000", orgId);
+  diagnostics.push(diag("telephony/config/trunks", rTrunks));
+  const trunks = pickItems(rTrunks.data);
+
+  const rPremise = await webexFetchSafe(env, "/telephony/config/premisePstnConnections?max=1000", orgId);
+  diagnostics.push(diag("telephony/config/premisePstnConnections", rPremise));
+  const premise = pickItems(rPremise.data);
+
+  // 4) Emergency (best-effort)
+  const rEmergency = await webexFetchSafe(env, "/telephony/config/emergencyCallBackNumbers?max=1000", orgId);
+  diagnostics.push(diag("telephony/config/emergencyCallBackNumbers", rEmergency));
+  const emergency = pickItems(rEmergency.data);
+
+  // 5) Routing objects (optional / best-effort)
+  const rRouteGroups = await webexFetchSafe(env, "/telephony/config/routeGroups?max=1000", orgId);
+  diagnostics.push(diag("telephony/config/routeGroups", rRouteGroups));
+  const routeGroups = pickItems(rRouteGroups.data);
+
+  const rCallRouting = await webexFetchSafe(env, "/telephony/config/callRouting", orgId);
+  diagnostics.push(diag("telephony/config/callRouting", rCallRouting));
+  const callRouting = rCallRouting.ok ? (rCallRouting.data || {}) : null;
+
+  function numberLocationId(n) {
+    return n?.locationId || n?.location?.id || n?.location?.locationId || null;
+  }
+
+  function isAssignedNumber(n) {
+    const owner =
+      n?.owner ||
+      n?.ownerId ||
+      n?.userId ||
+      n?.workspaceId ||
+      n?.placeId ||
+      n?.assignedTo ||
+      n?.assigned;
+    if (owner) return true;
+
+    const status = String(n?.status || n?.state || "").toLowerCase();
+    if (status.includes("assigned")) return true;
+    if (status.includes("unassigned")) return false;
+
+    if (n?.personName || n?.workspaceName || n?.displayName) return true;
+    return false;
+  }
+
+  function trunkLocationId(t) {
+    return t?.locationId || t?.location?.id || null;
+  }
+
+  function ecbnLocationId(e) {
+    return e?.locationId || e?.location?.id || null;
+  }
+
+  const perLocation = [];
+
+  for (const loc of locations) {
+    const locId = loc?.id || null;
+
+    const locNumbers = locId ? numbers.filter(n => numberLocationId(n) === locId) : [];
+    const totalDids = locNumbers.length;
+    const assigned = locNumbers.filter(isAssignedNumber).length;
+    const unassigned = Math.max(0, totalDids - assigned);
+
+    const locTrunks = locId ? trunks.filter(t => trunkLocationId(t) === locId) : [];
+    const locPrem = locId ? premise.filter(p => trunkLocationId(p) === locId) : [];
+
+    const locEcbn = locId ? emergency.filter(e => ecbnLocationId(e) === locId) : [];
+
+    const emergencyConfigured = locEcbn.length > 0
+      ? true
+      : (typeof loc?.emergencyCallBackNumber !== "undefined" ? !!loc.emergencyCallBackNumber : null);
+
+    const pstnType =
+      loc?.pstnType ||
+      loc?.callingLineIdType ||
+      loc?.routingChoice ||
+      (locPrem.length ? "Local Gateway / Premise PSTN" : (locTrunks.length ? "Trunk / Provider" : "Unknown"));
+
+    const riskFlags = {
+      orphanDIDs: unassigned > 0,
+      singleTrunkRisk: (locTrunks.length + locPrem.length) === 1,
+      e911Missing: emergencyConfigured === false,
+    };
+
+    perLocation.push({
+      id: locId,
+      name: loc?.name || loc?.displayName || "Unnamed Location",
+      timeZone: loc?.timeZone || null,
+      address: loc?.address || null,
+      pstnType,
+      trunks: locTrunks.map(t => ({
+        id: t?.id || null,
+        name: t?.name || t?.displayName || "Unnamed Trunk",
+        type: t?.type || t?.trunkType || null,
+        status: t?.status || null,
+        failoverConfigured: typeof t?.failoverConfigured !== "undefined" ? !!t.failoverConfigured : null
+      })),
+      premisePstnConnections: locPrem.map(p => ({
+        id: p?.id || null,
+        name: p?.name || p?.displayName || "Premise PSTN",
+        type: p?.type || null,
+        status: p?.status || null
+      })),
+      dids: { total: totalDids, assigned, unassigned },
+      emergencyConfigured,
+      riskFlags
+    });
+  }
+
+  const totals = {
+    locations: perLocation.length,
+    trunks: trunks.length,
+    premisePstnConnections: premise.length,
+    didsTotal: numbers.length,
+    didsUnassigned: Math.max(0, numbers.length - numbers.filter(isAssignedNumber).length),
+    routeGroups: routeGroups.length
+  };
+
+  const risk = {
+    orphanDIDs: perLocation.some(l => l.riskFlags.orphanDIDs),
+    singleTrunkRisk: perLocation.some(l => l.riskFlags.singleTrunkRisk),
+    e911Missing: perLocation.some(l => l.riskFlags.e911Missing === true),
+    apiDegraded: diagnostics.some(d => !d.ok && (d.status === 403 || d.status === 404 || d.status >= 500))
+  };
+
+  let pstnReliabilityScore = 100;
+  if (risk.orphanDIDs) pstnReliabilityScore -= 10;
+  if (risk.singleTrunkRisk) pstnReliabilityScore -= 15;
+  if (risk.e911Missing) pstnReliabilityScore -= 25;
+  if (risk.apiDegraded) pstnReliabilityScore -= 10;
+  if (pstnReliabilityScore < 0) pstnReliabilityScore = 0;
+
+  return {
+    orgId,
+    generatedAt: new Date().toISOString(),
+    scores: { pstnReliabilityScore },
+    totals,
+    risk,
+    locations: perLocation,
+    routing: {
+      routeGroups: routeGroups.map(rg => ({
+        id: rg?.id || null,
+        name: rg?.name || rg?.displayName || "Route Group",
+        locationId: rg?.locationId || rg?.location?.id || null
+      })),
+      callRouting
+    },
+    diagnostics
+  };
+}
 
 async function computeGlobalSummary(env) {
   const orgResult = await webexFetch(env, "/organizations");
@@ -2631,6 +2858,23 @@ if (url.pathname.startsWith("/api/customer/")) {
     if (!result.ok) return json({ ok:false, error:"webex_pstn_failed" }, 500);
     return json({ ok:true, locations: result.data.items || [] });
   }
+   // ----------------------------------------------------
+  // NEW: PSTN deep (best-effort, never breaks UI)
+  // GET /api/customer/:key/pstn-deep
+  // ----------------------------------------------------
+  if (action === "pstn-deep") {
+    const pstn = await buildPstnDeep(env, resolvedOrgId);
+    return json({ ok: true, pstn }, 200);
+  }
+   // ----------------------------------------------------
+  // OPTIONAL: PSTN snapshot
+  // GET /api/customer/:key/pstn
+  // ----------------------------------------------------
+  if (action === "pstn") {
+    const snap = await env.WEBEX.get(`pstn:${resolvedOrgId}`, { type: "json" });
+    if (!snap) return json({ ok: false, error: "pstn_not_available" }, 404);
+    return json({ ok: true, pstn: snap }, 200);
+  }
   // -------------------------------------------------------------------
   // NEW: tenant "health" snapshot (written by scheduled() into WEBEX KV)
   // GET /api/customer/:key/health
@@ -3110,6 +3354,8 @@ await mapLimit(orgs, CONCURRENCY, async (org) => {
     JSON.stringify(quality),
     { expirationTtl: 60 * 30 }
   );
+   const pstn = await buildPstnDeep(env, org.id);
+   await storePstnSnapshot(env, org.id, pstn);
 });
 
 // 🔥 Rebuild global snapshot ONCE
