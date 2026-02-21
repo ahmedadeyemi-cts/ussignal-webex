@@ -113,94 +113,108 @@ canvas{width:100%;height:160px}
 <script>
 const $=id=>document.getElementById(id)
 
-async function api(p){const r=await fetch(p);return r.json()}
+async function api(p){
+  const r=await fetch(p)
+  return r.json()
+}
 
 async function init(){
- const me=await api("/api/me")
- const orgId=me.orgId
 
- const trunks=await api("/api/pstn/trunks?orgId="+orgId)
- const dids=await api("/api/pstn/dids?orgId="+orgId)
- const gateways=await api("/api/pstn/gateways?orgId="+orgId)
- const history=await api("/api/pstn/history?orgId="+orgId)
- const e911=await api("/api/pstn/e911?orgId="+orgId)
+  const me=await api("/api/me")
+  if(!me.orgId){
+    location="/pin"
+    return
+  }
 
- $("kTrunks").textContent=trunks.length
- $("kDids").textContent=dids.length
- $("kGateways").textContent=gateways.length
+  const key=me.orgId
 
- analyzeRisk(trunks)
- renderTrend(history)
- auditDids(dids)
- validateFailover(trunks)
- monitorGateways(gateways)
- auditE911(e911)
- detectFraud(history)
+  // Try snapshot first (fast)
+  let data = await api(`/api/customer/${key}/pstn`)
+
+  if(!data.ok){
+    // fallback to live deep
+    data = await api(`/api/customer/${key}/pstn-deep`)
+  }
+
+  if(!data.ok){
+    alert("PSTN data unavailable")
+    return
+  }
+
+  const pstn = data.pstn
+
+  // KPIs
+  $("kTrunks").textContent = pstn.totals.trunks
+  $("kDids").textContent = pstn.totals.didsTotal
+  $("kGateways").textContent = pstn.totals.premisePstnConnections
+  $("kRisk").textContent = pstn.scores.pstnReliabilityScore
+
+  updateRAGFromScore(pstn.scores.pstnReliabilityScore)
+
+  validateFailover(pstn.locations)
+  auditDids(pstn.locations)
+  monitorGateways(pstn.locations)
+  auditE911(pstn.locations)
+
+  renderTrendPlaceholder()
 }
 
-function analyzeRisk(trunks){
- let risk="GREEN"
- trunks.forEach(t=>{
-   if(t.utilization>85) risk="RED"
-   else if(t.utilization>70 && risk!=="RED") risk="AMBER"
- })
- $("kRisk").textContent=risk
- updateRAG(risk)
+function updateRAGFromScore(score){
+  let state="GREEN"
+  if(score < 70) state="RED"
+  else if(score < 85) state="AMBER"
+
+  const el=$("rag")
+  el.className="summary-pill"
+  if(state==="RED") el.classList.add("summary-red")
+  else if(state==="AMBER") el.classList.add("summary-amber")
+  else el.classList.add("summary-green")
+  el.textContent=state
 }
 
-function updateRAG(state){
- const el=$("rag")
- el.className="summary-pill"
- if(state==="RED") el.classList.add("summary-red")
- else if(state==="AMBER") el.classList.add("summary-amber")
- else el.classList.add("summary-green")
- el.textContent=state
+function validateFailover(locations){
+  $("failover").innerHTML =
+    locations.map(l=>
+      `<div><b>${l.name}</b> → ${
+        l.riskFlags.singleTrunkRisk ? "Single Trunk Risk" : "Redundant"
+      }</div>`
+    ).join("")
 }
 
-function simulate(){
- const number=$("simNumber").value
- $("simResult").textContent="Route lookup for "+number+" → Primary trunk A → Failover trunk B"
+function auditDids(locations){
+  const orphan = locations.reduce((a,l)=>a+(l.dids.unassigned||0),0)
+  $("didAudit").textContent = "Unassigned DIDs: "+orphan
 }
 
-function validateFailover(trunks){
- $("failover").innerHTML=trunks.map(t=>
-  "<div>"+t.name+" → "+(t.failover?"Failover OK":"No Backup")+"</div>").join("")
+function monitorGateways(locations){
+  const list=[]
+  locations.forEach(l=>{
+    l.premisePstnConnections.forEach(g=>{
+      list.push(`<div>${l.name} → ${g.name} (${g.status||"unknown"})</div>`)
+    })
+  })
+  $("gatewayStatus").innerHTML = list.join("") || "No Local Gateways"
 }
 
-function auditDids(dids){
- const orphan=dids.filter(d=>!d.assigned)
- $("didAudit").innerHTML="Unassigned DIDs: "+orphan.length
+function auditE911(locations){
+  const nonCompliant = locations.filter(l=>l.riskFlags.e911Missing)
+  $("e911Audit").textContent =
+    nonCompliant.length===0
+      ? "Compliant"
+      : nonCompliant.length+" Locations Missing E911"
 }
 
-function monitorGateways(gws){
- $("gatewayStatus").innerHTML=gws.map(g=>
-  "<div>"+g.name+" → "+g.status+"</div>").join("")
+function renderTrendPlaceholder(){
+  const c=$("trend")
+  const ctx=c.getContext("2d")
+  ctx.clearRect(0,0,c.width,c.height)
+  ctx.font="14px system-ui"
+  ctx.fillText("Historical utilization coming next phase",20,80)
 }
 
-function auditE911(e){
- $("e911Audit").textContent=e.compliant?"Compliant":"Non-Compliant"
+function logout(){
+  fetch("/api/pin/logout",{method:"POST"}).finally(()=>location="/")
 }
-
-function detectFraud(history){
- const spikes=history.filter(h=>h.calls>h.avg*2)
- $("fraud").textContent="Traffic spikes detected: "+spikes.length
-}
-
-function renderTrend(data){
- const c=$("trend")
- const ctx=c.getContext("2d")
- ctx.clearRect(0,0,c.width,c.height)
- ctx.strokeStyle="#0f62fe"
- ctx.beginPath()
- data.forEach((d,i)=>{
-   const x=i*(c.width/data.length)
-   const y=c.height-(d.calls/Math.max(...data.map(x=>x.calls)))*c.height
-   if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y)
- })
- ctx.stroke()
-}
-
-function logout(){fetch("/api/logout",{method:"POST"}).finally(()=>location="/")}
 
 init()
 </script>
