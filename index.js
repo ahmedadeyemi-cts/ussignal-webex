@@ -149,9 +149,10 @@ async function webexFetch(env, path, orgId = null) {
 
   const url = `https://webexapis.com/v1${finalPath}`;
 
-  const headers = {
-    Authorization: `Bearer ${token}`
-  };
+ const headers = {
+  Authorization: `Bearer ${token}`,
+  Accept: "application/json"
+};
 
   // For endpoints that support header switching
   if (orgId && !requiresQueryOrg) {
@@ -209,7 +210,15 @@ async function webexFetchSafe(env, path, orgId) {
     };
   }
 }
-
+// CDR payload normalization helper
+function normalizeCdrItems(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload.items)) return payload.items;
+  if (Array.isArray(payload.records)) return payload.records;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload)) return payload;
+  return [];
+}
 function diag(name, result) {
   return {
     name,
@@ -949,6 +958,11 @@ async function computeTenantHealth(env, orgId) {
   let licenseFailed = false;
   let deviceFailed = false;
   let analyticsFailed = false;
+ let pstnScore = null;
+let pstnDegraded = false;
+let pstnSingleTrunk = false;
+let pstnE911Risk = false;
+let pstnCapacityRed = false;
 
   /* -------------------------
      LICENSES
@@ -999,6 +1013,22 @@ async function computeTenantHealth(env, orgId) {
     ? (failedCalls / totalCalls) * 100
     : 0;
 
+ // PSTN (prefer KV snapshot written by cron)
+try {
+  const pstnSnap = await env.WEBEX.get(`pstn:${orgId}`, { type: "json" });
+  if (pstnSnap?.scores) {
+    pstnScore = pstnSnap.scores.pstnObservabilityScore ?? pstnSnap.scores.pstnReliabilityScore ?? null;
+    pstnDegraded = !!pstnSnap.risk?.apiDegraded;
+    pstnSingleTrunk = !!pstnSnap.risk?.singleTrunkRisk;
+    pstnE911Risk = !!pstnSnap.risk?.timezoneAwareE911Risk || !!pstnSnap.risk?.e911Missing;
+    pstnCapacityRed = !!pstnSnap.risk?.capacityRed;
+  } else {
+    // If missing or malformed, treat as degraded (but don’t hard fail)
+    pstnDegraded = true;
+  }
+} catch {
+  pstnDegraded = true;
+}
   /* =====================================================
      ENTERPRISE WEIGHTED SCORING
   ===================================================== */
@@ -1026,6 +1056,21 @@ async function computeTenantHealth(env, orgId) {
 
   if (score < 0) score = 0;
 
+ // PSTN penalties (enterprise-grade)
+if (pstnScore != null) {
+  if (pstnScore < 85) score -= 8;
+  if (pstnScore < 70) score -= 12;
+  if (pstnScore < 55) score -= 18;
+} else {
+  // Unknown PSTN is a mild penalty (visibility gap)
+  score -= 5;
+}
+
+if (pstnDegraded) score -= 8;
+if (pstnSingleTrunk) score -= 7;
+if (pstnE911Risk) score -= 12;
+if (pstnCapacityRed) score -= 10;
+
   /* -------------------------
      STATUS TIERS
   -------------------------- */
@@ -1034,33 +1079,52 @@ async function computeTenantHealth(env, orgId) {
   if (score < 85) status = "Warning";
   if (score < 60) status = "Critical";
 
-  /* -------------------------
-     ALERT FLAGS
-  -------------------------- */
+/* -------------------------
+   ALERT FLAGS
+-------------------------- */
 
-  const alerts = {
-    licenseDeficit: deficit > 0,
-    minorDeviceOutage: offline > 0 && offline <= 5,
-    majorDeviceOutage: offline > 10,
-    elevatedCallFailures: failureRate > 5,
-    severeCallFailures: failureRate > 10,
-    apiDegraded: licenseFailed || deviceFailed || analyticsFailed
-  };
+const alerts = {
+  licenseDeficit: deficit > 0,
+  minorDeviceOutage: offline > 0 && offline <= 5,
+  majorDeviceOutage: offline > 10,
+  elevatedCallFailures: failureRate > 5,
+  severeCallFailures: failureRate > 10,
+  apiDegraded: licenseFailed || deviceFailed || analyticsFailed,
 
-  return {
-    orgId,
-    score,
-    status,
-    metrics: {
-      deficit,
-      offlineDevices: offline,
-      failureRate: Number(failureRate.toFixed(2)),
-      totalCalls,
-      failedCalls
-    },
-    alerts,
-    generatedAt: new Date().toISOString()
-  };
+  // 🔵 PSTN Extensions (new)
+  pstnDegraded,
+  pstnSingleTrunk,
+  pstnE911Risk,
+  pstnCapacityRed
+};
+
+/* -------------------------
+   METRICS BLOCK
+-------------------------- */
+
+const metrics = {
+  deficit,
+  offlineDevices: offline,
+  failureRate: Number(failureRate.toFixed(2)),
+  totalCalls,
+  failedCalls,
+
+  // 🔵 PSTN metric added (no removal of existing fields)
+  pstnScore
+};
+
+/* -------------------------
+   FINAL RETURN
+-------------------------- */
+
+return {
+  orgId,
+  score,
+  status,
+  metrics,
+  alerts,
+  generatedAt: new Date().toISOString()
+};
 }
 
 async function computeCallQuality(env, orgId) {
@@ -1087,6 +1151,220 @@ async function computeCallQuality(env, orgId) {
     totalAnalyzed: items.length,
     poorCalls: poor.length,
     worstExamples: poor.slice(0,5)
+  };
+}
+function pct(n, d) {
+  if (!d || d <= 0) return 0;
+  return Math.round((n / d) * 1000) / 10; // 1 decimal
+}
+
+function clamp(n, lo, hi) {
+  return Math.max(lo, Math.min(hi, n));
+}
+
+function sum(arr, fn) {
+  let s = 0;
+  for (const x of arr) s += Number(fn(x) || 0);
+  return s;
+}
+
+// Try to infer Cisco/CCP/LGW based on fields that vary by tenant.
+function detectPstnTypeEnhanced({ loc, locTrunks, locPremise, callRouting, routeGroups }) {
+  // 1) Premise/LGW is the strongest signal
+  if ((locPremise?.length || 0) > 0) return "Local Gateway / Premise PSTN";
+
+  // 2) Look for trunk/provider hints
+  const providers = (locTrunks || [])
+    .map(t => String(t?.providerName || t?.provider || t?.vendor || "").toLowerCase())
+    .filter(Boolean);
+
+  const trunkTypes = (locTrunks || [])
+    .map(t => String(t?.type || t?.trunkType || t?.connectionType || "").toLowerCase())
+    .filter(Boolean);
+
+  if (providers.some(p => p.includes("cisco")) || trunkTypes.some(t => t.includes("cisco"))) {
+    return "Cisco PSTN";
+  }
+  if (providers.some(p => p.includes("cloud connected") || p.includes("ccp")) || trunkTypes.some(t => t.includes("ccp"))) {
+    return "Cloud Connected PSTN";
+  }
+  if ((locTrunks?.length || 0) > 0) return "Trunk / Provider";
+
+  // 3) Fallback to any existing loc hints
+  const hint = loc?.pstnType || loc?.routingChoice || loc?.callingLineIdType;
+  if (hint) return String(hint);
+
+  return "Unknown";
+}
+
+function computeRedundancyScore(locTrunks, locPremise) {
+  const t = (locTrunks?.length || 0);
+  const p = (locPremise?.length || 0);
+  const total = t + p;
+
+  if (total === 0) return 0;
+
+  // Base score by count
+  let score = total === 1 ? 40 : total === 2 ? 75 : 90;
+
+  // Bonus if any explicit failover configured flags exist
+  const hasFailoverFlag = (locTrunks || []).some(x => x?.failoverConfigured === true);
+  if (hasFailoverFlag) score += 5;
+
+  // Bonus for mixed connectivity (e.g., trunk + premise)
+  if (t > 0 && p > 0) score += 5;
+
+  return clamp(score, 0, 100);
+}
+
+// Diagnostics -> degradation signals for UI panels + scoring
+function deriveApiDegradation(diagnostics) {
+  const diags = Array.isArray(diagnostics) ? diagnostics : [];
+  const bad = diags.filter(d => !d.ok);
+  const hard = bad.filter(d => (d.status === 401 || d.status === 403 || d.status === 404));
+  const soft = bad.filter(d => (d.status >= 500 || d.status === 0));
+
+  const worst = bad
+    .slice()
+    .sort((a, b) => (b.status || 0) - (a.status || 0))[0] || null;
+
+  return {
+    ok: bad.length === 0,
+    failedCount: bad.length,
+    authOrNotFoundCount: hard.length,
+    upstreamErrorCount: soft.length,
+    worst: worst ? { name: worst.name, status: worst.status, error: worst.error } : null
+  };
+}
+
+/**
+ * Best-effort CDR concurrency estimator.
+ * - Uses up to `max=1000` calls for the window
+ * - Bins by 15-min bucket using startTime (duration if present)
+ * - Returns peakConcurrentEstimate for the org
+ *
+ * NOTE: Webex CDR schemas vary. This is intentionally defensive.
+ */
+async function estimateConcurrencyFromCdr(env, orgId, days = 1) {
+  const end = new Date();
+  const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const path =
+    `/cdr/calls?startTime=${encodeURIComponent(start.toISOString())}` +
+    `&endTime=${encodeURIComponent(end.toISOString())}` +
+    `&max=1000`;
+
+  const r = await webexFetchSafe(env, path, orgId);
+  if (!r.ok) return { ok: false, reason: "cdr_fetch_failed", diag: diag("cdr/calls", r) };
+
+  const items = pickItems(r.data);
+  if (!items.length) return { ok: true, peakConcurrentEstimate: 0, sampledCalls: 0 };
+
+  // 15-min buckets
+  const bucketMs = 15 * 60 * 1000;
+  const buckets = new Map(); // bucketStart -> count
+
+  for (const c of items) {
+    const st = c?.startTime || c?.start || c?.startDate;
+    if (!st) continue;
+
+    const t0 = Date.parse(st);
+    if (!Number.isFinite(t0)) continue;
+
+    // duration may be seconds; vary by schema
+    const durSec = Number(c?.durationSeconds || c?.duration || c?.durationSec || 0);
+    const durMs = Number.isFinite(durSec) && durSec > 0 ? durSec * 1000 : 0;
+
+    // If we have duration, count buckets spanned; else count just start bucket.
+    const t1 = durMs > 0 ? (t0 + durMs) : t0;
+
+    const bStart = Math.floor(t0 / bucketMs) * bucketMs;
+    const bEnd = Math.floor(t1 / bucketMs) * bucketMs;
+
+    for (let b = bStart; b <= bEnd; b += bucketMs) {
+      buckets.set(b, (buckets.get(b) || 0) + 1);
+    }
+  }
+
+  let peak = 0;
+  for (const v of buckets.values()) peak = Math.max(peak, v);
+
+  return {
+    ok: true,
+    peakConcurrentEstimate: peak,
+    sampledCalls: items.length
+  };
+}
+
+/**
+ * Persist a daily PSTN score point per org, keep last 30 points.
+ * Stored in WEBEX KV as pstnTrend:<orgId>
+ */
+async function appendPstnTrend(env, orgId, point) {
+  const key = `pstnTrend:${orgId}`;
+
+  const existing = await env.WEBEX.get(key, { type: "json" });
+  const arr = Array.isArray(existing?.items) ? existing.items : [];
+
+  // Daily key (UTC day)
+  const day = String(point?.day || "").trim() || new Date().toISOString().slice(0, 10);
+
+  // Replace same-day if exists, else append
+  const withoutDay = arr.filter(x => x?.day !== day);
+  withoutDay.push({ ...point, day });
+
+  // Sort by day asc and keep last 30
+  withoutDay.sort((a, b) => String(a.day).localeCompare(String(b.day)));
+  const trimmed = withoutDay.slice(Math.max(0, withoutDay.length - 30));
+
+  await env.WEBEX.put(key, JSON.stringify({ items: trimmed }), { expirationTtl: 60 * 60 * 24 * 35 });
+  return { ok: true, count: trimmed.length };
+}
+
+/**
+ * Simple predictive DID exhaustion:
+ * - Uses last N trend points (default 7)
+ * - Linear slope on assignedDids/day
+ * - Predict days until assigned reaches 90% of totalDids (or totalDids if you prefer)
+ */
+function predictDidExhaustion(trendItems, totalDids, horizonDays = 7) {
+  const items = (Array.isArray(trendItems) ? trendItems : [])
+    .slice(-horizonDays)
+    .filter(x => Number.isFinite(Number(x.assignedDids)));
+
+  if (items.length < 3 || !Number.isFinite(totalDids) || totalDids <= 0) {
+    return { ok: false, reason: "insufficient_data" };
+  }
+
+  // x = 0..n-1, y = assigned
+  const n = items.length;
+  const xs = [...Array(n)].map((_, i) => i);
+  const ys = items.map(x => Number(x.assignedDids));
+
+  const xbar = xs.reduce((a, b) => a + b, 0) / n;
+  const ybar = ys.reduce((a, b) => a + b, 0) / n;
+
+  let num = 0, den = 0;
+  for (let i = 0; i < n; i++) {
+    num += (xs[i] - xbar) * (ys[i] - ybar);
+    den += (xs[i] - xbar) * (xs[i] - xbar);
+  }
+  const slopePerDay = den ? (num / den) : 0;
+
+  const target = Math.floor(totalDids * 0.9);
+  const current = ys[ys.length - 1];
+
+  if (slopePerDay <= 0) {
+    return { ok: true, slopePerDay: Number(slopePerDay.toFixed(2)), daysTo90pct: null, note: "no_growth_detected" };
+  }
+
+  const days = Math.ceil((target - current) / slopePerDay);
+  return {
+    ok: true,
+    slopePerDay: Number(slopePerDay.toFixed(2)),
+    daysTo90pct: days > 0 ? days : 0,
+    targetAssigned: target,
+    currentAssigned: current
   };
 }
 // =====================================================
@@ -1134,6 +1412,10 @@ async function buildPstnDeep(env, orgId) {
   diagnostics.push(diag("telephony/config/callRouting", rCallRouting));
   const callRouting = rCallRouting.ok ? (rCallRouting.data || {}) : null;
 
+  // 6) Optional: CDR concurrency modeling (best-effort)
+  const cdrModel = await estimateConcurrencyFromCdr(env, orgId, 1); // last 24h sample
+  const peakConcurrentOrg = cdrModel.ok ? (cdrModel.peakConcurrentEstimate || 0) : null;
+
   function numberLocationId(n) {
     return n?.locationId || n?.location?.id || n?.location?.locationId || null;
   }
@@ -1167,6 +1449,9 @@ async function buildPstnDeep(env, orgId) {
 
   const perLocation = [];
 
+  const tenantAssigned = numbers.filter(isAssignedNumber).length;
+  const tenantTotal = numbers.length || 1;
+
   for (const loc of locations) {
     const locId = loc?.id || null;
 
@@ -1184,16 +1469,53 @@ async function buildPstnDeep(env, orgId) {
       ? true
       : (typeof loc?.emergencyCallBackNumber !== "undefined" ? !!loc.emergencyCallBackNumber : null);
 
-    const pstnType =
-      loc?.pstnType ||
-      loc?.callingLineIdType ||
-      loc?.routingChoice ||
-      (locPrem.length ? "Local Gateway / Premise PSTN" : (locTrunks.length ? "Trunk / Provider" : "Unknown"));
+    // Enhanced PSTN Type detection (Cisco/CCP/LGW/etc.)
+    const pstnType = detectPstnTypeEnhanced({
+      loc,
+      locTrunks,
+      locPremise: locPrem,
+      callRouting,
+      routeGroups
+    });
+
+    // Enterprise redundancy scoring
+    const redundancyScore = computeRedundancyScore(locTrunks, locPrem);
+
+    // Blast radius: how much DID inventory is in this location
+    const blastRadiusPct = pct(totalDids, tenantTotal);
+
+    // Timezone-aware E911 checks (enterprise posture)
+    const hasTimeZone = !!loc?.timeZone;
+    const hasAddress = !!loc?.address;
+    const timezoneAwareE911Risk =
+      emergencyConfigured === false || !hasTimeZone || !hasAddress;
+
+    // Capacity risk (heuristic until trunk capacity fields are confirmed)
+    // If trunks expose capacity fields later, swap `defaultChannelsPerTrunk`.
+    const defaultChannelsPerTrunk = 23; // conservative assumption
+    const estCapacity = (locTrunks.length + locPrem.length) * defaultChannelsPerTrunk;
+
+    // We can only estimate utilization org-wide from CDR sample for now.
+    // Allocate a location share based on call presence proxies (assigned DID share).
+    // It’s not perfect, but it is defensible and stable until trunk->location usage is available.
+    const assignedShare = tenantAssigned > 0 ? (assigned / tenantAssigned) : 0;
+    const estPeakConcurrentAtLoc = peakConcurrentOrg == null ? null : Math.round(peakConcurrentOrg * assignedShare);
+    const estUtilPct = (estPeakConcurrentAtLoc != null && estCapacity > 0)
+      ? pct(estPeakConcurrentAtLoc, estCapacity)
+      : null;
+
+    let capacityRisk = "UNKNOWN";
+    if (estUtilPct == null) capacityRisk = "UNKNOWN";
+    else if (estUtilPct >= 85) capacityRisk = "RED";
+    else if (estUtilPct >= 70) capacityRisk = "AMBER";
+    else capacityRisk = "GREEN";
 
     const riskFlags = {
       orphanDIDs: unassigned > 0,
       singleTrunkRisk: (locTrunks.length + locPrem.length) === 1,
       e911Missing: emergencyConfigured === false,
+      timezoneAwareE911Risk,
+      capacityRisk
     };
 
     perLocation.push({
@@ -1201,11 +1523,23 @@ async function buildPstnDeep(env, orgId) {
       name: loc?.name || loc?.displayName || "Unnamed Location",
       timeZone: loc?.timeZone || null,
       address: loc?.address || null,
+
+      // NEW: richer PSTN fields
       pstnType,
+      blastRadiusPct,
+      redundancyScore,
+      capacity: {
+        estChannels: estCapacity || 0,
+        estPeakConcurrent: estPeakConcurrentAtLoc,
+        estUtilizationPct: estUtilPct
+      },
+
+      // Keep your existing detail maps
       trunks: locTrunks.map(t => ({
         id: t?.id || null,
         name: t?.name || t?.displayName || "Unnamed Trunk",
         type: t?.type || t?.trunkType || null,
+        providerName: t?.providerName || t?.provider || null,
         status: t?.status || null,
         failoverConfigured: typeof t?.failoverConfigured !== "undefined" ? !!t.failoverConfigured : null
       })),
@@ -1215,6 +1549,7 @@ async function buildPstnDeep(env, orgId) {
         type: p?.type || null,
         status: p?.status || null
       })),
+
       dids: { total: totalDids, assigned, unassigned },
       emergencyConfigured,
       riskFlags
@@ -1226,31 +1561,82 @@ async function buildPstnDeep(env, orgId) {
     trunks: trunks.length,
     premisePstnConnections: premise.length,
     didsTotal: numbers.length,
-    didsUnassigned: Math.max(0, numbers.length - numbers.filter(isAssignedNumber).length),
+    didsAssigned: tenantAssigned,
+    didsUnassigned: Math.max(0, numbers.length - tenantAssigned),
     routeGroups: routeGroups.length
   };
+
+  const apiDegradation = deriveApiDegradation(diagnostics);
 
   const risk = {
     orphanDIDs: perLocation.some(l => l.riskFlags.orphanDIDs),
     singleTrunkRisk: perLocation.some(l => l.riskFlags.singleTrunkRisk),
     e911Missing: perLocation.some(l => l.riskFlags.e911Missing === true),
-    apiDegraded: diagnostics.some(d => !d.ok && (d.status === 403 || d.status === 404 || d.status >= 500))
+    timezoneAwareE911Risk: perLocation.some(l => l.riskFlags.timezoneAwareE911Risk === true),
+    capacityRed: perLocation.some(l => l.riskFlags.capacityRisk === "RED"),
+    capacityAmber: perLocation.some(l => l.riskFlags.capacityRisk === "AMBER"),
+    apiDegraded: !apiDegradation.ok
   };
 
+  // Reliability score (your existing style, extended)
   let pstnReliabilityScore = 100;
   if (risk.orphanDIDs) pstnReliabilityScore -= 10;
   if (risk.singleTrunkRisk) pstnReliabilityScore -= 15;
   if (risk.e911Missing) pstnReliabilityScore -= 25;
+  if (risk.timezoneAwareE911Risk) pstnReliabilityScore -= 10;
   if (risk.apiDegraded) pstnReliabilityScore -= 10;
-  if (pstnReliabilityScore < 0) pstnReliabilityScore = 0;
+  pstnReliabilityScore = clamp(pstnReliabilityScore, 0, 100);
+
+  // NEW: Redundancy score (avg across locations)
+  const avgRedundancy = perLocation.length
+    ? Math.round(sum(perLocation, l => l.redundancyScore) / perLocation.length)
+    : 0;
+
+  // NEW: Capacity score based on modeled risk
+  let pstnCapacityScore = 100;
+  if (risk.capacityAmber) pstnCapacityScore -= 10;
+  if (risk.capacityRed) pstnCapacityScore -= 25;
+  if (risk.apiDegraded) pstnCapacityScore -= 5;
+  pstnCapacityScore = clamp(pstnCapacityScore, 0, 100);
+
+  // NEW: Observability PSTN score (what you can feed into global RAG)
+  const pstnObservabilityScore = clamp(
+    Math.round((pstnReliabilityScore * 0.55) + (avgRedundancy * 0.25) + (pstnCapacityScore * 0.20)),
+    0,
+    100
+  );
 
   return {
     orgId,
     generatedAt: new Date().toISOString(),
-    scores: { pstnReliabilityScore },
+
+    // NEW: richer scoring layer (keeps your old score, adds more)
+    scores: {
+      pstnReliabilityScore,
+      pstnCapacityScore,
+      pstnRedundancyScore: avgRedundancy,
+      pstnObservabilityScore
+    },
+
     totals,
     risk,
+
+    // NEW: diagnostics rollup for pstn.diagnostics panel
+    apiDegradation,
+    modeling: {
+      cdrConcurrency: cdrModel.ok ? {
+        ok: true,
+        peakConcurrentEstimate: cdrModel.peakConcurrentEstimate,
+        sampledCalls: cdrModel.sampledCalls
+      } : {
+        ok: false,
+        reason: cdrModel.reason || "unknown",
+        diag: cdrModel.diag || null
+      }
+    },
+
     locations: perLocation,
+
     routing: {
       routeGroups: routeGroups.map(rg => ({
         id: rg?.id || null,
@@ -1259,6 +1645,7 @@ async function buildPstnDeep(env, orgId) {
       })),
       callRouting
     },
+
     diagnostics
   };
 }
@@ -1286,13 +1673,15 @@ const orgs = rawOrgs.filter(o => {
       const orgName = org.displayName || org.name || "Unknown";
 
      let deficit = 0;
-let offlineDevices = 0;
-let callVolume = 0;
+     let offlineDevices = 0;
+     let callVolume = 0;
 
-let analyticsFailed = false;
-let cdrFailed = false;
-let pstnFailed = false;
-let licenseFailed = false;
+     let analyticsFailed = false;
+     let cdrFailed = false;
+     let pstnFailed = false;
+     let licenseFailed = false;
+     let pstnScore = null;
+     let pstnRisk = null;
 
      try {
   const cdrProbe = await webexFetch(env, "/cdr/calls?max=1", orgId);
@@ -1322,7 +1711,17 @@ try {
   analyticsFailed = true;
 }
 
-
+try {
+  const pstnSnap = await env.WEBEX.get(`pstn:${orgId}`, { type: "json" });
+  if (pstnSnap?.scores) {
+    pstnScore = pstnSnap.scores.pstnObservabilityScore ?? pstnSnap.scores.pstnReliabilityScore ?? null;
+    pstnRisk = pstnSnap.risk || null;
+  } else {
+    pstnFailed = true; // you already track pstnFailed
+  }
+} catch {
+  pstnFailed = true;
+}
 
 
       // Licenses
@@ -1353,12 +1752,14 @@ if (!pstnResult.ok) {
 }
 
 
-     return {
+   return {
   orgId,
   orgName,
   deficit,
   offlineDevices,
   callVolume,
+  pstnScore,
+  pstnRisk,
   failures: {
     analyticsFailed,
     cdrFailed,
@@ -1381,13 +1782,22 @@ if (!pstnResult.ok) {
 
   const tenants = await mapLimit(orgs, CONCURRENCY, perOrg);
 
-  return {
-    totalOrgs: tenants.length,
-    totalDeficits: tenants.reduce((a,t)=>a+t.deficit,0),
-    offlineDevices: tenants.reduce((a,t)=>a+t.offlineDevices,0),
-    totalCalls: tenants.reduce((a,t)=>a+t.callVolume,0),
-    tenants
-  };
+ return {
+  totalOrgs: tenants.length,
+  totalDeficits: tenants.reduce((a,t)=>a+t.deficit,0),
+  offlineDevices: tenants.reduce((a,t)=>a+t.offlineDevices,0),
+  totalCalls: tenants.reduce((a,t)=>a+t.callVolume,0),
+
+  // NEW: Global PSTN view
+  avgPstnScore: (() => {
+    const vals = tenants.map(t => Number(t.pstnScore)).filter(Number.isFinite);
+    if (!vals.length) return null;
+    return Math.round(vals.reduce((a,b)=>a+b,0) / vals.length);
+  })(),
+  pstnUnknownCount: tenants.filter(t => t.pstnScore == null).length,
+
+  tenants
+};
 }
 
 export default {
@@ -1440,10 +1850,17 @@ const publicPaths = [
   "/"
 ];
 
-if (!accessEmail && !publicPaths.includes(url.pathname)) {
- return json({ error: "access_required" }, 401);
-}
+const publicPrefixes = [
+  "/customer"
+];
 
+const isPublic =
+  publicPaths.includes(url.pathname) ||
+  publicPrefixes.some(p => url.pathname.startsWith(p));
+
+if (!accessEmail && !isPublic) {
+  return json({ error: "access_required" }, 401);
+}
 
 
       /* -----------------------------
@@ -1878,7 +2295,7 @@ if (url.pathname === "/api/debug/org-context") {
 if (url.pathname === "/api/status" && request.method === "GET") {
 
   const user = getCurrentUser(request);
-  const session = await getSession(env, user.email);
+  const session = user?.email ? await getSession(env, user.email) : null;
 
   if (!user || !user.isAdmin) {
     if (!session || !session.orgId) {
@@ -1985,7 +2402,7 @@ return json({
 if (url.pathname === "/api/incidents" && request.method === "GET") {
 
   const user = getCurrentUser(request);
-  const session = await getSession(env, user.email);
+const session = user?.email ? await getSession(env, user.email) : null;
 
   if (!user || !user.isAdmin) {
     if (!session || !session.orgId) {
@@ -2069,7 +2486,7 @@ const all = await Promise.all(
 if (url.pathname === "/api/maintenance" && request.method === "GET") {
 
   const user = getCurrentUser(request);
-  const session = await getSession(env, user.email);
+const session = user?.email ? await getSession(env, user.email) : null;
 
   if (!user || !user.isAdmin) {
     if (!session || !session.orgId) {
@@ -2173,7 +2590,7 @@ if (url.pathname === "/api/components" && request.method === "GET") {
     return json({ error: "auth_failed" }, 401);
   }
 
-  const session = await getSession(env, user.email);
+  const session = user?.email ? await getSession(env, user.email) : null;
 
   if (!user || !user.isAdmin) {
     if (!session || !session.orgId) {
@@ -2830,7 +3247,9 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
 if (url.pathname.startsWith("/api/customer/")) {
 
   const user = getCurrentUser(request);
-  const session = await getSession(env, user.email);
+ const session = user?.email
+  ? await getSession(env, user.email)
+  : null;
 
   if (!user || !user.isAdmin) {
     if (!session || !session.orgId) {
@@ -2872,20 +3291,44 @@ if (url.pathname.startsWith("/api/customer/")) {
     return json({ ok:true, analytics: result.data });
   }
 
- if (action === "cdr") {
+if (action === "cdr") {
   const now = new Date().toISOString();
   const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const max = 100;
 
-  const path =
-    `/cdr/calls?startTime=${encodeURIComponent(from)}` +
-    `&endTime=${encodeURIComponent(now)}` +
-    `&max=100`;
+  // Prefer feed style first (often required for org-scoped access)
+  const try1 = await webexFetchSafe(
+    env,
+    `/cdr_feed?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=${max}`,
+    resolvedOrgId
+  );
 
-  const result = await webexFetch(env, path, resolvedOrgId);
+  // Fallback to your current call path if feed not supported
+  const try2 = try1.ok ? null : await webexFetchSafe(
+    env,
+    `/cdr/calls?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=${max}`,
+    resolvedOrgId
+  );
 
-  if (!result.ok) return json({ ok:false, error:"webex_cdr_failed" }, 500);
+  const picked = (try1.ok ? try1 : try2);
 
-  return json({ ok:true, records: result.data.items || [] });
+  // Return diagnostics but don’t 500 the tenant page
+  if (!picked || !picked.ok) {
+    return json({
+      ok: false,
+      error: "cdr_unavailable",
+      diag: picked ? diag("cdr", picked) : { name:"cdr", ok:false, status:0, error:"no_attempt" }
+    }, 200);
+  }
+
+  const records = normalizeCdrItems(picked.data);
+
+  return json({
+    ok: true,
+    source: try1.ok ? "cdr_feed" : "cdr_calls",
+    count: records.length,
+    records
+  }, 200);
 }
 
   if (action === "pstn-health") {
@@ -2896,12 +3339,44 @@ if (url.pathname.startsWith("/api/customer/")) {
     // ----------------------------------------------------
   // OPTIONAL: PSTN snapshot
   // GET /api/customer/:key/pstn
-  // ----------------------------------------------------
-  if (action === "pstn") {
-    const snap = await env.WEBEX.get(`pstn:${resolvedOrgId}`, { type: "json" });
-    if (!snap) return json({ ok: false, error: "pstn_not_available" }, 404);
-    return json({ ok: true, pstn: snap }, 200);
-  }
+// ----------------------------------------------------
+// PSTN snapshot
+// GET /api/customer/:key/pstn
+// ----------------------------------------------------
+if (action === "pstn") {
+  const snap = await env.WEBEX.get(`pstn:${resolvedOrgId}`, { type: "json" });
+  if (!snap) return json({ ok: false, error: "pstn_not_available" }, 404);
+  return json({ ok: true, pstn: snap }, 200);
+}
+
+// ----------------------------------------------------
+// PSTN trend
+// GET /api/customer/:key/pstn-trend
+// ----------------------------------------------------
+if (action === "pstn-trend") {
+  const trend = await env.WEBEX.get(`pstnTrend:${resolvedOrgId}`, { type: "json" });
+  return json({ ok: true, trend: trend?.items || [] }, 200);
+}
+
+// ----------------------------------------------------
+// PSTN predictive modeling
+// GET /api/customer/:key/pstn-predict
+// ----------------------------------------------------
+if (action === "pstn-predict") {
+  const trend = await env.WEBEX.get(`pstnTrend:${resolvedOrgId}`, { type: "json" });
+  const items = trend?.items || [];
+
+  const pstnSnap = await env.WEBEX.get(`pstn:${resolvedOrgId}`, { type: "json" });
+  const totalDids = pstnSnap?.totals?.didsTotal ?? null;
+
+  const prediction = predictDidExhaustion(items, Number(totalDids || 0), 7);
+
+  return json({
+    ok: true,
+    prediction,
+    last: items[items.length - 1] || null
+  }, 200);
+}
    // ----------------------------------------------------
   // NEW: PSTN deep (best-effort, never breaks UI)
   // GET /api/customer/:key/pstn-deep
@@ -3346,6 +3821,22 @@ if (url.pathname === "/api/cdr" && request.method === "GET") {
           kvBound: !!env.ORG_MAP_KV,
         });
       }
+if (url.pathname === "/api/debug/cdr-direct" && request.method === "GET") {
+  const orgId = url.searchParams.get("orgId");
+  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 400);
+
+  const now = new Date().toISOString();
+  const from = new Date(Date.now() - 24*60*60*1000).toISOString();
+
+  const a = await webexFetchSafe(env, `/cdr_feed?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=1`, orgId);
+  const b = a.ok ? null : await webexFetchSafe(env, `/cdr/calls?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=1`, orgId);
+
+  return json({
+    ok: true,
+    feed: diag("cdr_feed", a),
+    calls: b ? diag("cdr_calls", b) : null
+  }, 200);
+}
 /* -----------------------------
    🔎 DEBUG: Brevo env check
 ----------------------------- */
@@ -3380,21 +3871,28 @@ async scheduled(event, env, ctx) {
 
     const CONCURRENCY = 5;
 
-await mapLimit(orgs, CONCURRENCY, async (org) => {
+  await mapLimit(orgs, CONCURRENCY, async (org) => {
   const health = await computeTenantHealth(env, org.id);
   await storeHealth(env, health);
 
   const quality = await computeCallQuality(env, org.id);
-  await env.WEBEX.put(
-    `quality:${org.id}`,
-    JSON.stringify(quality),
-    { expirationTtl: 60 * 30 }
-  );
-   const pstn = await buildPstnDeep(env, org.id);
-   await storePstnSnapshot(env, org.id, pstn);
+  await env.WEBEX.put(`quality:${org.id}`, JSON.stringify(quality), { expirationTtl: 60 * 30 });
+
+  const pstn = await buildPstnDeep(env, org.id);
+  await storePstnSnapshot(env, org.id, pstn);
+
+  await appendPstnTrend(env, org.id, {
+    day: new Date().toISOString().slice(0, 10),
+    score: pstn?.scores?.pstnObservabilityScore ?? pstn?.scores?.pstnReliabilityScore ?? null,
+    reliability: pstn?.scores?.pstnReliabilityScore ?? null,
+    capacity: pstn?.scores?.pstnCapacityScore ?? null,
+    redundancy: pstn?.scores?.pstnRedundancyScore ?? null,
+    totalDids: pstn?.totals?.didsTotal ?? null,
+    assignedDids: pstn?.totals?.didsAssigned ?? null
+  });
 });
 
-// 🔥 Rebuild global snapshot ONCE
+// ✅ Global snapshot once per cron run
 try {
   const globalPayload = await computeGlobalSummary(env);
   await putGlobalSummarySnapshot(env, globalPayload);
@@ -3402,11 +3900,8 @@ try {
 } catch (e) {
   console.error("Global summary rebuild failed:", e);
 }
-      console.log("Health + Quality snapshots updated");
 
-    } catch (e) {
-      console.error("Scheduled job failed:", e.message);
-    }
+console.log("Health + Quality + PSTN snapshots updated");
 
   })());
 }
