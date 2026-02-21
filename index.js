@@ -3790,6 +3790,49 @@ if (url.pathname === "/api/analytics" && request.method === "GET") {
 if (url.pathname === "/api/cdr" && request.method === "GET") {
   return await apiCDR(env, request);
 }
+     /* -----------------------------
+   /api/pstn (GET)
+   - Admin: requires ?orgId=
+   - Customer: uses session orgId (ignores query)
+   - Returns KV snapshot if present; can force rebuild with ?refresh=1
+----------------------------- */
+if (url.pathname === "/api/pstn" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  const session = user?.email ? await getSession(env, user.email) : null;
+
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  const refresh = url.searchParams.get("refresh") === "1";
+
+  let resolvedOrgId = null;
+
+  if (user?.isAdmin) {
+    if (!requestedOrgId) return json({ error: "missing_orgId" }, 400);
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) return json({ error: "pin_required" }, 401);
+    if (session.expiresAt && session.expiresAt <= nowMs()) {
+      await clearSession(env, user.email);
+      return json({ error: "pin_required_or_expired" }, 401);
+    }
+    resolvedOrgId = session.orgId;
+  }
+
+  // Prefer snapshot (fast)
+  if (!refresh) {
+    const snap = await env.WEBEX.get(`pstn:${resolvedOrgId}`, { type: "json" });
+    if (snap) return json({ ok: true, orgId: resolvedOrgId, pstn: snap, source: "kv" }, 200);
+  }
+
+  // Rebuild on-demand (slower)
+  try {
+    const pstn = await buildPstnDeep(env, resolvedOrgId);
+    await storePstnSnapshot(env, resolvedOrgId, pstn);
+    return json({ ok: true, orgId: resolvedOrgId, pstn, source: "rebuild" }, 200);
+  } catch (e) {
+    console.error("api/pstn failed:", e);
+    return json({ ok: false, error: "pstn_failed", message: e.message }, 500);
+  }
+}
       /* -----------------------------
          🔎 DEBUG: seed + read a PIN
          GET /api/debug/pin-test
