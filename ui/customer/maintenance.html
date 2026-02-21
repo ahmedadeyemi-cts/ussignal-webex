@@ -1,1167 +1,2076 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8" />
-<title>US Signal | Webex Maintenance</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <title>US Signal | Webex Maintenance Intelligence</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<style>
-/* ======================================================
-   US Signal - Webex-style Maintenance UI
-   - Nearly identical interaction model to status.webex.com
-   - Expand row w/ light-blue highlight + animated chevron
-   - Sector (Commercial/Government)
-   - Impacted Region column
-   - Location parsing
-   - Product filter for full Commercial product list
-   - Email notification button per maintenance
-====================================================== */
+  <style>
+    /* ======================================================
+       US SIGNAL — PORTAL THEME (LIGHT/DARK)
+       - drop-in, no external deps
+    ====================================================== */
+    html[data-theme="light"]{
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --line:rgba(15,23,42,.10);
+      --shadow:0 10px 26px rgba(15,23,42,.08);
 
-:root{
-  --bg:#f6f8fb;
-  --card:#ffffff;
-  --border:#e6edf6;
-  --text:#0f172a;
-  --muted:#64748b;
-  --accent:#2563eb;
-  --accent2:#1d4ed8;
+      --accent:#0f62fe;
+      --accent2:#0b4bd4;
 
-  --pill:#e8f1ff;
-  --pillText:#1d4ed8;
+      --good:#16a34a;
+      --warn:#f59e0b;
+      --bad:#dc2626;
 
-  --rowHover:#f2f7ff;
-  --rowExpanded:#e9f2ff; /* light-blue highlight when expanded */
-  --detailBg:#f7fbff;
+      --rowHover:rgba(15,98,254,.06);
+      --chipBg:rgba(15,98,254,.10);
+      --chipText:#0b4bd4;
+    }
+    html[data-theme="dark"]{
+      --bg:#0b1220;
+      --card:#0f1b33;
+      --text:#e8eefc;
+      --muted:#a9b6d3;
+      --line:rgba(231,238,252,.10);
+      --shadow:0 12px 30px rgba(0,0,0,.35);
 
-  --success:#16a34a;
-  --warning:#f59e0b;
-  --danger:#dc2626;
+      --accent:#60a5fa;
+      --accent2:#3b82f6;
 
-  --shadow:0 10px 26px rgba(15,23,42,.08);
-}
+      --good:#22c55e;
+      --warn:#fbbf24;
+      --bad:#ef4444;
 
-html[data-theme="dark"]{
-  --bg:#0b1220;
-  --card:#0f172a;
-  --border:#1f2a3a;
-  --text:#e5e7eb;
-  --muted:#94a3b8;
-  --accent:#3b82f6;
-  --accent2:#60a5fa;
+      --rowHover:rgba(96,165,250,.10);
+      --chipBg:rgba(96,165,250,.16);
+      --chipText:#bfdbfe;
+    }
 
-  --pill:rgba(59,130,246,.18);
-  --pillText:#bfdbfe;
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    a{ color:inherit; text-decoration:none; }
+    .muted{ color:var(--muted); }
 
-  --rowHover:rgba(59,130,246,.10);
-  --rowExpanded:rgba(59,130,246,.16);
-  --detailBg:rgba(2,6,23,.25);
+    /* Layout */
+    .app{
+      display:grid;
+      grid-template-columns: 260px 1fr;
+      min-height:100vh;
+    }
+    .sidebar{
+      padding:18px 14px;
+      border-right:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+    }
+    .brand{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:10px 10px 14px;
+    }
+    .brand img{
+      width:40px;height:40px;border-radius:12px;box-shadow:var(--shadow);
+      object-fit:cover;
+    }
+    .brand h1{
+      margin:0;font-size:14px;line-height:1.2;font-weight:900;
+    }
+    .brand .sub{ font-size:12px;color:var(--muted);margin-top:3px; }
 
-  --shadow:0 14px 40px rgba(0,0,0,.35);
-}
+    .nav{
+      margin-top:12px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      padding:0 6px;
+    }
+    .nav a{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 12px;
+      border:1px solid transparent;
+      border-radius:14px;
+      color:var(--text);
+      font-weight:800;
+      font-size:13px;
+    }
+    .nav a:hover{
+      background:var(--rowHover);
+      border-color:var(--line);
+    }
+    .nav a.active{
+      background:var(--chipBg);
+      border-color:rgba(15,98,254,.22);
+      color:var(--chipText);
+    }
+    .pill{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(0,0,0,.05);
+      border:1px solid var(--line);
+      font-weight:900;
+    }
 
-*{ box-sizing:border-box; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  min-height:100vh;
-}
+    .sideCard{
+      margin:12px 6px 0;
+      padding:12px;
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+    }
+    .sideCard .row{
+      display:flex; justify-content:space-between; gap:10px; align-items:center;
+      margin-top:10px;
+      font-size:12px;
+    }
+    .rag{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:var(--chipBg);
+      color:var(--chipText);
+      font-weight:950;
+      font-size:12px;
+      width:100%;
+      justify-content:center;
+    }
+    .dot{
+      width:9px;height:9px;border-radius:999px;background:var(--warn);
+      box-shadow:0 0 0 4px rgba(0,0,0,.05);
+    }
 
-/* ======================================================
-   Layout (simple portal frame)
-====================================================== */
-.shell{
-  display:flex;
-  min-height:100vh;
-}
+    .main{
+      display:flex;
+      flex-direction:column;
+    }
+    .topbar{
+      position:sticky; top:0; z-index:10;
+      display:flex; justify-content:space-between; align-items:center; gap:12px;
+      padding:14px 18px;
+      border-bottom:1px solid var(--line);
+      background:rgba(255,255,255,.55);
+      backdrop-filter: blur(10px);
+    }
+    html[data-theme="dark"] .topbar{
+      background:rgba(11,18,32,.65);
+    }
+    .topbar h2{ margin:0; font-size:15px; font-weight:950; }
+    .topbar .meta{
+      font-size:12px; color:var(--muted); font-weight:800;
+    }
+    .topbarRight{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    }
 
-.sidebar{
-  width:260px;
-  background:var(--card);
-  border-right:1px solid var(--border);
-  padding:18px 18px 20px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
+    .btn{
+      appearance:none;
+      border:1px solid var(--line);
+      background:var(--card);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:14px;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow:0 6px 16px rgba(0,0,0,.06);
+      font-size:13px;
+    }
+    .btn:hover{ transform: translateY(-1px); }
+    .btn.primary{
+      background:linear-gradient(180deg, var(--accent), var(--accent2));
+      color:white;
+      border-color:rgba(255,255,255,.12);
+    }
+    .btn.ghost{
+      background:transparent;
+      box-shadow:none;
+    }
 
-.brand{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  padding:10px 10px 14px;
-  border-bottom:1px solid var(--border);
-  margin-bottom:8px;
-}
-.brand .title{
-  font-weight:850;
-  letter-spacing:.2px;
-}
-.brand .sub{
-  color:var(--muted);
-  font-size:12px;
-}
+    .content{
+      padding:18px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
 
-.brand img{
-  max-height:40px;
-  width:auto;
-  height:auto;
-  display:block;
-  object-fit:contain;
-}
-.nav{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  padding-top:6px;
-}
-.nav a{
-  text-decoration:none;
-  color:var(--text);
-  font-size:14px;
-  padding:10px 12px;
-  border-radius:10px;
-}
-.nav a:hover{ background:var(--rowHover); }
-.nav a.active{
-  background:var(--pill);
-  color:var(--pillText);
-  font-weight:700;
-}
+    .panel{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:20px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
 
-.main{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-}
+    .kpis{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap:12px;
+      padding:16px;
+    }
+    .kpi{
+      padding:14px;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0));
+      box-shadow:none;
+    }
+    .kpi .label{ font-size:12px; color:var(--muted); font-weight:900; }
+    .kpi .value{ font-size:22px; font-weight:1000; margin-top:6px; letter-spacing:-.02em; }
+    .kpi .hint{ font-size:12px; color:var(--muted); margin-top:6px; font-weight:800; line-height:1.35; }
 
-.topbar{
-  position:sticky;
-  top:0;
-  z-index:5;
-  background:var(--card);
-  border-bottom:1px solid var(--border);
-  padding:16px 20px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:14px;
-}
-.pageTitle{
-  display:flex;
-  flex-direction:column;
-  gap:2px;
-}
-.pageTitle h1{
-  margin:0;
-  font-size:18px;
-  font-weight:850;
-  letter-spacing:.2px;
-}
-.pageTitle p{
-  margin:0;
-  color:var(--muted);
-  font-size:12px;
-}
+    .row2{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:14px;
+    }
+    .row3{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
 
-.actions{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-.btn{
-  border:1px solid var(--border);
-  background:transparent;
-  color:var(--text);
-  padding:9px 12px;
-  border-radius:12px;
-  cursor:pointer;
-  font-weight:700;
-  font-size:13px;
-}
-.btn:hover{ background:var(--rowHover); }
-.btn.primary{
-  background:var(--accent);
-  color:#fff;
-  border-color:transparent;
-}
-.btn.primary:hover{ opacity:.92; }
-.btn:disabled{
-  opacity:.6;
-  cursor:not-allowed;
-}
+    /* Filters */
+    .filters{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      padding:14px 16px;
+      border-bottom:1px solid var(--line);
+    }
+    .search{
+      flex:1;
+      min-width:240px;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:transparent;
+      color:var(--text);
+      font-weight:800;
+      outline:none;
+    }
+    .select{
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:transparent;
+      color:var(--text);
+      font-weight:900;
+      outline:none;
+    }
 
-.content{
-  padding:22px 20px 40px;
-  max-width:1200px;
-  width:100%;
-}
+    /* Table */
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+    }
+    thead th{
+      text-align:left;
+      padding:12px 16px;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:1000;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      border-bottom:1px solid var(--line);
+    }
+    tbody td{
+      padding:12px 16px;
+      border-bottom:1px solid var(--line);
+      vertical-align:top;
+      font-weight:800;
+    }
+    tbody tr:hover{ background:var(--rowHover); cursor:pointer; }
 
-/* ======================================================
-   KPI (Webex-ish tiles)
-====================================================== */
-.kpis{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:14px;
-  margin:0 0 14px;
-}
-@media (max-width: 980px){
-  .kpis{ grid-template-columns:repeat(2,minmax(0,1fr)); }
-}
-@media (max-width: 520px){
-  .kpis{ grid-template-columns:1fr; }
-}
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      font-weight:950;
+      font-size:12px;
+      background:rgba(0,0,0,.03);
+      white-space:nowrap;
+    }
+    .tag .b{
+      width:10px;height:10px;border-radius:999px;
+      background:var(--muted);
+    }
+    .tag.good .b{ background:var(--good); }
+    .tag.warn .b{ background:var(--warn); }
+    .tag.bad .b{ background:var(--bad); }
 
-.kpi{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  padding:14px 14px 12px;
-}
-.kpi .label{
-  color:var(--muted);
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  font-weight:800;
-}
-.kpi .value{
-  font-size:26px;
-  font-weight:900;
-  margin-top:6px;
-}
-.kpi .hint{
-  color:var(--muted);
-  font-size:12px;
-  margin-top:6px;
-}
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      background:var(--chipBg);
+      color:var(--chipText);
+      border:1px solid var(--line);
+      font-weight:950;
+      font-size:12px;
+    }
 
-/* ======================================================
-   Filters (Webex-style chip bar)
-====================================================== */
-.filterRow{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-  margin:14px 0 14px;
-}
+    /* Heatmap */
+    .hmGrid{
+      display:grid;
+      grid-template-columns:140px repeat(4,1fr);
+      gap:8px;
+      padding:16px;
+    }
+    .hmCell{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px;
+      background:var(--card);
+      min-height:52px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:1000;
+    }
+    .hmHead{
+      justify-content:flex-start;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:1000;
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+    }
+    .hmRowHead{
+      justify-content:flex-start;
+      font-size:13px;
+      font-weight:1000;
+    }
+    .hmLow{ background:rgba(22,163,74,.10); color:var(--good); }
+    .hmMid{ background:rgba(245,158,11,.12); color:var(--warn); }
+    .hmHigh{ background:rgba(220,38,38,.12); color:var(--bad); }
 
-.select,
-.search{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:10px 12px;
-  font-size:13px;
-  color:var(--text);
-  outline:none;
-}
-.search{
-  min-width:260px;
-}
-.select{
-  min-width:220px;
-}
-.chip{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:8px 10px;
-  border-radius:999px;
-  background:var(--pill);
-  color:var(--pillText);
-  font-size:12px;
-  font-weight:800;
-  border:1px solid rgba(0,0,0,0);
-}
-.chip .dot{
-  width:7px; height:7px; border-radius:99px;
-  background:currentColor;
-  opacity:.65;
-}
+    /* Modal */
+    .modalOverlay{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+      padding:18px;
+    }
+    .modal{
+      width:min(1100px, 100%);
+      max-height:90vh;
+      overflow:auto;
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:22px;
+      box-shadow:0 24px 60px rgba(0,0,0,.35);
+      padding:16px;
+    }
+    .modal h3{ margin:0; font-weight:1000; }
+    .modal .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+      margin-top:12px;
+    }
+    .box{
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:12px;
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0));
+    }
+    .timelineItem{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+      margin-top:10px;
+      background:rgba(0,0,0,.02);
+    }
+    .htmlBox{
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:12px;
+      overflow:auto;
+      background:rgba(0,0,0,.02);
+    }
+    .htmlBox *{ max-width:100%; }
 
-/* ======================================================
-   Table (Webex-like)
-====================================================== */
-.panel{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:18px;
-  box-shadow:var(--shadow);
-  overflow:hidden;
-}
+    /* Simple sparkline canvas */
+    .sparkWrap{
+      display:flex; align-items:center; gap:10px; justify-content:space-between;
+    }
+    canvas{ display:block; }
 
-.tableWrap{ overflow:auto; }
+    /* Print */
+    @media print{
+      .sidebar, .topbar, .filters, #maintenancePanel { display:none !important; }
+      #execPrintOverlay{
+        position:static !important;
+        inset:auto !important;
+        background:transparent !important;
+        display:block !important;
+        padding:0 !important;
+      }
+      #execPrintOverlay .modal{
+        max-height:none !important;
+        box-shadow:none !important;
+        border:1px solid #ddd !important;
+      }
+    }
 
-table{
-  width:100%;
-  border-collapse:separate;
-  border-spacing:0;
-  min-width:980px;
-}
-
-thead th{
-  text-align:left;
-  font-size:12px;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  font-weight:900;
-  padding:14px 14px;
-  border-bottom:1px solid var(--border);
-  background:linear-gradient(to bottom, rgba(0,0,0,0.02), rgba(0,0,0,0));
-}
-tbody td{
-  padding:14px 14px;
-  border-bottom:1px solid var(--border);
-  vertical-align:top;
-  font-size:13px;
-}
-tbody tr.dataRow{
-  cursor:pointer;
-  transition:background .18s ease;
-}
-tbody tr.dataRow:hover{
-  background:var(--rowHover);
-}
-tbody tr.dataRow.expanded{
-  background:var(--rowExpanded);
-}
-
-.col-narrow{ width:120px; }
-.col-mid{ width:170px; }
-.col-wide{ width:440px; }
-
-.badge{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:6px 10px;
-  border-radius:999px;
-  font-weight:900;
-  font-size:12px;
-  letter-spacing:.01em;
-}
-.badge .bDot{
-  width:7px; height:7px; border-radius:99px;
-  background:currentColor;
-  opacity:.8;
-}
-
-.badge.scheduled{ background:rgba(37,99,235,.12); color:var(--accent2); }
-.badge.inprogress{ background:rgba(245,158,11,.18); color:#b45309; }
-.badge.completed{ background:rgba(22,163,74,.18); color:#166534; }
-.badge.unknown{ background:rgba(100,116,139,.18); color:var(--muted); }
-
-.muted{ color:var(--muted); }
-
-.rowHead{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-/* Animated expand arrow */
-.chev{
-  width:18px;
-  height:18px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:8px;
-  border:1px solid var(--border);
-  background:rgba(255,255,255,0.0);
-  transition:transform .18s ease, background .18s ease;
-  flex:0 0 auto;
-}
-html[data-theme="dark"] .chev{ background:rgba(255,255,255,0.03); }
-.chev svg{ width:14px; height:14px; opacity:.85; }
-.dataRow.expanded .chev{ transform:rotate(90deg); background:rgba(37,99,235,.10); }
-
-.titleLine{
-  font-weight:850;
-  line-height:1.25;
-}
-.subLine{
-  margin-top:4px;
-  font-size:12px;
-  color:var(--muted);
-}
-
-/* Email button */
-.btnEmail{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  padding:8px 10px;
-  border-radius:12px;
-  border:1px solid rgba(0,0,0,0);
-  background:var(--accent);
-  color:#fff;
-  font-size:12px;
-  font-weight:900;
-  cursor:pointer;
-}
-.btnEmail:hover{ opacity:.9; }
-
-/* ======================================================
-   Detail row
-====================================================== */
-.detailRow td{
-  padding:0;
-  border-bottom:1px solid var(--border);
-}
-.detailCard{
-  background:var(--detailBg);
-  border-top:1px solid var(--border);
-  padding:16px 16px 18px;
-  display:grid;
-  grid-template-columns: 1.3fr .7fr;
-  gap:14px;
-}
-@media (max-width: 980px){
-  .detailCard{ grid-template-columns:1fr; }
-}
-
-.detailBlock{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:16px;
-  padding:14px 14px 12px;
-}
-.detailBlock h3{
-  margin:0 0 10px;
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  color:var(--muted);
-  font-weight:950;
-}
-.detailBlock .body{
-  font-size:13px;
-  line-height:1.55;
-}
-.detailBlock .body b{
-  font-weight:950;
-}
-.detailBlock .body a{
-  color:var(--accent);
-  font-weight:850;
-  text-decoration:none;
-}
-.detailBlock .body a:hover{ text-decoration:underline; }
-
-.kv{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-.kvItem{
-  display:flex;
-  gap:10px;
-  justify-content:space-between;
-  border-bottom:1px dashed var(--border);
-  padding-bottom:10px;
-}
-.kvItem:last-child{
-  border-bottom:none;
-  padding-bottom:0;
-}
-.kvItem .k{
-  color:var(--muted);
-  font-weight:900;
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-}
-.kvItem .v{
-  text-align:right;
-  font-weight:850;
-  font-size:13px;
-}
-
-/* Empty / errors */
-.notice{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:18px;
-  padding:18px;
-  box-shadow:var(--shadow);
-  color:var(--muted);
-  font-size:13px;
-}
-
-/* Small helper */
-.sep{
-  height:1px;
-  background:var(--border);
-  margin:10px 0;
-}
-</style>
+    @media (max-width: 980px){
+      .app{ grid-template-columns: 1fr; }
+      .sidebar{ display:none; }
+      .kpis{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .row2{ grid-template-columns: 1fr; }
+      .row3{ grid-template-columns: 1fr; }
+      .modal .grid{ grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 
 <body>
-   
+  <div class="app">
+    <!-- ================= Sidebar ================= -->
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="/assets/ussignal-logo.jpg" alt="US Signal" />
+        <div>
+          <h1>US Signal</h1>
+          <div class="sub">Webex Customer Portal</div>
+        </div>
+      </div>
 
-<div class="shell">
+      <nav class="nav">
+        <a href="/customer" class=""><span>Home</span><span class="pill">Hub</span></a>
+        <a href="/customer/status" class=""><span>Status</span><span class="pill" id="sideOverall">—</span></a>
+        <a href="/customer/incidents" class=""><span>Incidents</span><span class="pill" id="sideInc">—</span></a>
+        <a href="/customer/maintenance" class="active"><span>Maintenance</span><span class="pill" id="sideMaint">—</span></a>
+        <a href="/customer/licenses" class=""><span>Licenses</span><span class="pill" id="sideLic">—</span></a>
+        <a href="/customer/devices" class=""><span>Devices</span><span class="pill" id="sideDev">—</span></a>
+        <a href="/customer/analytics" class=""><span>Analytics</span><span class="pill">QoS</span></a>
+        <a href="/customer/cdr" class=""><span>CDR</span><span class="pill">Calls</span></a>
+      </nav>
 
-  <aside class="sidebar">
-    <div class="brand">
-       <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
-      <div class="title">US Signal</div>
-      <div class="sub">Webex Partner Portal</div>
-    </div>
+      <div class="sideCard">
+        <div style="font-weight:1000;font-size:13px;">Tenant Context</div>
+        <div class="muted" style="margin-top:6px;font-size:12px;line-height:1.45;">
+          <div><b id="tenantName">—</b></div>
+          <div>Org ID: <span id="tenantOrgId">—</span></div>
+          <div>Role: <span id="tenantRole">—</span></div>
+          <div>Timezone: <span id="tenantTz">—</span></div>
+        </div>
 
-    <nav class="nav">
-      <a href="/customer">Dashboard</a>
-      <a href="/customer/maintenance" class="active">Maintenance</a>
-      <a href="/customer/status">Status</a>
-      <a href="/customer/incidents">Incidents</a>
-    </nav>
+        <div style="height:10px"></div>
+        <div class="rag">
+          <span class="dot" id="ragDot"></span>
+          <span id="ragText">Risk: —</span>
+        </div>
 
-    <div style="margin-top:auto; padding-top:10px; border-top:1px solid var(--border);">
-      <div class="muted" style="font-size:12px; line-height:1.4;">
-        Data source: status.webex.com<br/>
-        Cached locally for 5 minutes
+        <div class="row">
+          <span class="muted" style="font-weight:900;">Last refresh</span>
+          <span style="font-weight:1000;" id="sideRefresh">—</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ================= Main ================= -->
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2>Maintenance Intelligence</h2>
+          <div class="meta" id="topMeta">Loading tenant…</div>
+        </div>
+
+        <div class="topbarRight">
+          <button class="btn ghost" type="button" id="themeBtn">Toggle Theme</button>
+          <button class="btn" type="button" onclick="openExecPrint()">Executive PDF</button>
+          <button class="btn primary" type="button" onclick="logout()">Logout</button>
+        </div>
+      </header>
+
+      <section class="content">
+
+        <!-- ================= Executive Brief + Countdown + Risk ================= -->
+        <div class="panel">
+          <div style="padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+              <div style="min-width:280px;flex:1;">
+                <div style="font-weight:1000;font-size:14px;">Maintenance Executive Brief</div>
+                <div class="muted" id="execBrief" style="margin-top:8px;line-height:1.55;font-weight:850;">Loading…</div>
+                <div class="muted" style="margin-top:10px;font-size:12px;font-weight:900;">
+                  Tenant timezone: <b id="tzLabel">—</b> • Last refresh: <b id="refreshLabel">—</b>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <span class="chip"><span class="dot" id="riskDot"></span><span id="riskPillText">RISK: —</span></span>
+                <span class="chip"><span class="dot" id="slaDot"></span><span id="slaPillText">SLA RISK: —</span></span>
+              </div>
+            </div>
+
+            <div style="height:12px"></div>
+
+            <div class="kpis" style="padding:0;">
+              <div class="kpi">
+                <div class="label">Next Window</div>
+                <div class="value" id="nextWindowTitle" style="font-size:16px;">—</div>
+                <div class="hint" id="nextWindowMeta">—</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Live Countdown</div>
+                <div class="value" id="countdown" style="font-size:22px;">—</div>
+                <div class="hint" id="countdownHint">—</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Overlap Conflicts</div>
+                <div class="value" id="overlapCount">—</div>
+                <div class="hint" id="overlapHint">—</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Blast Radius</div>
+                <div class="value" id="blastRadius">—</div>
+                <div class="hint" id="blastHint">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= Heatmap + Clusters ================= -->
+        <div class="row2">
+          <div class="panel">
+            <div style="padding:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+              <div>
+                <div style="font-weight:1000;font-size:14px;">Impact vs Region Heatmap</div>
+                <div class="muted" style="margin-top:6px;font-size:12px;font-weight:850;">
+                  Concentration of upcoming/active maintenance by region and computed impact (blast + SLA + failure probability).
+                </div>
+              </div>
+              <div class="muted" style="font-size:12px;font-weight:1000;" id="heatmapHint">—</div>
+            </div>
+            <div class="hmGrid" id="heatmapGrid"></div>
+          </div>
+
+          <div class="panel">
+            <div style="padding:16px;">
+              <div style="font-weight:1000;font-size:14px;">Predictive Window Clusters</div>
+              <div class="muted" style="margin-top:6px;font-size:12px;font-weight:850;">
+                Groups similar changes by time bucket + product keywords + description fingerprint.
+              </div>
+              <div style="height:12px"></div>
+              <div id="clusterList" class="muted" style="font-size:13px;line-height:1.55;font-weight:850;">—</div>
+
+              <div style="height:12px"></div>
+
+              <div class="box">
+                <div style="font-weight:1000;font-size:13px;">30-Day Maintenance Trend</div>
+                <div class="muted" style="margin-top:6px;font-size:12px;font-weight:850;">
+                  Based on scheduled start times (best-effort from detailsHtml / updates).
+                </div>
+                <div style="height:8px"></div>
+                <div class="sparkWrap">
+                  <div class="muted" style="font-size:12px;font-weight:900;" id="trendLabel">—</div>
+                  <canvas id="trendCanvas" width="260" height="46"></canvas>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= Notification Center ================= -->
+        <div class="panel">
+          <div style="padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+              <div style="min-width:280px;flex:1;">
+                <div style="font-weight:1000;font-size:14px;">Notification Center</div>
+                <div class="muted" style="margin-top:6px;font-size:12px;font-weight:850;line-height:1.5;">
+                  Schedule alerts for upcoming maintenance windows. This scheduler runs while this page is open.
+                  Email uses <b>best-effort</b>: it will call <code>/api/maintenance/notify</code> if you add it later; otherwise it falls back to a mail draft.
+                  Slack webhooks may be blocked by browser CORS; we copy the payload if blocked.
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <button class="btn" type="button" onclick="testNotifyNow()">Test Alert</button>
+                <button class="btn primary" type="button" onclick="saveNotifySettings()">Save</button>
+              </div>
+            </div>
+
+            <div style="height:12px"></div>
+
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <label class="muted" style="font-weight:1000;font-size:12px;">Email</label>
+              <input id="notifyEmail" class="search" style="min-width:260px;flex:0;" type="email" placeholder="alerts@yourcompany.com" />
+
+              <label class="muted" style="font-weight:1000;font-size:12px;">Minutes before</label>
+              <select id="notifyLead" class="select" style="min-width:140px;">
+                <option value="15">15</option>
+                <option value="30" selected>30</option>
+                <option value="60">60</option>
+                <option value="180">180</option>
+                <option value="720">720</option>
+              </select>
+
+              <label class="muted" style="font-weight:1000;font-size:12px;display:flex;align-items:center;gap:8px;">
+                <input id="notifyOnlyRelevant" type="checkbox" />
+                Only changes relevant to my tenant (best-effort)
+              </label>
+
+              <label class="muted" style="font-weight:1000;font-size:12px;display:flex;align-items:center;gap:8px;">
+                <input id="notifySlackEnable" type="checkbox" />
+                Slack webhook
+              </label>
+
+              <input id="slackWebhook" class="search" style="min-width:320px;flex:0;" type="text" placeholder="https://hooks.slack.com/services/…" />
+            </div>
+
+            <div class="muted" id="notifyStatus" style="margin-top:10px;font-size:12px;font-weight:1000;">—</div>
+            <div class="muted" id="slackStatus" style="margin-top:6px;font-size:12px;font-weight:1000;display:none;"></div>
+          </div>
+        </div>
+
+        <!-- ================= Maintenance Table ================= -->
+        <div class="panel" id="maintenancePanel">
+          <div class="filters">
+            <input id="q" class="search" placeholder="Search maintenance (name, region, product, description)..." />
+            <select id="statusFilter" class="select">
+              <option value="all" selected>All Status</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+            <select id="impactFilter" class="select">
+              <option value="all" selected>All Impact</option>
+              <option value="critical">Critical</option>
+              <option value="major">Major</option>
+              <option value="minor">Minor</option>
+              <option value="maintenance">Maintenance</option>
+            </select>
+            <button class="btn" type="button" onclick="refresh()">Refresh</button>
+            <button class="btn" type="button" onclick="exportCsv()">Export CSV</button>
+          </div>
+
+          <div style="overflow:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Maintenance</th>
+                  <th>Window (Start → End)</th>
+                  <th>Region</th>
+                  <th>Products</th>
+                  <th>Risk (SLA / Failure / Blast)</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+
+          <div style="padding:14px 16px;" class="muted">
+            <div style="font-size:12px;font-weight:900;" id="footNote">—</div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <!-- ================= Detail Modal ================= -->
+  <div id="detailOverlay" class="modalOverlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="min-width:260px;flex:1;">
+          <h3 id="dTitle">—</h3>
+          <div class="muted" id="dSub" style="margin-top:6px;font-size:12px;font-weight:900;">—</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn" type="button" onclick="exportICSForCurrent()">ICS</button>
+          <button class="btn" type="button" onclick="copySlackPayload()">Copy Slack Payload</button>
+          <button class="btn primary" type="button" onclick="closeDetail()">Close</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="box">
+          <div style="font-weight:1000;font-size:13px;">Risk & Scope</div>
+          <div style="height:8px"></div>
+          <div id="dRisk" class="muted" style="font-size:13px;line-height:1.55;font-weight:850;">—</div>
+          <div style="height:12px"></div>
+          <div style="font-weight:1000;font-size:13px;">Overlap Conflicts</div>
+          <div id="dOverlaps" class="muted" style="margin-top:8px;font-size:13px;line-height:1.55;font-weight:850;">—</div>
+        </div>
+
+        <div class="box">
+          <div style="font-weight:1000;font-size:13px;">Timeline Updates</div>
+          <div id="dTimeline" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="box" style="grid-column:1 / -1;">
+          <div style="font-weight:1000;font-size:13px;">Provider Detail (Sanitized HTML)</div>
+          <div class="muted" style="margin-top:6px;font-size:12px;font-weight:850;">
+            This is the upstream maintenance detail as published on status.webex.com. We preserve it but render safely.
+          </div>
+          <div style="height:10px"></div>
+          <div id="dHtml" class="htmlBox"></div>
+        </div>
       </div>
     </div>
-  </aside>
+  </div>
 
-  <main class="main">
-    <div class="topbar">
-      <div class="pageTitle">
-        <h1>Webex Maintenance</h1>
-        <p>Commercial and Government maintenance windows, filtered by product and region.</p>
-      </div>
-
-      <div class="actions">
-  <a 
-    href="https://status.webex.com/maintenance?lang=en_US" 
-    target="_blank" 
-    rel="noopener noreferrer"
-    class="btn"
-    style="text-decoration:none; display:inline-flex; align-items:center;"
-  >
-    Webex Maintenance
-  </a>
-
-  <button id="btnTheme" class="btn" type="button">Toggle Theme</button>
-  <button id="btnRefresh" class="btn primary" type="button">Refresh</button>
-</div>
-</div>
-
-    <div class="content">
-
-      <div class="kpis">
-        <div class="kpi">
-          <div class="label">Upcoming</div>
-          <div class="value" id="kUpcoming">—</div>
-          <div class="hint">Scheduled windows</div>
+  <!-- ================= Executive Print Modal ================= -->
+  <div id="execPrintOverlay" class="modalOverlay">
+    <div class="modal" style="width:980px;">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+        <div>
+          <h3 style="margin:0;">Maintenance Executive Summary</h3>
+          <div class="muted" style="margin-top:6px;font-size:12px;font-weight:900;" id="execPrintSubtitle">—</div>
         </div>
-        <div class="kpi">
-          <div class="label">Active</div>
-          <div class="value" id="kActive">—</div>
-          <div class="hint">In progress</div>
-        </div>
-        <div class="kpi">
-          <div class="label">Completed</div>
-          <div class="value" id="kCompleted">—</div>
-          <div class="hint">Completed</div>
-        </div>
-        <div class="kpi">
-          <div class="label">Total</div>
-          <div class="value" id="kTotal">—</div>
-          <div class="hint">All results</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn" type="button" onclick="printExec()">Print / PDF</button>
+          <button class="btn primary" type="button" onclick="closeExecPrint()">Close</button>
         </div>
       </div>
-
-      <div class="filterRow">
-        <span class="chip"><span class="dot"></span>US Signal view</span>
-
-        <select id="sectorFilter" class="select" aria-label="Sector filter">
-          <option value="">All Sectors</option>
-          <option value="Commercial">Commercial</option>
-          <option value="Government">Government</option>
-        </select>
-
-        <select id="productFilter" class="select" aria-label="Product filter">
-          <option value="">All Products</option>
-          <option value="Webex Meetings">Webex Meetings</option>
-          <option value="Webex App">Webex App</option>
-          <option value="Webex User Hub">Webex User Hub</option>
-          <option value="Webex Control Hub">Webex Control Hub</option>
-          <option value="Webex Cloud Registered Device">Webex Cloud Registered Device</option>
-          <option value="Webex Calling">Webex Calling</option>
-          <option value="Developer API">Developer API</option>
-          <option value="Cisco BroadCloud">Cisco BroadCloud</option>
-          <option value="Webex Hybrid Services">Webex Hybrid Services</option>
-          <option value="Dedicated Instance/UCM Cloud">Dedicated Instance/UCM Cloud</option>
-          <option value="Webex for BroadWorks">Webex for BroadWorks</option>
-          <option value="Webex Contact Center">Webex Contact Center</option>
-          <option value="Gateway and Solutions">Gateway and Solutions</option>
-          <option value="Webex Contact Center Enterprise">Webex Contact Center Enterprise</option>
-          <option value="Webex Events (formerly Socio)">Webex Events (formerly Socio)</option>
-          <option value="Slido">Slido</option>
-        </select>
-
-        <select id="regionFilter" class="select" aria-label="Region filter">
-          <option value="">All Regions</option>
-          <option value="Americas">Americas</option>
-          <option value="EMEA">EMEA</option>
-          <option value="APJC">APJC</option>
-          <option value="Global">Global</option>
-          <option value="Unknown">Unknown</option>
-        </select>
-
-        <input id="searchBox" class="search" type="search" placeholder="Search change #, title, location, or body…" />
-
+      <div style="height:12px"></div>
+      <div id="execPrintBody" class="muted" style="line-height:1.55;font-size:13px;font-weight:850;">
+        —
       </div>
-
-      <div id="maintenancePanel" class="panel">
-        <div class="tableWrap">
-          <table>
-            <thead>
-              <tr>
-                <th class="col-narrow">Change #</th>
-                <th class="col-mid">Date</th>
-                <th class="col-narrow">Status</th>
-                <th class="col-mid">Sector</th>
-                <th class="col-wide">Maintenance</th>
-                <th class="col-narrow"></th>
-              </tr>
-            </thead>
-            <tbody id="tbody">
-              <tr><td colspan="8" style="padding:18px;"><span class="muted">Loading…</span></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="notice" style="display:none; margin-top:14px;" class="notice"></div>
-
     </div>
-  </main>
-</div>
+  </div>
 
-<script>
-/* ======================================================
-   CONFIG
-====================================================== */
-const CACHE_KEY = "maintenanceCacheWebexStyleV1";
-const CACHE_TTL_MS = 5 * 60 * 1000;
+  <script>
+    /* ======================================================
+       MAINTENANCE.HTML — DROP-IN (CUSTOMER)
+       Uses your worker endpoints:
+       - GET /api/me
+       - GET /api/maintenance
+       - GET /api/licenses   (for SLA risk integration)
+       Optional (if you add later):
+       - POST /api/maintenance/notify
+       Existing logout:
+       - POST /api/pin/logout
+    ====================================================== */
 
-/* ======================================================
-   THEME
-====================================================== */
-function loadTheme(){
-  const saved = localStorage.getItem("uiTheme") || "light";
-  document.documentElement.setAttribute("data-theme", saved);
-}
-function toggleTheme(){
-  const cur = document.documentElement.getAttribute("data-theme");
-  const next = cur === "dark" ? "light" : "dark";
-  localStorage.setItem("uiTheme", next);
-  loadTheme();
-}
-loadTheme();
-document.getElementById("btnTheme").addEventListener("click", toggleTheme);
+    // ---------------- State ----------------
+    let TENANT = { email:null, role:null, orgId:null, orgName:null, tz:null };
+    let LICENSE_SUMMARY = { hasDeficit:false, totalDeficit:0, totalLicenses:0 };
+    let ALL = [];
+    let FILTERED = [];
+    let CURRENT = null;
+    let OVERLAPS = [];
+    let COUNTDOWN_TIMER = null;
 
-/* ======================================================
-   FETCH
-====================================================== */
-async function fetchMaintenance(){
-  try{
-    const res = await fetch("/api/maintenance", { cache:"no-store" });
-    if(!res.ok) return { ok:false, status:res.status };
-    const data = await res.json();
-    return { ok:true, data };
-  }catch(e){
-    return { ok:false, error:e };
-  }
-}
+    const NOTIFY_KEY = "MAINT_NOTIFY_SETTINGS_V2";
+    let NOTIFY_TIMER = null;
 
-/* ======================================================
-   HELPERS: status badge
-====================================================== */
-function badgeClass(status){
-  const s = String(status || "").toLowerCase();
-  if(s.includes("progress")) return "inprogress";
-  if(s === "completed") return "completed";
-  if(s === "scheduled") return "scheduled";
-  return "unknown";
-}
+    // ---------------- Utilities ----------------
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#39;");
+    }
 
-/* ======================================================
-   HELPERS: Change number extraction
-   - Prefer externalId
-   - Otherwise parse CHG\d+ from title/body
-====================================================== */
-function extractChangeNumber(m){
-  if(m?.externalId) return String(m.externalId);
+    function setTheme(theme){
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("theme", theme);
+    }
+    function initTheme(){
+      const saved = localStorage.getItem("theme");
+      if(saved === "dark" || saved === "light") setTheme(saved);
+    }
 
-  const title = String(m?.name || "");
-  const body = String(m?.updates?.[0]?.body || m?.body || "");
-  const match = (title + " " + body).match(/CHG\d{6,}/);
-  return match ? match[0] : "—";
-}
+    function detectTimezone(){
+      return (Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
+    }
 
-/* ======================================================
-   HELPERS: Sector parsing (Commercial/Government)
-   - Best-effort:
-     - Use m.sector if API provides it
-     - Use m.audience / m.type if present
-     - Infer from body text keywords (gov / government)
-====================================================== */
-function parseSector(m){
-  const direct =
-    m?.sector ||
-    m?.audience ||
-    m?.type ||
-    m?.environment ||
-    null;
+    function toTextFromHtml(html){
+      try{
+        const dp = new DOMParser();
+        const doc = dp.parseFromString(String(html||""), "text/html");
+        return (doc.body?.textContent || "").replace(/\s+/g," ").trim();
+      }catch{
+        return String(html||"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
+      }
+    }
 
-  if(direct){
-    const s = String(direct);
-    if(/gov/i.test(s)) return "Government";
-    if(/comm/i.test(s)) return "Commercial";
-  }
+    function fmtDate(d){
+      if(!d || isNaN(d.getTime())) return "—";
+      return d.toLocaleString(undefined, { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+    }
 
-  const body = String(m?.updates?.[0]?.body || m?.body || "").toLowerCase();
-  const name = String(m?.name || "").toLowerCase();
+    function safeText(s){ return String(s||"").toLowerCase(); }
 
-  if(body.includes("government") || name.includes("government")) return "Government";
-  if(body.includes("commercial") || name.includes("commercial")) return "Commercial";
+    function statusTag(status){
+      const s = safeText(status);
+      if(s.includes("progress")) return { cls:"warn", label:"IN PROGRESS" };
+      if(s.includes("scheduled")) return { cls:"good", label:"SCHEDULED" };
+      if(s.includes("complete") || s.includes("resolved")) return { cls:"good", label:"COMPLETED" };
+      return { cls:"", label:String(status||"UNKNOWN").toUpperCase() };
+    }
 
-  return "Commercial"; // default per your request (show all commercial products)
-}
+    function impactTag(impact){
+      const i = safeText(impact);
+      if(i.includes("critical")) return { cls:"bad", label:"CRITICAL" };
+      if(i.includes("major")) return { cls:"warn", label:"MAJOR" };
+      if(i.includes("minor")) return { cls:"good", label:"MINOR" };
+      if(i.includes("maintenance")) return { cls:"", label:"MAINTENANCE" };
+      return { cls:"", label:(impact||"UNKNOWN").toUpperCase() };
+    }
 
-/* ======================================================
-   HELPERS: Location parsing
-   - Webex UI shows things like "Canada Data Center"
-   - Try:
-     1) m.location / m.region / m.impacted_region
-     2) Title patterns: "Canada Data Center", "US Data Center", etc
-     3) Body patterns: lines containing "Data Center" or obvious place tokens
-====================================================== */
-function parseLocation(m){
-  const direct =
-    m?.location ||
-    m?.site ||
-    m?.impacted_location ||
-    m?.data_center ||
-    null;
-  if(direct) return String(direct);
+    function products(m){
+      return (m.components || []).map(c=>c?.name).filter(Boolean);
+    }
 
-  const title = String(m?.name || "");
-  // common pattern: "<Place> Data Center"
-  const titleMatch = title.match(/([A-Za-z][A-Za-z\s]+Data Center)/);
-  if(titleMatch) return titleMatch[1].trim();
+    function regionFromText(text){
+      const t = safeText(text);
+      if(t.includes("global")) return "Global";
+      if(t.includes("emea")) return "EMEA";
+      if(t.includes("apac") || t.includes("apjc")) return "APJC";
+      if(t.includes("americas") || t.includes("north america") || t.includes("south america") || t.includes("us region") || t.includes("usa") || t.includes("canada")) return "Americas";
+      // keep stable buckets for heatmap
+      return "Global"; // if unknown, treat as global-ish for conservative risk
+    }
 
-  const body = String(m?.updates?.[0]?.body || m?.body || "");
-  const bodyMatch = body.match(/([A-Za-z][A-Za-z\s]+Data Center)/);
-  if(bodyMatch) return bodyMatch[1].trim();
+    // ---------------- Start/End alignment (BEST-EFFORT) ----------------
+    // Your worker does not expose scheduled_for / scheduled_until, so we derive from:
+    // - detailsHtml (upstream text)
+    // - updates bodies
+    // - fallback: created_at + default duration
+    function parseStartEnd(m){
+      const html = m.detailsHtml || "";
+      const text = [
+        toTextFromHtml(html),
+        ...((m.updates||[]).map(u=>toTextFromHtml(u.body||""))),
+        m.name || ""
+      ].join(" | ");
 
-  return "—";
-}
+      // Patterns we see commonly in Statuspage bodies:
+      // "Scheduled for: Feb 21, 2026 01:00 PST"
+      // "Scheduled until: Feb 21, 2026 03:00 PST"
+      // "Start: 2026-02-21T09:00:00Z"
+      // "End: 2026-02-21T11:00:00Z"
+      const patterns = [
+        { k:"start", re: /(scheduled for|window start|starts?|begin(?:s)?)\s*[:\-]\s*([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4}.*?\d{1,2}:\d{2}\s*(AM|PM)?\s*[A-Z]{2,5}|20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)/i },
+        { k:"end",   re: /(scheduled until|window end|ends?)\s*[:\-]\s*([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4}.*?\d{1,2}:\d{2}\s*(AM|PM)?\s*[A-Z]{2,5}|20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)/i }
+      ];
 
-/* ======================================================
-   HELPERS: Region parsing (Americas / EMEA / APJC / Global)
-   - Best-effort mapping from location/body keywords
-====================================================== */
-function parseRegion(m){
-  const direct =
-    m?.impacted_region ||
-    m?.region ||
-    m?.geo ||
-    null;
-  if(direct) return String(direct);
+      let startRaw = null, endRaw = null;
 
-  const loc = (parseLocation(m) || "").toLowerCase();
-  const body = String(m?.updates?.[0]?.body || m?.body || "").toLowerCase();
-  const blob = (loc + " " + body);
+      const ms1 = text.match(patterns[0].re);
+      if(ms1) startRaw = ms1[2];
 
-  if(blob.includes("emea") || blob.includes("europe") || blob.includes("africa") || blob.includes("middle east")) return "EMEA";
-  if(blob.includes("apjc") || blob.includes("apac") || blob.includes("asia") || blob.includes("japan") || blob.includes("australia")) return "APJC";
-  if(blob.includes("americas") || blob.includes("canada") || blob.includes("united states") || blob.includes("u.s.") || blob.includes("us ")) return "Americas";
-  if(blob.includes("global") || blob.includes("worldwide")) return "Global";
+      const ms2 = text.match(patterns[1].re);
+      if(ms2) endRaw = ms2[2];
 
-  return "Unknown";
-}
+      // Try a second pass for "Scheduled for" / "Scheduled until" if formatted without colon
+      if(!startRaw){
+        const m2 = text.match(/scheduled for\s+([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4}.*?\d{1,2}:\d{2}\s*(AM|PM)?\s*[A-Z]{2,5})/i);
+        if(m2) startRaw = m2[1];
+      }
+      if(!endRaw){
+        const m2 = text.match(/scheduled until\s+([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4}.*?\d{1,2}:\d{2}\s*(AM|PM)?\s*[A-Z]{2,5})/i);
+        if(m2) endRaw = m2[1];
+      }
 
-/* ======================================================
-   HELPERS: Body formatting to resemble Webex UI
-   - Convert \n to <br>
-   - Convert <strong> to <b> safely
-   - Linkify https://... text if present
-====================================================== */
-function escapeHtml(s){
-  return String(s || "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
+      // Date parsing
+      let start = startRaw ? new Date(startRaw) : null;
+      let end = endRaw ? new Date(endRaw) : null;
 
-function linkifyText(htmlEscaped){
-  // htmlEscaped is already escaped; URLs have no < > in them
-  return htmlEscaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
-}
+      // If parsing failed but ISO exists in body
+      if(!start || isNaN(start.getTime())){
+        const iso = text.match(/(20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)/);
+        if(iso) start = new Date(iso[1]);
+      }
 
-function formatBody(m){
-  // Use update body if present; otherwise description/body
-  let raw = m?.updates?.[0]?.body || m?.body || m?.description || "";
-  if(!raw) return "No details available.";
+      // Default duration heuristic
+      const created = m.created_at ? new Date(m.created_at) : new Date();
+      if(!start || isNaN(start.getTime())) start = created;
 
-  // Some APIs might already include <strong> and \n sequences
-  // We will render HTML-like emphasis but keep everything safe:
-  // - escape first
-  // - then re-inject known tags from escaped equivalents
-  let safe = escapeHtml(raw);
+      // Parse duration: "duration: 90 minutes" etc.
+      let defaultHours = 2;
+      const dm = text.match(/duration\s*[:\-]?\s*(\d{1,3})\s*(min|mins|minutes|hour|hours|hr|hrs)/i);
+      if(dm){
+        const n = Number(dm[1]||0);
+        const unit = String(dm[2]||"").toLowerCase();
+        if(n>0) defaultHours = unit.startsWith("min") ? (n/60) : n;
+      }
 
-  // Re-enable emphasis tags that appeared in the original body
-  safe = safe.replaceAll("&lt;strong&gt;","<b>").replaceAll("&lt;/strong&gt;","</b>");
+      if(!end || isNaN(end.getTime())){
+        end = new Date(start.getTime() + defaultHours*3600000);
+      }
 
-  // Normalize common "— Section —" style lines:
-  // Keep them readable as bold-ish headings when possible
-  safe = safe.replace(/--\s*([^-\n\r]+)\s*--/g, "<br><br><b>$1</b>");
+      const durationHours = Math.max(0.25, (end-start)/3600000);
 
-  // Newlines to breaks (note: raw may contain literal \n OR escaped \\n)
-  safe = safe.replaceAll("\\n","<br>").replace(/\r?\n/g,"<br>");
+      return { start, end, durationHours };
+    }
 
-  // Linkify URLs
-  safe = linkifyText(safe);
+    // ---------------- Risk Scoring ----------------
+    function isRelevantToTenant(m){
+      // best-effort correlation: license keywords + products + text
+      if(!TENANT.orgId) return "unknown";
 
-  return safe;
-}
+      const prod = products(m).map(safeText).join(" ");
+      const txt = safeText(m.name) + " " + safeText(toTextFromHtml(m.detailsHtml || ""));
 
-/* ======================================================
-   Filtering + state
-====================================================== */
-let ALL_ITEMS = [];
-let EXPANDED_ID = null;
+      let hits = 0;
+      const kws = [];
+      if(LICENSE_SUMMARY.totalLicenses > 0){
+        // heuristic keywords from typical Webex license families
+        kws.push("calling","meetings","device","contact center","control hub","telephony","api");
+      }
+      for(const kw of kws){
+        if(prod.includes(kw)) hits++;
+        if(txt.includes(kw)) hits++;
+      }
+      if(hits >= 3) return "high";
+      if(hits >= 1) return "medium";
+      return "low";
+    }
 
-function getFilters(){
-  return {
-    sector: document.getElementById("sectorFilter").value,
-    product: document.getElementById("productFilter").value,
-    region: document.getElementById("regionFilter").value,
-    q: document.getElementById("searchBox").value.trim().toLowerCase()
-  };
-}
+    function scoreMaintenance(m){
+      const w = parseStartEnd(m);
+      const prodCount = products(m).length;
+      const txt = toTextFromHtml(m.detailsHtml || "");
+      const region = regionFromText(txt);
+      const stat = safeText(m.status);
 
-function matchesFilters(m, f){
-  const sector = parseSector(m);
-  const region = parseRegion(m);
-  const location = parseLocation(m);
-  const changeNo = extractChangeNumber(m);
-  const title = String(m?.name || "");
-  const body = String(m?.updates?.[0]?.body || m?.body || "");
+      // Blast radius: scope + region + live/in-progress + tenant relevance
+      let blast = 0;
+      blast += Math.min(10, prodCount * 2);
+      if(region === "Global") blast += 6;
+      else blast += 3;
+      if(stat.includes("progress")) blast += 4;
 
-  if(f.sector && sector !== f.sector) return false;
-  if(f.region && region !== f.region) return false;
+      const rel = isRelevantToTenant(m);
+      if(rel === "high") blast += 3;
+      else if(rel === "medium") blast += 1;
 
-  if(f.product){
-    // Filter by component PRODUCT name (not group)
-    const has = (m.components || []).some(c => String(c?.name || "") === f.product);
-    if(!has) return false;
-  }
+      blast = Math.max(0, Math.min(25, blast));
 
-  if(f.q){
-    const hay = (changeNo + " " + title + " " + location + " " + sector + " " + region + " " + body).toLowerCase();
-    if(!hay.includes(f.q)) return false;
-  }
+      // Failure probability index: duration + complexity + overlaps + in-progress
+      let fail = 0;
+      fail += Math.min(12, Math.round(w.durationHours * 1.6));
+      fail += Math.min(10, prodCount);
+      if(stat.includes("progress")) fail += 3;
 
-  return true;
-}
+      // Add small bump if description includes known risky words
+      const low = safeText(txt);
+      if(low.includes("database") || low.includes("routing") || low.includes("pstn") || low.includes("telephony")) fail += 2;
+      if(low.includes("migration") || low.includes("upgrade") || low.includes("cutover")) fail += 2;
 
-/* ======================================================
-   Rendering
-====================================================== */
-function setNotice(msg){
-  const el = document.getElementById("notice");
-  if(!msg){
-    el.style.display = "none";
-    el.textContent = "";
-    return;
-  }
-  el.style.display = "block";
-  el.textContent = msg;
-}
+      fail = Math.max(0, Math.min(25, fail));
 
-function render(){
-  const tbody = document.getElementById("tbody");
-  const f = getFilters();
+      // SLA risk: time proximity + blast + tenant health integration (license deficit)
+      const hoursTo = (w.start - Date.now())/3600000;
+      let sla = 0;
+      if(hoursTo <= 6) sla += 8;
+      else if(hoursTo <= 24) sla += 5;
+      else if(hoursTo <= 48) sla += 3;
 
-  const items = (ALL_ITEMS || []).filter(m => matchesFilters(m, f));
+      sla += Math.round(blast/5);
 
-  // KPI updates (based on filtered set)
-  const upcoming = items.filter(m => String(m.status||"").toLowerCase()==="scheduled");
-  const active = items.filter(m => String(m.status||"").toLowerCase().includes("progress"));
-  const completed = items.filter(m => String(m.status||"").toLowerCase()==="completed");
+      // integrate license deficit (your /api/licenses normalization)
+      if(LICENSE_SUMMARY.hasDeficit) sla += 3;
+      if(LICENSE_SUMMARY.totalDeficit >= 5) sla += 2;
 
-  document.getElementById("kUpcoming").textContent = upcoming.length;
-  document.getElementById("kActive").textContent = active.length;
-  document.getElementById("kCompleted").textContent = completed.length;
-  document.getElementById("kTotal").textContent = items.length;
+      sla = Math.max(0, Math.min(20, sla));
 
-  if(items.length === 0){
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8" style="padding:18px;">
-          <span class="muted">No maintenance events found for the current filters.</span>
-        </td>
-      </tr>
-    `;
-    return;
-  }
+      return { blast, fail, sla, region, rel, w };
+    }
 
-  // Sort: scheduled/active first, then by created_at desc
-  const order = { scheduled: 0, inprogress: 1, completed: 2, unknown: 3 };
-  items.sort((a,b) => {
-    const ac = badgeClass(a.status);
-    const bc = badgeClass(b.status);
-    if(order[ac] !== order[bc]) return order[ac] - order[bc];
+    function riskBand(v, bands){
+      if(v >= bands.high) return "HIGH";
+      if(v >= bands.mid) return "MEDIUM";
+      return "LOW";
+    }
 
-    const at = a?.created_at ? new Date(a.created_at).getTime() : 0;
-    const bt = b?.created_at ? new Date(b.created_at).getTime() : 0;
-    return bt - at;
-  });
+    // ---------------- Overlap Conflict Detection ----------------
+    function computeOverlaps(items){
+      const ws = items.map(m=>{
+        const w = parseStartEnd(m);
+        return { id:String(m.id), name:m.name, m, start:w.start, end:w.end };
+      }).filter(x=>x.start && x.end).sort((a,b)=>a.start-b.start);
 
-  let html = "";
+      const out = [];
+      for(let i=0;i<ws.length;i++){
+        for(let j=i+1;j<ws.length;j++){
+          const a=ws[i], b=ws[j];
+          if(b.start > a.end) break;
+          if(b.start < a.end){
+            const ap = new Set(products(a.m).map(safeText));
+            const bp = new Set(products(b.m).map(safeText));
+            const sharedProd = [...ap].some(x=>bp.has(x));
 
-  for(const m of items){
-    const changeNo = extractChangeNumber(m);
-    const dateStr = m?.created_at ? new Date(m.created_at).toLocaleString() : "—";
-    const status = String(m?.status || "—");
-    const bClass = badgeClass(status);
-    const sector = parseSector(m);
-    const region = parseRegion(m);
-    const location = parseLocation(m);
+            const ar = scoreMaintenance(a.m).region;
+            const br = scoreMaintenance(b.m).region;
+            const sharedRegion = ar && br && ar === br;
 
-    // product list summary
-    const products = (m.components || []).map(c => c?.name).filter(Boolean);
-    const productSummary = products.length ? products.join(", ") : "—";
+            out.push({ a, b, sharedProd, sharedRegion, score: 1 + (sharedProd?2:0) + (sharedRegion?2:0) });
+          }
+        }
+      }
+      return out;
+    }
 
-    const isExpanded = EXPANDED_ID === String(m.id);
+    // ---------------- Predictive Clustering ----------------
+    function clusterWindows(items){
+      function fingerprint(m){
+        const t = safeText(m.name) + " " + safeText(toTextFromHtml(m.detailsHtml || ""));
+        const keys = [];
+        if(t.includes("calling") || t.includes("telephony") || t.includes("pstn")) keys.push("calling");
+        if(t.includes("meeting")) keys.push("meetings");
+        if(t.includes("control hub")) keys.push("controlhub");
+        if(t.includes("device") || t.includes("room")) keys.push("devices");
+        if(t.includes("contact center") || t.includes("wcc")) keys.push("contactcenter");
+        if(t.includes("api")) keys.push("api");
+        if(!keys.length) keys.push("general");
+        return keys.slice(0,2).join("+");
+      }
 
-    const rowId = `row-${m.id}`;
-    const detailId = `detail-${m.id}`;
+      const buckets = new Map();
 
-    html += `
-      <tr class="dataRow ${isExpanded ? "expanded" : ""}" id="${rowId}" data-id="${String(m.id)}">
-        <td class="col-narrow"><b>${escapeHtml(changeNo)}</b></td>
-        <td class="col-mid">${escapeHtml(dateStr)}</td>
-        <td class="col-narrow">
-          <span class="badge ${bClass}">
-            <span class="bDot"></span>${escapeHtml(status)}
-          </span>
-        </td>
-        <td class="col-mid">${escapeHtml(sector)}</td>
-        <td class="col-mid">${escapeHtml(region)}</td>
-        <td class="col-mid">${escapeHtml(location)}</td>
-        <td class="col-wide">
-          <div class="rowHead">
-            <span class="chev" aria-hidden="true">
-              <svg viewBox="0 0 20 20" fill="none">
-                <path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+      for(const m of items){
+        const w = parseStartEnd(m);
+        const dayKey = w.start ? new Date(w.start.getFullYear(), w.start.getMonth(), w.start.getDate()).toISOString().slice(0,10) : "unknown";
+        const fp = fingerprint(m);
+        const key = `${dayKey}::${fp}`;
+        if(!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push({ m, w, fp, dayKey });
+      }
+
+      return Array.from(buckets.entries())
+        .map(([key, arr])=>{
+          const start = arr.map(x=>x.w.start).filter(Boolean).sort((a,b)=>a-b)[0] || null;
+          return { key, start, size:arr.length, fp:arr[0]?.fp || "general", items:arr };
+        })
+        .sort((a,b)=> (b.size-a.size) || ((a.start||0)-(b.start||0)))
+        .slice(0,8);
+    }
+
+    // ---------------- Heatmap ----------------
+    function buildHeatmap(items){
+      const regions = ["Americas","EMEA","APJC","Global"];
+      const impacts = ["LOW","MEDIUM","HIGH","CRITICAL"];
+
+      const grid = {};
+      for(const r of regions){
+        grid[r] = { LOW:0, MEDIUM:0, HIGH:0, CRITICAL:0 };
+      }
+
+      for(const m of items){
+        const s = scoreMaintenance(m);
+        const region = s.region || "Global";
+        const composite = s.blast + s.sla + Math.round(s.fail/2); // 0..~60
+        let band = "LOW";
+        if(composite >= 36) band = "CRITICAL";
+        else if(composite >= 24) band = "HIGH";
+        else if(composite >= 14) band = "MEDIUM";
+        if(!grid[region]) grid[region] = { LOW:0, MEDIUM:0, HIGH:0, CRITICAL:0 };
+        grid[region][band] += 1;
+      }
+
+      const el = document.getElementById("heatmapGrid");
+      el.innerHTML = "";
+
+      // header
+      el.appendChild(hmHead(""));
+      for(const i of impacts) el.appendChild(hmHead(i));
+
+      for(const r of regions){
+        el.appendChild(hmRowHead(r));
+        for(const i of impacts){
+          const v = grid[r][i];
+          const cls = v === 0 ? "hmLow" : (v <= 2 ? "hmMid" : "hmHigh");
+          const c = document.createElement("div");
+          c.className = `hmCell ${cls}`;
+          c.textContent = String(v);
+          el.appendChild(c);
+        }
+      }
+      document.getElementById("heatmapHint").textContent =
+        `Scoring = blast radius + SLA risk + (failure/2).`;
+    }
+    function hmHead(t){
+      const d = document.createElement("div");
+      d.className = "hmCell hmHead";
+      d.textContent = t;
+      return d;
+    }
+    function hmRowHead(t){
+      const d = document.createElement("div");
+      d.className = "hmCell hmRowHead";
+      d.textContent = t;
+      return d;
+    }
+
+    // ---------------- Trend (30-day sparkline) ----------------
+    function buildTrend(items){
+      const days = 30;
+      const buckets = new Array(days).fill(0);
+      const now = new Date();
+      const start = new Date(now.getTime() - (days-1)*86400000);
+      start.setHours(0,0,0,0);
+
+      for(const m of items){
+        const w = parseStartEnd(m);
+        const dt = w.start || (m.created_at ? new Date(m.created_at) : null);
+        if(!dt || isNaN(dt.getTime())) continue;
+
+        const idx = Math.floor((dt.getTime() - start.getTime()) / 86400000);
+        if(idx >= 0 && idx < days) buckets[idx] += 1;
+      }
+
+      const total = buckets.reduce((a,b)=>a+b,0);
+      document.getElementById("trendLabel").textContent = `${total} window(s) in last 30 days (best-effort).`;
+
+      const canvas = document.getElementById("trendCanvas");
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+
+      const max = Math.max(1, ...buckets);
+      const pad = 4;
+      const w = canvas.width - pad*2;
+      const h = canvas.height - pad*2;
+      const step = w / (days-1);
+
+      // line
+      ctx.beginPath();
+      for(let i=0;i<days;i++){
+        const x = pad + i*step;
+        const y = pad + h - (buckets[i]/max)*h;
+        if(i===0) ctx.moveTo(x,y);
+        else ctx.lineTo(x,y);
+      }
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#0f62fe";
+      ctx.stroke();
+
+      // dots
+      for(let i=0;i<days;i++){
+        const x = pad + i*step;
+        const y = pad + h - (buckets[i]/max)*h;
+        ctx.beginPath();
+        ctx.arc(x,y,2.2,0,Math.PI*2);
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent2").trim() || "#0b4bd4";
+        ctx.fill();
+      }
+    }
+
+    // ---------------- Countdown ----------------
+    function fmtDur(ms){
+      const s = Math.max(0, Math.floor(ms/1000));
+      const dd = Math.floor(s/86400);
+      const hh = Math.floor((s%86400)/3600);
+      const mm = Math.floor((s%3600)/60);
+      const ss = s%60;
+      const parts = [];
+      if(dd) parts.push(`${dd}d`);
+      parts.push(`${String(hh).padStart(2,"0")}h`);
+      parts.push(`${String(mm).padStart(2,"0")}m`);
+      parts.push(`${String(ss).padStart(2,"0")}s`);
+      return parts.join(" ");
+    }
+
+    function startCountdown(next){
+      if(COUNTDOWN_TIMER) clearInterval(COUNTDOWN_TIMER);
+      updateCountdown(next);
+      COUNTDOWN_TIMER = setInterval(()=>updateCountdown(next), 1000);
+    }
+
+    function updateCountdown(next){
+      const c = document.getElementById("countdown");
+      const hint = document.getElementById("countdownHint");
+      if(!next){
+        c.textContent = "—";
+        hint.textContent = "No upcoming windows found.";
+        return;
+      }
+      const { start, end } = next;
+      const now = Date.now();
+      if(start && now < start.getTime()){
+        c.textContent = fmtDur(start.getTime() - now);
+        hint.textContent = `Starts ${fmtDate(start)} (${TENANT.tz}).`;
+        return;
+      }
+      if(start && end && now >= start.getTime() && now < end.getTime()){
+        c.textContent = "IN PROGRESS";
+        hint.textContent = `Ends ${fmtDate(end)} (${TENANT.tz}).`;
+        return;
+      }
+      c.textContent = "—";
+      hint.textContent = "Window has passed.";
+    }
+
+    // ---------------- Exec Summary + Sidebar RAG ----------------
+    function setRag(band){
+      const dot = document.getElementById("ragDot");
+      const txt = document.getElementById("ragText");
+      const riskDot = document.getElementById("riskDot");
+      const slaDot = document.getElementById("slaDot");
+
+      const good = getComputedStyle(document.documentElement).getPropertyValue("--good").trim();
+      const warn = getComputedStyle(document.documentElement).getPropertyValue("--warn").trim();
+      const bad  = getComputedStyle(document.documentElement).getPropertyValue("--bad").trim();
+
+      let color = warn;
+      if(band === "LOW") color = good;
+      if(band === "HIGH") color = bad;
+
+      dot.style.background = color;
+      riskDot.style.background = color;
+      txt.textContent = `Risk: ${band}`;
+
+      // SLA dot color set later in updateExecutive
+    }
+
+    function setRefreshLabel(){
+      const t = new Date().toLocaleString();
+      document.getElementById("refreshLabel").textContent = t;
+      document.getElementById("sideRefresh").textContent = t;
+    }
+
+    function updateExecutive(items){
+      const upcoming = items
+        .map(m=>({ m, s:scoreMaintenance(m) }))
+        .filter(x=>x.s.w.start)
+        .sort((a,b)=>a.s.w.start - b.s.w.start);
+
+      const next = upcoming.find(x=>x.s.w.start.getTime() > Date.now()) || upcoming[0] || null;
+
+      // overlaps
+      OVERLAPS = computeOverlaps(items);
+      document.getElementById("overlapCount").textContent = String(OVERLAPS.length);
+      document.getElementById("overlapHint").textContent = OVERLAPS.length
+        ? "Overlapping windows detected. Review clusters and drill-down."
+        : "No overlaps detected.";
+
+      // blast avg (top 10)
+      const slice = upcoming.slice(0, Math.min(10, upcoming.length));
+      const blastAvg = slice.length ? Math.round(slice.reduce((a,x)=>a+x.s.blast,0)/slice.length) : 0;
+      document.getElementById("blastRadius").textContent = `${blastAvg}/25`;
+      document.getElementById("blastHint").textContent = "Scope + region + status + tenant relevance.";
+
+      // next window
+      if(next){
+        document.getElementById("nextWindowTitle").textContent = next.m.name || "Next maintenance";
+        document.getElementById("nextWindowMeta").textContent =
+          `${fmtDate(next.s.w.start)} → ${fmtDate(next.s.w.end)} • ~${next.s.w.durationHours.toFixed(1)}h • ${next.s.rel === "high" ? "High tenant relevance" : next.s.rel === "medium" ? "Likely tenant relevance" : "General platform"}`;
+        startCountdown(next.s.w);
+      } else {
+        document.getElementById("nextWindowTitle").textContent = "—";
+        document.getElementById("nextWindowMeta").textContent = "—";
+        startCountdown(null);
+      }
+
+      // risk composites
+      const maxSla = upcoming.reduce((mx,x)=>Math.max(mx, x.s.sla), 0);
+      const maxFail = upcoming.reduce((mx,x)=>Math.max(mx, x.s.fail), 0);
+
+      const riskComposite = Math.min(100, Math.round((maxSla*3 + maxFail*2 + blastAvg*2)));
+      const riskBand2 = riskComposite >= 70 ? "HIGH" : riskComposite >= 40 ? "MEDIUM" : "LOW";
+      document.getElementById("riskPillText").textContent = `RISK: ${riskBand2} (${riskComposite})`;
+
+      const slaBand = maxSla >= 14 ? "HIGH" : maxSla >= 8 ? "MEDIUM" : "LOW";
+      document.getElementById("slaPillText").textContent = `SLA RISK: ${slaBand} (${maxSla}/20)`;
+
+      // SLA dot
+      const slaDot = document.getElementById("slaDot");
+      const good = getComputedStyle(document.documentElement).getPropertyValue("--good").trim();
+      const warn = getComputedStyle(document.documentElement).getPropertyValue("--warn").trim();
+      const bad  = getComputedStyle(document.documentElement).getPropertyValue("--bad").trim();
+      slaDot.style.background = slaBand === "LOW" ? good : (slaBand === "MEDIUM" ? warn : bad);
+
+      // sidebar RAG
+      setRag(riskBand2);
+
+      // executive narrative
+      const active = items.filter(m=>safeText(m.status).includes("progress")).length;
+      const scheduled = items.filter(m=>safeText(m.status).includes("scheduled")).length;
+
+      let msg = `This dashboard summarizes Webex scheduled maintenance and highlights customer-specific operational risk. `;
+      if(active) msg += `${active} maintenance window(s) are currently in progress. `;
+      msg += `${scheduled} upcoming scheduled window(s) detected. `;
+
+      if(next){
+        msg += `Next window starts ${fmtDate(next.s.w.start)} (${TENANT.tz}). `;
+        msg += `Estimated duration ~${next.s.w.durationHours.toFixed(1)} hours. `;
+        msg += `Computed blast radius ${next.s.blast}/25 and failure probability index ${next.s.fail}/25. `;
+      }
+      msg += `Highest SLA risk score across listed maintenance is ${maxSla}/20. `;
+      if(LICENSE_SUMMARY.hasDeficit){
+        msg += `Tenant license deficit is detected (${LICENSE_SUMMARY.totalDeficit}), which increases SLA sensitivity during change windows. `;
+      }
+
+      document.getElementById("execBrief").textContent = msg;
+
+      // heatmap + clusters + trend
+      buildHeatmap(items);
+      renderClusters(items);
+      buildTrend(items);
+    }
+
+    function renderClusters(items){
+      const clusters = clusterWindows(items);
+      const el = document.getElementById("clusterList");
+      if(!clusters.length){
+        el.textContent = "No clusters identified.";
+        return;
+      }
+      el.innerHTML = clusters.map(c=>{
+        const when = c.start ? fmtDate(new Date(c.start)) : "Unknown time";
+        const sample = c.items.slice(0,2).map(x=>x.m.name).filter(Boolean).join(" • ");
+        return `<div class="timelineItem" style="margin-top:0;margin-bottom:10px;">
+          <div style="font-weight:1000;">${c.size} change(s) • ${escapeHtml(c.fp)}</div>
+          <div class="muted" style="margin-top:6px;font-size:12px;font-weight:900;">${escapeHtml(when)}</div>
+          <div class="muted" style="margin-top:6px;font-size:12px;font-weight:850;">${escapeHtml(sample || "—")}</div>
+        </div>`;
+      }).join("");
+    }
+
+    // ---------------- Data fetch ----------------
+    async function apiGet(path){
+      const res = await fetch(path, { cache:"no-store" });
+      const txt = await res.text();
+      try{
+        const json = JSON.parse(txt);
+        if(!res.ok) throw new Error(json?.error || `HTTP_${res.status}`);
+        return json;
+      }catch(e){
+        if(!res.ok) throw new Error(`HTTP_${res.status}`);
+        throw e;
+      }
+    }
+
+    async function loadTenant(){
+      const me = await apiGet("/api/me");
+      TENANT.email = me.email || null;
+      TENANT.role = me.role || null;
+      TENANT.orgId = me.orgId || null;
+      TENANT.orgName = me.orgName || "Customer";
+      TENANT.tz = detectTimezone();
+
+      document.getElementById("tenantName").textContent = TENANT.orgName || "—";
+      document.getElementById("tenantOrgId").textContent = TENANT.orgId ? TENANT.orgId.slice(0,16) + "…" : "—";
+      document.getElementById("tenantRole").textContent = TENANT.role || "—";
+      document.getElementById("tenantTz").textContent = TENANT.tz;
+      document.getElementById("tzLabel").textContent = TENANT.tz;
+
+      document.getElementById("topMeta").textContent = `${TENANT.orgName || "Customer"} • ${TENANT.email || "—"}`;
+    }
+
+    async function loadLicensesForRisk(){
+      try{
+        const lic = await apiGet("/api/licenses");
+        const s = lic.summary || {};
+        LICENSE_SUMMARY = {
+          hasDeficit: !!s.hasDeficit,
+          totalDeficit: Number(s.totalDeficit || 0),
+          totalLicenses: Number(s.totalLicenses || 0)
+        };
+        document.getElementById("sideLic").textContent = LICENSE_SUMMARY.hasDeficit ? `DEF ${LICENSE_SUMMARY.totalDeficit}` : "OK";
+      }catch{
+        // leave defaults, not fatal
+        document.getElementById("sideLic").textContent = "—";
+      }
+    }
+
+    async function loadMaintenance(){
+      const data = await apiGet("/api/maintenance");
+      ALL = Array.isArray(data.maintenance) ? data.maintenance : [];
+      document.getElementById("sideMaint").textContent = String(data?.counts?.total ?? ALL.length);
+      setRefreshLabel();
+      return data;
+    }
+
+    // ---------------- Render table ----------------
+    function applyFilters(){
+      const q = safeText(document.getElementById("q").value);
+      const sf = document.getElementById("statusFilter").value;
+      const imf = document.getElementById("impactFilter").value;
+
+      FILTERED = ALL.filter(m=>{
+        const s = safeText(m.status);
+        if(sf !== "all"){
+          if(sf === "scheduled" && !s.includes("scheduled")) return false;
+          if(sf === "in_progress" && !s.includes("progress")) return false;
+          if(sf === "completed" && !(s.includes("complete") || s.includes("resolved"))) return false;
+        }
+        const i = safeText(m.impact);
+        if(imf !== "all"){
+          if(!i.includes(imf)) return false;
+        }
+        if(!q) return true;
+
+        const txt = safeText(m.name) + " " +
+          safeText(toTextFromHtml(m.detailsHtml || "")) + " " +
+          safeText(products(m).join(" ")) + " " +
+          safeText(regionFromText(toTextFromHtml(m.detailsHtml||"")));
+
+        return txt.includes(q);
+      });
+
+      renderRows();
+    }
+
+    function renderRows(){
+      const tbody = document.getElementById("rows");
+      tbody.innerHTML = "";
+
+      if(!FILTERED.length){
+        tbody.innerHTML = `<tr><td colspan="7" class="muted" style="padding:18px 16px;font-weight:900;">No maintenance events match current filters.</td></tr>`;
+        document.getElementById("footNote").textContent = "0 results.";
+        return;
+      }
+
+      for(const m of FILTERED){
+        const st = statusTag(m.status);
+        const imp = impactTag(m.impact);
+
+        const s = scoreMaintenance(m);
+        const w = s.w;
+
+        const prod = products(m);
+        const prodShort = prod.slice(0,3).join(", ") + (prod.length>3 ? ` +${prod.length-3}` : "");
+
+        const riskBandX = riskBand(s.sla + Math.round(s.fail/2), { mid:14, high:26 });
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>
+            <span class="tag ${st.cls}">
+              <span class="b"></span>${escapeHtml(st.label)}
             </span>
-            <div>
-              <div class="titleLine">${escapeHtml(m?.name || "—")}</div>
-              <div class="subLine">Products: ${escapeHtml(productSummary)}</div>
+            <div style="height:6px"></div>
+            <span class="tag ${imp.cls}">
+              <span class="b"></span>${escapeHtml(imp.label)}
+            </span>
+          </td>
+          <td>
+            <div style="font-weight:1000;">${escapeHtml(m.name || "Maintenance")}</div>
+            <div class="muted" style="margin-top:6px;font-size:12px;font-weight:900;">
+              Ref: ${escapeHtml(String(m.id || ""))} • Relevance: ${escapeHtml(String(s.rel).toUpperCase())}
             </div>
-          </div>
-        </td>
-        <td class="col-narrow" style="text-align:right;">
-          <button class="btnEmail" type="button" data-email-btn="1" data-mid="${escapeHtml(String(m.id))}">Email</button>
-        </td>
-      </tr>
-
-      <tr class="detailRow" id="${detailId}" style="display:${isExpanded ? "table-row" : "none"};">
-        <td colspan="8">
-          <div class="detailCard">
-            <div class="detailBlock">
-              <h3>Details</h3>
-              <div class="body">${formatBody(m)}</div>
+          </td>
+          <td>
+            <div style="font-weight:1000;">${fmtDate(w.start)} → ${fmtDate(w.end)}</div>
+            <div class="muted" style="margin-top:6px;font-size:12px;font-weight:900;">~${w.durationHours.toFixed(1)}h</div>
+          </td>
+          <td>
+            <div style="font-weight:1000;">${escapeHtml(s.region)}</div>
+          </td>
+          <td>
+            <div style="font-weight:1000;">${escapeHtml(prodShort || "—")}</div>
+          </td>
+          <td>
+            <span class="tag ${riskBandX==="HIGH"?"bad":riskBandX==="MEDIUM"?"warn":"good"}">
+              <span class="b"></span>${riskBandX}
+            </span>
+            <div class="muted" style="margin-top:8px;font-size:12px;font-weight:900;">
+              SLA ${s.sla}/20 • Fail ${s.fail}/25 • Blast ${s.blast}/25
             </div>
-            <div class="detailBlock">
-              <h3>Summary</h3>
-              <div class="kv">
-                <div class="kvItem">
-                  <div class="k">Change #</div>
-                  <div class="v">${escapeHtml(changeNo)}</div>
-                </div>
-                <div class="kvItem">
-                  <div class="k">Status</div>
-                  <div class="v">${escapeHtml(status)}</div>
-                </div>
-                <div class="kvItem">
-                  <div class="k">Sector</div>
-                  <div class="v">${escapeHtml(sector)}</div>
-                </div>
-                <div class="kvItem">
-                  <div class="k">Region</div>
-                  <div class="v">${escapeHtml(region)}</div>
-                </div>
-                <div class="kvItem">
-                  <div class="k">Location</div>
-                  <div class="v">${escapeHtml(location)}</div>
-                </div>
-                <div class="kvItem">
-                  <div class="k">Created</div>
-                  <div class="v">${escapeHtml(dateStr)}</div>
-                </div>
-              </div>
-
-              <div class="sep"></div>
-
-              <div class="muted" style="font-size:12px; line-height:1.5;">
-                This view mirrors Webex Status detail formatting where available.
-              </div>
+          </td>
+          <td style="text-align:right;">
+            <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+              <button class="btn" type="button" data-ics="1" data-id="${escapeHtml(String(m.id))}" style="padding:8px 10px;">ICS</button>
+              <button class="btn" type="button" data-email="1" data-id="${escapeHtml(String(m.id))}" style="padding:8px 10px;">Email</button>
             </div>
-          </div>
-        </td>
-      </tr>
-    `;
-  }
+          </td>
+        `;
+        tr.addEventListener("click", ()=>openDetail(m.id));
+        tbody.appendChild(tr);
+      }
 
-  tbody.innerHTML = html;
+      // wire action buttons
+      tbody.querySelectorAll("[data-ics='1']").forEach(btn=>{
+        btn.addEventListener("click",(e)=>{
+          e.stopPropagation();
+          const id = btn.getAttribute("data-id");
+          const m = ALL.find(x=>String(x.id)===String(id));
+          if(m) exportICS(m);
+        });
+      });
+      tbody.querySelectorAll("[data-email='1']").forEach(btn=>{
+        btn.addEventListener("click",(e)=>{
+          e.stopPropagation();
+          const id = btn.getAttribute("data-id");
+          const m = ALL.find(x=>String(x.id)===String(id));
+          if(m) emailDraft(m);
+        });
+      });
 
-  // Wire row click + email buttons
-  tbody.querySelectorAll("tr.dataRow").forEach(tr => {
-    tr.addEventListener("click", (e) => {
-      // Ignore if clicking email button
-      const target = e.target;
-      if(target && target.closest && target.closest("[data-email-btn='1']")) return;
-
-      const id = tr.getAttribute("data-id");
-      toggleExpanded(id);
-    });
-  });
-
-  tbody.querySelectorAll("[data-email-btn='1']").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const mid = btn.getAttribute("data-mid");
-      notify(mid);
-    });
-  });
-}
-
-function toggleExpanded(id){
-  const same = EXPANDED_ID === id;
-  EXPANDED_ID = same ? null : id;
-
-  // Update rows without full re-render for snappy UX
-  document.querySelectorAll("tr.dataRow").forEach(r => {
-    const rid = r.getAttribute("data-id");
-    r.classList.toggle("expanded", EXPANDED_ID === rid);
-  });
-  document.querySelectorAll("tr.detailRow").forEach(dr => {
-    const did = dr.id.replace("detail-","");
-    dr.style.display = (EXPANDED_ID === did) ? "table-row" : "none";
-  });
-}
-
-/* ======================================================
-   Email notify (per maintenance)
-   - Uses your existing endpoint: /api/maintenance/notify
-====================================================== */
-async function notify(maintenanceId){
-  const email = prompt("Enter email address to notify:");
-  if(!email) return;
-
-  try{
-    const res = await fetch("/api/maintenance/notify",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ maintenanceId, email })
-    });
-
-    const txt = await res.text();
-
-    if(!res.ok){
-      alert("Failed to send notification.\n\n" + txt.slice(0,300));
-      return;
+      document.getElementById("footNote").textContent =
+        `${FILTERED.length} result(s). Times shown in your local browser format; tenant timezone reference: ${TENANT.tz}.`;
     }
 
-    alert("Notification sent successfully.");
-  }catch(e){
-    alert("Notification error.");
-  }
-}
+    // ---------------- Drill-down modal ----------------
+    function sanitizeAndRenderHtml(html){
+      // Safe render strategy:
+      // - Parse
+      // - Remove script/style/iframe/object/embed
+      // - Remove inline event handlers
+      // - Return innerHTML
+      try{
+        const dp = new DOMParser();
+        const doc = dp.parseFromString(String(html||""), "text/html");
+        const kill = doc.querySelectorAll("script,style,iframe,object,embed,link");
+        kill.forEach(n=>n.remove());
 
-/* ======================================================
-   Load / Cache
-====================================================== */
-async function loadMaintenance(force){
-  setNotice("");
+        const all = doc.querySelectorAll("*");
+        all.forEach(el=>{
+          [...el.attributes].forEach(a=>{
+            const n = a.name.toLowerCase();
+            if(n.startsWith("on")) el.removeAttribute(a.name);
+            if(n === "style") {
+              // allow style but strip url() to avoid weirdness
+              const v = String(a.value||"");
+              if(/url\s*\(/i.test(v)) el.removeAttribute("style");
+            }
+            if(n === "href" || n === "src"){
+              const v = String(a.value||"");
+              if(v.startsWith("javascript:")) el.removeAttribute(a.name);
+            }
+          });
+        });
 
-  if(!force){
-    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-    if(cached && (Date.now() - cached.ts) < CACHE_TTL_MS){
-      ALL_ITEMS = cached.items || [];
-      EXPANDED_ID = null;
-      render();
-      return;
+        return doc.body ? doc.body.innerHTML : escapeHtml(String(html||""));
+      }catch{
+        return `<pre>${escapeHtml(String(html||""))}</pre>`;
+      }
     }
-  }
 
-  const r = await fetchMaintenance();
-  if(!r.ok){
-    setNotice("Maintenance API is unavailable. Confirm /api/maintenance is implemented in the worker and returning JSON.");
-    document.getElementById("tbody").innerHTML = `
-      <tr><td colspan="8" style="padding:18px;"><span class="muted">Unable to load maintenance.</span></td></tr>
-    `;
-    return;
-  }
+    function openDetail(id){
+      const m = ALL.find(x=>String(x.id)===String(id));
+      if(!m) return;
 
-  const items = r.data?.maintenance || [];
-  ALL_ITEMS = items;
+      CURRENT = m;
 
-  localStorage.setItem(CACHE_KEY, JSON.stringify({
-    ts: Date.now(),
-    items
-  }));
+      const s = scoreMaintenance(m);
+      const w = s.w;
 
-  EXPANDED_ID = null;
-  render();
-}
+      document.getElementById("dTitle").textContent = m.name || "Maintenance";
+      document.getElementById("dSub").textContent =
+        `Status: ${m.status} • Impact: ${m.impact || "—"} • Window: ${fmtDate(w.start)} → ${fmtDate(w.end)} • Region: ${s.region} • Relevance: ${String(s.rel).toUpperCase()}`;
 
-/* ======================================================
-   Filters events
-====================================================== */
-["sectorFilter","productFilter","regionFilter"].forEach(id => {
-  document.getElementById(id).addEventListener("change", () => {
-    EXPANDED_ID = null;
-    render();
-  });
-});
+      // Risk block (includes SLA breach detection heuristic)
+      const slaBreachRisk = (s.sla >= 14) || (s.blast >= 18) || (s.fail >= 18) || (LICENSE_SUMMARY.hasDeficit && s.sla >= 10);
+      const overlapCount = OVERLAPS.filter(o=> String(o.a.id)===String(m.id) || String(o.b.id)===String(m.id)).length;
 
-let searchTimer = null;
-document.getElementById("searchBox").addEventListener("input", () => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => {
-    EXPANDED_ID = null;
-    render();
-  }, 140);
-});
+      const riskLines = [];
+      riskLines.push(`<div><b>Blast Radius</b>: ${s.blast}/25 (scope + region + tenant relevance)</div>`);
+      riskLines.push(`<div><b>Change Failure Probability Index</b>: ${s.fail}/25 (duration + complexity signals)</div>`);
+      riskLines.push(`<div><b>SLA Risk Score</b>: ${s.sla}/20 (time proximity + blast + license health)</div>`);
+      riskLines.push(`<div><b>SLA Breach Detection</b>: ${slaBreachRisk ? "<span style='color:var(--bad);font-weight:1000;'>ELEVATED</span>" : "<span style='color:var(--good);font-weight:1000;'>LOW</span>"} (heuristic)</div>`);
+      riskLines.push(`<div><b>Overlap Conflicts</b>: ${overlapCount} overlapping window(s) with this change</div>`);
+      if(LICENSE_SUMMARY.hasDeficit){
+        riskLines.push(`<div class="muted" style="margin-top:6px;font-size:12px;font-weight:900;">
+          Tenant has license deficit (${LICENSE_SUMMARY.totalDeficit}). Capacity pressure can amplify impact during change windows.
+        </div>`);
+      }
+      document.getElementById("dRisk").innerHTML = riskLines.join("");
 
-/* ======================================================
-   Refresh
-====================================================== */
-document.getElementById("btnRefresh").addEventListener("click", () => loadMaintenance(true));
+      // Overlaps list
+      const mine = OVERLAPS.filter(o=> String(o.a.id)===String(m.id) || String(o.b.id)===String(m.id))
+        .slice(0,12);
 
-/* ======================================================
-   Init
-====================================================== */
-loadMaintenance(false);
+      if(!mine.length){
+        document.getElementById("dOverlaps").textContent = "No overlap conflicts detected for this maintenance window.";
+      } else {
+        document.getElementById("dOverlaps").innerHTML = mine.map(o=>{
+          const other = String(o.a.id)===String(m.id) ? o.b : o.a;
+          const sev = o.score >= 5 ? "HIGH" : o.score >= 3 ? "MEDIUM" : "LOW";
+          return `<div class="muted" style="margin-top:8px;font-weight:900;">
+            <b>${sev}</b> • Overlaps with: ${escapeHtml(other.name || "Maintenance")} • Shared products: ${o.sharedProd ? "Yes" : "No"} • Shared region: ${o.sharedRegion ? "Yes" : "No"}
+          </div>`;
+        }).join("");
+      }
 
-</script>
+      // Timeline
+      const updates = (m.updates || []).slice().sort((a,b)=> new Date(b.created_at) - new Date(a.created_at));
+      const tl = document.getElementById("dTimeline");
+      if(!updates.length){
+        tl.innerHTML = `<div class="muted" style="font-weight:900;">No updates published yet.</div>`;
+      } else {
+        tl.innerHTML = updates.map(u=>`
+          <div class="timelineItem">
+            <div style="font-weight:1000;">${escapeHtml(u.status || "Update")}</div>
+            <div class="muted" style="margin-top:6px;font-weight:850;">${escapeHtml(toTextFromHtml(u.body || ""))}</div>
+            <div class="muted" style="margin-top:8px;font-size:12px;font-weight:900;">${u.created_at ? fmtDate(new Date(u.created_at)) : ""}</div>
+          </div>
+        `).join("");
+      }
 
+      // HTML details
+      document.getElementById("dHtml").innerHTML = sanitizeAndRenderHtml(m.detailsHtml || "");
+
+      document.getElementById("detailOverlay").style.display = "flex";
+    }
+
+    function closeDetail(){
+      document.getElementById("detailOverlay").style.display = "none";
+      CURRENT = null;
+    }
+
+    // ---------------- ICS Export ----------------
+    function formatICSDate(d){
+      return d.toISOString().replace(/[-:]/g,"").split(".")[0] + "Z";
+    }
+    function icsEscape(s){
+      return String(s||"").replace(/\r?\n/g," ").replace(/,/g,"\\,");
+    }
+    function exportICS(m){
+      const w = parseStartEnd(m);
+      const start = w.start || new Date(m.created_at || Date.now());
+      const end = w.end || new Date(start.getTime() + 2*3600000);
+
+      const desc = toTextFromHtml(m.detailsHtml || "");
+      const prod = products(m).join(", ");
+      const reg = regionFromText(desc);
+
+      const ics =
+`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//US Signal//Webex Maintenance//EN
+BEGIN:VEVENT
+UID:${String(m.id)}@ussignal
+SUMMARY:${icsEscape(m.name)}
+DTSTART:${formatICSDate(start)}
+DTEND:${formatICSDate(end)}
+DESCRIPTION:${icsEscape(desc)} Products: ${icsEscape(prod)} Region: ${icsEscape(reg)}
+END:VEVENT
+END:VCALENDAR`;
+
+      const blob = new Blob([ics], { type:"text/calendar;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `maintenance_${String(m.id)}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+    function exportICSForCurrent(){
+      if(CURRENT) exportICS(CURRENT);
+    }
+
+    // ---------------- Email Draft (fallback) ----------------
+    function emailDraft(m){
+      const w = parseStartEnd(m);
+      const s = scoreMaintenance(m);
+      const prod = products(m).slice(0,8).join(", ");
+      const desc = toTextFromHtml(m.detailsHtml || "").slice(0,1200);
+
+      const subject = `Webex Maintenance: ${m.name}`;
+      const body =
+`Tenant: ${TENANT.orgName}
+Window: ${fmtDate(w.start)} → ${fmtDate(w.end)} (${TENANT.tz})
+Region: ${s.region}
+Products: ${prod || "—"}
+
+Risk Summary
+- SLA Risk: ${s.sla}/20
+- Failure Probability Index: ${s.fail}/25
+- Blast Radius: ${s.blast}/25
+- Relevance: ${String(s.rel).toUpperCase()}
+
+Provider Detail
+${desc}
+
+Portal: ${location.href}`;
+
+      const to = document.getElementById("notifyEmail").value.trim() || "";
+      const url = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = url;
+    }
+
+    // ---------------- CSV Export ----------------
+    function exportCsv(){
+      const rows = FILTERED.map(m=>{
+        const s = scoreMaintenance(m);
+        const w = s.w;
+        return {
+          id: m.id,
+          name: m.name,
+          status: m.status,
+          impact: m.impact,
+          start: w.start ? w.start.toISOString() : "",
+          end: w.end ? w.end.toISOString() : "",
+          region: s.region,
+          products: products(m).join("; "),
+          sla: s.sla,
+          fail: s.fail,
+          blast: s.blast,
+          relevance: s.rel
+        };
+      });
+
+      const headers = Object.keys(rows[0] || { id:"" });
+      const csv = [
+        headers.join(","),
+        ...rows.map(r=> headers.map(h=> `"${String(r[h] ?? "").replace(/"/g,'""')}"`).join(","))
+      ].join("\n");
+
+      const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `maintenance_export_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    // ---------------- Executive Print ----------------
+    function openExecPrint(){
+      const overlay = document.getElementById("execPrintOverlay");
+      overlay.style.display = "flex";
+
+      document.getElementById("execPrintSubtitle").textContent =
+        `${TENANT.orgName || "Customer"} • ${new Date().toLocaleString()} • Timezone: ${TENANT.tz}`;
+
+      const overlaps = computeOverlaps(ALL);
+      const clusters = clusterWindows(ALL);
+
+      const scored = ALL.map(m=>({ m, s:scoreMaintenance(m) }))
+        .sort((a,b)=> (b.s.sla + b.s.blast + b.s.fail) - (a.s.sla + a.s.blast + a.s.fail))
+        .slice(0,10);
+
+      const lines = [];
+      lines.push(`<b>Executive Summary</b><br/>`);
+      lines.push(`${escapeHtml(document.getElementById("execBrief").textContent)}<br/><br/>`);
+
+      lines.push(`<b>Top Risk Windows</b><br/>`);
+      if(!scored.length){
+        lines.push(`—<br/><br/>`);
+      } else {
+        lines.push(`<ol>`);
+        for(const x of scored){
+          lines.push(`<li>
+            <b>${escapeHtml(x.m.name || "Maintenance")}</b><br/>
+            Window: ${escapeHtml(fmtDate(x.s.w.start))} → ${escapeHtml(fmtDate(x.s.w.end))} (~${x.s.w.durationHours.toFixed(1)}h)<br/>
+            Region: ${escapeHtml(x.s.region)} • Products: ${escapeHtml(products(x.m).slice(0,8).join(", ") || "—")}<br/>
+            SLA ${x.s.sla}/20 • Failure ${x.s.fail}/25 • Blast ${x.s.blast}/25 • Relevance ${escapeHtml(String(x.s.rel).toUpperCase())}
+          </li>`);
+        }
+        lines.push(`</ol><br/>`);
+      }
+
+      lines.push(`<b>Overlap Conflicts</b><br/>`);
+      if(!overlaps.length){
+        lines.push(`No overlaps detected.<br/><br/>`);
+      } else {
+        lines.push(`<ul>`);
+        overlaps.slice(0,12).forEach(o=>{
+          lines.push(`<li>
+            ${escapeHtml(o.a.name || "Change A")} overlaps ${escapeHtml(o.b.name || "Change B")} • Shared products: ${o.sharedProd ? "Yes" : "No"} • Shared region: ${o.sharedRegion ? "Yes" : "No"}
+          </li>`);
+        });
+        lines.push(`</ul><br/>`);
+      }
+
+      lines.push(`<b>Predictive Clusters</b><br/>`);
+      if(!clusters.length){
+        lines.push(`No clusters identified.<br/>`);
+      } else {
+        lines.push(`<ul>`);
+        clusters.slice(0,8).forEach(c=>{
+          lines.push(`<li>${c.size} change(s) • ${escapeHtml(c.fp)} • ${escapeHtml(c.start ? fmtDate(new Date(c.start)) : "—")}</li>`);
+        });
+        lines.push(`</ul>`);
+      }
+
+      document.getElementById("execPrintBody").innerHTML = lines.join("");
+    }
+
+    function closeExecPrint(){ document.getElementById("execPrintOverlay").style.display = "none"; }
+    function printExec(){ window.print(); }
+
+    // ---------------- Slack payload helpers ----------------
+    function makeSlackPayload(m){
+      const w = parseStartEnd(m);
+      const s = scoreMaintenance(m);
+      return {
+        text:
+`Webex Maintenance Alert: ${m.name}
+Tenant: ${TENANT.orgName}
+Window: ${fmtDate(w.start)} → ${fmtDate(w.end)} (${TENANT.tz})
+Region: ${s.region}
+Products: ${(products(m).slice(0,10).join(", ") || "—")}
+Risk: SLA ${s.sla}/20 • Failure ${s.fail}/25 • Blast ${s.blast}/25 • Relevance ${String(s.rel).toUpperCase()}`
+      };
+    }
+    async function copySlackPayload(){
+      if(!CURRENT) return;
+      const payload = makeSlackPayload(CURRENT);
+      try{
+        await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+        alert("Slack payload copied to clipboard.");
+      }catch{
+        alert("Could not access clipboard. Copy manually from console.");
+        console.log(payload);
+      }
+    }
+
+    async function sendSlackWebhook(m, webhook){
+      if(!webhook) return false;
+      const payload = makeSlackPayload(m);
+      try{
+        const r = await fetch(webhook, {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(payload)
+        });
+        return r.ok;
+      }catch{
+        // common due to CORS
+        setSlackStatus("Slack webhook blocked by browser/CORS. Payload copied to clipboard.", true);
+        try{ await navigator.clipboard.writeText(JSON.stringify(payload, null, 2)); }catch{}
+        return false;
+      }
+    }
+
+    function setSlackStatus(msg, show){
+      const el = document.getElementById("slackStatus");
+      el.style.display = show ? "block" : "none";
+      el.textContent = msg || "";
+    }
+
+    // ---------------- Notifications (scheduler) ----------------
+    function loadNotifySettings(){
+      try{ return JSON.parse(localStorage.getItem(NOTIFY_KEY) || "{}"); }
+      catch{ return {}; }
+    }
+    function setNotifyStatus(msg){
+      document.getElementById("notifyStatus").textContent = msg || "—";
+    }
+
+    function saveNotifySettings(){
+      const s = {
+        email: document.getElementById("notifyEmail").value.trim(),
+        leadMin: Number(document.getElementById("notifyLead").value || 30),
+        onlyRelevant: !!document.getElementById("notifyOnlyRelevant").checked,
+        slackEnable: !!document.getElementById("notifySlackEnable").checked,
+        slackWebhook: document.getElementById("slackWebhook").value.trim(),
+        lastSent: loadNotifySettings().lastSent || {}
+      };
+      localStorage.setItem(NOTIFY_KEY, JSON.stringify(s));
+      setNotifyStatus("Saved notification settings.");
+      startNotifyScheduler();
+    }
+
+    function shouldNotifyFor(m, s){
+      const w = parseStartEnd(m);
+      const minsTo = (w.start.getTime() - Date.now())/60000;
+      if(minsTo <= 0) return false;
+      if(minsTo > (s.leadMin + 1)) return false;
+
+      // only relevant filter
+      if(s.onlyRelevant){
+        const rel = isRelevantToTenant(m);
+        if(rel !== "high" && rel !== "medium") return false;
+      }
+
+      return true;
+    }
+
+    async function sendEmailNotifyBestEffort(m, email){
+      // If you later add /api/maintenance/notify, this will use it automatically.
+      // For now, we treat 404 as "not available" and fallback to mailto draft.
+      try{
+        const res = await fetch("/api/maintenance/notify", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ maintenanceId: String(m.id), email })
+        });
+        if(res.ok) return true;
+        if(res.status === 404) return false;
+        return false;
+      }catch{
+        return false;
+      }
+    }
+
+    function startNotifyScheduler(){
+      if(NOTIFY_TIMER) clearInterval(NOTIFY_TIMER);
+
+      const tick = async ()=>{
+        const s = loadNotifySettings();
+        if((!s.email || !s.email.trim()) && !s.slackEnable) return;
+        if(!ALL.length) return;
+
+        if(!s.lastSent) s.lastSent = {};
+        let fired = 0;
+
+        for(const m of ALL){
+          if(!m?.id) continue;
+          const mid = String(m.id);
+          const last = Number(s.lastSent[mid] || 0);
+
+          // once per 24h per maintenance id
+          if(Date.now() - last < 24*3600000) continue;
+
+          if(!shouldNotifyFor(m, s)) continue;
+
+          const sc = scoreMaintenance(m);
+
+          // notify gate: medium+ risk OR tenant relevance
+          const gate = (sc.sla >= 8) || (sc.blast >= 10) || (sc.fail >= 14) || (isRelevantToTenant(m) !== "low");
+          if(!gate) continue;
+
+          // Email
+          if(s.email && s.email.trim()){
+            const ok = await sendEmailNotifyBestEffort(m, s.email.trim());
+            if(ok){
+              s.lastSent[mid] = Date.now();
+              fired++;
+            } else {
+              // fallback: open a draft once (do not spam)
+              s.lastSent[mid] = Date.now();
+              fired++;
+              emailDraft(m);
+            }
+          }
+
+          // Slack
+          if(s.slackEnable && s.slackWebhook){
+            await sendSlackWebhook(m, s.slackWebhook);
+          }
+        }
+
+        if(fired){
+          localStorage.setItem(NOTIFY_KEY, JSON.stringify(s));
+          setNotifyStatus(`Sent ${fired} scheduled alert(s).`);
+        }
+      };
+
+      NOTIFY_TIMER = setInterval(tick, 30 * 1000);
+      setNotifyStatus("Scheduler armed (checks every 30 seconds while this page is open).");
+    }
+
+    async function testNotifyNow(){
+      const s = loadNotifySettings();
+      const email = document.getElementById("notifyEmail").value.trim();
+      const slackEnabled = document.getElementById("notifySlackEnable").checked;
+      const hook = document.getElementById("slackWebhook").value.trim();
+
+      if(!email && !slackEnabled){
+        setNotifyStatus("Set email and/or enable Slack webhook first.");
+        return;
+      }
+
+      const next = ALL
+        .map(m=>({ m, w: parseStartEnd(m) }))
+        .sort((a,b)=>a.w.start-b.w.start)[0];
+
+      if(!next){
+        setNotifyStatus("No maintenance found to test.");
+        return;
+      }
+
+      if(email){
+        const ok = await sendEmailNotifyBestEffort(next.m, email);
+        setNotifyStatus(ok ? "Test email sent via endpoint." : "Endpoint not available; opening mail draft.");
+        if(!ok) emailDraft(next.m);
+      }
+
+      if(slackEnabled){
+        await sendSlackWebhook(next.m, hook);
+        setSlackStatus("Slack test attempted. If blocked by CORS, payload copied to clipboard.", true);
+      }
+    }
+
+    // ---------------- Logout ----------------
+    async function logout(){
+      try{
+        await fetch("/api/pin/logout", { method:"POST" });
+      }catch{}
+      location.href = "/pin?loggedout=1";
+    }
+
+    // ---------------- Page init ----------------
+    async function refresh(){
+      try{
+        await loadLicensesForRisk();
+        await loadMaintenance();
+        // sort: in progress first, then by start
+        ALL.sort((a,b)=>{
+          const sa = safeText(a.status).includes("progress") ? 0 : 1;
+          const sb = safeText(b.status).includes("progress") ? 0 : 1;
+          if(sa !== sb) return sa - sb;
+          return parseStartEnd(a).start - parseStartEnd(b).start;
+        });
+
+        // update counts in sidebar (optional quick fetches)
+        try{
+          const inc = await apiGet("/api/incidents");
+          document.getElementById("sideInc").textContent = String(inc?.counts?.active ?? "—");
+        }catch{}
+        try{
+          const st = await apiGet("/api/status");
+          document.getElementById("sideOverall").textContent = String(st?.overall ?? "—").toUpperCase();
+        }catch{}
+
+        updateExecutive(ALL);
+        applyFilters();
+
+        // notification settings hydration
+        const saved = loadNotifySettings();
+        if(saved.email) document.getElementById("notifyEmail").value = saved.email;
+        if(saved.leadMin) document.getElementById("notifyLead").value = String(saved.leadMin);
+        document.getElementById("notifyOnlyRelevant").checked = !!saved.onlyRelevant;
+        document.getElementById("notifySlackEnable").checked = !!saved.slackEnable;
+        if(saved.slackWebhook) document.getElementById("slackWebhook").value = saved.slackWebhook;
+
+        startNotifyScheduler();
+
+      }catch(e){
+        console.error(e);
+        document.getElementById("execBrief").textContent =
+          "Failed to load maintenance data. If you are a customer user, verify your PIN session is active, then refresh.";
+        document.getElementById("rows").innerHTML =
+          `<tr><td colspan="7" class="muted" style="padding:18px 16px;font-weight:900;">Error loading maintenance: ${escapeHtml(e.message || String(e))}</td></tr>`;
+      }
+    }
+
+    // ---------------- Wire events ----------------
+    document.getElementById("q").addEventListener("input", applyFilters);
+    document.getElementById("statusFilter").addEventListener("change", applyFilters);
+    document.getElementById("impactFilter").addEventListener("change", applyFilters);
+
+    document.getElementById("themeBtn").addEventListener("click", ()=>{
+      const cur = document.documentElement.getAttribute("data-theme") || "light";
+      setTheme(cur === "light" ? "dark" : "light");
+      // rebuild trend with new colors
+      buildTrend(ALL);
+    });
+
+    document.getElementById("detailOverlay").addEventListener("click", (e)=>{
+      if(e.target && e.target.id === "detailOverlay") closeDetail();
+    });
+    document.getElementById("execPrintOverlay").addEventListener("click", (e)=>{
+      if(e.target && e.target.id === "execPrintOverlay") closeExecPrint();
+    });
+
+    // ---------------- Boot ----------------
+    (async ()=>{
+      initTheme();
+      await loadTenant();
+      await refresh();
+    })();
+  </script>
 </body>
 </html>
