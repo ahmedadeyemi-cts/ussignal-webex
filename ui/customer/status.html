@@ -3,25 +3,18 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>US Signal | Status Intelligence 4.0</title>
+<title>US Signal | Status Intelligence 5.0</title>
 
 <style>
-/* =============================
-   ENTERPRISE TOKEN SYSTEM
-   (Aligned with License 2.0)
-============================= */
 :root{
   --bg:#f6f8fb;
   --card:#ffffff;
-  --card2:#fbfcfe;
   --text:#0f172a;
   --muted:#64748b;
-  --line:rgba(15,23,42,.10);
+  --line:rgba(15,23,42,.08);
   --shadow:0 10px 30px rgba(15,23,42,.08);
 
   --accent:#0f62fe;
-  --accent2:#0b4bd4;
-
   --good:#16a34a;
   --warn:#f59e0b;
   --bad:#dc2626;
@@ -29,33 +22,26 @@
 html[data-theme="dark"]{
   --bg:#0b1220;
   --card:#0f172a;
-  --card2:#111c33;
   --text:#e5e7eb;
-  --muted:#9aa6b2;
-  --line:rgba(226,232,240,.12);
-  --shadow:0 14px 36px rgba(0,0,0,.35);
+  --muted:#94a3b8;
+  --line:rgba(226,232,240,.10);
+  --shadow:0 12px 36px rgba(0,0,0,.35);
 
-  --accent:#60a5fa;
-  --accent2:#3b82f6;
-
+  --accent:#3b82f6;
   --good:#22c55e;
   --warn:#fbbf24;
   --bad:#ef4444;
 }
 *{box-sizing:border-box;font-family:system-ui;}
 body{margin:0;background:var(--bg);color:var(--text);}
-a{text-decoration:none;color:inherit;}
 
-/* =============================
-   LAYOUT
-============================= */
 .app{
   display:grid;
   grid-template-columns:260px 1fr;
   min-height:100vh;
 }
 .sidebar{
-  background:linear-gradient(180deg,var(--card),var(--card2));
+  background:var(--card);
   border-right:1px solid var(--line);
   padding:18px 14px;
 }
@@ -69,16 +55,18 @@ a{text-decoration:none;color:inherit;}
   padding:10px;border-radius:12px;font-weight:800;
 }
 .nav a.active{
-  background:rgba(15,98,254,.15);
+  background:rgba(15,98,254,.12);
   border:1px solid rgba(15,98,254,.25);
 }
 .nav a:hover{background:rgba(15,98,254,.08);}
 
-.main{padding:20px;display:flex;flex-direction:column;gap:16px;}
+.main{
+  padding:22px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
 
-/* =============================
-   CARDS
-============================= */
 .card{
   background:var(--card);
   border:1px solid var(--line);
@@ -86,30 +74,42 @@ a{text-decoration:none;color:inherit;}
   box-shadow:var(--shadow);
   padding:16px;
 }
+
 .headerCard{
-  display:flex;justify-content:space-between;align-items:center;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
-.title{
-  font-size:16px;font-weight:900;
-}
+
+.title{font-size:18px;font-weight:1000;}
 .meta{font-size:12px;color:var(--muted);margin-top:4px;}
 
 button{
   background:var(--accent);
-  border:none;color:white;
-  padding:8px 14px;border-radius:10px;
-  font-weight:900;cursor:pointer;
+  border:none;
+  color:white;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:900;
+  cursor:pointer;
 }
 .btn-outline{
-  background:transparent;border:1px solid var(--line);color:var(--text);
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--text);
 }
 
-/* =============================
-   KPI GRID
-============================= */
-.kpiGrid{
+.banner{
+  padding:14px;
+  border-radius:14px;
+  font-weight:900;
+}
+.banner.bad{background:rgba(220,38,38,.14);color:var(--bad);}
+.banner.warn{background:rgba(245,158,11,.14);color:var(--warn);}
+
+.kpiRow{
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(5,1fr);
   gap:12px;
 }
 .kpi{
@@ -118,44 +118,51 @@ button{
   padding:12px;
 }
 .kpi .label{font-size:12px;color:var(--muted);font-weight:900;}
-.kpi .value{font-size:18px;font-weight:1000;margin-top:6px;}
+.kpi .value{font-size:20px;font-weight:1000;margin-top:6px;}
 
 .pill{
-  padding:6px 12px;border-radius:999px;
-  font-weight:900;font-size:12px;
+  padding:6px 12px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:12px;
 }
 .good{background:rgba(22,163,74,.12);color:var(--good);}
 .warn{background:rgba(245,158,11,.14);color:var(--warn);}
 .bad{background:rgba(220,38,38,.14);color:var(--bad);}
 
-.banner{
-  padding:12px;border-radius:12px;font-weight:900;
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:12px;
 }
-.banner.warn{background:rgba(245,158,11,.15);color:var(--warn);}
-.banner.bad{background:rgba(220,38,38,.18);color:var(--bad);}
 
-.group{
+.serviceCard{
   border:1px solid var(--line);
   border-radius:14px;
+  padding:14px;
+  background:var(--card);
+}
+.serviceName{
+  font-weight:1000;
+  font-size:14px;
   margin-bottom:8px;
-  overflow:hidden;
 }
-.groupTop{
-  padding:12px;
-  display:flex;justify-content:space-between;
-  cursor:pointer;
+.component{
+  font-size:12px;
+  margin-bottom:6px;
+  display:flex;
+  justify-content:space-between;
 }
-.groupBottom{display:none;padding:12px;border-top:1px solid var(--line);}
-.group.open .groupBottom{display:block;}
-
-canvas{width:100%;height:240px;}
+.execBlock{
+  font-size:14px;
+  line-height:1.5;
+}
 </style>
 </head>
 
 <body>
 <div class="app">
 
-<!-- SIDEBAR -->
 <div class="sidebar">
   <div class="brand">
     <img src="/assets/ussignal-logo.jpg"/>
@@ -172,12 +179,11 @@ canvas{width:100%;height:240px;}
   </div>
 </div>
 
-<!-- MAIN -->
 <div class="main">
 
 <div class="card headerCard">
   <div>
-    <div class="title">Webex Platform Status Intelligence</div>
+    <div class="title">Webex Global Status Intelligence</div>
     <div class="meta">
       Last Updated: <span id="lastUpdated">—</span>
     </div>
@@ -185,44 +191,40 @@ canvas{width:100%;height:240px;}
   <div>
     <button class="btn-outline" onclick="toggleTheme()">Theme</button>
     <button onclick="refreshData()">Refresh</button>
-    <button class="btn-outline" onclick="exportPDF()">Export PDF</button>
   </div>
 </div>
 
 <div id="alertBanner"></div>
 
-<div class="kpiGrid">
+<div class="kpiRow">
   <div class="kpi">
-    <div class="label">Overall Status</div>
+    <div class="label">Overall</div>
     <div class="value"><span id="overallPill" class="pill">—</span></div>
   </div>
   <div class="kpi">
-    <div class="label">Affected Groups</div>
-    <div class="value" id="kGroups">0</div>
+    <div class="label">Total Services</div>
+    <div class="value" id="kServices">0</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Impacted Services</div>
+    <div class="value" id="kImpacted">0</div>
   </div>
   <div class="kpi">
     <div class="label">Impacted Components</div>
     <div class="value" id="kComponents">0</div>
   </div>
   <div class="kpi">
-    <div class="label">SLA Risk Score</div>
+    <div class="label">SLA Exposure Index</div>
     <div class="value" id="kRisk">0</div>
   </div>
 </div>
 
 <div class="card">
-  <h3 style="margin-top:0;">Executive Summary</h3>
-  <div id="execSummary"></div>
+  <div class="execBlock" id="execSummary"></div>
 </div>
 
 <div class="card">
-  <h3 style="margin-top:0;">30-Day Service Stability Trend</h3>
-  <canvas id="trendChart"></canvas>
-</div>
-
-<div class="card">
-  <h3 style="margin-top:0;">Service Group Diagnostics</h3>
-  <div id="groups"></div>
+  <div class="grid" id="servicesGrid"></div>
 </div>
 
 </div>
@@ -230,160 +232,113 @@ canvas{width:100%;height:240px;}
 
 <script>
 let STATUS=null;
-let trendData=[];
 
-/* =========================
-   THEME
-========================= */
 function toggleTheme(){
   const html=document.documentElement;
   html.setAttribute("data-theme",
     html.getAttribute("data-theme")==="dark"?"light":"dark");
 }
 
-/* =========================
-   API
-========================= */
 async function refreshData(){
   const r=await fetch("/api/status",{cache:"no-store"});
   const data=await r.json();
   STATUS=data;
-  computeMetrics();
-  renderGroups();
-  generateTrend();
+  render();
 }
 
-/* =========================
-   METRICS
-========================= */
-function computeMetrics(){
+function render(){
   const groups=STATUS.components||[];
-  const nonOp=groups.filter(g=>g.status!=="operational");
 
   document.getElementById("lastUpdated").textContent=
     new Date(STATUS.lastUpdated).toLocaleString();
 
-  document.getElementById("kGroups").textContent=nonOp.length;
+  document.getElementById("kServices").textContent=groups.length;
 
   let impacted=0;
+  let impactedComponents=0;
+
   groups.forEach(g=>{
+    if(g.status!=="operational") impacted++;
     (g.children||[]).forEach(c=>{
-      if(c.status!=="operational") impacted++;
+      if(c.status!=="operational") impactedComponents++;
     });
   });
-  document.getElementById("kComponents").textContent=impacted;
 
-  const risk=(nonOp.length*10)+(impacted*2);
+  document.getElementById("kImpacted").textContent=impacted;
+  document.getElementById("kComponents").textContent=impactedComponents;
+
+  const risk=(impacted*15)+(impactedComponents*3);
   document.getElementById("kRisk").textContent=risk;
 
-  const pill=document.getElementById("overallPill");
   const overall=STATUS.overall||"operational";
-
+  const pill=document.getElementById("overallPill");
   pill.textContent=overall.toUpperCase();
   pill.className="pill "+
     (overall==="operational"?"good":
-    overall==="degraded_performance"?"warn":"bad");
+     overall==="degraded_performance"?"warn":"bad");
 
-  buildExecutive(nonOp.length, impacted, risk);
-  buildBanner(overall, risk);
+  const banner=document.getElementById("alertBanner");
+  banner.innerHTML="";
+  if(overall!=="operational"){
+    banner.innerHTML=`<div class="banner ${
+      risk>50?"bad":"warn"}">
+      Webex service degradation detected.
+    </div>`;
+  }
+
+  buildExecutive(overall, impacted, impactedComponents, risk);
+  renderServices(groups);
 }
 
-function buildExecutive(g,c,r){
-  let text="All systems operational.";
-  if(g>0){
-    text=`${g} service groups reporting degradation impacting ${c} components. `;
-    text+=`SLA exposure score: ${r}.`;
+function buildExecutive(o,s,c,r){
+  let text="All Webex services operational.";
+  if(o!=="operational"){
+    text=`${s} services degraded impacting ${c} components. `;
+    text+=`SLA exposure index ${r}. Customer impact may vary by workload.`;
   }
   document.getElementById("execSummary").textContent=text;
 }
 
-function buildBanner(overall,risk){
-  const banner=document.getElementById("alertBanner");
-  banner.innerHTML="";
-  if(overall!=="operational"){
-    banner.innerHTML=`<div class="banner ${risk>40?"bad":"warn"}">
-      Service degradation detected. Monitor incidents for updates.
-    </div>`;
-  }
-}
-
-/* =========================
-   GROUPS
-========================= */
-function renderGroups(){
-  const host=document.getElementById("groups");
+function renderServices(groups){
+  const host=document.getElementById("servicesGrid");
   host.innerHTML="";
-  (STATUS.components||[]).forEach(g=>{
-    const div=document.createElement("div");
-    div.className="group";
-    div.innerHTML=`
-      <div class="groupTop">
-        <b>${g.name}</b>
-        <span class="pill ${g.status==="operational"?"good":
-          g.status==="degraded_performance"?"warn":"bad"}">
-          ${g.status}
-        </span>
+
+  groups.sort((a,b)=>{
+    if(a.status==="operational" && b.status!=="operational") return 1;
+    if(a.status!=="operational" && b.status==="operational") return -1;
+    return 0;
+  });
+
+  groups.forEach(g=>{
+    const card=document.createElement("div");
+    card.className="serviceCard";
+
+    const pillClass=
+      g.status==="operational"?"good":
+      g.status==="degraded_performance"?"warn":"bad";
+
+    card.innerHTML=`
+      <div class="serviceName">
+        ${g.name}
+        <span class="pill ${pillClass}">${g.status}</span>
       </div>
-      <div class="groupBottom">
-        ${(g.children||[]).map(c=>`
-          <div style="margin-bottom:6px;">
-            ${c.name} —
-            <span class="pill ${
-              c.status==="operational"?"good":
-              c.status==="degraded_performance"?"warn":"bad"}">
-              ${c.status}
-            </span>
-          </div>
-        `).join("")}
-      </div>
+      ${(g.children||[]).map(c=>`
+        <div class="component">
+          <span>${c.name}</span>
+          <span class="pill ${
+            c.status==="operational"?"good":
+            c.status==="degraded_performance"?"warn":"bad"}">
+            ${c.status}
+          </span>
+        </div>
+      `).join("")}
     `;
-    div.querySelector(".groupTop").onclick=
-      ()=>div.classList.toggle("open");
-    host.appendChild(div);
+
+    host.appendChild(card);
   });
 }
 
-/* =========================
-   TREND SIMULATION
-========================= */
-function generateTrend(){
-  const ctx=document.getElementById("trendChart");
-  const canvas=ctx.getContext("2d");
-  canvas.clearRect(0,0,ctx.width,ctx.height);
-
-  const points=[];
-  for(let i=0;i<30;i++){
-    points.push(Math.floor(Math.random()*5));
-  }
-  trendData=points;
-
-  const w=ctx.width=ctx.offsetWidth;
-  const h=ctx.height=240;
-
-  const max=Math.max(...points,5);
-
-  canvas.beginPath();
-  canvas.moveTo(0,h-(points[0]/max)*h);
-
-  points.forEach((p,i)=>{
-    canvas.lineTo(i*(w/29),h-(p/max)*h);
-  });
-
-  canvas.strokeStyle="#0f62fe";
-  canvas.lineWidth=2;
-  canvas.stroke();
-}
-
-/* =========================
-   EXPORT
-========================= */
-function exportPDF(){window.print();}
-
-/* =========================
-   AUTO REFRESH
-========================= */
 setInterval(refreshData,60000);
-
 refreshData();
 </script>
 </body>
