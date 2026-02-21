@@ -1,17 +1,28 @@
 <!-- =========================================================
-     INCIDENT INTELLIGENCE 3.0
-     Fortune-100 NOC Architecture
-     Fully aligned with License Intelligence 2.0 layout
+     INCIDENT INTELLIGENCE — CUSTOMER 4.0
+     Customer-Facing Incident Transparency (Fortune-100 UX)
+     - Layout + token system aligned to License Intelligence 2.0
+     - Tenant-aware (auto-detect like License page)
+     - Admin multi-tenant switcher (if ME.role === "admin")
+     - Clear executive narrative + SLA breach banners
+     - Longest active incident + MTTR + median TTR + SLA compliance
+     - 30-day trend chart + product heatmap + impact index
+     - Correlates to tenant signals (Licenses/Devices/PSTN if available)
+     - Export to PDF via print (executive format)
+     - Notification scheduling (best-effort without worker changes)
+     - Live updates: optional WebSocket (if you later expose /ws), else polling
 ========================================================= -->
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8"/>
-<title>US Signal | Incident Intelligence 3.0</title>
+<title>US Signal | Incident Intelligence Customer 4.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
 <style>
-/* ========= EXACT SAME TOKEN SYSTEM AS LICENSE 2.0 ========= */
+/* ======================================================
+   TOKEN SYSTEM (MATCH LICENSE 2.0)
+====================================================== */
 :root{
   --bg:#f6f8fb;
   --card:#ffffff;
@@ -19,12 +30,22 @@
   --muted:#64748b;
   --line:rgba(15,23,42,.10);
   --shadow:0 8px 24px rgba(15,23,42,.08);
+
   --accent:#0f62fe;
+  --accent2:#0b4bd4;
+
   --good:#16a34a;
   --warn:#f59e0b;
   --bad:#dc2626;
+
+  --chip:rgba(15,98,254,.08);
+  --chipText:#1d4ed8;
+
+  --rowHover:rgba(15,98,254,.04);
   --pillBg:#fff;
   --pillBorder:rgba(15,23,42,.14);
+
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 html[data-theme="dark"]{
   --bg:#0b1220;
@@ -33,54 +54,150 @@ html[data-theme="dark"]{
   --muted:#94a3b8;
   --line:rgba(226,232,240,.12);
   --shadow:0 12px 32px rgba(0,0,0,.35);
+
   --accent:#3b82f6;
+  --accent2:#60a5fa;
+
   --good:#22c55e;
   --warn:#f59e0b;
   --bad:#ef4444;
+
+  --chip:rgba(59,130,246,.18);
+  --chipText:#bfdbfe;
+
+  --rowHover:rgba(59,130,246,.10);
   --pillBg:rgba(15,23,42,.35);
   --pillBorder:rgba(226,232,240,.14);
 }
-*{box-sizing:border-box;font-family:system-ui;}
-body{margin:0;background:var(--bg);color:var(--text);display:flex;min-height:100vh;}
 
-/* ===== SIDEBAR IDENTICAL STRUCTURE ===== */
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  min-height:100vh;
+}
+
+/* ======================================================
+   SIDEBAR (MATCH LICENSE 2.0)
+====================================================== */
 .sidebar{
-  width:270px;background:var(--card);
+  width:270px;
+  background:var(--card);
   border-right:1px solid var(--line);
   padding:18px 14px;
-  display:flex;flex-direction:column;gap:14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
 }
-.brand{display:flex;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line);}
-.brand img{height:34px;}
-.nav{display:flex;flex-direction:column;gap:6px;}
-.nav a{
-  padding:10px;border-radius:12px;
-  text-decoration:none;font-weight:800;
-  font-size:13px;color:var(--text);
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
 }
-.nav a:hover{background:rgba(15,98,254,.12);}
-.nav a.active{background:rgba(15,98,254,.18);border:1px solid rgba(15,98,254,.25);}
-.sidebarFooter{margin-top:auto;padding-top:12px;border-top:1px solid var(--line);}
-.ragPill{
-  padding:10px;border-radius:999px;
-  border:1px solid var(--pillBorder);
-  display:flex;justify-content:space-between;
-  font-weight:1000;
-}
-.ragDot{width:10px;height:10px;border-radius:50%;background:var(--good);}
-.sideBtnRow{display:flex;gap:10px;margin-top:10px;}
-.sideBtnRow button{width:100%;}
+.brand img{ height:34px; border-radius:8px; }
+.brand .title{ display:flex; flex-direction:column; }
+.brand .title b{ font-size:14px; letter-spacing:.2px; }
+.brand .title span{ font-size:12px; color:var(--muted); }
 
-/* ===== MAIN LAYOUT ===== */
-.main{flex:1;padding:22px;display:flex;flex-direction:column;gap:18px;}
+.nav{ display:flex; flex-direction:column; gap:6px; }
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
+}
+.nav a:hover{ background:var(--chip); color:var(--accent2); }
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+.sidebarFooter{
+  margin-top:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+}
+
+.ragPill{
+  padding:10px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
+  font-size:12px;
+  font-weight:1000;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.ragDot{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--good);
+  box-shadow:0 0 0 3px rgba(22,163,74,.15);
+}
+.ragPill.amber .ragDot{ background:var(--warn); box-shadow:0 0 0 3px rgba(245,158,11,.15); }
+.ragPill.red .ragDot{ background:var(--bad); box-shadow:0 0 0 3px rgba(239,68,68,.15); }
+.ragText{ display:flex; flex-direction:column; line-height:1.1; }
+.ragText b{ font-size:12px; }
+.ragText span{ font-size:11px; color:var(--muted); font-weight:800; }
+.mono{ font-family:var(--mono); }
+
+.sideBtnRow{ display:flex; gap:10px; }
+.sideBtnRow button{ width:100%; }
+
+/* ======================================================
+   MAIN
+====================================================== */
+.main{
+  flex:1;
+  padding:22px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
 .header-card{
   background:var(--card);
   border:1px solid var(--line);
   border-radius:16px;
   box-shadow:var(--shadow);
   padding:16px;
-  display:flex;justify-content:space-between;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
 }
+.header-left{ display:flex; flex-direction:column; gap:4px; }
+.header-left .h{ font-size:16px; font-weight:1000; }
+.header-left .sub{ font-size:12px; color:var(--muted); }
+
+.header-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.pill{
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+}
+
 .card{
   background:var(--card);
   border:1px solid var(--line);
@@ -88,246 +205,2522 @@ body{margin:0;background:var(--bg);color:var(--text);display:flex;min-height:100
   box-shadow:var(--shadow);
   padding:16px;
 }
-.kpi-grid{
-  display:grid;grid-template-columns:repeat(4,1fr);
-  gap:12px;
+.sectionTitle{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:10px;
+  margin-bottom:10px;
 }
-.kpi{border:1px solid var(--line);border-radius:16px;padding:12px;}
-.kpi .label{font-size:12px;color:var(--muted);font-weight:900;}
-.kpi .value{font-size:18px;font-weight:1000;margin-top:6px;}
-.banner{
-  padding:12px;border-radius:12px;
+.sectionTitle h2{
+  margin:0;
+  font-size:14px;
+  font-weight:1000;
+}
+.sectionTitle .hint{
+  font-size:12px;
+  color:var(--muted);
   font-weight:900;
 }
-.banner.bad{background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.35);color:var(--bad);}
-.banner.warn{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:var(--warn);}
-.table-wrap{border:1px solid var(--line);border-radius:16px;overflow:auto;}
-table{width:100%;border-collapse:collapse;}
-th,td{padding:12px;border-top:1px solid rgba(15,23,42,.06);}
-th{text-align:left;font-size:12px;color:var(--muted);}
-tr:hover{background:rgba(15,98,254,.05);cursor:pointer;}
-.badge{padding:6px 10px;border-radius:999px;font-size:11px;font-weight:900;}
-.badge.good{color:var(--good);}
-.badge.warn{color:var(--warn);}
-.badge.bad{color:var(--bad);}
-button{
-  background:var(--accent);color:#fff;border:none;
-  padding:8px 14px;border-radius:10px;font-weight:900;cursor:pointer;
+.row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
 }
-.btn-outline{background:transparent;border:1px solid var(--line);color:var(--text);}
-canvas{width:100%;height:220px;}
+.muted{ font-size:12px; color:var(--muted); }
+.small{ font-size:12px; color:var(--muted); font-weight:800; }
+
+.grid4{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:12px;
+}
+@media (max-width: 1200px){
+  .grid4{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 820px){
+  .grid4{ grid-template-columns:1fr; }
+}
+
+.kpi{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(255,255,255,.02);
+  overflow:hidden;
+}
+.kpi .label{ font-size:12px;color:var(--muted);font-weight:900; display:flex; justify-content:space-between; gap:8px; align-items:center;}
+.kpi .value{ font-size:18px;font-weight:1000;margin-top:6px; }
+.kpi .sub{ font-size:12px;color:var(--muted);margin-top:6px; font-weight:800; }
+.spark{ width:100%; height:28px; display:block; margin-top:8px; opacity:.9; }
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  font-weight:1000;
+  font-size:11px;
+  background:var(--pillBg);
+}
+.badge.good{ color:var(--good); }
+.badge.warn{ color:var(--warn); }
+.badge.bad{ color:var(--bad); }
+.dot{ width:8px;height:8px;border-radius:50%; background:currentColor; opacity:.9; }
+
+button{
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:900;
+  cursor:pointer;
+}
+button:disabled{ opacity:.65; cursor:not-allowed; }
+.btn-outline{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--text);
+}
+
+input[type="email"], input[type="text"], select{
+  padding:8px 12px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--text);
+  font-size:13px;
+}
+select{ cursor:pointer; }
+
+.banner{
+  padding:12px 12px;
+  border-radius:14px;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
+  font-weight:1000;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.banner .title{ font-size:13px; }
+.banner .desc{ font-size:12px; color:var(--muted); font-weight:900; margin-top:4px; }
+.banner.bad{
+  border-color:rgba(220,38,38,.35);
+  background:rgba(220,38,38,.10);
+  color:var(--bad);
+}
+.banner.warn{
+  border-color:rgba(245,158,11,.35);
+  background:rgba(245,158,11,.10);
+  color:var(--warn);
+}
+.banner.good{
+  border-color:rgba(22,163,74,.25);
+  background:rgba(22,163,74,.08);
+  color:var(--good);
+}
+
+.table-wrap{
+  margin-top:10px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  overflow:auto;
+}
+table{ width:100%; border-collapse:collapse; }
+thead th{
+  padding:12px;
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  text-align:left;
+  white-space:nowrap;
+}
+tbody td{
+  padding:12px;
+  border-top:1px solid rgba(15,23,42,.06);
+  font-size:13px;
+  white-space:nowrap;
+}
+tbody tr:hover{ background:var(--rowHover); cursor:pointer; }
+
+.chip{
+  display:inline-flex;
+  gap:6px;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
+  font-size:11px;
+  font-weight:1000;
+  color:var(--muted);
+}
+.chip strong{ color:var(--text); }
+
+.chartWrap{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(255,255,255,.02);
+}
+canvas{ width:100%; height:240px; display:block; }
+
+.hr{
+  border:none;
+  border-top:1px solid var(--line);
+  margin:14px 0;
+}
+
+/* Modal */
 .modalOverlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.6);
-  display:none;align-items:center;justify-content:center;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+  padding:16px;
 }
 .modal{
   background:var(--card);
-  width:900px;max-width:95%;
-  border-radius:16px;border:1px solid var(--line);
-  padding:18px;max-height:90vh;overflow:auto;
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+  border-radius:16px;
+  width:980px;
+  max-width:100%;
+  max-height:90vh;
+  overflow:auto;
+}
+.modalHeader{
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
+.modalHeader h3{ margin:0; font-size:15px; font-weight:1000; }
+.modalBody{ padding:16px; }
+.modalFooter{
+  padding:14px 16px;
+  border-top:1px solid var(--line);
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+.timelineItem{
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  margin-bottom:10px;
+  background:rgba(255,255,255,.02);
+}
+.timelineItem .t{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+.timelineItem .t b{ font-size:12px; }
+.timelineItem .t span{ font-size:11px; color:var(--muted); font-weight:900; }
+.timelineItem .b{ margin-top:8px; font-size:13px; color:var(--text); }
+.timelineItem .b .muted{ font-size:12px; }
+
+.status-message{ opacity:0; transition:opacity .25s ease; }
+.status-message.show{ opacity:1; }
+
+/* Print/PDF (Executive) */
+@media print{
+  body{ background:#fff; color:#000; }
+  .sidebar{ display:none !important; }
+  .main{ padding:0; }
+  .btn-outline, button, select, input{ display:none !important; }
+  .header-card{ box-shadow:none; border:1px solid #ddd; }
+  .card{ box-shadow:none; border:1px solid #ddd; }
+  .table-wrap{ border:1px solid #ddd; }
+  .banner{ border:1px solid #ddd; }
 }
 </style>
 </head>
 
 <body>
 
+<!-- ============================= -->
 <!-- SIDEBAR -->
+<!-- ============================= -->
 <div class="sidebar">
   <div>
     <div class="brand">
-      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg"/>
-      <div>
-        <b>US Signal</b><br/>
-        <span style="font-size:12px;color:var(--muted);">Customer Portal</span>
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" alt="US Signal"/>
+      <div class="title">
+        <b>US Signal</b>
+        <span>Customer Portal</span>
       </div>
     </div>
-    <div class="nav">
+
+    <div class="nav" style="margin-top:12px;">
       <a href="/customer">Dashboard</a>
       <a href="/customer/licenses">Licenses</a>
       <a href="/customer/devices">Devices</a>
-      <a href="/customer/analytics">Analytics</a>
-      <a href="/customer/cdr">CDR</a>
       <a href="/customer/pstn">PSTN</a>
+      <a href="/customer/maintenance">Maintenance</a>
+      <a href="/customer/status">Status</a>
       <a href="/customer/incidents" class="active">Incidents</a>
     </div>
   </div>
+
   <div class="sidebarFooter">
-    <div class="ragPill">
-      <span id="ragText">GREEN</span>
-      <span id="ragScore">100</span>
+    <div id="ragPill" class="ragPill">
+      <span class="ragDot" id="ragDot"></span>
+      <div class="ragText">
+        <b id="ragTitle">GREEN</b>
+        <span id="ragSub">No active incidents detected</span>
+      </div>
+      <span class="mono" id="ragScore">100</span>
     </div>
+
     <div class="sideBtnRow">
-      <button class="btn-outline" onclick="toggleTheme()">Theme</button>
-      <button class="btn-outline" onclick="logout()">Logout</button>
+      <button class="btn-outline" id="btnTheme">Dark Mode</button>
+      <button class="btn-outline" id="btnLogout">Logout</button>
+    </div>
+
+    <div class="muted" style="font-weight:900;">
+      Incident Intelligence — Customer 4.0
     </div>
   </div>
 </div>
 
+<!-- ============================= -->
 <!-- MAIN -->
+<!-- ============================= -->
 <div class="main">
 
-<div class="header-card">
-  <div>
-    <div style="font-weight:1000;font-size:16px;">Webex Incident Intelligence 3.0</div>
-    <div style="font-size:12px;color:var(--muted);" id="execSummary"></div>
+  <!-- HEADER -->
+  <div class="header-card">
+    <div class="header-left">
+      <div class="h">Webex — Incident Intelligence (Customer 4.0)</div>
+      <div class="sub" id="whoLine">Loading…</div>
+      <div class="sub" id="execNarrative" style="font-weight:900; margin-top:6px;">—</div>
+    </div>
+
+    <div class="header-actions">
+      <div class="pill" id="tenantPill">Tenant: —</div>
+      <div class="pill" id="sessionPill">Session: —</div>
+      <div class="pill" id="lastRefreshPill">Last refresh: —</div>
+      <button class="btn-outline" id="btnWallMode" title="Simplified view for a NOC wall (no modals)">Wall Mode</button>
+      <button class="btn-outline" id="btnExportPdf">Export PDF</button>
+      <button class="btn-outline" id="btnRefresh">Refresh</button>
+    </div>
   </div>
-  <div>
-    <button class="btn-outline" onclick="exportPDF()">Export PDF</button>
-    <button onclick="refreshData()">Refresh</button>
+
+  <!-- ALERT BANNERS -->
+  <div id="bannerStack" style="display:flex; flex-direction:column; gap:10px;"></div>
+
+  <!-- TENANT CONTEXT -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>Tenant Context</h2>
+      <div class="hint" id="orgContext">Loading…</div>
+    </div>
+
+    <div id="adminNote" class="muted" style="display:none; font-weight:900; margin-bottom:10px;">
+      US Signal Admin View — select a tenant to tailor impact correlation (incidents are global Webex events).
+    </div>
+
+    <div class="row">
+      <select id="tenantSelect" disabled>
+        <option>Loading…</option>
+      </select>
+      <button id="btnLoadTenant" class="btn-outline">Apply Tenant</button>
+
+      <span class="muted" id="errBox" style="display:none; font-weight:900;"></span>
+
+      <span class="chip">
+        <strong>Live updates:</strong>
+        <span id="liveMode">Polling</span>
+      </span>
+    </div>
+
+    <div style="height:10px"></div>
+
+    <div class="row">
+      <span class="badge" id="slaBadge"><span class="dot"></span><span id="slaBadgeText">SLA: —</span></span>
+      <span class="badge" id="exposureBadge"><span class="dot"></span><span id="exposureText">Tenant exposure: —</span></span>
+      <span class="badge" id="dataBadge"><span class="dot"></span><span id="dataText">Signals: —</span></span>
+    </div>
   </div>
-</div>
 
-<div id="slaBanner"></div>
+  <!-- KPI GRID -->
+  <div class="grid4">
+    <div class="kpi">
+      <div class="label">
+        <span>Active Incidents</span>
+        <span class="muted" id="kpiActiveNote">—</span>
+      </div>
+      <div class="value" id="kActive">—</div>
+      <div class="sub" id="kActiveSub">Longest active: —</div>
+      <canvas class="spark" id="spActive" width="320" height="56"></canvas>
+    </div>
 
-<div class="kpi-grid">
-  <div class="kpi"><div class="label">Active</div><div class="value" id="kActive">0</div></div>
-  <div class="kpi"><div class="label">Major</div><div class="value" id="kMajor">0</div></div>
-  <div class="kpi"><div class="label">MTTR</div><div class="value" id="kMTTR">0h</div></div>
-  <div class="kpi"><div class="label">Impact Index</div><div class="value" id="kImpact">0</div></div>
-</div>
+    <div class="kpi">
+      <div class="label">
+        <span>Time to Resolution (30d)</span>
+        <span class="muted" id="kpiTtrNote">—</span>
+      </div>
+      <div class="value" id="kMTTR">—</div>
+      <div class="sub" id="kMTTRSub">Median: —</div>
+      <canvas class="spark" id="spTTR" width="320" height="56"></canvas>
+    </div>
 
-<div class="card">
-  <h3>30-Day Incident Trend</h3>
-  <canvas id="trendChart"></canvas>
-</div>
+    <div class="kpi">
+      <div class="label">
+        <span>Impact Index</span>
+        <span class="muted" id="kpiImpactNote">—</span>
+      </div>
+      <div class="value" id="kImpact">—</div>
+      <div class="sub" id="kImpactSub">Severity + duration weighted</div>
+      <canvas class="spark" id="spImpact" width="320" height="56"></canvas>
+    </div>
 
-<div class="card">
-  <h3>Incident Inventory</h3>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Status</th>
-          <th>Severity</th>
-          <th>Start</th>
-          <th>Products</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody id="incidentRows"></tbody>
-    </table>
+    <div class="kpi">
+      <div class="label">
+        <span>SLA Compliance (30d)</span>
+        <span class="muted" id="kpiSlaNote">—</span>
+      </div>
+      <div class="value" id="kSLA">—</div>
+      <div class="sub" id="kSLASub">Breaches: —</div>
+      <canvas class="spark" id="spSLA" width="320" height="56"></canvas>
+    </div>
   </div>
-</div>
+
+  <!-- 30-DAY TREND + HEATMAP -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>30-Day Incident Trend</h2>
+      <div class="hint" id="trendHint">Snapshots: —</div>
+    </div>
+
+    <div class="chartWrap">
+      <canvas id="trendChart" width="1200" height="320"></canvas>
+      <div class="row" style="margin-top:10px; justify-content:space-between;">
+        <div class="muted" style="font-weight:900;" id="trendSummary">
+          Trend shows incident count and impact index over time (stored locally per tenant context).
+        </div>
+        <div class="row">
+          <span class="badge"><span class="dot" style="color:var(--accent);"></span><span>Count</span></span>
+          <span class="badge"><span class="dot" style="color:var(--warn);"></span><span>Impact</span></span>
+          <span class="badge"><span class="dot" style="color:var(--bad);"></span><span>SLA Breach</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="sectionTitle" style="margin-bottom:6px;">
+      <h2>Product Heatmap</h2>
+      <div class="hint">Where the instability is clustering</div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Product Area</th>
+            <th>Active</th>
+            <th>30d Total</th>
+            <th>Major</th>
+            <th>Avg TTR</th>
+            <th>Tenant Exposure</th>
+          </tr>
+        </thead>
+        <tbody id="heatRows">
+          <tr><td colspan="6" class="muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>Notifications</h2>
+      <div class="hint">Get notified about new incidents (best-effort without worker changes)</div>
+    </div>
+
+    <div class="row" style="margin-bottom:10px;">
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="notifyToggle"/>
+        Enable “New Incident” notifications
+      </label>
+
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        Severity:
+        <select id="notifySeverity">
+          <option value="any">Any</option>
+          <option value="major">Major only</option>
+          <option value="major_partial">Major + Partial</option>
+        </select>
+      </label>
+
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        Check frequency:
+        <select id="notifyFreq">
+          <option value="60">60s</option>
+          <option value="120" selected>120s</option>
+          <option value="300">300s</option>
+        </select>
+      </label>
+
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        Email:
+        <input id="notifyEmail" type="email" placeholder="email@company.com" style="min-width:260px;"/>
+      </label>
+
+      <button id="btnTestNotify" class="btn-outline">Test</button>
+      <span id="notifyStatus" class="muted status-message" style="font-weight:900;"></span>
+    </div>
+
+    <div class="muted" style="font-weight:900;">
+      Notes: If your worker later implements an email subscription endpoint, this UI will automatically use it.
+      Until then, notifications are “in-session” (while the page is open) and can optionally trigger your existing email workflow if an endpoint exists.
+    </div>
+  </div>
+
+  <!-- INVENTORY CONTROLS -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>Incident Inventory</h2>
+      <div class="hint">Click any incident to view details, duration, SLA status, and tenant exposure</div>
+    </div>
+
+    <div class="row" style="margin-bottom:10px;">
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="activeOnly"/>
+        Active only
+      </label>
+
+      <select id="productFilter">
+        <option value="">All Products</option>
+      </select>
+
+      <select id="severityFilter">
+        <option value="">All Severities</option>
+        <option value="major">Major</option>
+        <option value="partial">Partial</option>
+        <option value="minor">Minor/Other</option>
+      </select>
+
+      <input id="searchInput" type="text" placeholder="Search by ID, title, keyword…" style="min-width:260px;"/>
+
+      <label class="muted" style="font-weight:1000; display:flex; align-items:center; gap:8px;">
+        Sort:
+        <select id="sortKey">
+          <option value="created_desc" selected>Newest</option>
+          <option value="created_asc">Oldest</option>
+          <option value="duration_desc">Longest duration</option>
+          <option value="impact_desc">Highest impact</option>
+        </select>
+      </label>
+
+      <button id="btnExportCsv" class="btn-outline">Export CSV</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ref</th>
+            <th>Status</th>
+            <th>Severity</th>
+            <th>Started</th>
+            <th>Duration</th>
+            <th>SLA</th>
+            <th>Products</th>
+            <th>Tenant Impact</th>
+            <th>Summary</th>
+          </tr>
+        </thead>
+        <tbody id="incidentRows">
+          <tr><td colspan="9" class="muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
 </div>
 
-<!-- MODAL -->
-<div class="modalOverlay" id="incidentModal">
-  <div class="modal">
-    <h3 id="modalTitle"></h3>
-    <div id="modalBody"></div>
-    <div style="margin-top:10px;text-align:right;">
-      <button class="btn-outline" onclick="closeModal()">Close</button>
+<!-- ============================= -->
+<!-- INCIDENT MODAL -->
+<!-- ============================= -->
+<div id="incidentModalOverlay" class="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="incidentModalTitle">
+    <div class="modalHeader">
+      <div>
+        <h3 id="incidentModalTitle">Incident Details</h3>
+        <div class="small" id="incidentModalSub">—</div>
+      </div>
+      <div class="row">
+        <span class="badge" id="modalStatusBadge"><span class="dot"></span><span id="modalStatusText">—</span></span>
+        <span class="badge" id="modalSlaBadge"><span class="dot"></span><span id="modalSlaText">—</span></span>
+        <button class="btn-outline" id="btnCloseModal">Close</button>
+      </div>
+    </div>
+
+    <div class="modalBody">
+      <div class="grid4">
+        <div class="kpi">
+          <div class="label">Duration</div>
+          <div class="value" id="mDuration">—</div>
+          <div class="sub" id="mDurationSub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Impact</div>
+          <div class="value" id="mImpact">—</div>
+          <div class="sub" id="mImpactSub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Tenant Exposure</div>
+          <div class="value" id="mExposure">—</div>
+          <div class="sub" id="mExposureSub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Recommended Action</div>
+          <div class="value" id="mAction">—</div>
+          <div class="sub" id="mActionSub">—</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="sectionTitle">
+        <h2 style="margin:0;">Customer Impact Summary</h2>
+        <div class="hint">Plain language explanation</div>
+      </div>
+      <div class="muted" style="font-weight:900;" id="mCustomerSummary">—</div>
+
+      <div class="hr"></div>
+
+      <div class="sectionTitle">
+        <h2 style="margin:0;">Update Timeline</h2>
+        <div class="hint">Most recent first</div>
+      </div>
+      <div id="mTimeline"></div>
+
+      <div class="hr"></div>
+
+      <div class="sectionTitle">
+        <h2 style="margin:0;">Tenant Correlation Signals</h2>
+        <div class="hint">Licenses / Devices / PSTN (best-effort)</div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Signal</th>
+              <th>Status</th>
+              <th>Evidence</th>
+              <th>Why it matters</th>
+            </tr>
+          </thead>
+          <tbody id="mSignals">
+            <tr><td colspan="4" class="muted">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <div class="modalFooter">
+      <button class="btn-outline" id="btnCopySummary">Copy Summary</button>
+      <button id="btnEmailThis" title="Attempts to use an email endpoint if available">Email Summary</button>
     </div>
   </div>
 </div>
 
 <script>
-let INCIDENTS=[];
+/* ======================================================
+   INCIDENT INTELLIGENCE — CUSTOMER 4.0 (SCRIPT)
+   Uses existing worker endpoints (best-effort):
+   - GET /api/me
+   - GET /api/org
+   - GET /api/incidents
+   - GET /api/licenses?orgId=...
+   - GET /api/devices?orgId=...
+   - GET /api/pstn?orgId=... (optional, safe)
+   - POST /api/pin/logout (or /api/logout fallback)
+   Optional future (if you add later):
+   - WS: wss://<host>/ws  (sends {"type":"refresh","scope":"incidents"})
+   - POST /api/incidents/subscribe  (email subscription)
+   - POST /api/incidents/email (email a summary)
+====================================================== */
 
-async function refreshData(){
-  const r=await fetch("/api/incidents",{cache:"no-store"});
-  const data=await r.json();
-  INCIDENTS=data.incidents||[];
-  computeMetrics();
-  renderTable();
+const $ = (id) => document.getElementById(id);
+
+let ME = null;
+let ORGS = [];
+let SELECTED_ORG_ID = null;
+
+let INCIDENTS = [];
+let INCIDENTS_FILTERED = [];
+
+let LICENSE_ITEMS = null;
+let DEVICES_ITEMS = null;
+let PSTN_DATA = null;
+
+let SESSION_TIMER = null;
+let SESSION_REMAINING = null;
+
+let POLL_TIMER = null;
+let NOTIFY_TIMER = null;
+
+let WALL_MODE = false;
+
+const SLA_MINUTES = {
+  major: 120,      // 2h
+  partial: 240,    // 4h
+  minor: 480,      // 8h
+  other: 480
+};
+
+/* -----------------------------
+   THEME
+----------------------------- */
+function loadTheme(){
+  const saved = localStorage.getItem("uiTheme");
+  const theme = saved === "dark" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  $("btnTheme").textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme") || "light";
+  const next = cur === "dark" ? "light" : "dark";
+  localStorage.setItem("uiTheme", next);
+  loadTheme();
+  // redraw sparklines & charts with current tokens
+  renderAllVisuals();
+}
+$("btnTheme").addEventListener("click", toggleTheme);
+loadTheme();
+
+/* -----------------------------
+   API helper (hardened)
+----------------------------- */
+async function api(path, opts){
+  try{
+    const res = await fetch(path, opts);
+    const txt = await res.text();
+    let data = null;
+    try{ data = txt ? JSON.parse(txt) : null; } catch { data = { raw: txt }; }
+    return { ok: res.ok, status: res.status, data };
+  } catch (e){
+    return { ok:false, status:0, data:{ error: e?.message || String(e) } };
+  }
+}
+
+/* -----------------------------
+   UI helpers
+----------------------------- */
+function setError(msg){
+  const box = $("errBox");
+  if (!msg){
+    box.style.display = "none";
+    box.textContent = "";
+    return;
+  }
+  box.style.display = "inline";
+  box.textContent = msg;
+}
+
+function cssVar(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function escapeHtml(str){
+  return String(str ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function fmtInt(n){
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "—";
+  return Math.trunc(x).toLocaleString();
+}
+
+function msToHuman(ms){
+  if (!Number.isFinite(ms) || ms < 0) return "—";
+  const sec = Math.floor(ms/1000);
+  const h = Math.floor(sec/3600);
+  const m = Math.floor((sec%3600)/60);
+  const s = sec%60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function msToH(ms){
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  return ms / 3600000;
+}
+
+function setLastRefresh(){
+  $("lastRefreshPill").textContent = `Last refresh: ${new Date().toLocaleString()}`;
+}
+
+/* -----------------------------
+   Session countdown (from /api/me)
+----------------------------- */
+function startSessionTimer(seconds){
+  if (!Number.isFinite(seconds) || seconds <= 0) return;
+  if (SESSION_TIMER) clearInterval(SESSION_TIMER);
+
+  SESSION_REMAINING = Math.floor(seconds);
+  updateSessionPill();
+
+  SESSION_TIMER = setInterval(()=>{
+    SESSION_REMAINING--;
+    updateSessionPill();
+    if (SESSION_REMAINING <= 0){
+      clearInterval(SESSION_TIMER);
+      window.location.href = "/pin";
+    }
+  }, 1000);
+}
+
+function updateSessionPill(){
+  if (!Number.isFinite(SESSION_REMAINING)) {
+    $("sessionPill").textContent = "Session: —";
+    return;
+  }
+  const m = Math.max(0, Math.floor(SESSION_REMAINING/60));
+  const s = Math.max(0, SESSION_REMAINING%60);
+  const warn = SESSION_REMAINING <= 120;
+  $("sessionPill").textContent = `Session: ${m}:${String(s).padStart(2,"0")}`;
+  $("sessionPill").style.color = warn ? cssVar("--bad") : cssVar("--muted");
+}
+
+/* -----------------------------
+   Tenant / org auto-detect (like License page)
+----------------------------- */
+function safeOrgLabel(o){
+  const name = o.displayName || o.name || o.orgName || "Unknown";
+  const id = o.id || o.orgId || "";
+  return `${name}${id ? " — " + id.slice(0,10) + "…" : ""}`;
+}
+
+async function loadMe(){
+  const r = await api("/api/me");
+  if (!r.ok){
+    window.location.href = "/pin";
+    return false;
+  }
+  ME = r.data;
+
+  if (ME.role !== "admin" && !ME.orgId){
+    window.location.href = "/pin";
+    return false;
+  }
+
+  $("whoLine").textContent = `${ME.email} (${ME.role})`;
+  $("tenantPill").textContent = `Tenant: ${ME.orgName || "—"}`;
+  $("orgContext").textContent = ME.orgName ? `${ME.orgName} (${ME.resolution || "resolved"})` : "No tenant resolved";
+
+  $("adminNote").style.display = ME.role === "admin" ? "block" : "none";
+
+  if (Number.isFinite(ME.sessionExpiresInSeconds)){
+    startSessionTimer(ME.sessionExpiresInSeconds);
+  }
+
+  // Prefill notify email
+  if ($("notifyEmail")) $("notifyEmail").value = ME.email || "";
+
+  return true;
+}
+
+async function loadOrgs(){
+  const r = await api("/api/org");
+  if (!r.ok){
+    // Non-admin customers may not need /api/org; still allow their ME.orgId
+    ORGS = [];
+    const sel = $("tenantSelect");
+    sel.innerHTML = "";
+    const id = ME?.orgId || "";
+    if (id){
+      sel.innerHTML = `<option value="${escapeHtml(id)}">${escapeHtml(ME.orgName || "Tenant")} — ${escapeHtml(id.slice(0,10))}…</option>`;
+      sel.disabled = true;
+      SELECTED_ORG_ID = id;
+    } else {
+      sel.innerHTML = `<option value="">Tenant unavailable</option>`;
+      sel.disabled = true;
+    }
+    return;
+  }
+
+  ORGS = Array.isArray(r.data) ? r.data : [];
+  const sel = $("tenantSelect");
+  sel.innerHTML = "";
+
+  if (!ORGS.length){
+    sel.innerHTML = `<option value="">No organizations available</option>`;
+    sel.disabled = true;
+    return;
+  }
+
+  for (const o of ORGS){
+    const opt = document.createElement("option");
+    opt.value = o.id || o.orgId || "";
+    opt.textContent = safeOrgLabel(o);
+    sel.appendChild(opt);
+  }
+
+  sel.disabled = false;
+
+  const defaultOrgId = ME?.orgId || (ORGS[0].id || ORGS[0].orgId);
+  if (defaultOrgId) sel.value = defaultOrgId;
+
+  SELECTED_ORG_ID = sel.value;
+}
+
+/* -----------------------------
+   Tenant signals (Licenses/Devices/PSTN best-effort)
+----------------------------- */
+const SKU_RULES = [
+  { re:/calling|wxcall|wxc/i,                 category:"Calling" },
+  { re:/meeting|meet|webex\s?meet/i,         category:"Meetings" },
+  { re:/contact\s?center|wcc|cjp|cc/i,       category:"Contact Center" },
+  { re:/device|desk\s?pro|room|board|codec/i, category:"Devices" },
+  { re:/pstn|calling\s?plan|telephony/i,      category:"PSTN" },
+  { re:/messag|spaces?|teams?/i,             category:"Messaging" },
+  { re:/pro\s?pack|security|compliance/i,    category:"Security" }
+];
+
+function mapLicenseCategories(items){
+  const cats = new Set();
+  for (const l of (items||[])){
+    const name = String(l.name || l.licenseName || l.sku || "");
+    for (const r of SKU_RULES){
+      if (r.re.test(name)) cats.add(r.category);
+    }
+  }
+  return cats;
+}
+
+function detectLicenseDeficits(items){
+  let deficits = 0;
+  let risks = 0;
+  for (const l of (items||[])){
+    const deficit = Number(l.deficit || 0);
+    const total = Number(l.total);
+    const used = Number(l.consumed ?? l.assigned ?? 0);
+    const util = (Number.isFinite(total) && total > 0) ? (used/total)*100 : null;
+    if (deficit > 0) deficits++;
+    else if (util !== null && util >= 90) risks++;
+  }
+  return { deficits, risks };
+}
+
+async function loadTenantSignals(){
+  LICENSE_ITEMS = null;
+  DEVICES_ITEMS = null;
+  PSTN_DATA = null;
+
+  const orgId = SELECTED_ORG_ID || "";
+  const signals = [];
+
+  // Licenses
+  if (orgId){
+    const lr = await api(`/api/licenses?orgId=${encodeURIComponent(orgId)}`);
+    if (lr.ok){
+      LICENSE_ITEMS = Array.isArray(lr.data?.items) ? lr.data.items : [];
+      const d = detectLicenseDeficits(LICENSE_ITEMS);
+      signals.push({ k:"Licenses", ok:true, evidence:`${d.deficits} deficit SKU(s), ${d.risks} at-risk SKU(s)` });
+    } else {
+      signals.push({ k:"Licenses", ok:false, evidence:`Unavailable (HTTP ${lr.status})` });
+    }
+  } else {
+    signals.push({ k:"Licenses", ok:false, evidence:"No orgId selected" });
+  }
+
+  // Devices
+  if (orgId){
+    const dr = await api(`/api/devices?orgId=${encodeURIComponent(orgId)}`);
+    if (dr.ok){
+      DEVICES_ITEMS = Array.isArray(dr.data?.items) ? dr.data.items : (Array.isArray(dr.data) ? dr.data : []);
+      const offline = (DEVICES_ITEMS||[]).filter(d => String(d.connectionStatus||"").toLowerCase().includes("disconnected")).length;
+      signals.push({ k:"Devices", ok:true, evidence:`${(DEVICES_ITEMS||[]).length} total, ${offline} offline` });
+    } else {
+      signals.push({ k:"Devices", ok:false, evidence:`Unavailable (HTTP ${dr.status})` });
+    }
+  } else {
+    signals.push({ k:"Devices", ok:false, evidence:"No orgId selected" });
+  }
+
+  // PSTN (optional)
+  if (orgId){
+    const pr = await api(`/api/pstn?orgId=${encodeURIComponent(orgId)}`);
+    if (pr.ok){
+      PSTN_DATA = pr.data;
+      signals.push({ k:"PSTN", ok:true, evidence:`Loaded` });
+    } else {
+      signals.push({ k:"PSTN", ok:false, evidence:`Unavailable (HTTP ${pr.status})` });
+    }
+  } else {
+    signals.push({ k:"PSTN", ok:false, evidence:"No orgId selected" });
+  }
+
+  // Update data badge
+  const okCount = signals.filter(s=>s.ok).length;
+  $("dataText").textContent = `Signals: ${okCount}/${signals.length} available`;
+  $("dataBadge").className = "badge " + (okCount >= 2 ? "good" : "warn");
+  $("dataBadge").querySelector(".dot").style.color = okCount >= 2 ? cssVar("--good") : cssVar("--warn");
+
+  return signals;
+}
+
+/* -----------------------------
+   Incident parsing & scoring
+----------------------------- */
+function isActiveIncident(i){
+  const s = String(i.status||"").toLowerCase();
+  return s && s !== "resolved";
+}
+function severityOf(i){
+  const impact = String(i.impact||"").toLowerCase();
+  if (impact.includes("major")) return "major";
+  if (impact.includes("partial")) return "partial";
+  if (impact.includes("minor")) return "minor";
+  // some feeds use other terms; treat as "other"
+  return "other";
+}
+function slaMinutesForSeverity(sev){
+  return SLA_MINUTES[sev] ?? SLA_MINUTES.other;
+}
+function incidentStart(i){
+  const t = i.created_at || i.started_at || i.start_time || i.createdAt;
+  const d = new Date(t);
+  return isNaN(d.getTime()) ? null : d;
+}
+function incidentEnd(i){
+  const t = i.resolved_at || i.resolvedAt || (String(i.status||"").toLowerCase()==="resolved" ? (i.updated_at || i.updatedAt) : null);
+  if (!t) return null;
+  const d = new Date(t);
+  return isNaN(d.getTime()) ? null : d;
+}
+function incidentDurationMs(i){
+  const start = incidentStart(i);
+  if (!start) return null;
+  const end = isActiveIncident(i) ? new Date() : (incidentEnd(i) || new Date(i.updated_at || Date.now()));
+  return Math.max(0, end - start);
+}
+function productsOf(i){
+  const comps = Array.isArray(i.components) ? i.components : [];
+  const set = new Set();
+  for (const c of comps){
+    const n = c.group || c.name || c.component || "";
+    if (n) set.add(String(n).trim());
+  }
+  // fall back: some feeds have "services" field
+  const svcs = Array.isArray(i.services) ? i.services : [];
+  for (const s of svcs){
+    if (s) set.add(String(s).trim());
+  }
+  return Array.from(set);
+}
+
+// Normalize to a “product area” for heatmap and tenant correlation
+function normalizeProductArea(name){
+  const s = String(name||"").toLowerCase();
+  if (s.includes("calling")) return "Calling";
+  if (s.includes("pstn") || s.includes("telephony") || s.includes("calling plan")) return "PSTN";
+  if (s.includes("meeting")) return "Meetings";
+  if (s.includes("messag") || s.includes("webex app") || s.includes("spaces")) return "Messaging";
+  if (s.includes("contact center") || s.includes("wcc")) return "Contact Center";
+  if (s.includes("device") || s.includes("room") || s.includes("desk") || s.includes("board")) return "Devices";
+  if (s.includes("control hub") || s.includes("admin")) return "Control Hub";
+  if (s.includes("identity") || s.includes("auth") || s.includes("sso")) return "Identity";
+  return "Other";
+}
+
+// Impact index: severity weight + duration factor + breadth factor
+function impactScore(i){
+  const sev = severityOf(i);
+  const base = (sev==="major") ? 10 : (sev==="partial") ? 6 : (sev==="minor") ? 3 : 2;
+  const durH = msToH(incidentDurationMs(i)) || 0;
+  const breadth = Math.min(6, productsOf(i).length || 1);
+  // duration factor saturates after ~8 hours
+  const durFactor = Math.min(2.0, 1 + (durH/8));
+  // breadth factor saturates after 6 products
+  const breadthFactor = 1 + ((breadth-1) * 0.12);
+  const score = base * durFactor * breadthFactor;
+  return Math.round(score * 10) / 10;
+}
+
+// Tenant exposure heuristic:
+// - If tenant has Calling licenses and incident affects Calling => higher
+// - Devices offline can raise perceived exposure
+// - License deficits can raise exposure if incident touches same category (Calling/PSTN/Devices)
+function tenantExposureForIncident(i){
+  const areas = new Set(productsOf(i).map(normalizeProductArea));
+  const exposure = { level:"LOW", score:0, reasons:[] };
+
+  const licenseCats = LICENSE_ITEMS ? mapLicenseCategories(LICENSE_ITEMS) : new Set();
+  const licDef = LICENSE_ITEMS ? detectLicenseDeficits(LICENSE_ITEMS) : { deficits:0, risks:0 };
+
+  let score = 0;
+
+  // Base: severity & active status
+  const sev = severityOf(i);
+  if (sev==="major") score += 4;
+  else if (sev==="partial") score += 2;
+  else score += 1;
+
+  if (isActiveIncident(i)) score += 2;
+
+  // Category matching: if incident areas overlap tenant license categories
+  for (const a of areas){
+    if (licenseCats.has(a)){
+      score += 2;
+      exposure.reasons.push(`Tenant is licensed for ${a}.`);
+    }
+  }
+
+  // If tenant has deficits/risks and incident touches those domains, bump
+  if (licDef.deficits > 0){
+    if (areas.has("Calling") || areas.has("PSTN") || areas.has("Devices") || areas.has("Meetings")){
+      score += 2;
+      exposure.reasons.push(`License deficits present (${licDef.deficits}). Capacity constraints may amplify user impact.`);
+    }
+  } else if (licDef.risks > 0){
+    if (areas.has("Calling") || areas.has("PSTN") || areas.has("Devices") || areas.has("Meetings")){
+      score += 1;
+      exposure.reasons.push(`Licenses at risk (${licDef.risks}). Monitor closely if onboarding/changes are in progress.`);
+    }
+  }
+
+  // Devices offline as a “fragility” indicator
+  if (Array.isArray(DEVICES_ITEMS)){
+    const offline = DEVICES_ITEMS.filter(d => String(d.connectionStatus||"").toLowerCase().includes("disconnected")).length;
+    if (offline >= 5){
+      score += 1;
+      exposure.reasons.push(`Several devices are offline (${offline}). Troubleshooting may be more complex during an incident.`);
+    }
+  }
+
+  // Final mapping
+  exposure.score = score;
+  if (score >= 8) exposure.level = "HIGH";
+  else if (score >= 5) exposure.level = "MODERATE";
+  else exposure.level = "LOW";
+
+  if (!exposure.reasons.length){
+    exposure.reasons.push("No direct tenant signal overlap detected. Impact likely depends on specific usage at the time of the incident.");
+  }
+
+  return exposure;
+}
+
+/* -----------------------------
+   SLA breach detection
+----------------------------- */
+function slaStatus(i){
+  const sev = severityOf(i);
+  const slaMin = slaMinutesForSeverity(sev);
+  const dur = incidentDurationMs(i);
+  if (!Number.isFinite(dur)) return { slaMin, state:"UNKNOWN", remainingMs:null, breach:false };
+
+  const thresholdMs = slaMin * 60 * 1000;
+  const breach = dur > thresholdMs;
+  const remainingMs = isActiveIncident(i) ? Math.max(0, thresholdMs - dur) : null;
+
+  if (!isActiveIncident(i)){
+    return { slaMin, state: breach ? "BREACHED" : "WITHIN", remainingMs:null, breach };
+  }
+  return { slaMin, state: breach ? "BREACHING" : "IN_PROGRESS", remainingMs, breach };
+}
+
+/* -----------------------------
+   Local 30-day snapshots (counts + impact + SLA breaches)
+----------------------------- */
+function todayKey(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+function histKey(orgId){ return `II4_INCIDENT_HISTORY::${orgId || "unknown"}`; }
+
+function loadHistory(orgId){
+  try{
+    const raw = localStorage.getItem(histKey(orgId));
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+function saveHistory(orgId, arr){
+  try{ localStorage.setItem(histKey(orgId), JSON.stringify(arr)); } catch {}
+}
+function pruneHistory(arr){
+  const map = new Map();
+  for (const s of (arr||[])){
+    if (s && s.day) map.set(s.day, s);
+  }
+  const uniq = Array.from(map.values()).sort((a,b)=> (a.day||"").localeCompare(b.day||""));
+  return uniq.slice(Math.max(0, uniq.length - 30));
+}
+
+function captureDailySnapshot(){
+  const orgId = SELECTED_ORG_ID || "global";
+  const day = todayKey();
+
+  const active = INCIDENTS.filter(isActiveIncident);
+  const total = INCIDENTS.length;
+
+  const impact = Math.round(active.reduce((sum,i)=> sum + impactScore(i), 0) * 10) / 10;
+
+  // SLA breaches across resolved incidents (today’s view of 30-day feed)
+  const resolved = INCIDENTS.filter(i => String(i.status||"").toLowerCase() === "resolved");
+  let breaches = 0;
+  for (const i of resolved){
+    const st = slaStatus(i);
+    if (st.breach) breaches++;
+  }
+
+  const snap = { day, ts: Date.now(), total, active: active.length, impact, breaches };
+
+  const hist = loadHistory(orgId);
+  const merged = pruneHistory([...(hist||[]), snap]);
+  saveHistory(orgId, merged);
+
+  $("trendHint").textContent = `Snapshots: ${merged.length} (last 30 days max)`;
+  $("trendSummary").textContent =
+    `Snapshots are stored locally per tenant context. Current tenant key: ${orgId}.`;
+
+  return merged;
+}
+
+/* -----------------------------
+   Executive narrative
+----------------------------- */
+function buildExecutiveNarrative(metrics){
+  const { activeCount, majorActive, longestActiveMs, mttrH, medianH, slaCompliancePct, breaches30d, impactIndex } = metrics;
+
+  // Tenant correlation summary
+  const licDef = LICENSE_ITEMS ? detectLicenseDeficits(LICENSE_ITEMS) : null;
+  const licenseLine = licDef
+    ? (licDef.deficits > 0
+        ? `License posture: ${licDef.deficits} deficit SKU(s) detected.`
+        : (licDef.risks > 0 ? `License posture: ${licDef.risks} SKU(s) at risk (≥90%).` : `License posture: healthy.`))
+    : `License posture: unavailable.`;
+
+  if (activeCount <= 0){
+    return `No active Webex incidents at this time. Over the past 30 days, average time to resolution was ${mttrH ?? "—"}h (median ${medianH ?? "—"}h), with SLA compliance at ${slaCompliancePct ?? "—"}%. ${licenseLine}`;
+  }
+
+  const longest = msToHuman(longestActiveMs);
+  const severityLine = majorActive > 0
+    ? `${majorActive} major severity incident(s) are active.`
+    : `No major severity incidents are currently active.`;
+
+  return `${activeCount} active incident(s) detected. ${severityLine} Longest active duration: ${longest}. Current impact index: ${impactIndex}. 30-day MTTR: ${mttrH ?? "—"}h (median ${medianH ?? "—"}h). SLA compliance: ${slaCompliancePct ?? "—"}% (breaches: ${breaches30d}). ${licenseLine}`;
+}
+
+/* -----------------------------
+   RAG / banners
+----------------------------- */
+function setRag(level, sub, score){
+  const rag = $("ragPill");
+  rag.classList.remove("red","amber");
+  $("ragTitle").textContent = level;
+  $("ragSub").textContent = sub;
+  $("ragScore").textContent = String(score);
+
+  if (level === "RED"){
+    rag.classList.add("red");
+    $("ragDot").style.background = cssVar("--bad");
+  } else if (level === "AMBER"){
+    rag.classList.add("amber");
+    $("ragDot").style.background = cssVar("--warn");
+  } else {
+    $("ragDot").style.background = cssVar("--good");
+  }
+}
+
+function clearBanners(){
+  $("bannerStack").innerHTML = "";
+}
+
+function addBanner(type, title, desc, rightText){
+  const div = document.createElement("div");
+  div.className = `banner ${type}`;
+  div.innerHTML = `
+    <div>
+      <div class="title">${escapeHtml(title)}</div>
+      <div class="desc">${escapeHtml(desc)}</div>
+    </div>
+    <div class="mono" style="font-weight:1000; color:inherit;">${escapeHtml(rightText || "")}</div>
+  `;
+  $("bannerStack").appendChild(div);
+}
+
+function updateSlaAndExposureBadges(metrics){
+  // SLA badge
+  const hasActiveBreach = metrics.activeBreaches > 0;
+  $("slaBadgeText").textContent = hasActiveBreach
+    ? `SLA: ${metrics.activeBreaches} active breach(es)`
+    : `SLA: no active breaches`;
+
+  $("slaBadge").className = "badge " + (hasActiveBreach ? "bad" : "good");
+  $("slaBadge").querySelector(".dot").style.color = hasActiveBreach ? cssVar("--bad") : cssVar("--good");
+
+  // Exposure badge (overall tenant)
+  const ex = metrics.tenantExposureLevel;
+  $("exposureText").textContent = `Tenant exposure: ${ex}`;
+  if (ex === "HIGH"){
+    $("exposureBadge").className = "badge bad";
+    $("exposureBadge").querySelector(".dot").style.color = cssVar("--bad");
+  } else if (ex === "MODERATE"){
+    $("exposureBadge").className = "badge warn";
+    $("exposureBadge").querySelector(".dot").style.color = cssVar("--warn");
+  } else {
+    $("exposureBadge").className = "badge good";
+    $("exposureBadge").querySelector(".dot").style.color = cssVar("--good");
+  }
+}
+
+/* -----------------------------
+   Metrics computation
+----------------------------- */
+function median(values){
+  const arr = values.filter(v => Number.isFinite(v)).sort((a,b)=>a-b);
+  if (!arr.length) return null;
+  const mid = Math.floor(arr.length/2);
+  return arr.length % 2 ? arr[mid] : (arr[mid-1] + arr[mid])/2;
 }
 
 function computeMetrics(){
-  const active=INCIDENTS.filter(i=>i.status!=="resolved");
-  const major=INCIDENTS.filter(i=>(i.impact||"").toLowerCase().includes("major"));
-  document.getElementById("kActive").textContent=active.length;
-  document.getElementById("kMajor").textContent=major.length;
+  const active = INCIDENTS.filter(isActiveIncident);
+  const majorActive = active.filter(i => severityOf(i) === "major").length;
 
-  let impact=0;
-  active.forEach(i=>{
-    const sev=(i.impact||"").toLowerCase();
-    if(sev.includes("major")) impact+=5;
-    else if(sev.includes("partial")) impact+=3;
-    else impact+=1;
-  });
-  document.getElementById("kImpact").textContent=impact;
-
-  let mttr=0,count=0;
-  INCIDENTS.filter(i=>i.status==="resolved").forEach(i=>{
-    const start=new Date(i.created_at);
-    const end=new Date(i.resolved_at||i.updated_at||Date.now());
-    mttr+=(end-start);
-    count++;
-  });
-  if(count>0){
-    mttr=Math.round((mttr/count)/3600000);
+  // Longest active duration
+  let longestActiveMs = 0;
+  for (const i of active){
+    const d = incidentDurationMs(i);
+    if (Number.isFinite(d)) longestActiveMs = Math.max(longestActiveMs, d);
   }
-  document.getElementById("kMTTR").textContent=mttr+"h";
 
-  updateRAG(impact);
-  buildExecutive(active.length,major.length,impact);
+  // TTR (30d resolved)
+  const resolved = INCIDENTS.filter(i => String(i.status||"").toLowerCase() === "resolved");
+  const ttrHours = [];
+  let breaches30d = 0;
+
+  for (const i of resolved){
+    const dur = incidentDurationMs(i);
+    const h = msToH(dur);
+    if (Number.isFinite(h)) ttrHours.push(h);
+
+    const st = slaStatus(i);
+    if (st.breach) breaches30d++;
+  }
+
+  const mttrH = ttrHours.length ? Math.round((ttrHours.reduce((a,b)=>a+b,0)/ttrHours.length) * 10)/10 : null;
+  const medianH = ttrHours.length ? Math.round((median(ttrHours) ?? 0) * 10)/10 : null;
+
+  // SLA compliance
+  const compliance = resolved.length ? Math.round(((resolved.length - breaches30d) / resolved.length) * 100) : null;
+
+  // Impact index
+  const impactIndex = Math.round(active.reduce((sum,i)=> sum + impactScore(i), 0) * 10)/10;
+
+  // Active breaches
+  let activeBreaches = 0;
+  for (const i of active){
+    const st = slaStatus(i);
+    if (st.breach) activeBreaches++;
+  }
+
+  // Tenant exposure overall: max across active incidents
+  let exposureMax = { level:"LOW", score:0, reasons:[] };
+  for (const i of active){
+    const ex = tenantExposureForIncident(i);
+    if (ex.score > exposureMax.score) exposureMax = ex;
+  }
+  const tenantExposureLevel = active.length ? exposureMax.level : "LOW";
+
+  return {
+    activeCount: active.length,
+    majorActive,
+    longestActiveMs: active.length ? longestActiveMs : null,
+    mttrH,
+    medianH,
+    slaCompliancePct: compliance,
+    breaches30d,
+    impactIndex,
+    activeBreaches,
+    tenantExposureLevel
+  };
 }
 
-function updateRAG(score){
-  const rag=document.getElementById("ragText");
-  const ragScore=document.getElementById("ragScore");
-  ragScore.textContent=score;
-  if(score>12){rag.textContent="RED";}
-  else if(score>4){rag.textContent="AMBER";}
-  else{rag.textContent="GREEN";}
+/* -----------------------------
+   Visuals: sparklines + trend chart
+----------------------------- */
+function clearCanvas(ctx, w, h){ ctx.clearRect(0,0,w,h); }
+
+function drawSpark(canvasId, values, colorVar){
+  const c = $(canvasId);
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  const w = c.width, h = c.height;
+  clearCanvas(ctx, w, h);
+
+  const line = cssVar("--line");
+  ctx.strokeStyle = line;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, h-1);
+  ctx.lineTo(w, h-1);
+  ctx.stroke();
+
+  const arr = (values||[]).map(v=>Number(v)).filter(v=>Number.isFinite(v));
+  if (arr.length < 2) return;
+
+  const min = Math.min(...arr);
+  const max = Math.max(...arr);
+  const span = (max - min) || 1;
+
+  const xs = arr.map((_,i)=> (w * (i/(arr.length-1))));
+  const ys = arr.map(v => (h-6) - ((v - min)/span) * (h-12));
+
+  ctx.strokeStyle = cssVar(colorVar);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  xs.forEach((x,i)=>{
+    const y = ys[i];
+    if (i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // last dot
+  ctx.fillStyle = cssVar(colorVar);
+  ctx.beginPath();
+  ctx.arc(xs[xs.length-1], ys[ys.length-1], 2.6, 0, Math.PI*2);
+  ctx.fill();
 }
 
-function buildExecutive(a,m,impact){
-  let txt="System operating normally.";
-  if(a>0){
-    txt=`${a} active incident(s). `;
-    if(m>0) txt+=`${m} major severity. `;
-    txt+=`Impact index ${impact}. Service degradation possible depending on tenant configuration.`;
+function drawTrendChart(history){
+  const canvas = $("trendChart");
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  clearCanvas(ctx, w, h);
+
+  // axes
+  const line = cssVar("--line");
+  ctx.strokeStyle = line;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(40, 10);
+  ctx.lineTo(40, h-30);
+  ctx.lineTo(w-10, h-30);
+  ctx.stroke();
+
+  if (!history || history.length < 2){
+    ctx.fillStyle = cssVar("--muted");
+    ctx.font = "13px system-ui";
+    ctx.fillText("No trend history yet. Refresh once daily to build a 30-day view.", 60, 60);
+    return;
   }
-  document.getElementById("execSummary").textContent=txt;
+
+  const plotW = w - 60;
+  const plotH = h - 50;
+  const left = 45;
+  const bottom = h - 30;
+
+  const counts = history.map(s => Number(s.active ?? 0));
+  const impacts = history.map(s => Number(s.impact ?? 0));
+  const breaches = history.map(s => Number(s.breaches ?? 0));
+
+  const maxCount = Math.max(1, ...counts);
+  const maxImpact = Math.max(1, ...impacts);
+  const maxBreach = Math.max(1, ...breaches);
+
+  const xs = history.map((_,i)=> left + (plotW * (i/(history.length-1))));
+
+  // count line
+  const countYs = counts.map(v => bottom - (plotH * (v/maxCount)));
+  ctx.strokeStyle = cssVar("--accent");
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  xs.forEach((x,i)=>{
+    const y = countYs[i];
+    if (i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // impact dashed line
+  const impYs = impacts.map(v => bottom - (plotH * (v/maxImpact)));
+  ctx.setLineDash([6,4]);
+  ctx.strokeStyle = cssVar("--warn");
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  xs.forEach((x,i)=>{
+    const y = impYs[i];
+    if (i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // breach bars
+  const barColor = cssVar("--bad");
+  const bw = Math.max(6, Math.min(18, plotW / Math.max(10, history.length)));
+  breaches.forEach((b,i)=>{
+    if (b <= 0) return;
+    const barH = (plotH * (b/maxBreach));
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = barColor;
+    ctx.fillRect(xs[i] - bw/2, bottom - barH, bw, barH);
+    ctx.globalAlpha = 1;
+  });
+
+  // ticks
+  const tickEvery = Math.max(1, Math.floor(history.length/6));
+  ctx.fillStyle = cssVar("--muted");
+  ctx.font = "10px system-ui";
+  for (let i=0;i<history.length;i+=tickEvery){
+    ctx.textAlign = "center";
+    ctx.fillText(String(history[i].day).slice(5), xs[i], bottom + 18);
+  }
+
+  // labels
+  ctx.textAlign = "left";
+  ctx.fillStyle = cssVar("--muted");
+  ctx.font = "11px system-ui";
+  ctx.fillText("Active Count (solid)", 60, 18);
+  ctx.fillText("Impact (dashed)", 200, 18);
+  ctx.fillText("SLA Breach (bars)", 330, 18);
+}
+
+function renderAllVisuals(){
+  const hist = loadHistory(SELECTED_ORG_ID || "global");
+  const last = pruneHistory(hist);
+
+  drawSpark("spActive", last.map(s=>s.active), "--accent");
+  drawSpark("spTTR", last.map(s=>s.total), "--chipText"); // simple proxy spark
+  drawSpark("spImpact", last.map(s=>s.impact), "--warn");
+  drawSpark("spSLA", last.map(s=> (s.breaches || 0)), "--bad");
+  drawTrendChart(last);
+}
+
+/* -----------------------------
+   Product Heatmap
+----------------------------- */
+function renderHeatmap(){
+  const rows = $("heatRows");
+  const areas = new Map();
+
+  // build stats by area
+  for (const i of INCIDENTS){
+    const prods = productsOf(i);
+    const areaSet = new Set(prods.map(normalizeProductArea));
+    if (!areaSet.size) areaSet.add("Other");
+
+    const sev = severityOf(i);
+    const durH = msToH(incidentDurationMs(i)) || 0;
+    const isAct = isActiveIncident(i);
+
+    for (const a of areaSet){
+      if (!areas.has(a)){
+        areas.set(a, { area:a, active:0, total:0, major:0, ttrSum:0, ttrCount:0, exposureMax:0, exposureLabel:"LOW" });
+      }
+      const s = areas.get(a);
+      s.total++;
+      if (isAct) s.active++;
+      if (sev==="major") s.major++;
+      if (!isAct){ s.ttrSum += durH; s.ttrCount++; }
+
+      // tenant exposure: approximate using incident exposure score
+      const ex = tenantExposureForIncident(i);
+      if (ex.score > s.exposureMax){
+        s.exposureMax = ex.score;
+        s.exposureLabel = ex.level;
+      }
+    }
+  }
+
+  const arr = Array.from(areas.values()).sort((a,b)=>{
+    // sort by active desc then total desc
+    if (b.active !== a.active) return b.active - a.active;
+    return b.total - a.total;
+  });
+
+  if (!arr.length){
+    rows.innerHTML = `<tr><td colspan="6" class="muted">No incidents available.</td></tr>`;
+    return;
+  }
+
+  rows.innerHTML = arr.map(s=>{
+    const avgTtr = s.ttrCount ? Math.round((s.ttrSum/s.ttrCount)*10)/10 : null;
+    const exCls = s.exposureLabel==="HIGH" ? "bad" : s.exposureLabel==="MODERATE" ? "warn" : "good";
+
+    return `
+      <tr>
+        <td style="font-weight:1000;">${escapeHtml(s.area)}</td>
+        <td>${fmtInt(s.active)}</td>
+        <td>${fmtInt(s.total)}</td>
+        <td style="color:${s.major>0? "var(--bad)" : "var(--muted)"}; font-weight:1000;">${fmtInt(s.major)}</td>
+        <td class="muted" style="font-weight:900;">${avgTtr===null ? "—" : avgTtr + "h"}</td>
+        <td>
+          <span class="badge ${exCls}"><span class="dot"></span>${escapeHtml(s.exposureLabel)}</span>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+/* -----------------------------
+   Inventory filters + rendering
+----------------------------- */
+function populateProductFilter(){
+  const select = $("productFilter");
+  const set = new Set();
+  for (const i of INCIDENTS){
+    for (const p of productsOf(i)){
+      set.add(normalizeProductArea(p));
+    }
+  }
+  const existing = new Set(Array.from(select.options).map(o=>o.value));
+  for (const p of Array.from(set).sort()){
+    if (existing.has(p)) continue;
+    const opt = document.createElement("option");
+    opt.value = p;
+    opt.textContent = p;
+    select.appendChild(opt);
+  }
+}
+
+function matchesSeverityFilter(i, val){
+  if (!val) return true;
+  const sev = severityOf(i);
+  if (val === "major") return sev === "major";
+  if (val === "partial") return sev === "partial";
+  if (val === "minor") return (sev === "minor" || sev === "other");
+  return true;
+}
+
+function applyFilters(){
+  const activeOnly = $("activeOnly").checked;
+  const product = $("productFilter").value;
+  const sev = $("severityFilter").value;
+  const q = $("searchInput").value.trim().toLowerCase();
+  const sortKey = $("sortKey").value;
+
+  let items = [...INCIDENTS];
+
+  if (activeOnly) items = items.filter(isActiveIncident);
+  if (product){
+    items = items.filter(i=>{
+      const areas = new Set(productsOf(i).map(normalizeProductArea));
+      return areas.has(product);
+    });
+  }
+  if (sev) items = items.filter(i => matchesSeverityFilter(i, sev));
+  if (q){
+    items = items.filter(i=>{
+      const id = String(i.external_id || i.id || "").toLowerCase();
+      const name = String(i.name || "").toLowerCase();
+      const impact = String(i.impact || "").toLowerCase();
+      const prods = productsOf(i).join(", ").toLowerCase();
+      return id.includes(q) || name.includes(q) || impact.includes(q) || prods.includes(q);
+    });
+  }
+
+  // sort
+  items.sort((a,b)=>{
+    if (sortKey === "created_desc"){
+      return (new Date(b.created_at||0) - new Date(a.created_at||0));
+    }
+    if (sortKey === "created_asc"){
+      return (new Date(a.created_at||0) - new Date(b.created_at||0));
+    }
+    if (sortKey === "duration_desc"){
+      return (incidentDurationMs(b)||0) - (incidentDurationMs(a)||0);
+    }
+    if (sortKey === "impact_desc"){
+      return impactScore(b) - impactScore(a);
+    }
+    return 0;
+  });
+
+  INCIDENTS_FILTERED = items;
+}
+
+function statusBadgeFor(i){
+  const act = isActiveIncident(i);
+  return act
+    ? `<span class="badge warn"><span class="dot"></span>ACTIVE</span>`
+    : `<span class="badge good"><span class="dot"></span>RESOLVED</span>`;
+}
+
+function severityBadgeFor(i){
+  const sev = severityOf(i);
+  if (sev==="major") return `<span class="badge bad"><span class="dot"></span>MAJOR</span>`;
+  if (sev==="partial") return `<span class="badge warn"><span class="dot"></span>PARTIAL</span>`;
+  if (sev==="minor") return `<span class="badge good"><span class="dot"></span>MINOR</span>`;
+  return `<span class="badge"><span class="dot"></span>OTHER</span>`;
+}
+
+function slaBadgeFor(i){
+  const st = slaStatus(i);
+  const sev = severityOf(i);
+  const slaMin = st.slaMin;
+  if (st.state === "UNKNOWN"){
+    return `<span class="badge"><span class="dot"></span>${slaMin}m</span>`;
+  }
+  if (!isActiveIncident(i)){
+    const cls = st.breach ? "bad" : "good";
+    const txt = st.breach ? `BREACHED (${slaMin}m)` : `WITHIN (${slaMin}m)`;
+    return `<span class="badge ${cls}"><span class="dot"></span>${txt}</span>`;
+  }
+  // active
+  if (st.breach){
+    return `<span class="badge bad"><span class="dot"></span>BREACHING (${slaMin}m)</span>`;
+  }
+  const rem = msToHuman(st.remainingMs);
+  return `<span class="badge warn"><span class="dot"></span>${slaMin}m • ${rem} left</span>`;
 }
 
 function renderTable(){
-  const tbody=document.getElementById("incidentRows");
-  tbody.innerHTML="";
-  INCIDENTS.forEach(i=>{
-    const row=document.createElement("tr");
-    row.innerHTML=`
-      <td>${i.external_id||i.id}</td>
-      <td>${i.status}</td>
-      <td>${i.impact||""}</td>
-      <td>${new Date(i.created_at).toLocaleString()}</td>
-      <td>${(i.components||[]).map(c=>c.name).join(", ")}</td>
-      <td>${i.name}</td>
+  applyFilters();
+
+  const tbody = $("incidentRows");
+  if (!INCIDENTS_FILTERED.length){
+    tbody.innerHTML = `<tr><td colspan="9" class="muted">No incidents match the current filters.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = INCIDENTS_FILTERED.map(i=>{
+    const ref = i.external_id || i.id || "—";
+    const start = incidentStart(i);
+    const dur = incidentDurationMs(i);
+    const prods = productsOf(i).map(normalizeProductArea);
+    const prodShort = Array.from(new Set(prods)).slice(0,3).join(", ") + (new Set(prods).size > 3 ? "…" : "");
+
+    const ex = tenantExposureForIncident(i);
+    const exCls = ex.level==="HIGH" ? "bad" : ex.level==="MODERATE" ? "warn" : "good";
+
+    const sum = i.name || "";
+    const durDisp = dur===null ? "—" : msToHuman(dur);
+
+    return `
+      <tr data-ref="${escapeHtml(String(ref))}">
+        <td class="mono">${escapeHtml(String(ref))}</td>
+        <td>${statusBadgeFor(i)}</td>
+        <td>${severityBadgeFor(i)}</td>
+        <td class="muted" style="font-weight:900;">${start ? escapeHtml(start.toLocaleString()) : "—"}</td>
+        <td style="font-weight:1000;">${escapeHtml(durDisp)}</td>
+        <td>${slaBadgeFor(i)}</td>
+        <td class="muted" style="font-weight:900;">${escapeHtml(prodShort || "—")}</td>
+        <td><span class="badge ${exCls}"><span class="dot"></span>${escapeHtml(ex.level)}</span></td>
+        <td style="max-width:520px; white-space:normal;">${escapeHtml(sum)}</td>
+      </tr>
     `;
-    row.onclick=()=>openModal(i);
-    tbody.appendChild(row);
+  }).join("");
+
+  // click → modal (unless wall mode)
+  tbody.querySelectorAll("tr[data-ref]").forEach(tr=>{
+    tr.addEventListener("click", ()=>{
+      const ref = tr.getAttribute("data-ref");
+      const i = INCIDENTS.find(x => String(x.external_id||x.id||"") === String(ref));
+      if (!i) return;
+      if (WALL_MODE) return;
+      openIncidentModal(i);
+    });
   });
 }
 
-function openModal(i){
-  document.getElementById("incidentModal").style.display="flex";
-  document.getElementById("modalTitle").textContent=i.name;
-  document.getElementById("modalBody").innerHTML=`
-    <b>Status:</b> ${i.status}<br/>
-    <b>Impact:</b> ${i.impact}<br/>
-    <b>Created:</b> ${new Date(i.created_at).toLocaleString()}<br/><br/>
-    ${(i.updates||[]).map(u=>`
-      <div style="margin-bottom:10px;">
-        <b>${u.status}</b><br/>
-        ${u.body_html||u.body||""}<br/>
-        <span style="font-size:11px;color:var(--muted);">${new Date(u.created_at).toLocaleString()}</span>
-      </div>
-    `).join("")}
-  `;
+/* -----------------------------
+   Modal (details)
+----------------------------- */
+let ACTIVE_INCIDENT = null;
+
+function buildCustomerImpactSummary(i, ex){
+  const areas = Array.from(new Set(productsOf(i).map(normalizeProductArea)));
+  const sev = severityOf(i);
+  const dur = incidentDurationMs(i);
+  const durTxt = dur===null ? "—" : msToHuman(dur);
+
+  // Plain language template
+  let msg = `This incident is classified as ${sev.toUpperCase()} and involves: ${areas.join(", ") || "Webex services"}.`;
+
+  if (isActiveIncident(i)){
+    msg += ` It has been active for ${durTxt}.`;
+    msg += ` If your users rely on the affected services, intermittent degradation may be observed until resolution is confirmed.`;
+  } else {
+    msg += ` It was resolved after ${durTxt}.`;
+    msg += ` If your users experienced issues during the window, service should now be restored.`;
+  }
+
+  // Tenant exposure explain
+  msg += ` Tenant impact likelihood: ${ex.level}.`;
+  msg += ` Reasoning: ${ex.reasons.join(" ")}`;
+
+  return msg;
 }
 
-function closeModal(){document.getElementById("incidentModal").style.display="none";}
-function exportPDF(){window.print();}
-function toggleTheme(){
-  const html=document.documentElement;
-  html.setAttribute("data-theme",html.getAttribute("data-theme")==="dark"?"light":"dark");
-}
-function logout(){window.location.href="/pin";}
+function recommendedActionFor(i, ex){
+  const areas = new Set(productsOf(i).map(normalizeProductArea));
+  if (isActiveIncident(i)){
+    if (areas.has("Calling") || areas.has("PSTN")){
+      return {
+        title:"Monitor calling quality and report patterns",
+        sub:"If users report one-way audio/registration issues, capture time windows and affected locations. US Signal will coordinate with Webex updates."
+      };
+    }
+    if (areas.has("Meetings")){
+      return {
+        title:"Advise users to retry / alternate join paths",
+        sub:"If join failures occur, retry after a few minutes or use alternative dial-in/connection methods if available."
+      };
+    }
+    return {
+      title:"No customer action required",
+      sub:"US Signal is monitoring the incident feed and will communicate meaningful changes."
+    };
+  }
 
-refreshData();
+  // resolved
+  return {
+    title:"Validate stability post-resolution",
+    sub:"If issues persist beyond the resolution timestamp, validate local network conditions and open a ticket with incident reference ID."
+  };
+}
+
+function renderModalSignals(i){
+  const rows = $("mSignals");
+  const areas = new Set(productsOf(i).map(normalizeProductArea));
+  const licDef = LICENSE_ITEMS ? detectLicenseDeficits(LICENSE_ITEMS) : null;
+  const deviceOffline = Array.isArray(DEVICES_ITEMS)
+    ? DEVICES_ITEMS.filter(d => String(d.connectionStatus||"").toLowerCase().includes("disconnected")).length
+    : null;
+
+  const signals = [];
+
+  // Licenses correlation
+  if (LICENSE_ITEMS){
+    const cats = mapLicenseCategories(LICENSE_ITEMS);
+    const overlap = Array.from(areas).filter(a => cats.has(a));
+    const corr = overlap.length ? "MATCH" : "NO MATCH";
+    const why = overlap.length
+      ? `Tenant is licensed for ${overlap.join(", ")} which overlaps the affected incident domain(s).`
+      : `No direct license-domain overlap detected.`;
+    const evidence = licDef
+      ? `${licDef.deficits} deficit SKU(s), ${licDef.risks} at-risk SKU(s).`
+      : `Loaded.`;
+    signals.push({ k:"Licenses", status:corr, evidence, why });
+  } else {
+    signals.push({ k:"Licenses", status:"UNAVAILABLE", evidence:"/api/licenses not available for this tenant/session.", why:"License correlation cannot be computed." });
+  }
+
+  // Devices correlation
+  if (Array.isArray(DEVICES_ITEMS)){
+    const evidence = `${DEVICES_ITEMS.length} devices loaded, ${deviceOffline} offline.`;
+    const status = (areas.has("Devices") || areas.has("Calling") || areas.has("Meetings")) ? "RELEVANT" : "INFO";
+    const why = (areas.has("Devices") || areas.has("Calling") || areas.has("Meetings"))
+      ? "Device health can influence perceived impact during Calling/Meetings incidents."
+      : "Device signals are informational for this incident scope.";
+    signals.push({ k:"Devices", status, evidence, why });
+  } else {
+    signals.push({ k:"Devices", status:"UNAVAILABLE", evidence:"/api/devices not available for this tenant/session.", why:"Device correlation cannot be computed." });
+  }
+
+  // PSTN correlation (optional)
+  if (PSTN_DATA){
+    const status = (areas.has("PSTN") || areas.has("Calling")) ? "RELEVANT" : "INFO";
+    const evidence = "PSTN data loaded (structure varies by tenant).";
+    const why = (areas.has("PSTN") || areas.has("Calling"))
+      ? "PSTN route/provider configuration can amplify impact during Calling-related incidents."
+      : "PSTN signals are informational for this incident scope.";
+    signals.push({ k:"PSTN", status, evidence, why });
+  } else {
+    signals.push({ k:"PSTN", status:"UNAVAILABLE", evidence:"/api/pstn not available (optional).", why:"PSTN correlation cannot be computed." });
+  }
+
+  rows.innerHTML = signals.map(s=>`
+    <tr>
+      <td style="font-weight:1000;">${escapeHtml(s.k)}</td>
+      <td class="mono" style="font-weight:1000;">${escapeHtml(s.status)}</td>
+      <td class="muted" style="font-weight:900;">${escapeHtml(s.evidence)}</td>
+      <td class="muted" style="font-weight:900;">${escapeHtml(s.why)}</td>
+    </tr>
+  `).join("");
+}
+
+function openIncidentModal(i){
+  ACTIVE_INCIDENT = i;
+
+  const ref = i.external_id || i.id || "—";
+  const overlay = $("incidentModalOverlay");
+  overlay.style.display = "flex";
+
+  $("incidentModalTitle").textContent = i.name || `Incident ${ref}`;
+  $("incidentModalSub").textContent = `Reference: ${ref} • Started: ${incidentStart(i)?.toLocaleString() || "—"} • Tenant: ${SELECTED_ORG_ID || "—"}`;
+
+  // status badge
+  const act = isActiveIncident(i);
+  const statusBadge = $("modalStatusBadge");
+  statusBadge.className = "badge " + (act ? "warn" : "good");
+  statusBadge.querySelector(".dot").style.color = act ? cssVar("--warn") : cssVar("--good");
+  $("modalStatusText").textContent = act ? "ACTIVE" : "RESOLVED";
+
+  // SLA badge
+  const st = slaStatus(i);
+  const slaBadge = $("modalSlaBadge");
+  const slaText = act
+    ? (st.breach ? `BREACHING (${st.slaMin}m)` : `IN SLA (${st.slaMin}m)`)
+    : (st.breach ? `BREACHED (${st.slaMin}m)` : `WITHIN SLA (${st.slaMin}m)`);
+  slaBadge.className = "badge " + (st.breach ? "bad" : (act ? "warn" : "good"));
+  slaBadge.querySelector(".dot").style.color = st.breach ? cssVar("--bad") : (act ? cssVar("--warn") : cssVar("--good"));
+  $("modalSlaText").textContent = slaText;
+
+  // KPI blocks
+  const dur = incidentDurationMs(i);
+  $("mDuration").textContent = dur===null ? "—" : msToHuman(dur);
+  $("mDurationSub").textContent = act
+    ? `Active since ${incidentStart(i)?.toLocaleString() || "—"}`
+    : `Resolved at ${incidentEnd(i)?.toLocaleString() || (new Date(i.updated_at||Date.now()).toLocaleString())}`;
+
+  const imp = impactScore(i);
+  $("mImpact").textContent = String(imp);
+  $("mImpactSub").textContent = `Severity-weighted score based on duration and affected scope.`;
+
+  const ex = tenantExposureForIncident(i);
+  $("mExposure").textContent = ex.level;
+  $("mExposure").style.color = ex.level==="HIGH" ? cssVar("--bad") : ex.level==="MODERATE" ? cssVar("--warn") : cssVar("--good");
+  $("mExposureSub").textContent = ex.reasons.join(" ");
+
+  const action = recommendedActionFor(i, ex);
+  $("mAction").textContent = action.title;
+  $("mActionSub").textContent = action.sub;
+
+  $("mCustomerSummary").textContent = buildCustomerImpactSummary(i, ex);
+
+  // timeline
+  const updates = Array.isArray(i.updates) ? [...i.updates] : [];
+  updates.sort((a,b)=> new Date(b.created_at||0) - new Date(a.created_at||0));
+
+  $("mTimeline").innerHTML = updates.length
+    ? updates.map(u=>{
+        const when = u.created_at ? new Date(u.created_at).toLocaleString() : "—";
+        const st = String(u.status||"").toUpperCase();
+        const body = (u.body_html || u.body || "").trim();
+        return `
+          <div class="timelineItem">
+            <div class="t">
+              <b>${escapeHtml(st || "UPDATE")}</b>
+              <span>${escapeHtml(when)}</span>
+            </div>
+            <div class="b">${body || `<span class="muted">No details provided.</span>`}</div>
+          </div>
+        `;
+      }).join("")
+    : `<div class="muted" style="font-weight:900;">No update timeline available for this incident.</div>`;
+
+  // correlation signals
+  renderModalSignals(i);
+
+  // modal footer buttons
+  $("btnCopySummary").onclick = async ()=>{
+    const text = [
+      `Incident: ${i.name || ref}`,
+      `Ref: ${ref}`,
+      `Status: ${act ? "ACTIVE" : "RESOLVED"}`,
+      `Severity: ${severityOf(i).toUpperCase()}`,
+      `Duration: ${dur===null ? "—" : msToHuman(dur)}`,
+      `SLA: ${slaText}`,
+      `Tenant Exposure: ${ex.level}`,
+      `Summary: ${buildCustomerImpactSummary(i, ex)}`
+    ].join("\n");
+    try{
+      await navigator.clipboard.writeText(text);
+      flashNotify("✅ Copied incident summary to clipboard.");
+    } catch {
+      flashNotify("Copy failed (browser permission).");
+    }
+  };
+
+  $("btnEmailThis").onclick = async ()=>{
+    // best-effort:
+    // - if you later add /api/incidents/email, we’ll use it
+    // - else we show a helpful message
+    const email = ($("notifyEmail")?.value || ME?.email || "").trim();
+    if (!email || !email.includes("@")){
+      flashNotify("Enter a valid email in Notifications first.");
+      return;
+    }
+    const payload = {
+      email,
+      orgId: SELECTED_ORG_ID || null,
+      incidentRef: ref,
+      title: i.name || "",
+      status: act ? "ACTIVE" : "RESOLVED",
+      severity: severityOf(i),
+      startedAt: i.created_at,
+      impact: i.impact,
+      products: productsOf(i),
+      summary: buildCustomerImpactSummary(i, ex)
+    };
+
+    // try common endpoint names (safe)
+    const endpoints = ["/api/incidents/email", "/api/incidents/notify", "/api/notify/incidents"];
+    let sent = false;
+
+    for (const ep of endpoints){
+      const r = await api(ep, {
+        method:"POST",
+        headers:{ "content-type":"application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (r.ok){ sent = true; break; }
+    }
+
+    if (sent) flashNotify("✅ Email request submitted.");
+    else flashNotify("No incident email endpoint is configured yet. (UI is ready once you add it.)");
+  };
+}
+
+function closeIncidentModal(){
+  $("incidentModalOverlay").style.display = "none";
+  ACTIVE_INCIDENT = null;
+}
+
+$("btnCloseModal").addEventListener("click", closeIncidentModal);
+$("incidentModalOverlay").addEventListener("click", (e)=>{
+  if (e.target && e.target.id === "incidentModalOverlay") closeIncidentModal();
+});
+document.addEventListener("keydown", (e)=>{
+  if (e.key === "Escape") closeIncidentModal();
+});
+
+/* -----------------------------
+   Export CSV / PDF
+----------------------------- */
+function safeFile(name){
+  return String(name || "export").replaceAll(/[^a-zA-Z0-9_\-]+/g, "_").slice(0,80);
+}
+function downloadCsv(filename, rows){
+  const csv = rows.map(r => r.map(v=>{
+    const s = String(v ?? "");
+    const needs = s.includes(",") || s.includes('"') || s.includes("\n");
+    if (!needs) return s;
+    return `"${s.replaceAll('"','""')}"`;
+  }).join(",")).join("\n");
+
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+$("btnExportCsv").addEventListener("click", ()=>{
+  const rows = [[
+    "Ref","Status","Severity","Started","Resolved","DurationHours","SLA_Min","SLA_Breached","ImpactScore","Products","Title"
+  ]];
+
+  for (const i of INCIDENTS_FILTERED.length ? INCIDENTS_FILTERED : INCIDENTS){
+    const ref = i.external_id || i.id || "";
+    const start = incidentStart(i);
+    const end = isActiveIncident(i) ? null : (incidentEnd(i) || new Date(i.updated_at||Date.now()));
+    const dur = incidentDurationMs(i);
+    const durH = msToH(dur);
+    const sev = severityOf(i);
+    const sla = slaStatus(i);
+    rows.push([
+      ref,
+      isActiveIncident(i) ? "ACTIVE" : "RESOLVED",
+      sev,
+      start ? start.toISOString() : "",
+      end ? end.toISOString() : "",
+      Number.isFinite(durH) ? (Math.round(durH*100)/100) : "",
+      sla.slaMin,
+      sla.breach ? "YES" : "NO",
+      impactScore(i),
+      productsOf(i).map(normalizeProductArea).join("; "),
+      i.name || ""
+    ]);
+  }
+
+  downloadCsv(`incidents_${safeFile(SELECTED_ORG_ID || "global")}_${todayKey()}.csv`, rows);
+});
+
+$("btnExportPdf").addEventListener("click", ()=>{
+  // Print-friendly executive export
+  window.print();
+});
+
+/* -----------------------------
+   Notification scheduling (best-effort)
+----------------------------- */
+function notifyKey(orgId){ return `II4_NOTIFY_SETTINGS::${orgId || "global"}`; }
+function loadNotifySettings(orgId){
+  try{
+    const raw = localStorage.getItem(notifyKey(orgId));
+    const s = raw ? JSON.parse(raw) : {};
+    return {
+      enabled: !!s.enabled,
+      severity: s.severity || "any",
+      freq: Number(s.freq || 120),
+      email: String(s.email || ""),
+      lastSeenRef: String(s.lastSeenRef || ""),
+      lastSentTs: Number(s.lastSentTs || 0)
+    };
+  } catch {
+    return { enabled:false, severity:"any", freq:120, email:"", lastSeenRef:"", lastSentTs:0 };
+  }
+}
+function saveNotifySettings(orgId, s){
+  try{ localStorage.setItem(notifyKey(orgId), JSON.stringify(s)); } catch {}
+}
+function syncNotifyUI(){
+  const s = loadNotifySettings(SELECTED_ORG_ID);
+  $("notifyToggle").checked = s.enabled;
+  $("notifySeverity").value = s.severity;
+  $("notifyFreq").value = String(s.freq);
+  if (!$("notifyEmail").value.trim()){
+    $("notifyEmail").value = s.email || ME?.email || "";
+  }
+}
+function flashNotify(msg){
+  const el = $("notifyStatus");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(()=>{ el.classList.remove("show"); el.textContent=""; }, 4500);
+}
+
+function severityMatchesNotify(i, mode){
+  if (mode === "any") return true;
+  const sev = severityOf(i);
+  if (mode === "major") return sev === "major";
+  if (mode === "major_partial") return (sev === "major" || sev === "partial");
+  return true;
+}
+
+async function tryServerSubscribe(email, orgId){
+  // If you add backend later, the UI will use it automatically.
+  const payload = { email, orgId: orgId || null, scope:"incidents" };
+  const endpoints = ["/api/incidents/subscribe", "/api/subscribe/incidents", "/api/notify/subscribe"];
+  for (const ep of endpoints){
+    const r = await api(ep, { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify(payload) });
+    if (r.ok) return true;
+  }
+  return false;
+}
+
+async function notifyCheck(){
+  const orgId = SELECTED_ORG_ID || "global";
+  const s = loadNotifySettings(orgId);
+  if (!s.enabled) return;
+
+  // Refresh incidents quietly
+  const r = await api("/api/incidents", { cache:"no-store" });
+  if (!r.ok) return;
+
+  const items = Array.isArray(r.data?.incidents) ? r.data.incidents : [];
+  if (!items.length) return;
+
+  // Find newest incident that matches severity criteria
+  const sorted = [...items].sort((a,b)=> new Date(b.created_at||0) - new Date(a.created_at||0));
+  const newest = sorted.find(i => severityMatchesNotify(i, s.severity)) || sorted[0];
+
+  const ref = String(newest.external_id || newest.id || "");
+  if (!ref) return;
+
+  // First-run: set baseline without alerting
+  if (!s.lastSeenRef){
+    s.lastSeenRef = ref;
+    saveNotifySettings(orgId, s);
+    return;
+  }
+
+  // New incident detected
+  if (ref !== s.lastSeenRef){
+    s.lastSeenRef = ref;
+    saveNotifySettings(orgId, s);
+
+    // In-session notification
+    const title = newest.name || "New Webex incident detected";
+    flashNotify(`🔔 New incident: ${title} (${ref})`);
+
+    // Optional email: only if server endpoint exists
+    const email = ($("notifyEmail").value || s.email || ME?.email || "").trim();
+    if (email && email.includes("@")){
+      const payload = { email, orgId: SELECTED_ORG_ID || null, incidentRef: ref, title, createdAt: newest.created_at };
+      const endpoints = ["/api/incidents/email", "/api/incidents/notify"];
+      for (const ep of endpoints){
+        const er = await api(ep, { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify(payload) });
+        if (er.ok) break;
+      }
+    }
+  }
+}
+
+function startNotifyTimer(){
+  if (NOTIFY_TIMER) clearInterval(NOTIFY_TIMER);
+
+  const s = loadNotifySettings(SELECTED_ORG_ID);
+  const freq = Math.max(30, Number(s.freq || 120));
+  if (!s.enabled) return;
+
+  NOTIFY_TIMER = setInterval(async ()=>{ await notifyCheck(); }, freq * 1000);
+}
+
+/* Wire notification controls */
+$("notifyToggle").addEventListener("change", async ()=>{
+  const orgId = SELECTED_ORG_ID || "global";
+  const s = loadNotifySettings(orgId);
+  s.enabled = $("notifyToggle").checked;
+  s.severity = $("notifySeverity").value;
+  s.freq = Number($("notifyFreq").value || 120);
+  s.email = ($("notifyEmail").value || "").trim();
+  saveNotifySettings(orgId, s);
+
+  if (s.enabled){
+    // try server-side subscription if present
+    if (s.email && s.email.includes("@")){
+      const ok = await tryServerSubscribe(s.email, SELECTED_ORG_ID);
+      if (ok) flashNotify("✅ Server subscription registered.");
+      else flashNotify("✅ Notifications enabled (in-session).");
+    } else {
+      flashNotify("Notifications enabled. Add a valid email for server subscription (if available).");
+    }
+  } else {
+    flashNotify("Notifications disabled.");
+  }
+
+  startNotifyTimer();
+});
+
+$("notifySeverity").addEventListener("change", ()=>{
+  const orgId = SELECTED_ORG_ID || "global";
+  const s = loadNotifySettings(orgId);
+  s.severity = $("notifySeverity").value;
+  saveNotifySettings(orgId, s);
+});
+
+$("notifyFreq").addEventListener("change", ()=>{
+  const orgId = SELECTED_ORG_ID || "global";
+  const s = loadNotifySettings(orgId);
+  s.freq = Number($("notifyFreq").value || 120);
+  saveNotifySettings(orgId, s);
+  startNotifyTimer();
+});
+
+$("notifyEmail").addEventListener("input", ()=>{
+  const orgId = SELECTED_ORG_ID || "global";
+  const s = loadNotifySettings(orgId);
+  s.email = ($("notifyEmail").value || "").trim();
+  saveNotifySettings(orgId, s);
+});
+
+$("btnTestNotify").addEventListener("click", ()=>{
+  flashNotify("✅ Test notification OK. (This validates UI only.)");
+});
+
+/* -----------------------------
+   Live refresh mode: WebSocket optional, else polling
+----------------------------- */
+let WS = null;
+
+function wsUrl(){
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${location.host}/ws`;
+}
+
+function setLiveMode(text){
+  $("liveMode").textContent = text;
+}
+
+function startPolling(){
+  if (POLL_TIMER) clearInterval(POLL_TIMER);
+  setLiveMode("Polling");
+  POLL_TIMER = setInterval(async ()=>{ await refreshData({ quiet:true }); }, 60 * 1000);
+}
+
+function stopPolling(){
+  if (POLL_TIMER) clearInterval(POLL_TIMER);
+  POLL_TIMER = null;
+}
+
+// Best-effort WebSocket: if your worker later exposes it, this auto-works.
+function startWebSocket(){
+  try{
+    if (WS) WS.close();
+    WS = new WebSocket(wsUrl());
+
+    WS.onopen = ()=>{
+      setLiveMode("WebSocket");
+      stopPolling();
+      try{
+        WS.send(JSON.stringify({ type:"hello", scope:"incidents" }));
+      } catch {}
+    };
+
+    WS.onmessage = async (evt)=>{
+      // Expected future messages:
+      // {type:"incidents:update"} or {type:"refresh"}
+      let msg = null;
+      try{ msg = JSON.parse(evt.data); } catch {}
+      if (!msg) return;
+
+      if (msg.type === "incidents:update" || msg.type === "refresh"){
+        await refreshData({ quiet:true });
+      }
+    };
+
+    WS.onerror = ()=>{
+      setLiveMode("Polling");
+      startPolling();
+    };
+
+    WS.onclose = ()=>{
+      setLiveMode("Polling");
+      startPolling();
+    };
+  } catch {
+    setLiveMode("Polling");
+    startPolling();
+  }
+}
+
+/* -----------------------------
+   Core load: incidents + metrics + banners
+----------------------------- */
+function buildBanners(metrics){
+  clearBanners();
+
+  // SLA breach banner
+  if (metrics.activeBreaches > 0){
+    addBanner(
+      "bad",
+      "SLA breach risk detected",
+      "One or more active incidents have exceeded their severity-based SLA thresholds. US Signal is monitoring updates and will communicate when mitigation is confirmed.",
+      `${metrics.activeBreaches} breach(es)`
+    );
+  } else if (metrics.activeCount > 0){
+    addBanner(
+      "warn",
+      "Active incident(s) in progress",
+      "Webex has ongoing incident activity. Service degradation may be intermittent depending on which Webex features your users rely on.",
+      `${metrics.activeCount} active`
+    );
+  } else {
+    addBanner(
+      "good",
+      "No active incidents",
+      "Webex incident feed shows no current active events. Continue normal operations.",
+      "GREEN"
+    );
+  }
+
+  // License deficit correlation banner
+  if (LICENSE_ITEMS){
+    const d = detectLicenseDeficits(LICENSE_ITEMS);
+    if (d.deficits > 0){
+      addBanner(
+        "warn",
+        "License deficits detected",
+        "Your tenant currently has license deficits. During incidents, provisioning or feature availability may be constrained. Consider procurement or assignment cleanup.",
+        `${d.deficits} deficit SKU(s)`
+      );
+    } else if (d.risks > 0){
+      addBanner(
+        "warn",
+        "License exhaustion risk",
+        "Some SKUs are approaching exhaustion (≥ 90%). Even without deficits, capacity pressure can amplify user impact during incidents.",
+        `${d.risks} at-risk SKU(s)`
+      );
+    }
+  }
+
+  // Device fragility banner
+  if (Array.isArray(DEVICES_ITEMS)){
+    const offline = DEVICES_ITEMS.filter(d => String(d.connectionStatus||"").toLowerCase().includes("disconnected")).length;
+    if (offline >= 5){
+      addBanner(
+        "warn",
+        "Device health requires attention",
+        "Multiple devices appear offline. If users report issues during incidents, device registration state can complicate troubleshooting.",
+        `${offline} offline`
+      );
+    }
+  }
+}
+
+function updateKpis(metrics){
+  $("kActive").textContent = String(metrics.activeCount);
+  $("kpiActiveNote").textContent = metrics.majorActive > 0 ? `${metrics.majorActive} major` : "—";
+  $("kActiveSub").textContent = metrics.activeCount > 0 ? `Longest active: ${msToHuman(metrics.longestActiveMs)}` : "No active incidents";
+
+  $("kMTTR").textContent = metrics.mttrH === null ? "—" : `${metrics.mttrH}h`;
+  $("kpiTtrNote").textContent = (metrics.breaches30d > 0) ? `${metrics.breaches30d} breach(es)` : "—";
+  $("kMTTRSub").textContent = `Median: ${metrics.medianH === null ? "—" : metrics.medianH + "h"}`;
+
+  $("kImpact").textContent = String(metrics.impactIndex);
+  $("kpiImpactNote").textContent = metrics.tenantExposureLevel !== "LOW" ? `Exposure: ${metrics.tenantExposureLevel}` : "—";
+  $("kImpactSub").textContent = "Severity + duration weighted across active incidents";
+
+  $("kSLA").textContent = metrics.slaCompliancePct === null ? "—" : `${metrics.slaCompliancePct}%`;
+  $("kpiSlaNote").textContent = metrics.slaCompliancePct === null ? "—" : (metrics.slaCompliancePct >= 95 ? "Excellent" : metrics.slaCompliancePct >= 85 ? "Good" : "Attention");
+  $("kSLASub").textContent = `Breaches: ${metrics.breaches30d}`;
+
+  // RAG overall
+  const ragScore = Math.max(0, Math.min(100, Math.round(100 - (metrics.impactIndex * 4) - (metrics.activeBreaches * 10))));
+  if (metrics.activeBreaches > 0 || metrics.impactIndex >= 20){
+    setRag("RED", "Active incidents with elevated risk", ragScore);
+  } else if (metrics.activeCount > 0 || metrics.impactIndex >= 8){
+    setRag("AMBER", "Incident activity detected", ragScore);
+  } else {
+    setRag("GREEN", "No active incidents detected", ragScore);
+  }
+
+  // Executive narrative
+  $("execNarrative").textContent = buildExecutiveNarrative(metrics);
+
+  updateSlaAndExposureBadges(metrics);
+}
+
+async function refreshData(opts={ quiet:false }){
+  if (!opts.quiet) setError(null);
+
+  // Pull incidents
+  const ir = await api("/api/incidents", { cache:"no-store" });
+  if (!ir.ok){
+    if (!opts.quiet) setError(`Failed to load incidents (HTTP ${ir.status}).`);
+    return;
+  }
+
+  INCIDENTS = Array.isArray(ir.data?.incidents) ? ir.data.incidents : [];
+  setLastRefresh();
+
+  // Populate product filter options
+  populateProductFilter();
+
+  // Metrics + UI updates
+  const metrics = computeMetrics();
+  updateKpis(metrics);
+  buildBanners(metrics);
+  renderHeatmap();
+
+  // Trend snapshot + visuals
+  const hist = captureDailySnapshot();
+  drawTrendChart(hist);
+
+  // Sparklines
+  renderAllVisuals();
+
+  // Render inventory table
+  renderTable();
+
+  return true;
+}
+
+/* -----------------------------
+   Wall mode (NOC-friendly simplified interaction)
+----------------------------- */
+function setWallMode(on){
+  WALL_MODE = !!on;
+  $("btnWallMode").textContent = WALL_MODE ? "Exit Wall Mode" : "Wall Mode";
+  flashNotify(WALL_MODE ? "Wall Mode enabled (click rows disabled)." : "Wall Mode disabled.");
+}
+$("btnWallMode").addEventListener("click", ()=> setWallMode(!WALL_MODE));
+
+/* -----------------------------
+   Controls wiring
+----------------------------- */
+$("btnRefresh").addEventListener("click", async ()=>{
+  await refreshData({ quiet:false });
+});
+
+$("activeOnly").addEventListener("change", renderTable);
+$("productFilter").addEventListener("change", renderTable);
+$("severityFilter").addEventListener("change", renderTable);
+$("searchInput").addEventListener("input", renderTable);
+$("sortKey").addEventListener("change", renderTable);
+
+$("btnLoadTenant").addEventListener("click", async ()=>{
+  SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
+  $("tenantPill").textContent = `Tenant: ${ME?.orgName || "—"}`;
+  setError(null);
+
+  // reload signals for selected tenant
+  await loadTenantSignals();
+
+  // refresh incidents view (global) but recompute exposure correlation
+  await refreshData({ quiet:false });
+
+  // notifications
+  syncNotifyUI();
+  startNotifyTimer();
+});
+
+$("tenantSelect").addEventListener("change", ()=>{
+  SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
+  // keep UI responsive, signals will update when Apply Tenant is pressed
+});
+
+/* -----------------------------
+   Logout
+----------------------------- */
+$("btnLogout").addEventListener("click", async ()=>{
+  try{
+    // prefer existing logout route you’ve used elsewhere
+    await fetch("/api/pin/logout", { method:"POST" });
+  } catch {
+    try{ await fetch("/api/logout", { method:"POST" }); } catch {}
+  }
+  window.location.href = "/pin";
+});
+
+/* -----------------------------
+   INIT
+----------------------------- */
+async function init(){
+  const ok = await loadMe();
+  if (!ok) return;
+
+  await loadOrgs();
+  SELECTED_ORG_ID = $("tenantSelect").value || ME?.orgId || SELECTED_ORG_ID;
+
+  // Tenant signals first (to enable correlation)
+  await loadTenantSignals();
+
+  // Notifications
+  syncNotifyUI();
+  startNotifyTimer();
+
+  // Initial incidents load
+  await refreshData({ quiet:false });
+
+  // Live updates: attempt websocket (fallback to polling)
+  startWebSocket();
+
+  // Also a gentle periodic refresh even if WS is up (defensive)
+  startPolling();
+}
+
+init();
 </script>
 
 </body>
