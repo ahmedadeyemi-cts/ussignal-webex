@@ -3859,56 +3859,58 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
       return json({ error: "internal_error", message: e.message }, 500);
     }
   },
-async function runScheduled(env) {
-  try {
+async scheduled(event, env, ctx) {
+  ctx.waitUntil((async () => {
+    try {
 
-    const orgResult = await webexFetch(env, "/organizations");
-    if (!orgResult.ok) return;
+      const orgResult = await webexFetch(env, "/organizations");
+      if (!orgResult.ok) return;
 
-    const orgs = orgResult.data.items || [];
-    const CONCURRENCY = 5;
+      const orgs = orgResult.data.items || [];
+      const CONCURRENCY = 5;
 
-    await mapLimit(orgs, CONCURRENCY, async (org) => {
+      await mapLimit(orgs, CONCURRENCY, async (org) => {
 
-      const health = await computeTenantHealth(env, org.id);
-      await storeHealth(env, health);
+        const health = await computeTenantHealth(env, org.id);
+        await storeHealth(env, health);
 
-      const quality = await computeCallQuality(env, org.id);
-      await env.WEBEX.put(
-        `quality:${org.id}`,
-        JSON.stringify(quality),
-        { expirationTtl: 60 * 30 }
-      );
+        const quality = await computeCallQuality(env, org.id);
+        await env.WEBEX.put(
+          `quality:${org.id}`,
+          JSON.stringify(quality),
+          { expirationTtl: 60 * 30 }
+        );
 
-      const pstn = await buildPstnDeep(env, org.id);
-      await storePstnSnapshot(env, org.id, pstn);
+        const pstn = await buildPstnDeep(env, org.id);
+        await storePstnSnapshot(env, org.id, pstn);
 
-      await appendPstnTrend(env, org.id, {
-        day: new Date().toISOString().slice(0, 10),
-        score: pstn?.scores?.pstnObservabilityScore ?? pstn?.scores?.pstnReliabilityScore ?? null,
-        reliability: pstn?.scores?.pstnReliabilityScore ?? null,
-        capacity: pstn?.scores?.pstnCapacityScore ?? null,
-        redundancy: pstn?.scores?.pstnRedundancyScore ?? null,
-        totalDids: pstn?.totals?.didsTotal ?? null,
-        assignedDids: pstn?.totals?.didsAssigned ?? null
+        await appendPstnTrend(env, org.id, {
+          day: new Date().toISOString().slice(0, 10),
+          score: pstn?.scores?.pstnObservabilityScore ?? pstn?.scores?.pstnReliabilityScore ?? null,
+          reliability: pstn?.scores?.pstnReliabilityScore ?? null,
+          capacity: pstn?.scores?.pstnCapacityScore ?? null,
+          redundancy: pstn?.scores?.pstnRedundancyScore ?? null,
+          totalDids: pstn?.totals?.didsTotal ?? null,
+          assignedDids: pstn?.totals?.didsAssigned ?? null
+        });
+
       });
 
-    });
+      // Global snapshot once per cron run
+      try {
+        const globalPayload = await computeGlobalSummary(env);
+        await putGlobalSummarySnapshot(env, globalPayload);
+        console.log("Global summary snapshot rebuilt via cron");
+      } catch (e) {
+        console.error("Global summary rebuild failed:", e);
+      }
 
-    try {
-      const globalPayload = await computeGlobalSummary(env);
-      await putGlobalSummarySnapshot(env, globalPayload);
-      console.log("Global summary snapshot rebuilt via cron");
-    } catch (e) {
-      console.error("Global summary rebuild failed:", e);
+      console.log("Health + Quality + PSTN snapshots updated");
+
+    } catch (err) {
+      console.error("Scheduled task failed:", err);
     }
-
-    console.log("Health + Quality + PSTN snapshots updated");
-
-  } catch (err) {
-    console.error("Scheduled task failed:", err);
-  }
+  })());
 }
-
 
 };
