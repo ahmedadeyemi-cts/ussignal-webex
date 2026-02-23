@@ -3424,7 +3424,8 @@ if (url.pathname.startsWith("/api/customer/")) {
 
 if (action === "cdr") {
   const now = new Date().toISOString();
-  const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const windowDays = Number(url.searchParams.get("days") || 7);
+  const from = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString();
   const max = 100;
 
   // Prefer feed style first (often required for org-scoped access)
