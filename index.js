@@ -3102,7 +3102,7 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
    /api/devices
    - Admin: may specify ?orgId=...
    - Customer: resolved org only
------------------------------ 
+----------------------------- */
 if (url.pathname === "/api/devices" && request.method === "GET") {
 
   const user = getCurrentUser(request);
@@ -3162,8 +3162,8 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
     summary,
     items: normalized
   });
-}*/
-  if (url.pathname === "/api/devices" && request.method === "GET") {
+}
+  /*if (url.pathname === "/api/devices" && request.method === "GET") {
 
   const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
@@ -3198,7 +3198,7 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
     orgId: resolvedOrgId,
     items: result.data.items || []
   });
-}
+}*/
 
 /* -----------------------------
    /api/licenses/email
