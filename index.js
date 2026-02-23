@@ -2998,7 +2998,7 @@ return json(filtered);
    - Admin: may specify ?orgId=...
    - Customer: resolved org only
 ----------------------------- */
-if (url.pathname === "/api/licenses" && request.method === "GET") {
+/*if (url.pathname === "/api/licenses" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
@@ -3060,13 +3060,49 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
   };
 
   return json({ orgId: resolvedOrgId, summary, items: normalized });
+} */
+if (url.pathname === "/api/licenses" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  const session = await getSession(env, user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId = null;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ error: "missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) {
+      return json({ error: "pin_required" }, 401);
+    }
+    resolvedOrgId = session.orgId;
+  }
+
+  const result = await webexFetch(env, "/licenses", resolvedOrgId);
+
+  if (!result.ok) {
+    return json({
+      error: "webex_license_failed",
+      status: result.status,
+      preview: result.preview
+    }, 500);
+  }
+
+  return json({
+    ok: true,
+    orgId: resolvedOrgId,
+    items: result.data.items || []
+  });
 }
 
 /* -----------------------------
    /api/devices
    - Admin: may specify ?orgId=...
    - Customer: resolved org only
------------------------------ */
+----------------------------- 
 if (url.pathname === "/api/devices" && request.method === "GET") {
 
   const user = getCurrentUser(request);
@@ -3126,7 +3162,44 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
     summary,
     items: normalized
   });
+}*/
+  if (url.pathname === "/api/devices" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  const session = await getSession(env, user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId = null;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ error: "missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) {
+      return json({ error: "pin_required" }, 401);
+    }
+    resolvedOrgId = session.orgId;
+  }
+
+  const result = await webexFetch(env, "/devices", resolvedOrgId);
+
+  if (!result.ok) {
+    return json({
+      error: "webex_devices_failed",
+      status: result.status,
+      preview: result.preview
+    }, 500);
+  }
+
+  return json({
+    ok: true,
+    orgId: resolvedOrgId,
+    items: result.data.items || []
+  });
 }
+
 /* -----------------------------
    /api/licenses/email
    Sends license report via Brevo
