@@ -2113,7 +2113,7 @@ if (url.pathname === "/customer/pstn" && request.method === "GET") {
   });
 }
      /* -----------------------------
-   Customer UI: PSTN
+   Customer UI: Observability
 ----------------------------- */
 if (url.pathname === "/customer/observability" && request.method === "GET") {
   return text(await renderCustomerObservabilityHTML(), 200, {
@@ -4054,38 +4054,8 @@ if (url.pathname === "/api/analytics" && request.method === "GET") {
     return json({ ok: false, error: "pstn_failed", message: e.message }, 500);
   }
 } */
+
 if (url.pathname === "/api/pstn" && request.method === "GET") {
-
-  const user = getCurrentUser(request);
-  if (!user) return json({ error: "access_required" }, 401);
-
-  const session = await getSession(env, user.email);
-  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
-
-  let resolvedOrgId = null;
-
-  if (user.isAdmin) {
-    if (!requestedOrgId) {
-      return json({ error: "missing_orgId" }, 400);
-    }
-    resolvedOrgId = requestedOrgId;
-  } else {
-    if (!session?.orgId) return json({ error: "pin_required" }, 401);
-    resolvedOrgId = session.orgId;
-  }
-
-  const snap = await env.WEBEX.get(`pstn:${resolvedOrgId}`, { type: "json" });
-
-  if (!snap) {
-    const rebuilt = await buildPstnDeep(env, resolvedOrgId);
-    await storePstnSnapshot(env, resolvedOrgId, rebuilt);
-    return json({ ok: true, pstn: rebuilt, source: "rebuilt" });
-  }
-
-  return json({ ok: true, pstn: snap, source: "kv" });
-}
-
-/* if (url.pathname === "/api/pstn" && request.method === "GET") {
 
   const user = getCurrentUser(request);
   if (!user) return json({ error: "access_required" }, 401);
@@ -4167,7 +4137,7 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     trunks,
     numbers
   });
-} */
+}
 
       /* -----------------------------
          🔎 DEBUG: seed + read a PIN
