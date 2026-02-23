@@ -4044,14 +4044,34 @@ if (url.pathname === "/api/analytics" && request.method === "GET") {
   }
 } */
 if (url.pathname === "/api/pstn" && request.method === "GET") {
-  const user = getCurrentUser(request);
-  const session = user?.email ? await getSession(env, user.email) : null;
 
-  return json({
-    debugUser: user,
-    isAdmin: user?.isAdmin,
-    hasSession: !!session
-  });
+  const user = getCurrentUser(request);
+  if (!user) return json({ error: "access_required" }, 401);
+
+  const session = await getSession(env, user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId = null;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ error: "missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) return json({ error: "pin_required" }, 401);
+    resolvedOrgId = session.orgId;
+  }
+
+  const snap = await env.WEBEX.get(`pstn:${resolvedOrgId}`, { type: "json" });
+
+  if (!snap) {
+    const rebuilt = await buildPstnDeep(env, resolvedOrgId);
+    await storePstnSnapshot(env, resolvedOrgId, rebuilt);
+    return json({ ok: true, pstn: rebuilt, source: "rebuilt" });
+  }
+
+  return json({ ok: true, pstn: snap, source: "kv" });
 }
 
 /* if (url.pathname === "/api/pstn" && request.method === "GET") {
