@@ -3475,13 +3475,23 @@ if (action === "cdr") {
 // PSTN snapshot
 // GET /api/customer/:key/pstn
 // ----------------------------------------------------
+// ----------------------------------------------------
+// PSTN snapshot
+// GET /api/customer/:key/pstn
+// ----------------------------------------------------
 if (action === "pstn") {
   const snap = await env.WEBEX.get(`pstn:${resolvedOrgId}`, { type: "json" });
+
   if (!snap) {
-  const rebuilt = await buildPstnDeep(env, resolvedOrgId);
-  await storePstnSnapshot(env, resolvedOrgId, rebuilt);
-  return json({ ok: true, pstn: rebuilt, source: "rebuilt" }, 200);
+    const rebuilt = await buildPstnDeep(env, resolvedOrgId);
+    await storePstnSnapshot(env, resolvedOrgId, rebuilt);
+    return json({ ok: true, pstn: rebuilt, source: "rebuilt" }, 200);
+  }
+
+  // ✅ IMPORTANT: return the snapshot when it exists
+  return json({ ok: true, pstn: snap, source: "kv" }, 200);
 }
+
 // ----------------------------------------------------
 // PSTN trend
 // GET /api/customer/:key/pstn-trend
@@ -3510,14 +3520,15 @@ if (action === "pstn-predict") {
     last: items[items.length - 1] || null
   }, 200);
 }
-   // ----------------------------------------------------
-  // NEW: PSTN deep (best-effort, never breaks UI)
-  // GET /api/customer/:key/pstn-deep
-  // ----------------------------------------------------
-  if (action === "pstn-deep") {
-    const pstn = await buildPstnDeep(env, resolvedOrgId);
-    return json({ ok: true, pstn }, 200);
-  }
+
+// ----------------------------------------------------
+// PSTN deep (best-effort, never breaks UI)
+// GET /api/customer/:key/pstn-deep
+// ----------------------------------------------------
+if (action === "pstn-deep") {
+  const pstn = await buildPstnDeep(env, resolvedOrgId);
+  return json({ ok: true, pstn }, 200);
+}
 
   // -------------------------------------------------------------------
   // NEW: tenant "health" snapshot (written by scheduled() into WEBEX KV)
