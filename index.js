@@ -1399,8 +1399,8 @@ async function buildPstnDeep(env, orgId) {
   const premise = pickItems(rPremise.data);
 
   // 4) Emergency (best-effort)
-  const rEmergency = await webexFetchSafe(env, "/telephony/config/emergencyCallBackNumbers?max=1000", orgId);
-  diagnostics.push(diag("telephony/config/emergencyCallBackNumbers", rEmergency));
+  const rEmergency = await webexFetchSafe(env, "/telephony/config/emergencyCallbackNumbers?max=1000", orgId);
+  diagnostics.push(diag("telephony/config/emergencyCallbackNumbers", rEmergency));
   const emergency = pickItems(rEmergency.data);
 
   // 5) Routing objects (optional / best-effort)
