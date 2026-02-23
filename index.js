@@ -3918,9 +3918,74 @@ if (url.pathname === "/api/analytics" && request.method === "GET") {
   return await apiCallingAnalytics(env, request);
 }
 
-if (url.pathname === "/api/cdr" && request.method === "GET") {
+/* if (url.pathname === "/api/cdr" && request.method === "GET") {
   return await apiCDR(env, request);
+} */
+     if (url.pathname === "/api/cdr" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ error: "access_required" }, 401);
+
+  const session = await getSession(env, user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId = null;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ error: "missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) return json({ error: "pin_required" }, 401);
+    resolvedOrgId = session.orgId;
+  }
+
+  const now = new Date().toISOString();
+  const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const max = 100;
+
+  // 🔹 Prefer feed (partner-friendly + multi-tenant safe)
+  const tryFeed = await webexFetchSafe(
+    env,
+    `/cdr_feed?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=${max}`,
+    resolvedOrgId
+  );
+
+  // 🔹 Fallback to calls endpoint
+  const tryCalls = tryFeed.ok ? null : await webexFetchSafe(
+    env,
+    `/cdr/calls?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=${max}`,
+    resolvedOrgId
+  );
+
+  const picked = tryFeed.ok ? tryFeed : tryCalls;
+
+  if (!picked || !picked.ok) {
+    return json({
+      ok: false,
+      orgId: resolvedOrgId,
+      error: "cdr_unavailable",
+      diag: picked ? diag("cdr", picked) : {
+        name: "cdr",
+        ok: false,
+        status: 0,
+        error: "no_attempt"
+      }
+    }, 200); // 🔹 DO NOT 500 tenant page
+  }
+
+  const records = normalizeCdrItems(picked.data);
+
+  return json({
+    ok: true,
+    orgId: resolvedOrgId,
+    source: tryFeed.ok ? "cdr_feed" : "cdr_calls",
+    count: records.length,
+    records
+  }, 200);
 }
+
      /* -----------------------------
    /api/pstn (GET)
    - Admin: requires ?orgId=
