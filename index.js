@@ -2998,7 +2998,7 @@ return json(filtered);
    - Admin: may specify ?orgId=...
    - Customer: resolved org only
 ----------------------------- */
-/*if (url.pathname === "/api/licenses" && request.method === "GET") {
+if (url.pathname === "/api/licenses" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
@@ -3060,8 +3060,8 @@ return json(filtered);
   };
 
   return json({ orgId: resolvedOrgId, summary, items: normalized });
-} */
-if (url.pathname === "/api/licenses" && request.method === "GET") {
+} 
+/*if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
@@ -3096,7 +3096,7 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     orgId: resolvedOrgId,
     items: result.data.items || []
   });
-}
+} */
 
 /* -----------------------------
    /api/devices
