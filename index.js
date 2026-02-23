@@ -3922,7 +3922,7 @@ if (url.pathname === "/api/analytics" && request.method === "GET") {
 /* if (url.pathname === "/api/cdr" && request.method === "GET") {
   return await apiCDR(env, request);
 } */
-     if (url.pathname === "/api/cdr" && request.method === "GET") {
+  if (url.pathname === "/api/cdr" && request.method === "GET") {
 
   const user = getCurrentUser(request);
   if (!user) return json({ error: "access_required" }, 401);
@@ -3942,18 +3942,29 @@ if (url.pathname === "/api/analytics" && request.method === "GET") {
     resolvedOrgId = session.orgId;
   }
 
-  const now = new Date().toISOString();
-  const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const max = 100;
+  const windowDays = Math.min(
+    Number(url.searchParams.get("days") || 7),
+    30
+  );
 
-  // 🔹 Prefer feed (partner-friendly + multi-tenant safe)
+  const max = Math.min(
+    Number(url.searchParams.get("max") || 200),
+    1000
+  );
+
+  const now = new Date().toISOString();
+  const from = new Date(
+    Date.now() - windowDays * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  // 🔹 Prefer CDR Feed
   const tryFeed = await webexFetchSafe(
     env,
     `/cdr_feed?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=${max}`,
     resolvedOrgId
   );
 
-  // 🔹 Fallback to calls endpoint
+  // 🔹 Fallback
   const tryCalls = tryFeed.ok ? null : await webexFetchSafe(
     env,
     `/cdr/calls?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=${max}`,
@@ -3973,7 +3984,7 @@ if (url.pathname === "/api/analytics" && request.method === "GET") {
         status: 0,
         error: "no_attempt"
       }
-    }, 200); // 🔹 DO NOT 500 tenant page
+    }, 200); // 🔥 never 500 tenant page
   }
 
   const records = normalizeCdrItems(picked.data);
@@ -3982,6 +3993,7 @@ if (url.pathname === "/api/analytics" && request.method === "GET") {
     ok: true,
     orgId: resolvedOrgId,
     source: tryFeed.ok ? "cdr_feed" : "cdr_calls",
+    windowDays,
     count: records.length,
     records
   }, 200);
@@ -4030,8 +4042,18 @@ if (url.pathname === "/api/analytics" && request.method === "GET") {
     return json({ ok: false, error: "pstn_failed", message: e.message }, 500);
   }
 } */
+if (url.pathname === "/api/pstn" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  const session = user?.email ? await getSession(env, user.email) : null;
 
-     if (url.pathname === "/api/pstn" && request.method === "GET") {
+  return json({
+    debugUser: user,
+    isAdmin: user?.isAdmin,
+    hasSession: !!session
+  });
+}
+
+/* if (url.pathname === "/api/pstn" && request.method === "GET") {
 
   const user = getCurrentUser(request);
   if (!user) return json({ error: "access_required" }, 401);
@@ -4113,7 +4135,7 @@ if (url.pathname === "/api/analytics" && request.method === "GET") {
     trunks,
     numbers
   });
-}
+} */
 
       /* -----------------------------
          🔎 DEBUG: seed + read a PIN
