@@ -1851,7 +1851,7 @@ const publicPaths = [
 ];
 
 const publicPrefixes = [
-  "/customer"
+/*  "/customer" */
 ];
 
 const isPublic =
