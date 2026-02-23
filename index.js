@@ -3134,7 +3134,7 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
    - Admin: may specify ?orgId=...
    - Customer: resolved org only
 ----------------------------- */
-if (url.pathname === "/api/devices" && request.method === "GET") {
+/*if (url.pathname === "/api/devices" && request.method === "GET") {
 
   const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
@@ -3193,10 +3193,12 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
     summary,
     items: normalized
   });
-}
-  /*if (url.pathname === "/api/devices" && request.method === "GET") {
+} */
+  if (url.pathname === "/api/devices" && request.method === "GET") {
 
   const user = getCurrentUser(request);
+  if (!user) return json({ error: "access_required" }, 401);
+
   const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
@@ -3208,9 +3210,7 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
     }
     resolvedOrgId = requestedOrgId;
   } else {
-    if (!session?.orgId) {
-      return json({ error: "pin_required" }, 401);
-    }
+    if (!session?.orgId) return json({ error: "pin_required" }, 401);
     resolvedOrgId = session.orgId;
   }
 
@@ -3224,13 +3224,40 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
     }, 500);
   }
 
-  return json({
-    ok: true,
-    orgId: resolvedOrgId,
-    items: result.data.items || []
-  });
-}*/
+  const raw = result.data.items || [];
 
+  const normalized = raw.map(d => {
+
+    const connection = String(d.connectionStatus || "").toLowerCase();
+    const connected = connection === "connected";
+
+    return {
+      id: d.id,
+      displayName: d.displayName,
+      model: d.model || d.product || null,
+      connectionStatus: d.connectionStatus,
+      lastSeen: d.lastSeen || d.lastSeenTime || null,
+      location: d.workspaceLocationId || d.locationId || null,
+
+      status: connected ? "ONLINE" : "OFFLINE",
+      severity: connected ? 0 : 2,
+
+      raw: d   // preserve full object for future use
+    };
+  });
+
+  const summary = {
+    totalDevices: normalized.length,
+    connected: normalized.filter(d => d.status === "ONLINE").length,
+    offline: normalized.filter(d => d.status === "OFFLINE").length
+  };
+
+  return json({
+    orgId: resolvedOrgId,
+    summary,
+    items: normalized
+  });
+}
 /* -----------------------------
    /api/licenses/email
    Sends license report via Brevo
