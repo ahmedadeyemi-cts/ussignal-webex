@@ -2998,7 +2998,7 @@ return json(filtered);
    - Admin: may specify ?orgId=...
    - Customer: resolved org only
 ----------------------------- */
-if (url.pathname === "/api/licenses" && request.method === "GET") {
+/*if (url.pathname === "/api/licenses" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
@@ -3060,10 +3060,12 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
   };
 
   return json({ orgId: resolvedOrgId, summary, items: normalized });
-} 
-/*if (url.pathname === "/api/licenses" && request.method === "GET") {
+} */
+if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   const user = getCurrentUser(request);
+  if (!user) return json({ error: "access_required" }, 401);
+
   const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
@@ -3075,9 +3077,7 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     }
     resolvedOrgId = requestedOrgId;
   } else {
-    if (!session?.orgId) {
-      return json({ error: "pin_required" }, 401);
-    }
+    if (!session?.orgId) return json({ error: "pin_required" }, 401);
     resolvedOrgId = session.orgId;
   }
 
@@ -3091,12 +3091,43 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     }, 500);
   }
 
-  return json({
-    ok: true,
-    orgId: resolvedOrgId,
-    items: result.data.items || []
+  const licenses = result.data.items || [];
+
+  const normalized = licenses.map(l => {
+    const rawTotal = l.totalUnits;
+    const rawConsumed = l.consumedUnits;
+
+    const total = rawTotal == null ? null : Number(rawTotal);
+    const consumed = Number(rawConsumed ?? 0);
+
+    const isUnlimited = total === -1;
+    const hasTotal = Number.isFinite(total);
+
+    const available = isUnlimited ? -1 : (hasTotal ? Math.max(0, total - consumed) : null);
+    const deficit = isUnlimited ? 0 : (hasTotal ? Math.max(0, consumed - total) : 0);
+
+    let status = "OK";
+    if (isUnlimited) status = "UNLIMITED";
+    else if (!hasTotal) status = "UNKNOWN";
+    else if (deficit > 0) status = "DEFICIT";
+    else if (available === 0) status = "FULL";
+
+    return { id:l.id, name:l.name, total, consumed, available, deficit, status };
   });
-} */
+
+  const summary = {
+    totalLicenses: normalized.length,
+    totalConsumed: normalized.reduce((a,l)=>a+(l.consumed||0),0),
+    totalDeficit: normalized.reduce((a,l)=>a+(l.deficit||0),0),
+    hasDeficit: normalized.some(l=>l.status==="DEFICIT")
+  };
+
+  return json({
+    orgId: resolvedOrgId,
+    summary,
+    items: normalized
+  });
+}
 
 /* -----------------------------
    /api/devices
