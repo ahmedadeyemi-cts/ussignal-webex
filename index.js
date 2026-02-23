@@ -3993,7 +3993,7 @@ if (url.pathname === "/api/analytics" && request.method === "GET") {
    - Customer: uses session orgId (ignores query)
    - Returns KV snapshot if present; can force rebuild with ?refresh=1
 ----------------------------- */
-if (url.pathname === "/api/pstn" && request.method === "GET") {
+/*if (url.pathname === "/api/pstn" && request.method === "GET") {
   const user = getCurrentUser(request);
   const session = user?.email ? await getSession(env, user.email) : null;
 
@@ -4029,7 +4029,92 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     console.error("api/pstn failed:", e);
     return json({ ok: false, error: "pstn_failed", message: e.message }, 500);
   }
+} */
+
+     if (url.pathname === "/api/pstn" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ error: "access_required" }, 401);
+
+  const session = await getSession(env, user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId = null;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ error: "missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) return json({ error: "pin_required" }, 401);
+    resolvedOrgId = session.orgId;
+  }
+
+  // 1️⃣ Get Locations
+  const locResult = await webexFetch(env, "/telephony/config/locations", resolvedOrgId);
+  if (!locResult.ok) {
+    return json({ error: "pstn_locations_failed" }, 500);
+  }
+
+  const locations = locResult.data.locations || [];
+
+  // 2️⃣ Enrich each location with PSTN connection info
+  const enrichedLocations = [];
+
+  for (const loc of locations) {
+    const conn = await webexFetchSafe(
+      env,
+      `/telephony/config/locations/${loc.id}/connection`,
+      resolvedOrgId
+    );
+
+    enrichedLocations.push({
+      id: loc.id,
+      name: loc.name,
+      callingEnabled: loc.callingEnabled,
+      pstnConnection: conn.ok ? conn.data : null
+    });
+  }
+
+  // 3️⃣ Get Trunks
+  const trunkResult = await webexFetchSafe(
+    env,
+    "/telephony/config/trunks",
+    resolvedOrgId
+  );
+
+  const trunks = trunkResult.ok ? trunkResult.data.trunks || [] : [];
+
+  // 4️⃣ Get Numbers
+  const numberResult = await webexFetchSafe(
+    env,
+    "/telephony/config/numbers",
+    resolvedOrgId
+  );
+
+  const numbers = numberResult.ok ? numberResult.data.phoneNumbers || [] : [];
+
+  const summary = {
+    totalLocations: enrichedLocations.length,
+    totalTrunks: trunks.length,
+    totalNumbers: numbers.length,
+    pstnTypes: [...new Set(
+      enrichedLocations
+        .map(l => l.pstnConnection?.connectionType)
+        .filter(Boolean)
+    )]
+  };
+
+  return json({
+    orgId: resolvedOrgId,
+    summary,
+    locations: enrichedLocations,
+    trunks,
+    numbers
+  });
 }
+
       /* -----------------------------
          🔎 DEBUG: seed + read a PIN
          GET /api/debug/pin-test
