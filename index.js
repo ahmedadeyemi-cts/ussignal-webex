@@ -3477,10 +3477,11 @@ if (action === "cdr") {
 // ----------------------------------------------------
 if (action === "pstn") {
   const snap = await env.WEBEX.get(`pstn:${resolvedOrgId}`, { type: "json" });
-  if (!snap) return json({ ok: false, error: "pstn_not_available" }, 404);
-  return json({ ok: true, pstn: snap }, 200);
+  if (!snap) {
+  const rebuilt = await buildPstnDeep(env, resolvedOrgId);
+  await storePstnSnapshot(env, resolvedOrgId, rebuilt);
+  return json({ ok: true, pstn: rebuilt, source: "rebuilt" }, 200);
 }
-
 // ----------------------------------------------------
 // PSTN trend
 // GET /api/customer/:key/pstn-trend
@@ -4227,6 +4228,7 @@ async scheduled(event, env, ctx) {
           JSON.stringify(quality),
           { expirationTtl: 60 * 30 }
         );
+
 
         const pstn = await buildPstnDeep(env, org.id);
         await storePstnSnapshot(env, org.id, pstn);
