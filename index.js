@@ -3061,6 +3061,7 @@ return json(filtered);
 
   return json({ orgId: resolvedOrgId, summary, items: normalized });
 } */
+ /*    This is the config i was using on Feb 23rd
 if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   const user = getCurrentUser(request);
@@ -3127,7 +3128,7 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     summary,
     items: normalized
   });
-}
+} */
 
 /* -----------------------------
    /api/devices
@@ -3194,6 +3195,52 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     items: normalized
   });
 } */
+
+if (url.pathname === "/api/licenses" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ error: "access_required" }, 401);
+
+  const session = await getSession(env, user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId = null;
+
+  // ADMIN LOGIC
+  if (user.isAdmin) {
+
+    if (requestedOrgId) {
+      resolvedOrgId = requestedOrgId;
+    } else if (session?.orgId) {
+      resolvedOrgId = session.orgId;
+    } else {
+      return json({ error: "missing_orgId" }, 400);
+    }
+
+  } else {
+    // CUSTOMER LOGIC
+    if (!session?.orgId) return json({ error: "pin_required" }, 401);
+    resolvedOrgId = session.orgId;
+  }
+
+  console.log("LICENSE ORG RESOLVED:", resolvedOrgId);
+
+  const result = await webexFetch(env, "/licenses", resolvedOrgId);
+
+  if (!result.ok) {
+    return json({
+      error: "webex_license_failed",
+      status: result.status,
+      preview: result.preview
+    }, 500);
+  }
+
+  return json({
+    ok: true,
+    orgId: resolvedOrgId,
+    items: result.data.items || []
+  });
+}
   if (url.pathname === "/api/devices" && request.method === "GET") {
 
   const user = getCurrentUser(request);
