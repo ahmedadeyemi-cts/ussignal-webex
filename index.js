@@ -3063,7 +3063,7 @@ return json(filtered);
 } */
 /* =====================================================
    /api/licenses (GET)
-   Mirrors working worker.js contract
+   Works for BOTH admin + customer views
 ===================================================== */
 
 if (url.pathname === "/api/licenses" && request.method === "GET") {
@@ -3076,15 +3076,12 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   let resolvedOrgId = null;
 
-  // Admin logic
   if (user.isAdmin) {
     if (!requestedOrgId && !session?.orgId) {
       return json({ ok:false, error: "missing_orgId" }, 400);
     }
     resolvedOrgId = requestedOrgId || session?.orgId;
-  } 
-  // Customer logic
-  else {
+  } else {
     if (!session?.orgId) {
       return json({ ok:false, error: "pin_required" }, 401);
     }
@@ -3102,11 +3099,46 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     }, 500);
   }
 
-  // 🔥 RETURN EXACT SAME SHAPE AS WORKING PORTAL
+  const raw = result.data.items || [];
+
+  let totalConsumed = 0;
+  let totalAvailable = 0;
+  let totalDeficit = 0;
+
+  const items = raw.map(l => {
+    const total = Number(l.totalUnits ?? 0);
+    const consumed = Number(l.consumedUnits ?? 0);
+    const available = total - consumed;
+
+    totalConsumed += consumed;
+    totalAvailable += available;
+
+    if (available < 0) {
+      totalDeficit += Math.abs(available);
+    }
+
+    return {
+      sku: l.name,
+      total,
+      consumed,
+      available,
+      deficit: available < 0 ? Math.abs(available) : 0
+    };
+  });
+
   return json({
     ok: true,
     orgId: resolvedOrgId,
-    items: result.data.items || []
+
+    // ✅ ADMIN PAGE NEEDS THIS
+    summary: {
+      totalConsumed,
+      totalAvailable,
+      totalDeficit
+    },
+
+    // ✅ BOTH ADMIN + CUSTOMER PAGES USE THIS
+    items
   });
 }
 
