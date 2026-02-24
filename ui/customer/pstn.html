@@ -878,17 +878,44 @@ $("btnApplyTenant").addEventListener("click", async () => {
    { orgId, summary, locations:[{id,name,callingEnabled,pstnConnection}], trunks:[], numbers:[], diagnostics:[] }
 ========================= */
 function normalizePstnResponse(raw){
-  // If you ever wrap as {ok:true, ...} handle it:
-  const r = raw?.data && raw?.ok !== undefined ? raw.data : raw;
 
+  // If wrapped like { ok:true, pstn:{...} }
+  if(raw && raw.pstn){
+    const p = raw.pstn;
+
+    return {
+      orgId: raw.orgId || null,
+
+      summary: {
+        totals: p.totals || {},
+        scores: p.scores || {}
+      },
+
+      locations: Array.isArray(p.locations) ? p.locations : [],
+      trunks: Array.isArray(p.trunks) ? p.trunks : [],
+      numbers: Array.isArray(p.numbers) ? p.numbers : [],
+      routeGroups: Array.isArray(p.routeGroups) ? p.routeGroups : [],
+
+      diagnostics: Array.isArray(p.diagnostics) ? p.diagnostics : [],
+      diagSummary: {
+        total: (p.diagnostics || []).length,
+        failed: (p.diagnostics || []).filter(d=>!d.ok).length,
+        has403: (p.diagnostics || []).some(d=>d.status===403),
+        has5xx: (p.diagnostics || []).some(d=>String(d.status||"").startsWith("5"))
+      }
+    };
+  }
+
+  // Legacy format fallback
   return {
-    orgId: r?.orgId || null,
-    summary: r?.summary || {},
-    locations: Array.isArray(r?.locations) ? r.locations : [],
-    trunks: Array.isArray(r?.trunks) ? r.trunks : [],
-    numbers: Array.isArray(r?.numbers) ? r.numbers : [],
-    diagnostics: Array.isArray(r?.diagnostics) ? r.diagnostics : [],
-    diagSummary: r?.diagSummary || null
+    orgId: raw?.orgId || null,
+    summary: raw?.summary || {},
+    locations: Array.isArray(raw?.locations) ? raw.locations : [],
+    trunks: Array.isArray(raw?.trunks) ? raw.trunks : [],
+    numbers: Array.isArray(raw?.numbers) ? raw.numbers : [],
+    routeGroups: Array.isArray(raw?.routeGroups) ? raw.routeGroups : [],
+    diagnostics: Array.isArray(raw?.diagnostics) ? raw.diagnostics : [],
+    diagSummary: raw?.diagSummary || null
   };
 }
 
