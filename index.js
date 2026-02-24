@@ -3061,24 +3061,33 @@ return json(filtered);
 
   return json({ orgId: resolvedOrgId, summary, items: normalized });
 } */
- /*    This is the config i was using on Feb 23rd
+/* =====================================================
+   /api/licenses (GET)
+   Mirrors working worker.js contract
+===================================================== */
+
 if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   const user = getCurrentUser(request);
-  if (!user) return json({ error: "access_required" }, 401);
+  if (!user) return json({ ok:false, error: "access_required" }, 401);
 
   const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
   let resolvedOrgId = null;
 
+  // Admin logic
   if (user.isAdmin) {
-    if (!requestedOrgId) {
-      return json({ error: "missing_orgId" }, 400);
+    if (!requestedOrgId && !session?.orgId) {
+      return json({ ok:false, error: "missing_orgId" }, 400);
     }
-    resolvedOrgId = requestedOrgId;
-  } else {
-    if (!session?.orgId) return json({ error: "pin_required" }, 401);
+    resolvedOrgId = requestedOrgId || session?.orgId;
+  } 
+  // Customer logic
+  else {
+    if (!session?.orgId) {
+      return json({ ok:false, error: "pin_required" }, 401);
+    }
     resolvedOrgId = session.orgId;
   }
 
@@ -3086,49 +3095,20 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   if (!result.ok) {
     return json({
+      ok:false,
       error: "webex_license_failed",
       status: result.status,
       preview: result.preview
     }, 500);
   }
 
-  const licenses = result.data.items || [];
-
-  const normalized = licenses.map(l => {
-    const rawTotal = l.totalUnits;
-    const rawConsumed = l.consumedUnits;
-
-    const total = rawTotal == null ? null : Number(rawTotal);
-    const consumed = Number(rawConsumed ?? 0);
-
-    const isUnlimited = total === -1;
-    const hasTotal = Number.isFinite(total);
-
-    const available = isUnlimited ? -1 : (hasTotal ? Math.max(0, total - consumed) : null);
-    const deficit = isUnlimited ? 0 : (hasTotal ? Math.max(0, consumed - total) : 0);
-
-    let status = "OK";
-    if (isUnlimited) status = "UNLIMITED";
-    else if (!hasTotal) status = "UNKNOWN";
-    else if (deficit > 0) status = "DEFICIT";
-    else if (available === 0) status = "FULL";
-
-    return { id:l.id, name:l.name, total, consumed, available, deficit, status };
-  });
-
-  const summary = {
-    totalLicenses: normalized.length,
-    totalConsumed: normalized.reduce((a,l)=>a+(l.consumed||0),0),
-    totalDeficit: normalized.reduce((a,l)=>a+(l.deficit||0),0),
-    hasDeficit: normalized.some(l=>l.status==="DEFICIT")
-  };
-
+  // 🔥 RETURN EXACT SAME SHAPE AS WORKING PORTAL
   return json({
+    ok: true,
     orgId: resolvedOrgId,
-    summary,
-    items: normalized
+    items: result.data.items || []
   });
-} */
+}
 
 /* -----------------------------
    /api/devices
@@ -3195,102 +3175,6 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     items: normalized
   });
 } */
-
-/* =====================================================
-   /api/licenses (GET)
-   - Admin: requires orgId OR session orgId
-   - Customer: uses session orgId
-   - Returns summary + items
-===================================================== */
-
-if (url.pathname === "/api/licenses" && request.method === "GET") {
-
-  const user = getCurrentUser(request);
-  if (!user) return json({ error: "access_required" }, 401);
-
-  const session = await getSession(env, user.email);
-  const requestedOrgId = normalizeOrgIdParam(
-    url.searchParams.get("orgId")
-  );
-
-  let resolvedOrgId = null;
-
-  // ===============================
-  // ADMIN LOGIC
-  // ===============================
-  if (user.isAdmin) {
-
-    if (requestedOrgId) {
-      resolvedOrgId = requestedOrgId;
-    } else if (session?.orgId) {
-      resolvedOrgId = session.orgId;
-    } else {
-      return json({ error: "missing_orgId" }, 400);
-    }
-
-  } else {
-    // ===============================
-    // CUSTOMER LOGIC
-    // ===============================
-    if (!session?.orgId) {
-      return json({ error: "pin_required" }, 401);
-    }
-    resolvedOrgId = session.orgId;
-  }
-
-  console.log("LICENSE ORG RESOLVED:", resolvedOrgId);
-
-  // ===============================
-  // WEBEX CALL
-  // ===============================
-  const result = await webexFetch(env, "/licenses", resolvedOrgId);
-
-  if (!result.ok) {
-    return json({
-      error: "webex_license_failed",
-      status: result.status,
-      preview: result.preview
-    }, 500);
-  }
-
-  const items = result.data?.items || [];
-
-  // ===============================
-  // SUMMARY CALCULATION
-  // ===============================
-  let totalAssigned = 0;
-  let totalConsumed = 0;
-  let totalAvailable = 0;
-
-  for (const l of items) {
-    const total = Number(l.totalUnits || 0);
-    const consumed = Number(l.consumedUnits || 0);
-    const available = total - consumed;
-
-    totalAssigned += total;
-    totalConsumed += consumed;
-    totalAvailable += available;
-  }
-
-  const totalDeficit = totalAvailable < 0 ? Math.abs(totalAvailable) : 0;
-
-  // ===============================
-  // RESPONSE
-  // ===============================
-  return json({
-    ok: true,
-    orgId: resolvedOrgId,
-
-    summary: {
-      totalAssigned,
-      totalConsumed,
-      totalAvailable,
-      totalDeficit
-    },
-
-    items
-  });
-}
   if (url.pathname === "/api/devices" && request.method === "GET") {
 
   const user = getCurrentUser(request);
