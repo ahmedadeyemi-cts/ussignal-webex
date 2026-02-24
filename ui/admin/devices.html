@@ -335,15 +335,22 @@ tbody tr:hover{
 <div class="section">
   <div class="table-wrap">
     <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Model</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>IP Address</th>
-        </tr>
-      </thead>
+<thead>
+  <tr>
+    <th>Name</th>
+    <th>Product</th>
+    <th>Model</th>
+    <th>Serial</th>
+    <th>MAC</th>
+    <th>IP</th>
+    <th>Lifecycle</th>
+    <th>Maintenance</th>
+    <th>First Seen</th>
+    <th>Last Seen</th>
+    <th>Status</th>
+    <th>Health</th>
+  </tr>
+</thead>
       <tbody id="deviceRows">
         <tr><td colspan="5">Select an organization...</td></tr>
       </tbody>
@@ -398,31 +405,45 @@ async function loadDevices(orgId){
 
   const devices = data.items || [];
 
-  const total = devices.length;
-  const online = devices.filter(d =>
-    String(d.connectionStatus).toLowerCase()==="connected").length;
-  const offline = total - online;
-
-  $("kpiTotal").textContent = total;
-  $("kpiOnline").textContent = online;
-  $("kpiOffline").textContent = offline;
+  $("kpiTotal").textContent = data.summary.totalDevices;
+  $("kpiOnline").textContent = data.summary.online;
+  $("kpiOffline").textContent = data.summary.offline;
   $("kpiSLA").textContent =
-    offline > 0 ? "At Risk" : "Healthy";
+    data.summary.offline > 0 ? "At Risk" : "Healthy";
 
-  const rows = devices.map(d => `
-    <tr onclick='openModal(${JSON.stringify(d)})'>
-      <td>${d.displayName || "—"}</td>
-      <td>${d.product || "—"}</td>
-      <td>${d.type || "—"}</td>
-      <td>${badge(String(d.connectionStatus).toLowerCase())}</td>
-      <td>${d.ip || "—"}</td>
-    </tr>
-  `).join("");
+  const rows = devices.map(d => {
+
+    const healthBadge =
+      d.healthLevel === "green"
+        ? `<span class="badge good">Healthy</span>`
+        : `<span class="badge bad">Degraded</span>`;
+
+    const statusBadge =
+      d.status === "ONLINE"
+        ? `<span class="badge good">Online</span>`
+        : `<span class="badge bad">Offline</span>`;
+
+    return `
+      <tr onclick='openModal(${JSON.stringify(d)})'>
+        <td>${d.name || "—"}</td>
+        <td>${d.product || "—"}</td>
+        <td>${d.model || "—"}</td>
+        <td>${d.raw?.serial || "—"}</td>
+        <td>${d.mac || "—"}</td>
+        <td>${d.ip || "—"}</td>
+        <td>${d.raw?.lifecycle || "—"}</td>
+        <td>${d.raw?.plannedMaintenance || "off"}</td>
+        <td>${d.raw?.firstSeen ? new Date(d.raw.firstSeen).toLocaleDateString() : "—"}</td>
+        <td>${d.lastSeen ? new Date(d.lastSeen).toLocaleDateString() : "—"}</td>
+        <td>${statusBadge}</td>
+        <td>${healthBadge}</td>
+      </tr>
+    `;
+  }).join("");
 
   $("deviceRows").innerHTML =
-    rows || `<tr><td colspan="5">No devices found.</td></tr>`;
+    rows || `<tr><td colspan="12">No devices found.</td></tr>`;
 }
-
 function openModal(data){
   $("modalTitle").textContent = data.displayName || "Device";
   $("modalContent").textContent =
