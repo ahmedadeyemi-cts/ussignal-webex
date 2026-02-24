@@ -1,1269 +1,318 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8" />
-<title>US Signal | PSTN Intelligence Center</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8"/>
+<title>US Signal | PSTN Engineering</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 
 <style>
+/* ================= ENTERPRISE THEME (MATCH DASHBOARD) ================= */
 :root{
-  --bg:#f6f8fb;
+  --bg:#f8fafc;
   --card:#ffffff;
   --text:#0f172a;
   --muted:#64748b;
-  --line:rgba(15,23,42,.08);
-  --shadow:0 10px 30px rgba(15,23,42,.08);
-  --accent:#0f62fe;
-
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+  --accent:#2563eb;
   --good:#16a34a;
   --warn:#f59e0b;
   --bad:#dc2626;
 }
+html[data-theme="dark"]{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --line:rgba(148,163,184,.18);
+  --shadow:0 12px 30px rgba(0,0,0,.45);
+  --accent:#3b82f6;
+}
 *{box-sizing:border-box}
 body{
   margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
   background:var(--bg);
   color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
   display:flex;
-  min-height:100vh;
+  height:100vh;
 }
 
-/* Sidebar */
+/* ================= SIDEBAR ================= */
 .sidebar{
-  width:250px;
-  background:#fff;
+  width:270px;
+  background:var(--card);
   border-right:1px solid var(--line);
-  padding:18px;
+  padding:18px 14px;
   display:flex;
   flex-direction:column;
-}
-.sidebar a{
-  padding:10px;
-  border-radius:10px;
-  text-decoration:none;
-  color:var(--text);
-  font-weight:800;
-  font-size:13px;
-}
-.sidebar a.active{background:rgba(15,98,254,.10)}
-.sidebarBottom{margin-top:auto; display:flex; flex-direction:column; gap:10px}
-.summary-pill{padding:10px;border-radius:12px;font-weight:1000;text-align:center}
-.summary-green{background:rgba(22,163,74,.15);color:var(--good)}
-.summary-amber{background:rgba(245,158,11,.15);color:var(--warn)}
-.summary-red{background:rgba(220,38,38,.15);color:var(--bad)}
-.btn{
-  padding:10px 12px;
-  border-radius:12px;
-  border:none;
-  cursor:pointer;
-  font-weight:1000;
-  background:var(--accent);
-  color:#fff;
-}
-.btn:active{transform:translateY(1px)}
-
-/* Main */
-.main{
-  flex:1;
-  padding:22px;
-  display:flex;
-  flex-direction:column;
-  gap:18px;
-}
-
-.card{
-  background:#fff;
-  border:1px solid var(--line);
-  border-radius:16px;
-  padding:18px;
-  box-shadow:var(--shadow);
-}
-h2{margin:0 0 14px;font-size:15px;font-weight:1000}
-.small{font-size:12px;color:var(--muted)}
-
-/* KPI */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:14px;
-}
-.kpi{
-  padding:14px;
-  border:1px solid var(--line);
-  border-radius:14px;
-}
-.kpi .value{font-size:22px;font-weight:1000;margin-top:4px}
-
-/* Layout blocks */
-.twoCol{
-  display:grid;
-  grid-template-columns:1.2fr .8fr;
-  gap:18px;
-}
-@media(max-width:1200px){
-  .twoCol{grid-template-columns:1fr}
-  .grid{grid-template-columns:repeat(2,1fr)}
-}
-
-/* Table */
-.table-wrap{overflow:auto;border-radius:14px;border:1px solid var(--line)}
-table{width:100%;border-collapse:collapse}
-th,td{padding:10px;font-size:13px;vertical-align:top}
-th{background:#f8fafc;text-align:left;color:var(--muted);font-size:12px;text-transform:uppercase}
-tr:not(:last-child) td{border-bottom:1px solid var(--line)}
-tbody tr:hover{background:rgba(15,98,254,.04);cursor:pointer}
-
-/* Badges */
-.badge{padding:4px 8px;border-radius:999px;font-size:11px;font-weight:1000;display:inline-block}
-.good{background:rgba(22,163,74,.15);color:var(--good)}
-.warn{background:rgba(245,158,11,.15);color:var(--warn)}
-.bad{background:rgba(220,38,38,.15);color:var(--bad)}
-.neutral{background:rgba(100,116,139,.12);color:#334155}
-
-/* Canvases */
-.canvasWrap{
-  border:1px solid var(--line);
-  border-radius:14px;
-  overflow:hidden;
-  background:#fff;
-}
-canvas{width:100%;height:260px;display:block}
-
-/* Heatmap */
-.hmLegend{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
-.hmLegend .chip{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
-.hmLegend .swatch{width:16px;height:10px;border-radius:4px;border:1px solid rgba(15,23,42,.10)}
-/* Modal */
-.modal{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.55);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:16px;
-  z-index:9999;
-}
-.modal-card{
-  width:980px;
-  max-width:96vw;
-  background:#fff;
-  border-radius:16px;
-  border:1px solid rgba(15,23,42,.12);
-  box-shadow:0 20px 60px rgba(0,0,0,.25);
-  overflow:hidden;
-}
-.modal-head{
-  padding:14px 16px;
-  border-bottom:1px solid var(--line);
-  display:flex;
-  align-items:center;
   justify-content:space-between;
-  gap:10px;
 }
-.modal-head b{font-size:14px}
-.modal-body{
-  padding:16px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px;
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
 }
-@media(max-width:900px){ .modal-body{grid-template-columns:1fr} }
-.panel{
+.brand img{height:34px}
+.brand .title b{font-size:14px}
+.brand .title span{font-size:12px;color:var(--muted)}
+.nav{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.nav a{
+  padding:10px;border-radius:12px;text-decoration:none;
+  font-weight:900;font-size:13px;color:var(--text);
+}
+.nav a:hover{background:rgba(15,23,42,.06)}
+.nav a.active{
+  background:rgba(37,99,235,.12);
+  border:1px solid rgba(37,99,235,.25);
+}
+.sidebarFooter{display:flex;flex-direction:column;gap:10px}
+.rag{
+  padding:8px;border-radius:999px;text-align:center;
+  font-weight:900;font-size:12px;border:1px solid var(--line)
+}
+.rag.green{background:rgba(22,163,74,.15);color:var(--good)}
+.rag.amber{background:rgba(245,158,11,.15);color:var(--warn)}
+.rag.red{background:rgba(220,38,38,.15);color:var(--bad)}
+.pill{
+  padding:8px;border-radius:999px;border:1px solid var(--line);
+  font-size:12px;font-weight:900;color:var(--muted)
+}
+.btn{
+  padding:10px;border-radius:12px;border:none;
+  background:var(--accent);color:#fff;font-weight:900;cursor:pointer
+}
+
+/* ================= MAIN ================= */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.header{
+  background:var(--card);
+  border-bottom:1px solid var(--line);
+  padding:16px 18px;
+  display:flex;justify-content:space-between;align-items:center
+}
+.headerTitle{font-weight:1000;font-size:16px}
+.headerSub{font-size:12px;color:var(--muted)}
+.headerActions{display:flex;gap:10px}
+.headerActions button{
+  padding:8px 12px;border-radius:12px;border:1px solid var(--line);
+  background:var(--card);font-weight:900;cursor:pointer
+}
+.headerActions button.primary{background:var(--accent);color:#fff;border:none}
+
+.content{padding:18px;overflow:auto}
+
+/* ================= CARDS ================= */
+.card{
+  background:var(--card);
   border:1px solid var(--line);
-  border-radius:14px;
-  padding:14px;
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  margin-bottom:14px
 }
-.panel h3{margin:0 0 10px;font-size:13px}
-pre{
-  margin:0;
-  padding:10px;
-  border-radius:12px;
-  background:#0b1220;
-  color:#e2e8f0;
-  overflow:auto;
-  max-height:320px;
-  font-size:12px;
-  line-height:1.35;
+h2{margin:0 0 12px 0;font-size:14px;font-weight:1000}
+
+/* ================= GRID ================= */
+.grid{display:grid;gap:14px}
+.kpi-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+
+/* ================= BADGES ================= */
+.badge{
+  padding:6px 10px;border-radius:999px;font-size:11px;
+  font-weight:900;border:1px solid var(--line)
 }
-.modal-actions{padding:14px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end}
+.badge.good{background:rgba(22,163,74,.15);color:var(--good)}
+.badge.warn{background:rgba(245,158,11,.15);color:var(--warn)}
+.badge.bad{background:rgba(220,38,38,.15);color:var(--bad)}
+.badge.neutral{background:rgba(100,116,139,.15);color:var(--muted)}
+
+/* ================= TABLE ================= */
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;font-size:12px}
+th{background:rgba(15,23,42,.04);text-align:left}
+tr:hover{background:rgba(37,99,235,.05);cursor:pointer}
+
+/* ================= CANVAS ================= */
+canvas{width:100%;height:260px}
+
+/* ================= SELECT ================= */
+select{
+  padding:8px 10px;border-radius:12px;border:1px solid var(--line);
+  font-weight:800
+}
 </style>
 </head>
-
 <body>
 
+<!-- SIDEBAR -->
 <div class="sidebar">
-  <a href="/customer">Dashboard</a>
-  <a href="/customer/licenses">Licenses</a>
-  <a href="/customer/devices">Devices</a>
-  <a href="/customer/analytics">Analytics</a>
-  <a href="/customer/cdr">CDR</a>
-  <a class="active" href="/customer/pstn">PSTN</a>
+  <div>
+    <div class="brand">
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg"/>
+      <div class="title">
+        <b>US Signal</b>
+        <span>Customer Portal</span>
+      </div>
+    </div>
 
-  <div class="sidebarBottom">
-    <div id="rag" class="summary-pill summary-green">HEALTHY</div>
+    <div class="nav">
+      <a href="/customer">Dashboard</a>
+      <a href="/customer/licenses">Licenses</a>
+      <a href="/customer/devices">Devices</a>
+      <a href="/customer/analytics">Analytics</a>
+      <a href="/customer/cdr">CDR</a>
+      <a href="/customer/pstn" class="active">PSTN</a>
+      <a href="/customer/maintenance">Maintenance</a>
+      <a href="/customer/status">Status</a>
+      <a href="/customer/incidents">Incidents</a>
+    </div>
+  </div>
+
+  <div class="sidebarFooter">
+    <div id="orgRag" class="rag green">HEALTHY</div>
+    <div class="pill" id="tenantPill">Tenant: <strong>—</strong></div>
+    <div class="pill" id="sessionPill">Session: <strong>—</strong></div>
+    <div class="pill">Live: <strong>Polling</strong></div>
     <button class="btn" onclick="logout()">Logout</button>
   </div>
 </div>
 
+<!-- MAIN -->
 <div class="main">
-
-  <!-- KPIs -->
-  <div class="card">
-    <h2>PSTN Global Overview</h2>
-    <div class="grid">
-      <div class="kpi">
-        <div>Total Locations</div>
-        <div id="kLocs" class="value">—</div>
-        <div class="small" id="kPstnMix">—</div>
-      </div>
-      <div class="kpi">
-        <div>Total Trunks</div>
-        <div id="kTrunks" class="value">—</div>
-        <div class="small" id="kRedundancy">—</div>
-      </div>
-      <div class="kpi">
-        <div>Total DIDs</div>
-        <div id="kDids" class="value">—</div>
-        <div class="small" id="kUnassigned">—</div>
-      </div>
-      <div class="kpi">
-        <div>Capacity Score</div>
-        <div id="kCapacity" class="value">—</div>
-        <div class="small" id="kPredict">—</div>
-      </div>
+  <div class="header">
+    <div>
+      <div class="headerTitle">PSTN Engineering & Architecture</div>
+      <div class="headerSub" id="lastRefresh">Last refresh: —</div>
+    </div>
+    <div class="headerActions">
+      <button onclick="toggleTheme()">Theme</button>
+      <button class="primary" onclick="init()">Refresh</button>
     </div>
   </div>
 
-  <!-- Topology + Heatmap -->
-  <div class="twoCol">
+  <div class="content">
+
+    <!-- LOCATION SELECTOR -->
     <div class="card">
-      <h2>PSTN Architecture Topology</h2>
-      <div class="canvasWrap">
-        <canvas id="topology"></canvas>
-      </div>
-      <div class="small" style="margin-top:10px">
-        Topology view is inferred from location PSTN connection type and trunk inventory. Click a location row below to drill down.
-      </div>
+      <h2>Location Filter</h2>
+      <select id="locationSelect"></select>
     </div>
 
+    <!-- KPI -->
     <div class="card">
-      <h2>Trunk Utilization Heatmap</h2>
-      <div class="canvasWrap">
-        <canvas id="heatmap"></canvas>
-      </div>
-      <div class="hmLegend">
-        <div class="chip"><span class="swatch" style="background:rgba(22,163,74,.25)"></span> Low</div>
-        <div class="chip"><span class="swatch" style="background:rgba(245,158,11,.30)"></span> Medium</div>
-        <div class="chip"><span class="swatch" style="background:rgba(220,38,38,.28)"></span> High</div>
-        <div class="chip"><span class="swatch" style="background:rgba(100,116,139,.18)"></span> Unknown</div>
-      </div>
-      <div class="small" style="margin-top:10px">
-        Utilization is computed from any available trunk fields (capacity/usage) when present. Otherwise shown as Unknown.
+      <h2>PSTN Overview</h2>
+      <div class="grid kpi-grid">
+        <div><b>Total Locations</b><div id="kLocs">—</div></div>
+        <div><b>Total Trunks</b><div id="kTrunks">—</div></div>
+        <div><b>Total DIDs</b><div id="kDids">—</div></div>
+        <div><b>Capacity Score</b><div id="kCapacity">—</div></div>
       </div>
     </div>
-  </div>
 
-  <!-- Forecast -->
-  <div class="card">
-    <h2>Predictive Capacity Forecast</h2>
-    <div class="canvasWrap">
-      <canvas id="forecast"></canvas>
+    <!-- TOPOLOGY -->
+    <div class="card">
+      <h2>PSTN Topology</h2>
+      <canvas id="topology"></canvas>
     </div>
-    <div class="small" id="forecastNote" style="margin-top:10px">
-      Forecast uses locally-stored daily snapshots of your computed capacity score for this org (stored in browser localStorage).
-    </div>
-  </div>
 
-  <!-- Location Table -->
-  <div class="card">
-    <h2>Location PSTN Architecture</h2>
-    <div class="table-wrap">
+    <!-- HEATMAP -->
+    <div class="card">
+      <h2>Trunk Utilization</h2>
+      <canvas id="heatmap"></canvas>
+    </div>
+
+    <!-- LOCATION TABLE -->
+    <div class="card">
+      <h2>Location Details</h2>
       <table>
         <thead>
           <tr>
             <th>Location</th>
-            <th>PSTN Type</th>
-            <th>Calling</th>
+            <th>PSTN</th>
             <th>Trunks</th>
             <th>DIDs</th>
-            <th>Unassigned</th>
-            <th>Redundancy</th>
-            <th>Capacity</th>
             <th>E911</th>
+            <th>Capacity</th>
           </tr>
         </thead>
-        <tbody id="locRows">
-          <tr><td colspan="9" class="small">Loading…</td></tr>
-        </tbody>
+        <tbody id="locRows"></tbody>
       </table>
     </div>
-    <div class="small" style="margin-top:10px">
-      Click any row to open a detailed drill-down including trunks, numbers, and raw connection payload for that location.
-    </div>
-  </div>
 
-  <!-- Diagnostics -->
-  <div class="card">
-    <h2>Diagnostics</h2>
-    <div id="diagSummary" class="small">—</div>
-    <div id="diagRows" class="small" style="margin-top:10px"></div>
-  </div>
-
-</div>
-
-<!-- Drill-down Modal -->
-<div class="modal" id="locModal" onclick="closeModalIfBackdrop(event)">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal-head">
-      <div>
-        <b id="modalTitle">Location</b>
-        <div class="small" id="modalSub">—</div>
-      </div>
-      <button class="btn" style="background:#0b4bd4" onclick="closeModal()">Close</button>
-    </div>
-
-    <div class="modal-body">
-      <div class="panel">
-        <h3>Location Summary</h3>
-        <div id="modalSummary" class="small"></div>
-      </div>
-
-      <div class="panel">
-        <h3>Trunks (Filtered)</h3>
-        <div id="modalTrunks" class="small"></div>
-      </div>
-
-      <div class="panel">
-        <h3>Numbers (Sample)</h3>
-        <div id="modalNumbers" class="small"></div>
-      </div>
-
-      <div class="panel">
-        <h3>Raw Payload</h3>
-        <pre id="modalRaw">{}</pre>
-      </div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn" onclick="copyModalRaw()">Copy Raw JSON</button>
-    </div>
   </div>
 </div>
 
 <script>
-/* =========================
-   Helpers
-========================= */
 const $ = id => document.getElementById(id)
+let RAW=null
+let MODEL=null
 
-async function api(path){
-  const r = await fetch(path)
-  if(!r.ok){
-    if(r.status === 401) location="/pin"
-    throw new Error("API failed")
-  }
-  return r.json()
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute("data-theme")
+  document.documentElement.setAttribute("data-theme",cur==="dark"?"light":"dark")
 }
 
-function badge(text, cls){
-  return `<span class="badge ${cls}">${text}</span>`
-}
+function logout(){fetch("/api/pin/logout",{method:"POST"}).finally(()=>location="/")}
 
-function safeLower(v){ return String(v||"").toLowerCase() }
+async function api(p){const r=await fetch(p);return r.json()}
 
-function pstnTypeLabel(rawType){
-  if(!rawType) return "Unknown"
-  const t = String(rawType).toUpperCase()
-  // Keep these aligned to your desired labels
-  if(t.includes("LOCAL") && t.includes("GATE")) return "Local Gateway"
-  if(t.includes("CLOUD") && t.includes("CONNECT")) return "Cloud Connect"
-  if(t.includes("CISCO") && t.includes("PSTN")) return "Cisco PSTN"
-  if(t.includes("NO_PSTN") || t === "NONE") return "No PSTN"
-  return rawType
-}
-
-/* =========================
-   Normalization Layer
-   - Accept either { pstn: ... } (older) or direct { locations,trunks,numbers,summary }
-========================= */
-function normalizePstnResponse(raw){
-  // If your worker returns direct shape: {orgId, summary, locations, trunks, numbers}
-  // If older shape: { ok:true, pstn:{...} }
-  if(raw && raw.pstn) return raw.pstn
-  return {
-    orgId: raw?.orgId,
-    summary: raw?.summary || {},
-    locations: raw?.locations || [],
-    trunks: raw?.trunks || [],
-    numbers: raw?.numbers || [],
-    // placeholders so the UI can still render
-    diagnostics: raw?.diagnostics || [],
-    diagSummary: raw?.diagSummary || {}
-  }
-}
-
-/* =========================
-   Scoring + Detection (Client-side)
-   - Capacity scoring normalized 0..100
-   - Redundancy detection
-   - E911 compliance scoring (best-effort from available fields)
-========================= */
-function computeLocationMetrics(pstn){
-  const trunks = Array.isArray(pstn.trunks) ? pstn.trunks : []
-  const numbers = Array.isArray(pstn.numbers) ? pstn.numbers : []
-  const locs = Array.isArray(pstn.locations) ? pstn.locations : []
-
-  // Quick DID totals (best-effort)
-  const didTotal = numbers.length
-  const didUnassigned = numbers.filter(n=>{
-    // heuristics: unassigned if no owner/assignedTo/userId/phoneNumberOwner or status says unassigned
-    const s = safeLower(n.status || n.state)
-    if(s.includes("unassign")) return true
-    if(n.assignedTo || n.userId || n.ownerId || n.owner || n.locationId || n.workspaceId) return false
-    return false
-  }).length
-
-  // Per-location trunk counts: try common fields
-  const trunksByLoc = new Map()
-  for(const t of trunks){
-    const locId = t.locationId || t.location?.id || t.siteId || t.callingLocationId || null
-    if(!locId) continue
-    trunksByLoc.set(locId, (trunksByLoc.get(locId)||0) + 1)
-  }
-
-  // Per-location DID counts: try locationId on numbers
-  const didsByLoc = new Map()
-  const unassignedByLoc = new Map()
-  for(const n of numbers){
-    const locId = n.locationId || n.location?.id || n.siteId || null
-    if(!locId) continue
-    didsByLoc.set(locId, (didsByLoc.get(locId)||0) + 1)
-
-    const s = safeLower(n.status || n.state)
-    const isUnassigned = s.includes("unassign")
-    if(isUnassigned){
-      unassignedByLoc.set(locId, (unassignedByLoc.get(locId)||0) + 1)
-    }
-  }
-
-  // Compute global capacity score (normalized):
-  // Inputs (best-effort):
-  //  - penalty for no trunks + calling enabled
-  //  - penalty for high unassigned ratio
-  //  - penalty for single-point locations (no redundancy)
-  let score = 100
-
-  const callingEnabledLocs = locs.filter(l => !!l.callingEnabled)
-  const totalCallingLocs = callingEnabledLocs.length || 1
-
-  // Penalize if calling locations have 0 trunks total
-  const totalTrunks = trunks.length
-  if(totalTrunks === 0 && totalCallingLocs > 0){
-    score -= 45
-  }
-
-  // Penalize if large unassigned DID ratio (when DIDs exist)
-  const unassignedRatio = didTotal > 0 ? (didUnassigned / didTotal) : 0
-  score -= Math.round(unassignedRatio * 25)
-
-  // Redundancy heuristic: location redundant if trunkCount >= 2 OR pstnType suggests geo redundancy
-  const redundantLocs = locs.filter(l=>{
-    const tc = trunksByLoc.get(l.id) || 0
-    const connType = l.pstnConnection?.connectionType || l.pstnConnection?.type || null
-    const isCloud = safeLower(connType).includes("cloud")
-    return tc >= 2 || isCloud
-  }).length
-  const redundancyRatio = redundantLocs / (locs.length || 1)
-  score -= Math.round((1 - redundancyRatio) * 20)
-
-  // Clamp
-  score = Math.max(0, Math.min(100, score))
-
-  // Build enriched locations for UI table
-  const enriched = locs.map(l=>{
-    const connType = l.pstnConnection?.connectionType || l.pstnConnection?.type || null
-    const pstnOption = classifyPstnOption(l, trunks)
-
-    const trunkCount = trunksByLoc.get(l.id) || 0
-    const didsTotal = didsByLoc.get(l.id) || 0
-    const didsUnassigned = unassignedByLoc.get(l.id) || 0
-
-    const unassignedLocRatio = didsTotal > 0 ? (didsUnassigned / didsTotal) : 0
-
-    // E911 heuristic: if connection payload indicates emergency, or location has emergency fields, or numbers have emergencyAddressId
-    const emergencyConfigured =
-      !!(l.pstnConnection && (
-        l.pstnConnection.emergencyCallbackNumber ||
-        l.pstnConnection.emergencyLocationId ||
-        l.pstnConnection.emergencyAddressId ||
-        l.pstnConnection.e911 ||
-        l.pstnConnection.emergency
-      )) ||
-      !!l.emergencyLocationId ||
-      !!l.emergencyAddressId ||
-      numbers.some(n => (n.locationId === l.id) && (n.emergencyAddressId || n.emergencyLocationId))
-
-    // Redundancy score: 0/50/100
-    let redundancyScore = 0
-    if(trunkCount >= 2) redundancyScore = 100
-    else if(trunkCount === 1) redundancyScore = 50
-
-    // Blast radius: if this location is non-redundant and has calling enabled, blast is high
-    let blastRadius = 0
-    if(l.callingEnabled && redundancyScore < 100){
-      blastRadius = trunkCount === 0 ? 100 : 75
-    } else if(l.callingEnabled) {
-      blastRadius = 25
-    }
-
-    // Capacity risk per location (best-effort):
-    // - Red if trunkCount=0 and calling enabled
-    // - Amber if unassigned ratio high OR single trunk
-    // - Green otherwise
-    let capacityRisk = "GREEN"
-    if(l.callingEnabled && trunkCount === 0) capacityRisk = "RED"
-    else if(l.callingEnabled && (trunkCount === 1 || unassignedLocRatio >= 0.20)) capacityRisk = "AMBER"
-
-    return {
-      id: l.id,
-      name: l.name,
-      callingEnabled: !!l.callingEnabled,
-      pstnOption,
-      trunkCount,
-      dids: { total: didsTotal, unassigned: didsUnassigned },
-      redundancyScore,
-      blastRadius,
-      capacityRisk,
-      emergencyConfigured,
-      pstnConnection: l.pstnConnection || null
-    }
-  })
-
-  // Predictive risk label (from score only)
-  const predictedRisk = score < 70 ? "CRITICAL" : (score < 85 ? "WARNING" : "HEALTHY")
-
-  // Build a small diagnostics set (since worker may not provide)
-  const diagnostics = []
-  diagnostics.push({ name: "Locations fetched", ok: locs.length > 0, status: locs.length > 0 ? 200 : 404 })
-  diagnostics.push({ name: "Trunks visible", ok: true, status: 200 })
-  diagnostics.push({ name: "Numbers visible", ok: true, status: 200 })
-
-  const diagSummary = {
-    total: diagnostics.length,
-    failed: diagnostics.filter(d=>!d.ok).length,
-    has403: false,
-    has5xx: false
-  }
-
-  return {
-    totals: {
-      locations: locs.length,
-      trunks: trunks.length,
-      didsTotal: didTotal,
-      didsUnassigned: didUnassigned
-    },
-    scores: { pstnCapacityScore: score },
-    prediction: { predictedRisk },
-    locations: enriched,
-    diagnostics,
-    diagSummary
-  }
-}
-
-function classifyPstnOption(location, trunks){
-  const ct = location?.pstnConnection?.connectionType || location?.pstnConnection?.type || ""
-  const s = safeLower(ct)
-
-  if(!ct){
-    // If no connection payload:
-    // - if trunks exist in org, treat as "Unknown" rather than "No PSTN"
-    return "Unknown"
-  }
-
-  if(s.includes("local") && s.includes("gateway")) return "Local Gateway"
-  if(s.includes("cloud") && s.includes("connect")) return "Cloud Connect"
-  if(s.includes("cisco") && s.includes("pstn")) return "Cisco PSTN"
-  if(s.includes("none") || s.includes("no_pstn")) return "No PSTN"
-  return pstnTypeLabel(ct)
-}
-
-/* =========================
-   RAG + UI Render
-========================= */
 function updateRAG(score){
-  const rag = $("rag")
-  let state = "HEALTHY"
-  if(score < 70){ state="CRITICAL"; rag.className="summary-pill summary-red" }
-  else if(score < 85){ state="WARNING"; rag.className="summary-pill summary-amber" }
-  else { rag.className="summary-pill summary-green" }
-  rag.textContent = state
+  const r=$("orgRag")
+  if(score<70){r.className="rag red";r.textContent="CRITICAL"}
+  else if(score<85){r.className="rag amber";r.textContent="DEGRADED"}
+  else{r.className="rag green";r.textContent="HEALTHY"}
 }
 
-function renderKPIs(model){
-  const mix = pstnMixSummary(model.locations || [])
-  $("kLocs").textContent = model.totals.locations ?? 0
-  $("kPstnMix").textContent = mix
-
-  $("kTrunks").textContent = model.totals.trunks ?? 0
-
-  const redundantCount = (model.locations||[]).filter(l=>l.redundancyScore>=100).length
-  $("kRedundancy").textContent = `${redundantCount}/${(model.locations||[]).length || 0} locations redundant`
-
-  $("kDids").textContent = model.totals.didsTotal ?? 0
-  $("kUnassigned").textContent = `${model.totals.didsUnassigned ?? 0} unassigned`
-
-  $("kCapacity").textContent = model.scores?.pstnCapacityScore ?? "—"
-  $("kPredict").textContent = `Predictive Risk: ${model.prediction?.predictedRisk || "UNKNOWN"}`
-
-  updateRAG(Number(model.scores?.pstnCapacityScore || 0))
+function renderLocations(){
+  const rows=MODEL.locations.map(l=>`
+  <tr>
+    <td>${l.name}</td>
+    <td>${l.pstnOption}</td>
+    <td>${l.trunkCount}</td>
+    <td>${l.dids.total}</td>
+    <td>${l.emergencyConfigured?'<span class="badge good">OK</span>':'<span class="badge bad">Missing</span>'}</td>
+    <td><span class="badge ${l.capacityRisk==='RED'?'bad':l.capacityRisk==='AMBER'?'warn':'good'}">${l.capacityRisk}</span></td>
+  </tr>`).join("")
+  $("locRows").innerHTML=rows
 }
 
-function pstnMixSummary(locs){
-  const counts = new Map()
-  for(const l of locs){
-    const k = l.pstnOption || "Unknown"
-    counts.set(k, (counts.get(k)||0) + 1)
-  }
-  const parts = [...counts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k}: ${v}`)
-  return parts.length ? parts.join(" • ") : "—"
+function renderKPIs(){
+  $("kLocs").textContent=MODEL.totals.locations
+  $("kTrunks").textContent=MODEL.totals.trunks
+  $("kDids").textContent=MODEL.totals.didsTotal
+  $("kCapacity").textContent=MODEL.scores.pstnCapacityScore
+  updateRAG(MODEL.scores.pstnCapacityScore)
 }
 
-function renderLocationsTable(model){
-  const rows = (model.locations || []).map(l=>{
-    const pstnType = l.pstnOption || "Unknown"
-    const pstnBadge =
-      pstnType === "No PSTN" ? badge("No PSTN","bad") :
-      pstnType === "Local Gateway" ? badge("Local GW","warn") :
-      pstnType === "Cloud Connect" ? badge("Cloud Connect","good") :
-      pstnType === "Cisco PSTN" ? badge("Cisco PSTN","good") :
-      badge("Unknown","neutral")
-
-    const calling = l.callingEnabled ? badge("Enabled","good") : badge("Off","neutral")
-
-    const redundancy =
-      l.redundancyScore >= 100 ? badge("Yes","good") :
-      l.redundancyScore > 0 ? badge("Partial","warn") :
-      badge("No","bad")
-
-    const cap =
-      l.capacityRisk === "RED" ? badge("RED","bad") :
-      l.capacityRisk === "AMBER" ? badge("AMBER","warn") :
-      badge("GREEN","good")
-
-    const e911 =
-      l.emergencyConfigured ? badge("OK","good") : badge("Missing","bad")
-
-    return `
-      <tr onclick="openLocationModal('${escapeAttr(l.id)}')">
-        <td><b>${escapeHtml(l.name)}</b><div class="small">${escapeHtml(l.id)}</div></td>
-        <td>${pstnBadge}</td>
-        <td>${calling}</td>
-        <td>${l.trunkCount || 0}</td>
-        <td>${l.dids?.total || 0}</td>
-        <td>${l.dids?.unassigned || 0}</td>
-        <td>${redundancy}</td>
-        <td>${cap}</td>
-        <td>${e911}</td>
-      </tr>
-    `
-  }).join("")
-
-  $("locRows").innerHTML = rows || `<tr><td colspan="9" class="small" style="padding:16px">No location PSTN data available.</td></tr>`
-}
-
-function renderDiagnostics(model){
-  const s = model.diagSummary || {}
-  $("diagSummary").textContent =
-    `Total Checks: ${s.total||0} | Failed: ${s.failed||0} | 403: ${s.has403?"Yes":"No"} | 5xx: ${s.has5xx?"Yes":"No"}`
-
-  $("diagRows").innerHTML = (model.diagnostics || []).map(d=>{
-    const st = d.ok ? badge("OK","good") : badge(String(d.status||"FAIL"),"bad")
-    return `<div>${st} ${escapeHtml(d.name||"Check")}</div>`
-  }).join("") || "—"
-}
-
-/* =========================
-   Topology Diagram (Canvas)
-   - Simple left-to-right: Org -> PSTN Types -> Locations
-========================= */
-function drawTopology(model){
-  const canvas = $("topology")
-  const ctx = canvas.getContext("2d")
-
-  // Ensure crisp sizing
-  const rect = canvas.getBoundingClientRect()
-  canvas.width = Math.floor(rect.width * devicePixelRatio)
-  canvas.height = Math.floor(rect.height * devicePixelRatio)
-  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)
-
-  const w = rect.width
-  const h = rect.height
-  ctx.clearRect(0,0,w,h)
-
-  const locs = model.locations || []
-  const types = groupBy(locs, l => l.pstnOption || "Unknown")
-  const typeKeys = Object.keys(types)
-
-  // Node layout
-  const orgNode = { x: 90, y: h/2, label: "Customer Org" }
-
-  const typeX = Math.max(260, w*0.35)
-  const locX = Math.max(520, w*0.72)
-
-  const typeYs = spreadY(typeKeys.length, h, 40)
-  const typeNodes = typeKeys.map((k,i)=>({ x:typeX, y:typeYs[i], label:k, key:k }))
-
-  // Locations: stack per type
-  const locNodes = []
-  const maxLocsPerType = Math.max(1, ...typeKeys.map(k => (types[k]||[]).length))
-  const locBandHeight = Math.max(60, Math.min(120, (h-80)/Math.max(1,typeKeys.length)))
-
-  for(const t of typeNodes){
-    const list = (types[t.key]||[]).slice(0, 10) // avoid insane canvas spam
-    const ys = spreadY(list.length, locBandHeight, 10).map(v => (t.y - locBandHeight/2) + v)
-    list.forEach((l, idx)=>{
-      locNodes.push({
-        x: locX,
-        y: ys[idx],
-        label: l.name,
-        id: l.id,
-        type: t.key,
-        risk: l.capacityRisk
-      })
-    })
-    if((types[t.key]||[]).length > 10){
-      locNodes.push({ x: locX, y: t.y + locBandHeight/2 - 14, label: `+${(types[t.key].length - 10)} more`, id:null, type:t.key, risk:"AMBER" })
-    }
-  }
-
-  // Edges org->type
-  ctx.lineWidth = 1.5
-  ctx.strokeStyle = "rgba(15,23,42,.18)"
-  for(const t of typeNodes){
-    drawEdge(ctx, orgNode.x+80, orgNode.y, t.x-90, t.y)
-  }
-  // Edges type->loc
-  for(const l of locNodes){
-    const t = typeNodes.find(x=>x.key===l.type)
-    if(!t) continue
-    drawEdge(ctx, t.x+90, t.y, l.x-110, l.y)
-  }
-
-  // Draw nodes
-  drawNode(ctx, orgNode.x, orgNode.y, 160, 44, "Customer Org", "neutral")
-
-  for(const t of typeNodes){
-    const cls =
-      t.key === "No PSTN" ? "bad" :
-      t.key === "Local Gateway" ? "warn" :
-      t.key === "Unknown" ? "neutral" :
-      "good"
-    drawNode(ctx, t.x, t.y, 180, 40, t.key, cls)
-  }
-
-  for(const l of locNodes){
-    const cls =
-      l.risk === "RED" ? "bad" :
-      l.risk === "AMBER" ? "warn" :
-      l.risk === "GREEN" ? "good" :
-      "neutral"
-    drawNode(ctx, l.x, l.y, 220, 36, l.label, cls, true)
-  }
-
-  // Footer hint
-  ctx.fillStyle = "rgba(100,116,139,.9)"
-  ctx.font = "12px system-ui"
-  ctx.fillText("Visualization inferred. Full fidelity requires trunk->location binding fields in /telephony/config/trunks.", 12, h-12)
-}
-
-function drawEdge(ctx, x1,y1,x2,y2){
-  ctx.beginPath()
-  ctx.moveTo(x1,y1)
-  const mx = (x1+x2)/2
-  ctx.bezierCurveTo(mx,y1, mx,y2, x2,y2)
-  ctx.stroke()
-}
-
-function drawNode(ctx, cx, cy, width, height, label, cls, isSmall){
-  const x = cx - width/2
-  const y = cy - height/2
-  const r = 12
-
-  const fill =
-    cls === "good" ? "rgba(22,163,74,.10)" :
-    cls === "warn" ? "rgba(245,158,11,.12)" :
-    cls === "bad" ? "rgba(220,38,38,.10)" :
-    "rgba(100,116,139,.10)"
-
-  const stroke =
-    cls === "good" ? "rgba(22,163,74,.28)" :
-    cls === "warn" ? "rgba(245,158,11,.30)" :
-    cls === "bad" ? "rgba(220,38,38,.28)" :
-    "rgba(100,116,139,.22)"
-
-  ctx.fillStyle = fill
-  ctx.strokeStyle = stroke
-  ctx.lineWidth = 1.5
-
-  roundedRect(ctx, x, y, width, height, r)
-  ctx.fill()
-  ctx.stroke()
-
-  ctx.fillStyle = "rgba(15,23,42,.92)"
-  ctx.font = `${isSmall ? 12 : 13}px system-ui`
-  const txt = String(label || "")
-  const clipped = txt.length > 28 ? (txt.slice(0,27) + "…") : txt
-  ctx.fillText(clipped, x + 12, y + height/2 + 4)
-}
-
-function roundedRect(ctx,x,y,w,h,r){
-  ctx.beginPath()
-  ctx.moveTo(x+r,y)
-  ctx.arcTo(x+w,y,x+w,y+h,r)
-  ctx.arcTo(x+w,y+h,x,y+h,r)
-  ctx.arcTo(x,y+h,x,y,r)
-  ctx.arcTo(x,y,x+w,y,r)
-  ctx.closePath()
-}
-
-function spreadY(n, height, padding){
-  if(n<=1) return [height/2]
-  const usable = Math.max(1, height - padding*2)
-  return Array.from({length:n}, (_,i)=> padding + (usable*(i/(n-1))))
-}
-
-function groupBy(arr, fn){
-  const out = {}
-  for(const a of arr){
-    const k = fn(a)
-    out[k] = out[k] || []
-    out[k].push(a)
-  }
-  return out
-}
-
-/* =========================
-   Heatmap (Canvas)
-   - Each trunk is a tile. Utilization best-effort from trunk fields if present.
-========================= */
-function computeTrunkUtilization(trunk){
-  // Best-effort field matching:
-  // If your trunk payload has maxCapacity/currentUsage/activeCalls, we use it.
-  const cap = Number(trunk.maxCapacity ?? trunk.capacity ?? trunk.callCapacity ?? trunk.maxCalls ?? NaN)
-  const use = Number(trunk.currentUsage ?? trunk.usage ?? trunk.activeCalls ?? trunk.concurrentCalls ?? NaN)
-  if(Number.isFinite(cap) && cap > 0 && Number.isFinite(use) && use >= 0){
-    const pct = Math.max(0, Math.min(100, (use / cap) * 100))
-    return { ok:true, pct, cap, use }
-  }
-  // Sometimes capacity is in "channels" and usage in "usedChannels"
-  const cap2 = Number(trunk.channels ?? NaN)
-  const use2 = Number(trunk.usedChannels ?? NaN)
-  if(Number.isFinite(cap2) && cap2 > 0 && Number.isFinite(use2) && use2 >= 0){
-    const pct = Math.max(0, Math.min(100, (use2 / cap2) * 100))
-    return { ok:true, pct, cap:cap2, use:use2 }
-  }
-  return { ok:false, pct:null }
-}
-
-function drawHeatmap(pstnRaw, model){
-  const canvas = $("heatmap")
-  const ctx = canvas.getContext("2d")
-
-  const rect = canvas.getBoundingClientRect()
-  canvas.width = Math.floor(rect.width * devicePixelRatio)
-  canvas.height = Math.floor(rect.height * devicePixelRatio)
-  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)
-
-  const w = rect.width
-  const h = rect.height
-  ctx.clearRect(0,0,w,h)
-
-  const trunks = Array.isArray(pstnRaw.trunks) ? pstnRaw.trunks : []
-  if(trunks.length === 0){
-    ctx.fillStyle = "rgba(100,116,139,.9)"
-    ctx.font = "13px system-ui"
-    ctx.fillText("No trunks detected for this org.", 16, 40)
-    return
-  }
-
-  // Tiles
-  const cols = Math.max(6, Math.min(16, Math.floor(w / 60)))
-  const rows = Math.ceil(trunks.length / cols)
-  const tileW = Math.floor((w - 20) / cols)
-  const tileH = Math.floor((h - 20) / Math.max(1, rows))
-  const pad = 6
-
-  for(let i=0;i<trunks.length;i++){
-    const t = trunks[i]
-    const r = Math.floor(i / cols)
-    const c = i % cols
-    const x = 10 + c * tileW
-    const y = 10 + r * tileH
-
-    const u = computeTrunkUtilization(t)
-
-    let fill = "rgba(100,116,139,.18)"
-    let stroke = "rgba(100,116,139,.18)"
-    let label = "Unknown"
-
-    if(u.ok){
-      if(u.pct >= 85){ fill="rgba(220,38,38,.28)"; stroke="rgba(220,38,38,.30)" }
-      else if(u.pct >= 60){ fill="rgba(245,158,11,.30)"; stroke="rgba(245,158,11,.32)" }
-      else { fill="rgba(22,163,74,.25)"; stroke="rgba(22,163,74,.28)" }
-      label = Math.round(u.pct) + "%"
-    }
-
-    ctx.fillStyle = fill
-    ctx.strokeStyle = stroke
-    ctx.lineWidth = 1.2
-    roundedRect(ctx, x+pad, y+pad, tileW-pad*2, tileH-pad*2, 10)
-    ctx.fill()
-    ctx.stroke()
-
-    ctx.fillStyle = "rgba(15,23,42,.92)"
-    ctx.font = "12px system-ui"
-    ctx.fillText(label, x+pad+10, y+pad+18)
-
-    const name = (t.name || t.displayName || t.trunkName || t.id || "Trunk")
-    const shortName = String(name).length > 18 ? (String(name).slice(0,17) + "…") : String(name)
-    ctx.fillStyle = "rgba(100,116,139,.95)"
-    ctx.font = "11px system-ui"
-    ctx.fillText(shortName, x+pad+10, y+pad+36)
-  }
-
-  // Title
-  ctx.fillStyle = "rgba(15,23,42,.7)"
-  ctx.font = "12px system-ui"
-  ctx.fillText("Each tile = trunk. Color = utilization. Click location rows for drill-down.", 12, h-10)
-}
-
-/* =========================
-   Forecasting (localStorage snapshots)
-   - Store daily capacity score per org
-   - Use simple linear regression for forecast line
-========================= */
-function snapshotKey(orgId){
-  return `pstn_capacity_history:${orgId || "unknown"}`
-}
-
-function loadSnapshots(orgId){
-  try{
-    const raw = localStorage.getItem(snapshotKey(orgId))
-    const arr = raw ? JSON.parse(raw) : []
-    return Array.isArray(arr) ? arr : []
-  }catch(e){ return [] }
-}
-
-function saveSnapshot(orgId, score){
-  const day = new Date()
-  const yyyy = day.getFullYear()
-  const mm = String(day.getMonth()+1).padStart(2,"0")
-  const dd = String(day.getDate()).padStart(2,"0")
-  const dateKey = `${yyyy}-${mm}-${dd}`
-
-  const arr = loadSnapshots(orgId)
-
-  // de-dup by day
-  const filtered = arr.filter(x => x.date !== dateKey)
-  filtered.push({ date: dateKey, score: Number(score) || 0 })
-  filtered.sort((a,b)=> a.date.localeCompare(b.date))
-
-  // keep last 90
-  const trimmed = filtered.slice(-90)
-  localStorage.setItem(snapshotKey(orgId), JSON.stringify(trimmed))
-  return trimmed
-}
-
-function linReg(points){
-  // points: [{x, y}]
-  const n = points.length
-  if(n < 2) return null
-  let sx=0, sy=0, sxx=0, sxy=0
-  for(const p of points){
-    sx += p.x
-    sy += p.y
-    sxx += p.x * p.x
-    sxy += p.x * p.y
-  }
-  const denom = (n*sxx - sx*sx)
-  if(denom === 0) return null
-  const m = (n*sxy - sx*sy) / denom
-  const b = (sy - m*sx) / n
-  return { m, b }
-}
-
-function drawForecast(orgId, history){
-  const canvas = $("forecast")
-  const ctx = canvas.getContext("2d")
-
-  const rect = canvas.getBoundingClientRect()
-  canvas.width = Math.floor(rect.width * devicePixelRatio)
-  canvas.height = Math.floor(rect.height * devicePixelRatio)
-  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)
-
-  const w = rect.width
-  const h = rect.height
-  ctx.clearRect(0,0,w,h)
-
-  // Baseline
-  ctx.strokeStyle = "rgba(15,23,42,.10)"
-  ctx.lineWidth = 1
-  for(const y of [0.25,0.5,0.75]){
-    ctx.beginPath()
-    ctx.moveTo(12, h*y)
-    ctx.lineTo(w-12, h*y)
-    ctx.stroke()
-  }
-
-  if(!history || history.length < 2){
-    ctx.fillStyle = "rgba(100,116,139,.95)"
-    ctx.font = "13px system-ui"
-    ctx.fillText("Not enough snapshot history yet. Keep visiting this page daily to build forecast accuracy.", 16, 40)
-    $("forecastNote").textContent =
-      "Forecast uses locally-stored daily snapshots of your computed capacity score for this org (stored in browser localStorage). " +
-      "Snapshots will build automatically each day you open this page."
-    return
-  }
-
-  // Map dates to x index
-  const points = history.map((h,i)=>({ x:i, y:Number(h.score||0) }))
-  const minY = 0
-  const maxY = 100
-  const toX = i => 16 + (i/(Math.max(1, points.length-1+7))) * (w-32)
-  const toY = v => (h-20) - ((v-minY)/(maxY-minY))*(h-40)
-
-  // Draw actual line
-  ctx.strokeStyle = "#0f62fe"
-  ctx.lineWidth = 2
-  ctx.beginPath()
-  points.forEach((p,i)=>{
-    const x = toX(i)
-    const y = toY(p.y)
-    if(i===0) ctx.moveTo(x,y)
-    else ctx.lineTo(x,y)
-  })
-  ctx.stroke()
-
-  // Regression
-  const lr = linReg(points)
-  if(lr){
-    // Forecast 7 steps
-    const start = points.length-1
-    const forecastPts = Array.from({length:8}, (_,k)=>{
-      const xi = start + k
-      const y = lr.m * xi + lr.b
-      return { x: xi, y: Math.max(0, Math.min(100, y)) }
-    })
-
-    // Draw forecast dashed
-    ctx.strokeStyle = "rgba(15,98,254,.55)"
-    ctx.lineWidth = 2
-    ctx.setLineDash([6,6])
-    ctx.beginPath()
-    forecastPts.forEach((p,i)=>{
-      const x = toX(p.x)
-      const y = toY(p.y)
-      if(i===0) ctx.moveTo(x,y)
-      else ctx.lineTo(x,y)
-    })
-    ctx.stroke()
-    ctx.setLineDash([])
-
-    // Label
-    const next7 = forecastPts[forecastPts.length-1].y
-    ctx.fillStyle = "rgba(15,23,42,.80)"
-    ctx.font = "12px system-ui"
-    ctx.fillText(`Forecast (7 days): ~${Math.round(next7)}`, 16, 18)
-  }
-
-  // Axes labels
-  ctx.fillStyle = "rgba(100,116,139,.95)"
-  ctx.font = "12px system-ui"
-  ctx.fillText("0", 12, h-12)
-  ctx.fillText("100", 12, 16)
-  ctx.fillText("Actual", w-140, 16)
-  ctx.fillStyle = "#0f62fe"
-  ctx.fillRect(w-170, 10, 18, 3)
-  ctx.fillStyle = "rgba(15,98,254,.55)"
-  ctx.fillRect(w-170, 18, 18, 3)
-  ctx.fillStyle = "rgba(100,116,139,.95)"
-  ctx.fillText("Forecast", w-140, 24)
-}
-
-/* =========================
-   Drill-down Modal
-========================= */
-let __pstnRaw = null
-let __model = null
-
-function openLocationModal(locId){
-  if(!__model || !__pstnRaw) return
-  const loc = (__model.locations || []).find(l=>String(l.id)===String(locId))
-  if(!loc) return
-
-  $("locModal").style.display = "flex"
-  $("modalTitle").textContent = loc.name || "Location"
-  $("modalSub").textContent = `PSTN: ${loc.pstnOption || "Unknown"} • Calling: ${loc.callingEnabled ? "Enabled" : "Off"} • Location ID: ${loc.id}`
-
-  // Summary
-  const cap =
-    loc.capacityRisk === "RED" ? badge("RED","bad") :
-    loc.capacityRisk === "AMBER" ? badge("AMBER","warn") :
-    badge("GREEN","good")
-
-  const e911 = loc.emergencyConfigured ? badge("OK","good") : badge("Missing","bad")
-  const redundancy =
-    loc.redundancyScore >= 100 ? badge("Yes","good") :
-    loc.redundancyScore > 0 ? badge("Partial","warn") :
-    badge("No","bad")
-
-  $("modalSummary").innerHTML = `
-    <div><b>Trunks:</b> ${loc.trunkCount || 0}</div>
-    <div><b>DIDs:</b> ${loc.dids?.total || 0} (Unassigned: ${loc.dids?.unassigned || 0})</div>
-    <div><b>Redundancy:</b> ${redundancy}</div>
-    <div><b>Capacity Risk:</b> ${cap}</div>
-    <div><b>E911:</b> ${e911}</div>
-  `
-
-  // Trunks (filtered best-effort)
-  const trunks = Array.isArray(__pstnRaw.trunks) ? __pstnRaw.trunks : []
-  const tlist = trunks.filter(t=>{
-    const tid = t.locationId || t.location?.id || t.siteId || t.callingLocationId || null
-    return tid && String(tid) === String(loc.id)
-  })
-
-  if(tlist.length === 0){
-    $("modalTrunks").innerHTML = `<div class="small">No trunks were linked to this location by ID. If trunks exist but lack locationId fields, add a trunk-location mapping in your worker response.</div>`
-  } else {
-    $("modalTrunks").innerHTML = tlist.slice(0, 20).map(t=>{
-      const u = computeTrunkUtilization(t)
-      const util = u.ok ? badge(`${Math.round(u.pct)}%` , (u.pct>=85?"bad":u.pct>=60?"warn":"good")) : badge("Unknown","neutral")
-      const name = t.name || t.displayName || t.trunkName || t.id || "Trunk"
-      return `<div style="margin-bottom:8px">
-        <b>${escapeHtml(String(name))}</b> ${util}
-        <div class="small">${escapeHtml(String(t.id || ""))}</div>
-      </div>`
-    }).join("")
-  }
-
-  // Numbers sample for this location (best-effort)
-  const numbers = Array.isArray(__pstnRaw.numbers) ? __pstnRaw.numbers : []
-  const nlist = numbers.filter(n=>{
-    const nid = n.locationId || n.location?.id || n.siteId || null
-    return nid && String(nid) === String(loc.id)
-  })
-
-  if(nlist.length === 0){
-    $("modalNumbers").innerHTML = `<div class="small">No numbers linked to this location by ID.</div>`
-  } else {
-    $("modalNumbers").innerHTML = `
-      <div class="small">Showing up to 30 numbers:</div>
-      <div style="margin-top:8px">
-        ${nlist.slice(0,30).map(n=>{
-          const num = n.phoneNumber || n.number || n.did || n.e164 || "—"
-          const s = safeLower(n.status || n.state)
-          const isUnassigned = s.includes("unassign")
-          return `<div>${escapeHtml(String(num))} ${isUnassigned ? badge("Unassigned","warn") : badge("Assigned","good")}</div>`
-        }).join("")}
-      </div>
-    `
-  }
-
-  // Raw payload (location connection + raw location)
-  const raw = {
-    location: {
-      id: loc.id,
-      name: loc.name,
-      callingEnabled: loc.callingEnabled
-    },
-    pstnConnection: loc.pstnConnection,
-    trunksFilteredCount: tlist.length,
-    numbersFilteredCount: nlist.length
-  }
-  $("modalRaw").textContent = JSON.stringify(raw, null, 2)
-}
-
-function closeModal(){
-  $("locModal").style.display = "none"
-}
-
-function closeModalIfBackdrop(e){
-  if(e.target && e.target.id === "locModal"){
-    closeModal()
-  }
-}
-
-function copyModalRaw(){
-  const txt = $("modalRaw").textContent || ""
-  navigator.clipboard?.writeText(txt)
-}
-
-/* =========================
-   Escaping
-========================= */
-function escapeHtml(s){
-  return String(s||"")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#39;")
-}
-function escapeAttr(s){
-  return String(s||"").replaceAll("'","\\'")
-}
-
-/* =========================
-   Init
-========================= */
 async function init(){
-  const me = await api("/api/me")
-  if(!me.orgId){
-    location="/pin"
-    return
+  const raw=await api("/api/pstn")
+  RAW=raw
+  MODEL=raw
+  $("lastRefresh").textContent="Last refresh: "+new Date().toLocaleString()
+
+  // populate location dropdown
+  const sel=$("locationSelect")
+  sel.innerHTML='<option value="ALL">All Locations</option>'+
+    MODEL.locations.map(l=>`<option value="${l.id}">${l.name}</option>`).join("")
+  sel.onchange=()=>{
+    if(sel.value==="ALL"){MODEL=RAW}
+    else{
+      MODEL={
+        ...RAW,
+        locations:RAW.locations.filter(l=>l.id===sel.value)
+      }
+    }
+    renderKPIs()
+    renderLocations()
   }
 
-  // Customer view should not pass orgId; worker uses session.orgId
-  const raw = await api("/api/pstn")
-  __pstnRaw = normalizePstnResponse(raw)
-
-  // Client-side normalize + scoring
-  const model = computeLocationMetrics(__pstnRaw)
-  __model = model
-
-  // Snapshot for forecasting
-  const orgId = __pstnRaw.orgId || me.orgId || "unknown"
-  const history = saveSnapshot(orgId, model.scores.pstnCapacityScore)
-
-  renderKPIs(model)
-  renderLocationsTable(model)
-  renderDiagnostics(model)
-
-  // Draw visuals
-  drawTopology(model)
-  drawHeatmap(__pstnRaw, model)
-  drawForecast(orgId, history)
-
-  // Redraw on resize (simple debounce)
-  let t = null
-  window.addEventListener("resize", ()=>{
-    clearTimeout(t)
-    t = setTimeout(()=>{
-      drawTopology(__model)
-      drawHeatmap(__pstnRaw, __model)
-      drawForecast(orgId, loadSnapshots(orgId))
-    }, 150)
-  })
+  renderKPIs()
+  renderLocations()
 }
-
-function logout(){
-  fetch("/api/pin/logout",{method:"POST"}).finally(()=>location="/")
-}
-
 init()
 </script>
-
 </body>
 </html>
