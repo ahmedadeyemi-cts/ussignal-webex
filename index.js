@@ -4216,89 +4216,224 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
 } */
 
 if (url.pathname === "/api/pstn" && request.method === "GET") {
-
   const user = getCurrentUser(request);
-  if (!user) return json({ error: "access_required" }, 401);
+  if (!user) return json({ ok: false, error: "access_required" }, 401);
 
   const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
   let resolvedOrgId = null;
-
   if (user.isAdmin) {
-    if (!requestedOrgId) {
-      return json({ error: "missing_orgId" }, 400);
-    }
+    if (!requestedOrgId) return json({ ok: false, error: "missing_orgId" }, 400);
     resolvedOrgId = requestedOrgId;
   } else {
-    if (!session?.orgId) return json({ error: "pin_required" }, 401);
+    if (!session?.orgId) return json({ ok: false, error: "pin_required" }, 401);
     resolvedOrgId = session.orgId;
   }
 
-  // 1️⃣ Get Locations
-  const locResult = await webexFetch(env, "/telephony/config/locations", resolvedOrgId);
-  if (!locResult.ok) {
-    return json({ error: "pstn_locations_failed" }, 500);
+  // -------------------------
+  // Helpers
+  // -------------------------
+  const diagnostics = [];
+  const diagPush = (name, safe) => {
+    diagnostics.push({
+      name,
+      ok: !!safe?.ok,
+      status: safe?.status ?? null,
+      preview: safe?.preview ?? null
+    });
+  };
+
+  // Normalize types into what you want to show
+  function normalizePstnTypeFromConn(conn) {
+    const t = String(conn?.connectionType || conn?.type || conn?.pstnType || "").toUpperCase();
+
+    // These mappings are intentionally tolerant because tenant payloads vary.
+    if (!t) return "UNKNOWN";
+
+    if (t.includes("CLOUD") || t.includes("CCP") || t.includes("CLOUD_CONNECT")) return "CLOUD_CONNECT";
+    if (t.includes("CISCO") || t.includes("PROVIDER")) return "CISCO_PSTN";
+    if (t.includes("PREMISE") || t.includes("LOCAL") || t.includes("GATEWAY")) return "LOCAL_GATEWAY";
+    if (t.includes("NONE") || t.includes("NO_PSTN")) return "NO_PSTN";
+
+    return "UNKNOWN";
   }
 
-  const locations = locResult.data.locations || [];
+  function capacityRiskFromScore(score) {
+    if (score < 70) return "RED";
+    if (score < 85) return "AMBER";
+    return "GREEN";
+  }
 
-  // 2️⃣ Enrich each location with PSTN connection info
+  // Basic scoring you can improve later (but it works now)
+  function computeCapacityScore({ trunksTotal, didsTotal }) {
+    // Simple normalization:
+    // - no trunks and no dids => 0 (No PSTN)
+    // - some trunks => baseline
+    // - more trunks => better
+    if (trunksTotal <= 0 && didsTotal <= 0) return 0;
+    let score = 70;                 // baseline if PSTN exists
+    score += Math.min(30, trunksTotal * 10); // +10 per trunk up to +30
+    return Math.max(0, Math.min(100, score));
+  }
+
+  function computeRedundancyScore(trunkCount) {
+    if (trunkCount >= 2) return 100;
+    if (trunkCount === 1) return 0;
+    return 0;
+  }
+
+  function estimateBlastRadius(trunkCount) {
+    // If only 1 trunk, outage impact is high.
+    if (trunkCount >= 2) return 25;
+    if (trunkCount === 1) return 90;
+    return 100;
+  }
+
+  // -------------------------
+  // 1) Locations (required)
+  // -------------------------
+  const locResult = await webexFetchSafe(env, "/v1/telephony/config/locations", resolvedOrgId);
+  diagPush("telephony/config/locations", locResult);
+
+  if (!locResult.ok) {
+    return json({
+      ok: false,
+      error: "pstn_locations_failed",
+      status: locResult.status,
+      preview: locResult.preview,
+      diagnostics
+    }, 200);
+  }
+
+  const locationsRaw = locResult.data?.locations || locResult.data?.items || [];
+
+  // -------------------------
+  // 2) Trunks (optional)
+  // -------------------------
+  const trunkResult = await webexFetchSafe(env, "/v1/telephony/config/trunks", resolvedOrgId);
+  diagPush("telephony/config/trunks", trunkResult);
+  const trunksRaw = trunkResult.ok ? (trunkResult.data?.trunks || trunkResult.data?.items || []) : [];
+
+  // -------------------------
+  // 3) Numbers (optional)
+  // -------------------------
+  const numberResult = await webexFetchSafe(env, "/v1/telephony/config/numbers", resolvedOrgId);
+  diagPush("telephony/config/numbers", numberResult);
+  const numbersRaw = numberResult.ok ? (numberResult.data?.phoneNumbers || numberResult.data?.items || []) : [];
+
+  // -------------------------
+  // 4) Per-location connection info (optional)
+  // NOTE: this endpoint may not exist for all tenants — keep it SAFE.
+  // -------------------------
   const enrichedLocations = [];
+  for (const loc of locationsRaw) {
+    const locId = loc.id;
+    const locName = loc.name || loc.locationName || "Unknown Location";
 
-  for (const loc of locations) {
     const conn = await webexFetchSafe(
       env,
-      `/telephony/config/locations/${loc.id}/connection`,
+      `/v1/telephony/config/locations/${encodeURIComponent(locId)}/connection`,
       resolvedOrgId
     );
+    diagPush(`locations/${locId}/connection`, conn);
+
+    // Derive PSTN type
+    const pstnOption = normalizePstnTypeFromConn(conn.ok ? conn.data : null);
+
+    // Very basic DID counts (global numbers endpoint often isn’t location-scoped)
+    // If you have locationId on number objects, this becomes accurate.
+    const locNums = numbersRaw.filter(n => n.locationId === locId || n.location?.id === locId);
+    const didsTotal = locNums.length;
+    const didsAssigned = locNums.filter(n => !!(n.owner || n.assigned || n.assignedTo || n.personId || n.workspaceId)).length;
+    const didsUnassigned = Math.max(0, didsTotal - didsAssigned);
+
+    // Trunk counts: if trunks include locationId, use it; otherwise show global counts only at org-level.
+    const locTrunks = trunksRaw.filter(t => t.locationId === locId || t.location?.id === locId);
+    const trunkCount = locTrunks.length;
+
+    const redundancyScore = computeRedundancyScore(trunkCount);
+    const blastRadius = estimateBlastRadius(trunkCount);
+
+    // Placeholder e911 check (upgrade later with ECBN + location settings)
+    const emergencyConfigured = !!(loc.e911SetupRequired === false || loc.e911Configured || loc.emergencyConfigured);
+
+    // Capacity score per location: if no location trunks, fall back to PSTN type presence
+    const locCapacityScore = computeCapacityScore({ trunksTotal: trunkCount, didsTotal });
+    const capacityRisk = capacityRiskFromScore(locCapacityScore);
 
     enrichedLocations.push({
-      id: loc.id,
-      name: loc.name,
-      callingEnabled: loc.callingEnabled,
-      pstnConnection: conn.ok ? conn.data : null
+      id: locId,
+      name: locName,
+      callingEnabled: !!loc.callingEnabled,
+
+      // What your UI expects:
+      pstnOption,
+      trunkCount,
+      dids: { total: didsTotal, assigned: didsAssigned, unassigned: didsUnassigned },
+      redundancyScore,
+      blastRadius,
+      emergencyConfigured,
+      capacityRisk,
+
+      // keep raw bits if you want drilldowns later
+      raw: { location: loc, connection: conn.ok ? conn.data : null }
     });
   }
 
-  // 3️⃣ Get Trunks
-  const trunkResult = await webexFetchSafe(
-    env,
-    "/telephony/config/trunks",
-    resolvedOrgId
-  );
-
-  const trunks = trunkResult.ok ? trunkResult.data.trunks || [] : [];
-
-  // 4️⃣ Get Numbers
-  const numberResult = await webexFetchSafe(
-    env,
-    "/telephony/config/numbers",
-    resolvedOrgId
-  );
-
-  const numbers = numberResult.ok ? numberResult.data.phoneNumbers || [] : [];
-
-  const summary = {
-    totalLocations: enrichedLocations.length,
-    totalTrunks: trunks.length,
-    totalNumbers: numbers.length,
-    pstnTypes: [...new Set(
-      enrichedLocations
-        .map(l => l.pstnConnection?.connectionType)
-        .filter(Boolean)
-    )]
+  // -------------------------
+  // Totals + scores (what your UI reads)
+  // -------------------------
+  const totals = {
+    trunks: trunksRaw.length,
+    premisePstnConnections: 0, // set later when you add premisePstnConnections endpoint
+    didsTotal: numbersRaw.length
   };
 
-  return json({
-    orgId: resolvedOrgId,
-    summary,
-    locations: enrichedLocations,
-    trunks,
-    numbers
+  const pstnCapacityScore = computeCapacityScore({
+    trunksTotal: totals.trunks,
+    didsTotal: totals.didsTotal
   });
-}
 
+  const scores = { pstnCapacityScore };
+
+  // crude predictive risk for now
+  const predictedRisk =
+    pstnCapacityScore < 70 ? "HIGH" :
+    pstnCapacityScore < 85 ? "MEDIUM" : "LOW";
+
+  // -------------------------
+  // Diagnostics summary (what your UI reads)
+  // -------------------------
+  const totalChecks = diagnostics.length;
+  const failed = diagnostics.filter(d => !d.ok).length;
+  const has403 = diagnostics.some(d => String(d.status) === "403");
+  const has5xx = diagnostics.some(d => String(d.status || "").startsWith("5"));
+
+  const diagSummary = {
+    total: totalChecks,
+    failed,
+    has403,
+    has5xx
+  };
+
+  // -------------------------
+  // Return in the shape your customer/pstn.html expects
+  // -------------------------
+  return json({
+    ok: true,
+    orgId: resolvedOrgId,
+    pstn: {
+      totals,
+      scores,
+      prediction: { predictedRisk },
+      history: [], // plug your KV history here later
+      locations: enrichedLocations,
+      diagnostics,
+      diagSummary
+    }
+  }, 200);
+}
       /* -----------------------------
          🔎 DEBUG: seed + read a PIN
          GET /api/debug/pin-test
