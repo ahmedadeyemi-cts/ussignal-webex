@@ -4288,7 +4288,8 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
   // 1️⃣ Locations
   // --------------------------------------------------
 
-  const locRes = await safe("/telephony/config/locations");
+ // const locRes = await safe("/telephony/config/locations");
+ const locRes = await webexFetchSafe(env, "/telephony/config/locations", null);
   diag("telephony/config/locations", locRes);
 
   if (!locRes.ok) {
