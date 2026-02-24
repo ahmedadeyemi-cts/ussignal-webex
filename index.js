@@ -4240,9 +4240,21 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     resolvedOrgId = session.orgId;
   }
 
-  // --------------------------------------------------
-  // Helpers
-  // --------------------------------------------------
+  // =====================================================
+  // 🔐 ORG CONTEXT LOGIC (CRITICAL FIX)
+  // =====================================================
+
+  const shouldForceOrg =
+    user.isAdmin &&
+    requestedOrgId &&
+    requestedOrgId !== user.orgId;
+
+  const safe = (path) =>
+    webexFetchSafe(env, path, shouldForceOrg ? resolvedOrgId : null);
+
+  // =====================================================
+  // Diagnostics
+  // =====================================================
 
   const diagnostics = [];
   const diag = (name, r) => diagnostics.push({
@@ -4250,10 +4262,6 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     ok: !!r?.ok,
     status: r?.status ?? null
   });
-
-  // IMPORTANT:
-  // webexFetchSafe should already prefix /v1 internally.
-  const safe = (path) => webexFetchSafe(env, path, resolvedOrgId);
 
   const getLocId = (obj) =>
     obj?.locationId ||
@@ -4284,37 +4292,42 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     return 95;
   }
 
-  // --------------------------------------------------
-  // 1️⃣ Locations
-  // --------------------------------------------------
+  // =====================================================
+  // 1️⃣ Locations (BASELINE CHECK)
+  // =====================================================
 
- // const locRes = await safe("/telephony/config/locations");
- const locRes = await webexFetchSafe(env, "/telephony/config/locations", null);
+  const locRes = await safe("/telephony/config/locations");
   diag("telephony/config/locations", locRes);
 
   if (!locRes.ok) {
     return json({
-      ok:false,
-      error:"locations_failed",
-      diagnostics
-    }, 200);
+      ok:true,
+      pstn:{
+        orgId: resolvedOrgId,
+        callingAvailable:false,
+        reason:"Calling API not accessible for this org",
+        totals:{ trunks:0, didsTotal:0, locations:0 },
+        locations:[],
+        trunks:[],
+        numbers:[],
+        routeGroups:[],
+        misconfigurations:[],
+        diagnostics
+      }
+    });
   }
 
   const locationsRaw = locRes.data?.locations || [];
 
-  // --------------------------------------------------
-  // 2️⃣ Numbers
-  // --------------------------------------------------
+  // =====================================================
+  // 2️⃣ OPTIONAL CALLING ENDPOINTS
+  // =====================================================
 
   const numbersRes = await safe("/telephony/config/numbers");
   diag("telephony/config/numbers", numbersRes);
   const numbersRaw = numbersRes.ok
     ? (numbersRes.data?.phoneNumbers || numbersRes.data?.items || [])
     : [];
-
-  // --------------------------------------------------
-  // 3️⃣ Trunks + Route Groups
-  // --------------------------------------------------
 
   const trunksRes = await safe("/telephony/config/premisePstn/trunks");
   diag("premisePstn/trunks", trunksRes);
@@ -4328,16 +4341,12 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     ? (routeRes.data?.routeGroups || routeRes.data?.items || [])
     : [];
 
-  // --------------------------------------------------
-  // 4️⃣ RedSky Global Compliance
-  // --------------------------------------------------
-
   const redskyGlobal = await safe("/telephony/config/redSky/complianceStatus");
   diag("redSky/complianceStatus", redskyGlobal);
 
-  // --------------------------------------------------
-  // 5️⃣ Enrich Locations
-  // --------------------------------------------------
+  // =====================================================
+  // 3️⃣ ENRICH LOCATIONS
+  // =====================================================
 
   const enrichedLocations = [];
 
@@ -4385,32 +4394,28 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     enrichedLocations.push({
       id: locId,
       name: loc.name || "Unknown Location",
-
-      callingEnabled: true, // safe default
+      callingEnabled: true,
       pstnConnection: conn.data || null,
-
       pstnOption: pstnType,
       trunkCount,
-
-      dids: {
+      dids:{
         total: didTotal,
         unassigned: didUnassigned
       },
-
       redundancyScore,
       blastRadius,
       emergencyConfigured,
-
-      raw: {
+      raw:{
+        connection: conn.data || null,
         redSky: redskyStatus.data || null,
         emergencyNotification: emergencyNotif.data || null
       }
     });
   }
 
-  // --------------------------------------------------
-  // 6️⃣ Org-Level Totals
-  // --------------------------------------------------
+  // =====================================================
+  // 4️⃣ ORG TOTALS
+  // =====================================================
 
   const totalTrunks = trunksRaw.length;
   const totalDids = numbersRaw.length;
@@ -4422,39 +4427,35 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     if (l.pstnOption === "NO_PSTN")
       misconfigurations.push({ location:l.name, issue:"No PSTN configured" });
 
-    if (l.redundancyScore === 0 && l.trunkCount === 1)
+    if (l.trunkCount === 1)
       misconfigurations.push({ location:l.name, issue:"Single trunk no redundancy" });
 
     if (!l.emergencyConfigured)
       misconfigurations.push({ location:l.name, issue:"E911 not compliant" });
   }
 
-  // --------------------------------------------------
-  // FINAL RESPONSE (UI COMPATIBLE)
-  // --------------------------------------------------
+  // =====================================================
+  // ✅ FINAL RESPONSE
+  // =====================================================
 
   return json({
-    ok: true,
-    pstn: {
-
+    ok:true,
+    pstn:{
       orgId: resolvedOrgId,
-
-      totals: {
+      callingAvailable:true,
+      totals:{
         trunks: totalTrunks,
         didsTotal: totalDids,
         locations: enrichedLocations.length
       },
-
       locations: enrichedLocations,
       trunks: trunksRaw,
       numbers: numbersRaw,
       routeGroups: routeGroupsRaw,
-
       compliance: redskyGlobal.ok ? redskyGlobal.data : null,
       misconfigurations,
       diagnostics,
-
-      scores: {
+      scores:{
         pstnCapacityScore: capacityScore
       }
     }
