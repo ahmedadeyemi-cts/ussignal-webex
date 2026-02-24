@@ -3063,27 +3063,27 @@ return json(filtered);
 } */
 /* =====================================================
    /api/licenses (GET)
-   Works for BOTH admin + customer views
+   Correct shape for admin/licenses page
 ===================================================== */
 
 if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   const user = getCurrentUser(request);
-  if (!user) return json({ ok:false, error: "access_required" }, 401);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
 
   const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
-  let resolvedOrgId = null;
+  let resolvedOrgId;
 
   if (user.isAdmin) {
-    if (!requestedOrgId && !session?.orgId) {
-      return json({ ok:false, error: "missing_orgId" }, 400);
+    if (!requestedOrgId) {
+      return json({ ok:false, error:"missing_orgId" }, 400);
     }
-    resolvedOrgId = requestedOrgId || session?.orgId;
+    resolvedOrgId = requestedOrgId;
   } else {
     if (!session?.orgId) {
-      return json({ ok:false, error: "pin_required" }, 401);
+      return json({ ok:false, error:"pin_required" }, 401);
     }
     resolvedOrgId = session.orgId;
   }
@@ -3093,16 +3093,14 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
   if (!result.ok) {
     return json({
       ok:false,
-      error: "webex_license_failed",
-      status: result.status,
-      preview: result.preview
+      error:"webex_license_failed",
+      status: result.status
     }, 500);
   }
 
-  const raw = result.data.items || [];
+  const raw = result.data?.items || [];
 
   let totalConsumed = 0;
-  let totalAvailable = 0;
   let totalDeficit = 0;
 
   const items = raw.map(l => {
@@ -3110,19 +3108,23 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     const consumed = Number(l.consumedUnits ?? 0);
     const available = total - consumed;
 
-    totalConsumed += consumed;
-    totalAvailable += available;
+    const deficit = available < 0 ? Math.abs(available) : 0;
+    const status =
+      total === -1 ? "UNLIMITED" :
+      deficit > 0 ? "DEFICIT" :
+      available === 0 ? "FULL" :
+      "HEALTHY";
 
-    if (available < 0) {
-      totalDeficit += Math.abs(available);
-    }
+    totalConsumed += consumed;
+    totalDeficit += deficit;
 
     return {
-      sku: l.name,
+      name: l.name,
       total,
       consumed,
       available,
-      deficit: available < 0 ? Math.abs(available) : 0
+      deficit,
+      status
     };
   });
 
@@ -3130,14 +3132,12 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     ok: true,
     orgId: resolvedOrgId,
 
-    // ✅ ADMIN PAGE NEEDS THIS
     summary: {
       totalConsumed,
-      totalAvailable,
-      totalDeficit
+      totalDeficit,
+      hasDeficit: totalDeficit > 0
     },
 
-    // ✅ BOTH ADMIN + CUSTOMER PAGES USE THIS
     items
   });
 }
