@@ -3196,17 +3196,28 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
   });
 } */
 
+/* =====================================================
+   /api/licenses (GET)
+   - Admin: requires orgId OR session orgId
+   - Customer: uses session orgId
+   - Returns summary + items
+===================================================== */
+
 if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   const user = getCurrentUser(request);
   if (!user) return json({ error: "access_required" }, 401);
 
   const session = await getSession(env, user.email);
-  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  const requestedOrgId = normalizeOrgIdParam(
+    url.searchParams.get("orgId")
+  );
 
   let resolvedOrgId = null;
 
+  // ===============================
   // ADMIN LOGIC
+  // ===============================
   if (user.isAdmin) {
 
     if (requestedOrgId) {
@@ -3218,13 +3229,20 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     }
 
   } else {
+    // ===============================
     // CUSTOMER LOGIC
-    if (!session?.orgId) return json({ error: "pin_required" }, 401);
+    // ===============================
+    if (!session?.orgId) {
+      return json({ error: "pin_required" }, 401);
+    }
     resolvedOrgId = session.orgId;
   }
 
   console.log("LICENSE ORG RESOLVED:", resolvedOrgId);
 
+  // ===============================
+  // WEBEX CALL
+  // ===============================
   const result = await webexFetch(env, "/licenses", resolvedOrgId);
 
   if (!result.ok) {
@@ -3235,10 +3253,42 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     }, 500);
   }
 
+  const items = result.data?.items || [];
+
+  // ===============================
+  // SUMMARY CALCULATION
+  // ===============================
+  let totalAssigned = 0;
+  let totalConsumed = 0;
+  let totalAvailable = 0;
+
+  for (const l of items) {
+    const total = Number(l.totalUnits || 0);
+    const consumed = Number(l.consumedUnits || 0);
+    const available = total - consumed;
+
+    totalAssigned += total;
+    totalConsumed += consumed;
+    totalAvailable += available;
+  }
+
+  const totalDeficit = totalAvailable < 0 ? Math.abs(totalAvailable) : 0;
+
+  // ===============================
+  // RESPONSE
+  // ===============================
   return json({
     ok: true,
     orgId: resolvedOrgId,
-    items: result.data.items || []
+
+    summary: {
+      totalAssigned,
+      totalConsumed,
+      totalAvailable,
+      totalDeficit
+    },
+
+    items
   });
 }
   if (url.pathname === "/api/devices" && request.method === "GET") {
