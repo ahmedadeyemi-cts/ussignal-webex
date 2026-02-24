@@ -4005,8 +4005,58 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
 
   return json(result);
 }
-if (url.pathname === "/api/analytics" && request.method === "GET") {
+/*if (url.pathname === "/api/analytics" && request.method === "GET") {
   return await apiCallingAnalytics(env, request);
+}*/
+     if (url.pathname === "/api/analytics" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
+  const session = await getSession(env, user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ ok:false, error:"missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) {
+      return json({ ok:false, error:"pin_required" }, 401);
+    }
+    resolvedOrgId = session.orgId;
+  }
+
+  try {
+
+    // 🔥 CHANGE THIS TO THE EXACT ENDPOINT YOU WANT
+    const result = await webexFetch(env, "/analytics/organization", resolvedOrgId);
+
+    if (!result.ok) {
+      return json({
+        ok:false,
+        error:"webex_analytics_failed",
+        status: result.status,
+        preview: result.preview
+      }, 500);
+    }
+
+    return json({
+      ok:true,
+      orgId: resolvedOrgId,
+      raw: result.data
+    });
+
+  } catch (err) {
+    return json({
+      ok:false,
+      error:"analytics_exception",
+      message: String(err)
+    }, 500);
+  }
 }
 
 /* if (url.pathname === "/api/cdr" && request.method === "GET") {
