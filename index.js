@@ -3207,23 +3207,30 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
     items: normalized
   });
 } */
-  if (url.pathname === "/api/devices" && request.method === "GET") {
+/* =====================================================
+   /api/devices (GET)
+   Clean, normalized contract for admin/devices
+===================================================== */
+
+if (url.pathname === "/api/devices" && request.method === "GET") {
 
   const user = getCurrentUser(request);
-  if (!user) return json({ error: "access_required" }, 401);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
 
   const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
-  let resolvedOrgId = null;
+  let resolvedOrgId;
 
   if (user.isAdmin) {
     if (!requestedOrgId) {
-      return json({ error: "missing_orgId" }, 400);
+      return json({ ok:false, error:"missing_orgId" }, 400);
     }
     resolvedOrgId = requestedOrgId;
   } else {
-    if (!session?.orgId) return json({ error: "pin_required" }, 401);
+    if (!session?.orgId) {
+      return json({ ok:false, error:"pin_required" }, 401);
+    }
     resolvedOrgId = session.orgId;
   }
 
@@ -3231,44 +3238,53 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   if (!result.ok) {
     return json({
-      error: "webex_devices_failed",
-      status: result.status,
-      preview: result.preview
+      ok:false,
+      error:"webex_devices_failed",
+      status: result.status
     }, 500);
   }
 
-  const raw = result.data.items || [];
+  const raw = result.data?.items || [];
 
-  const normalized = raw.map(d => {
+  let online = 0;
+  let offline = 0;
 
-    const connection = String(d.connectionStatus || "").toLowerCase();
-    const connected = connection === "connected";
+  const items = raw.map(d => {
+
+    const statusRaw = String(d.connectionStatus || "").toLowerCase();
+
+    const status =
+      statusRaw.includes("online") ? "ONLINE" :
+      statusRaw.includes("connected") ? "ONLINE" :
+      statusRaw.includes("offline") ? "OFFLINE" :
+      statusRaw.includes("disconnected") ? "OFFLINE" :
+      "UNKNOWN";
+
+    if (status === "ONLINE") online++;
+    if (status === "OFFLINE") offline++;
 
     return {
-      id: d.id,
-      displayName: d.displayName,
-      model: d.model || d.product || null,
-      connectionStatus: d.connectionStatus,
-      lastSeen: d.lastSeen || d.lastSeenTime || null,
-      location: d.workspaceLocationId || d.locationId || null,
-
-      status: connected ? "ONLINE" : "OFFLINE",
-      severity: connected ? 0 : 2,
-
-      raw: d   // preserve full object for future use
+      name: d.displayName || d.name || "—",
+      model: d.product || d.model || "—",
+      status,
+      location: d.locationName || "—",
+      lastSeen: d.lastSeen || null,
+      mac: d.mac || null,
+      ip: d.ipAddress || null
     };
   });
 
-  const summary = {
-    totalDevices: normalized.length,
-    connected: normalized.filter(d => d.status === "ONLINE").length,
-    offline: normalized.filter(d => d.status === "OFFLINE").length
-  };
-
   return json({
+    ok: true,
     orgId: resolvedOrgId,
-    summary,
-    items: normalized
+
+    summary: {
+      totalDevices: items.length,
+      online,
+      offline
+    },
+
+    items
   });
 }
 /* -----------------------------
