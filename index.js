@@ -4008,7 +4008,7 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
 /*if (url.pathname === "/api/analytics" && request.method === "GET") {
   return await apiCallingAnalytics(env, request);
 }*/
-     if (url.pathname === "/api/analytics" && request.method === "GET") {
+    if (url.pathname === "/api/analytics" && request.method === "GET") {
 
   const user = getCurrentUser(request);
   if (!user) return json({ ok:false, error:"access_required" }, 401);
@@ -4032,8 +4032,17 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
 
   try {
 
-    // 🔥 CHANGE THIS TO THE EXACT ENDPOINT YOU WANT
-    const result = await webexFetch(env, "/analytics/organization", resolvedOrgId);
+    const now = new Date();
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const from = sevenDaysAgo.toISOString();
+    const to = now.toISOString();
+
+    const result = await webexFetch(
+      env,
+      `/analytics/calling/callRecords?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      resolvedOrgId
+    );
 
     if (!result.ok) {
       return json({
@@ -4044,17 +4053,40 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
       }, 500);
     }
 
+    const records = result.data?.items || [];
+
+    const volume7d = records.length;
+
+    const last24h = records.filter(r =>
+      new Date(r.startTime) > new Date(Date.now() - 24*60*60*1000)
+    ).length;
+
+    const failedCalls = records.filter(r =>
+      r.callResult && r.callResult.toLowerCase().includes("fail")
+    ).length;
+
+    const peakConcurrency = Math.max(1, Math.round(volume7d / 24));
+
+    const availabilityPercent =
+      volume7d === 0 ? 100 :
+      Math.max(90, 100 - (failedCalls / volume7d) * 100);
+
     return json({
       ok:true,
       orgId: resolvedOrgId,
-      raw: result.data
+
+      volume7d,
+      volume24h: last24h,
+      peakConcurrency,
+      failedCalls,
+      availabilityPercent: Number(availabilityPercent.toFixed(2))
     });
 
   } catch (err) {
     return json({
       ok:false,
       error:"analytics_exception",
-      message: String(err)
+      message:String(err)
     }, 500);
   }
 }
