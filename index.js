@@ -3215,7 +3215,7 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
 if (url.pathname === "/api/devices" && request.method === "GET") {
 
   const user = getCurrentUser(request);
-  if (!user) return json({ ok:false, error:"access_required" }, 401);
+  if (!user) return json({ ok:false, error: "access_required" }, 401);
 
   const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
@@ -3224,12 +3224,12 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
 
   if (user.isAdmin) {
     if (!requestedOrgId) {
-      return json({ ok:false, error:"missing_orgId" }, 400);
+      return json({ ok:false, error: "missing_orgId" }, 400);
     }
     resolvedOrgId = requestedOrgId;
   } else {
     if (!session?.orgId) {
-      return json({ ok:false, error:"pin_required" }, 401);
+      return json({ ok:false, error: "pin_required" }, 401);
     }
     resolvedOrgId = session.orgId;
   }
@@ -3239,8 +3239,9 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
   if (!result.ok) {
     return json({
       ok:false,
-      error:"webex_devices_failed",
-      status: result.status
+      error: "webex_devices_failed",
+      status: result.status,
+      preview: result.preview
     }, 500);
   }
 
@@ -3248,43 +3249,91 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
 
   let online = 0;
   let offline = 0;
+  let unknown = 0;
 
-  const items = raw.map(d => {
+  const normalized = raw.map(d => {
 
-    const statusRaw = String(d.connectionStatus || "").toLowerCase();
+    const connection = String(d.connectionStatus || "").toLowerCase();
+
+    const isOnline =
+      connection.includes("connected") ||
+      connection.includes("online") ||
+      connection.includes("registered");
 
     const status =
-      statusRaw.includes("online") ? "ONLINE" :
-      statusRaw.includes("connected") ? "ONLINE" :
-      statusRaw.includes("offline") ? "OFFLINE" :
-      statusRaw.includes("disconnected") ? "OFFLINE" :
+      isOnline ? "ONLINE" :
+      connection.includes("offline") ||
+      connection.includes("disconnected") ? "OFFLINE" :
       "UNKNOWN";
 
     if (status === "ONLINE") online++;
-    if (status === "OFFLINE") offline++;
+    else if (status === "OFFLINE") offline++;
+    else unknown++;
+
+    const lastSeen =
+      d.lastSeen ||
+      d.lastSeenTime ||
+      d.lastActivityTime ||
+      null;
+
+    let lastSeenAgeHours = null;
+    if (lastSeen) {
+      const diff = Date.now() - new Date(lastSeen).getTime();
+      if (!isNaN(diff)) {
+        lastSeenAgeHours = Math.round(diff / 36e5);
+      }
+    }
+
+    const deviceType =
+      d.workspaceLocationId ? "WORKSPACE" :
+      d.personId ? "USER" :
+      "UNKNOWN";
 
     return {
+      id: d.id,
       name: d.displayName || d.name || "—",
-      model: d.product || d.model || "—",
+      model: d.model || d.product || "—",
+      product: d.product || null,
+
+      connectionStatus: d.connectionStatus || "UNKNOWN",
       status,
-      location: d.locationName || "—",
-      lastSeen: d.lastSeen || null,
+
+      locationId: d.workspaceLocationId || d.locationId || null,
+      locationName: d.workspaceLocationName || null,
+
       mac: d.mac || null,
-      ip: d.ipAddress || null
+      ip: d.ipAddress || null,
+
+      deviceType,
+      lastSeen,
+      lastSeenAgeHours,
+
+      healthLevel:
+        status === "ONLINE" ? "green" :
+        status === "OFFLINE" ? "red" :
+        "yellow",
+
+      severity:
+        status === "ONLINE" ? 0 :
+        status === "OFFLINE" ? 2 :
+        1,
+
+      raw: d
     };
   });
+
+  const summary = {
+    totalDevices: normalized.length,
+    online,
+    offline,
+    unknown
+  };
 
   return json({
     ok: true,
     orgId: resolvedOrgId,
-
-    summary: {
-      totalDevices: items.length,
-      online,
-      offline
-    },
-
-    items
+    summary,
+    items: normalized
   });
 }
 /* -----------------------------
