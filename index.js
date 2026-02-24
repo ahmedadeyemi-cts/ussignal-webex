@@ -51,6 +51,14 @@ function looksLikeWebexOrgId(s) {
   const v = String(s || "");
   return v.startsWith("Y2lzY29zcGFyazov"); // Webex orgId base64-ish prefix
 }
+function isUnassignedNumber(n){
+  const s = String(n?.status || n?.state || "").toLowerCase();
+  if (s.includes("unassign")) return true;
+  if (s.includes("available")) return true;
+  if (n?.owner === null) return true;
+  if (!n?.owner && !n?.personId && !n?.workspaceId && !n?.virtualLineId) return true;
+  return false;
+}
 async function storeHealth(env, health) {
   await env.WEBEX.put(
     `health:${health.orgId}`,
