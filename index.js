@@ -144,11 +144,12 @@ async function webexFetch(env, path, orgId = null) {
 
   let finalPath = path;
 
-  // Some Webex APIs REQUIRE ?orgId= instead of header switching
-  const requiresQueryOrg =
-    path.startsWith("/analytics") ||
-    path.startsWith("/cdr") ||
-    path.startsWith("/telephony");
+  // Some Webex APIs REQUIRE ?orgId= instead of header switching Ahmed Check This later
+const requiresQueryOrg =
+  path.startsWith("/analytics") ||
+  path.startsWith("/cdr") ||
+  path.startsWith("/telephony") ||
+  path.startsWith("/licenses");
 
   if (orgId && requiresQueryOrg) {
     const sep = path.includes("?") ? "&" : "?";
