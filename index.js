@@ -175,6 +175,9 @@ function scopeModeForPath(path) {
   return rule ? rule.mode : "header";
 }
 async function webexFetch(env, path, orgId = null) {
+ if (orgId) {
+  await ensureDelegation(env, orgId);
+}
   const token = await getAccessToken(env);
 
   const mode = scopeModeForPath(path);
@@ -617,7 +620,49 @@ async function downloadWebexReport(env, orgId, reportId) {
       return data.access_token;
     }
  
+// =====================================================
+// Delegation Engine (Enterprise Multi-Tenant)
+// =====================================================
 
+const DELEGATION_KV_PREFIX = "delegation:";
+
+async function isDelegated(env, orgId) {
+  const v = await env.WEBEX.get(`${DELEGATION_KV_PREFIX}${orgId}`);
+  return !!v;
+}
+
+async function markDelegated(env, orgId) {
+  await env.WEBEX.put(
+    `${DELEGATION_KV_PREFIX}${orgId}`,
+    "1",
+    { expirationTtl: 82800 } // 23h
+  );
+}
+
+async function warmDelegation(env, orgId) {
+  const token = await getAccessToken(env);
+
+  const res = await fetch(
+    `https://webexapis.com/v1/organizations/${orgId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  if (!res.ok) {
+    console.log("Delegation warm failed:", orgId, res.status);
+    return false;
+  }
+
+  await markDelegated(env, orgId);
+  return true;
+}
+
+async function ensureDelegation(env, orgId) {
+  if (!orgId) return;
+  const delegated = await isDelegated(env, orgId);
+  if (!delegated) {
+    await warmDelegation(env, orgId);
+  }
+}
     /* =====================================================
        Identity helpers
     ===================================================== */
@@ -957,6 +1002,13 @@ async function renderCustomerPSTNHTML() {
     "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/pstn.html"
   );
   if (!res.ok) throw new Error("Failed to load customer PSTN UI");
+  return await res.text();
+}
+async function renderCustomerSUPPORTHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/support.html"
+  );
+  if (!res.ok) throw new Error("Failed to load customer Support UI");
   return await res.text();
 }
 async function renderCustomerObservabilityHTML() {
@@ -1793,7 +1845,21 @@ async function buildPstnDeep(env, orgId) {
     diagnostics
   };
 }
+async function prewarmAllTenants(env) {
+  const orgs = await webexFetch(env, "/organizations");
 
+  if (!orgs.ok) return;
+
+  const items = orgs.data.items || [];
+
+  await mapLimit(items, 5, async (o) => {
+    try {
+      await warmDelegation(env, o.id);
+    } catch {}
+  });
+
+  return items.length;
+}
 async function computeGlobalSummary(env) {
   const orgResult = await webexFetch(env, "/organizations");
 
@@ -1945,7 +2011,6 @@ if (!pstnResult.ok) {
 }
 
 export default {
-
   async fetch(request, env, ctx) {
     try {
       const url = new URL(request.url);
@@ -2119,7 +2184,47 @@ if (!looksLikeWebexOrgId(orgId)) {
     ranAs: email,
   });
 }
+if (path === "/api/delegation/warm" && request.method === "POST") {
 
+  const { ok, user } = requireUser(request);
+  if (!ok) return user;
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const body = await request.json();
+  const orgId = body?.orgId;
+
+  if (!orgId) return json({ error: "missing_orgId" }, 400);
+
+  const success = await warmDelegation(env, orgId);
+
+  return json({ ok: success });
+}
+if (path === "/api/admin/delegation-health") {
+
+  const { ok, user } = requireUser(request);
+  if (!ok) return user;
+  if (!user.isAdmin) return json({ error: "admin_only" }, 403);
+
+  const orgs = await webexFetch(env, "/organizations");
+  if (!orgs.ok) return json({ error: "org_list_failed" }, 500);
+
+  const results = [];
+
+  for (const o of orgs.data.items || []) {
+    const delegated = await isDelegated(env, o.id);
+    results.push({
+      orgId: o.id,
+      orgName: o.displayName,
+      delegated
+    });
+  }
+
+  return json({
+    total: results.length,
+    delegatedCount: results.filter(r => r.delegated).length,
+    results
+  });
+}
       /* -----------------------------
    PIN UI
 ----------------------------- */
@@ -2253,6 +2358,14 @@ if (url.pathname === "/customer/cdr" && request.method === "GET") {
 ----------------------------- */
 if (url.pathname === "/customer/pstn" && request.method === "GET") {
   return text(await renderCustomerPSTNHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+     /* -----------------------------
+   Customer UI: Support
+----------------------------- */
+if (url.pathname === "/customer/support" && request.method === "GET") {
+  return text(await renderCustomerSUPPORTHTML(), 200, {
     "content-type": "text/html; charset=utf-8",
   });
 }
@@ -4562,6 +4675,19 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
     availabilityPercent: Number(availabilityPercent.toFixed(2))
   }, 200);
 }
+     if (path === "/api/delegation/warm" && request.method === "POST") {
+  const { ok, user } = requireUser(request);
+  if (!ok) return user;
+
+  const body = await request.json();
+  const orgId = body?.orgId;
+
+  if (!orgId) return json({ error: "missing_orgId" }, 400);
+
+  const success = await warmDelegation(env, orgId);
+
+  return json({ ok: success });
+}
 /* if (url.pathname === "/api/cdr" && request.method === "GET") {
   return await apiCDR(env, request);
 } */
@@ -5433,6 +5559,14 @@ async scheduled(event, env, ctx) {
       if (!orgResult.ok) return;
 
       const orgs = orgResult.data.items || [];
+     // 🔵 Delegation prewarm (safe, lightweight)
+   await mapLimit(orgs, 5, async (org) => {
+   try {
+    await warmDelegation(env, org.id);
+  } catch (e) {
+    console.log("Delegation warm failed for:", org.id);
+  }
+});
       const CONCURRENCY = 5;
 
       await mapLimit(orgs, CONCURRENCY, async (org) => {
@@ -5447,7 +5581,7 @@ async scheduled(event, env, ctx) {
           { expirationTtl: 60 * 30 }
         );
 
-
+         
         const pstn = await buildPstnDeep(env, org.id);
         await storePstnSnapshot(env, org.id, pstn);
 
@@ -5462,7 +5596,6 @@ async scheduled(event, env, ctx) {
         });
 
       });
-
       // Global snapshot once per cron run
       try {
         const globalPayload = await computeGlobalSummary(env);
@@ -5476,6 +5609,7 @@ async scheduled(event, env, ctx) {
 
     } catch (err) {
       console.error("Scheduled task failed:", err);
+     
     }
   })());
 }
