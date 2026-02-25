@@ -3085,12 +3085,32 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   let resolvedOrgId;
 
-  if (user.isAdmin) {
-    if (!requestedOrgId) {
-      return json({ ok:false, error:"missing_orgId" }, 400);
-    }
-    resolvedOrgId = requestedOrgId;
-  } else {
+//  if (user.isAdmin) {
+//    if (!requestedOrgId) {
+    //  return json({ ok:false, error:"missing_orgId" }, 400);
+  //  }
+ 
+  //  resolvedOrgId = requestedOrgId;  } 
+if (user.isAdmin) {
+  if (!requestedOrgId) {
+    return json({ ok:false, error:"missing_orgId" }, 400);
+  }
+
+  // 🚫 Prevent partner org license calls
+  const partnerCheck = await webexFetch(env, "/organizations");
+  const orgList = partnerCheck.data?.items || [];
+  const partnerOrg = orgList[0]?.id; // partner org is always first
+
+  if (requestedOrgId === partnerOrg) {
+    return json({
+      ok:false,
+      error:"licenses_not_available_for_partner_org"
+    }, 400);
+  }
+
+  resolvedOrgId = requestedOrgId;
+} 
+else {
     if (!session?.orgId) {
       return json({ ok:false, error:"pin_required" }, 401);
     }
