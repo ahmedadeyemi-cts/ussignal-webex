@@ -469,7 +469,111 @@ function pickReference(obj) {
       attemptsKeyEmail: (email) => `pinAttempts:email:${email}`,
       attemptsKeyIp: (ip) => `pinAttempts:ip:${ip}`,
     };
+// =====================================================
+// REPORTS ENGINE (Partner Multi-Tenant)
+// Place AFTER webexFetchSafe()
+// =====================================================
 
+const REPORTS_KV_PREFIX = "reports:";
+
+// Create report
+async function createWebexReport(env, orgId, reportType, params = {}) {
+
+  const body = {
+    reportType,
+    parameters: params
+  };
+
+  const token = await getAccessToken(env);
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json"
+  };
+
+  // Always use org query scoping for reports
+  const url = `https://webexapis.com/v1/reports?orgId=${encodeURIComponent(orgId)}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body)
+  });
+
+  const text = await res.text();
+
+  if (!res.ok) {
+    return {
+      ok:false,
+      status:res.status,
+      preview:text.slice(0,400)
+    };
+  }
+
+  const data = JSON.parse(text);
+
+  // Store metadata in KV
+  await env.WEBEX.put(
+    `${REPORTS_KV_PREFIX}${data.id}`,
+    JSON.stringify({
+      orgId,
+      reportType,
+      createdAt:new Date().toISOString(),
+      status:data.status
+    }),
+    { expirationTtl: 60 * 60 * 24 * 7 } // 7 days
+  );
+
+  return { ok:true, data };
+}
+
+// Get report status
+async function getWebexReport(env, orgId, reportId) {
+
+  const token = await getAccessToken(env);
+
+  const url = `https://webexapis.com/v1/reports/${reportId}?orgId=${encodeURIComponent(orgId)}`;
+
+  const res = await fetch(url, {
+    headers: { Authorization:`Bearer ${token}` }
+  });
+
+  const text = await res.text();
+
+  if (!res.ok) {
+    return {
+      ok:false,
+      status:res.status,
+      preview:text.slice(0,400)
+    };
+  }
+
+  return { ok:true, data:JSON.parse(text) };
+}
+
+// Proxy download file
+async function downloadWebexReport(env, orgId, reportId) {
+
+  const status = await getWebexReport(env, orgId, reportId);
+  if (!status.ok) return status;
+
+  if (status.data.status !== "completed") {
+    return { ok:false, error:"not_completed" };
+  }
+
+  const token = await getAccessToken(env);
+
+  const fileRes = await fetch(status.data.downloadUrl, {
+    headers:{ Authorization:`Bearer ${token}` }
+  });
+
+  return {
+    ok:fileRes.ok,
+    status:fileRes.status,
+    body:fileRes.body,
+    contentType:fileRes.headers.get("content-type")
+  };
+}
     /* =====================================================
        Webex Token Handling (refresh + KV cache)
     ===================================================== */
@@ -4534,6 +4638,160 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
   }, 200);
 }
 
+     // =====================================================
+// POST /api/reports
+// =====================================================
+if (url.pathname === "/api/reports" && request.method === "POST") {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
+  const session = await getSession(env, user.email);
+  const body = await request.json().catch(()=>({}));
+
+  const requestedOrgId = normalizeOrgIdParam(body.orgId);
+  const reportType = body.reportType;
+
+  if (!reportType) {
+    return json({ ok:false, error:"missing_reportType" }, 400);
+  }
+
+  let resolvedOrgId;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) return json({ ok:false, error:"missing_orgId" }, 400);
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) return json({ ok:false, error:"pin_required" }, 401);
+    resolvedOrgId = session.orgId;
+  }
+
+  const result = await createWebexReport(
+    env,
+    resolvedOrgId,
+    reportType,
+    body.parameters || {}
+  );
+
+  if (!result.ok) {
+    return json({ ok:false, error:"report_create_failed", preview:result.preview }, 200);
+  }
+
+  return json({
+    ok:true,
+    orgId:resolvedOrgId,
+    report:result.data
+  }, 200);
+}
+ // =====================================================
+// GET /api/reports/:id
+// =====================================================
+if (url.pathname.startsWith("/api/reports/") &&
+    request.method === "GET" &&
+    !url.pathname.endsWith("/file")) {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
+  const reportId = url.pathname.split("/").pop();
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  const session = await getSession(env, user.email);
+
+  let resolvedOrgId;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) return json({ ok:false, error:"missing_orgId" }, 400);
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) return json({ ok:false, error:"pin_required" }, 401);
+    resolvedOrgId = session.orgId;
+  }
+
+  const result = await getWebexReport(env, resolvedOrgId, reportId);
+
+  if (!result.ok) {
+    return json({ ok:false, error:"report_fetch_failed" }, 200);
+  }
+
+  return json({
+    ok:true,
+    report:result.data
+  }, 200);
+}
+ // =====================================================
+// GET /api/reports/:id
+// =====================================================
+if (url.pathname.startsWith("/api/reports/") &&
+    request.method === "GET" &&
+    !url.pathname.endsWith("/file")) {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
+  const reportId = url.pathname.split("/").pop();
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  const session = await getSession(env, user.email);
+
+  let resolvedOrgId;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) return json({ ok:false, error:"missing_orgId" }, 400);
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) return json({ ok:false, error:"pin_required" }, 401);
+    resolvedOrgId = session.orgId;
+  }
+
+  const result = await getWebexReport(env, resolvedOrgId, reportId);
+
+  if (!result.ok) {
+    return json({ ok:false, error:"report_fetch_failed" }, 200);
+  }
+
+  return json({
+    ok:true,
+    report:result.data
+  }, 200);
+}
+ // =====================================================
+// GET /api/reports/:id/file
+// =====================================================
+if (url.pathname.endsWith("/file") &&
+    url.pathname.startsWith("/api/reports/") &&
+    request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
+  const parts = url.pathname.split("/");
+  const reportId = parts[3];
+
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  const session = await getSession(env, user.email);
+
+  let resolvedOrgId;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) return json({ ok:false, error:"missing_orgId" }, 400);
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) return json({ ok:false, error:"pin_required" }, 401);
+    resolvedOrgId = session.orgId;
+  }
+
+  const result = await downloadWebexReport(env, resolvedOrgId, reportId);
+
+  if (!result.ok) {
+    return json({ ok:false, error:"download_failed" }, 200);
+  }
+
+  return new Response(result.body, {
+    status:200,
+    headers:{
+      "Content-Type": result.contentType || "application/octet-stream"
+    }
+  });
+}
      /* -----------------------------
    /api/pstn (GET)
    - Admin: requires ?orgId=
