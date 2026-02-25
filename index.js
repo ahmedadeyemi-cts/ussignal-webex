@@ -148,9 +148,7 @@ async function webexFetch(env, path, orgId = null) {
 const requiresQueryOrg =
   path.startsWith("/analytics") ||
   path.startsWith("/cdr") ||
-  path.startsWith("/telephony") ||
   path.startsWith("/licenses") ||
-  path.startsWith("/pstn") ||
   path.startsWith("/devices");
 
   if (orgId && requiresQueryOrg) {
