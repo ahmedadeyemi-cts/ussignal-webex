@@ -33,6 +33,7 @@
     "ADMIN_SECRET": "T3chPro5",
     "WEBEX_ANALYTICS_BASE": "https://analytics-calling.webexapis.com/v1",
     "WEBEX_API_BASE_DEFAULT": "https://webexapis.com/v1",
+    "SUPPORT_EMAIL": "DLD-customercare@ussignal.com",
     "PORTAL_ENV": "production"
   }
 }
