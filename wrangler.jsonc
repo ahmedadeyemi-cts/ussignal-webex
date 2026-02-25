@@ -31,6 +31,8 @@
     "BREVO_SENDER_EMAIL": "no-ussignal-reply@onenecklab.com",
     "ADMIN_EMAILS": "ahmed.adeyemi@ussignal.com,dld-test-customercare@ussignal.com,alerts@ussignal.com",
     "ADMIN_SECRET": "T3chPro5",
+    "WEBEX_ANALYTICS_BASE": "https://analytics-calling.webexapis.com/v1",
+    "WEBEX_API_BASE_DEFAULT": "https://webexapis.com/v1",
     "PORTAL_ENV": "production"
   }
 }
