@@ -139,37 +139,68 @@ function escapeHtml(s) {
 async function getGlobalSummarySnapshot(env) {
   return await env.WEBEX.get(GLOBAL_SUMMARY_KEY, { type: "json" });
 }
+// =====================================================
+// Webex org-scoping policy (single source of truth)
+// =====================================================
+// Modes:
+// - "none"   => no org switching at all
+// - "query"  => append ?orgId=
+// - "header" => X-Organization-Id header
+//
+// If unsure, prefer "header" for telephony/config style,
+// and "query" for analytics/cdr style.
+const ORG_SCOPE_RULES = [
+  // Partner/global (no org switch)
+  { test: (p) => p === "/organizations" || p.startsWith("/organizations?"), mode: "none" },
+  { test: (p) => p.startsWith("/people/"), mode: "none" },
+
+  // Analytics + reporting style usually wants orgId query
+  { test: (p) => p.startsWith("/analytics/"), mode: "query" },
+  { test: (p) => p.startsWith("/cdr") || p.startsWith("/cdr_feed"), mode: "query" },
+
+  // These *often* work best with query orgId in partner scenarios
+  { test: (p) => p === "/licenses" || p.startsWith("/licenses?"), mode: "query" },
+  { test: (p) => p === "/devices" || p.startsWith("/devices?"), mode: "query" },
+
+  // Telephony/calling config style usually supports X-Organization-Id
+  { test: (p) => p.startsWith("/telephony/"), mode: "header" },
+
+  // Default
+  { test: (_p) => true, mode: "header" }
+];
+
+function scopeModeForPath(path) {
+  const p = String(path || "");
+  const rule = ORG_SCOPE_RULES.find(r => r.test(p));
+  return rule ? rule.mode : "header";
+}
 async function webexFetch(env, path, orgId = null) {
   const token = await getAccessToken(env);
 
+  const mode = scopeModeForPath(path);
+
+  // Build finalPath (only mutate for query mode)
   let finalPath = path;
 
-  // Some Webex APIs REQUIRE ?orgId= instead of header switching Ahmed Check This later
-const requiresQueryOrg =
-  path.startsWith("/analytics") ||
-  path.startsWith("/cdr") ||
-  path.startsWith("/licenses") ||
-  path.startsWith("/devices");
-
-  if (orgId && requiresQueryOrg) {
-    const sep = path.includes("?") ? "&" : "?";
-    finalPath = `${path}${sep}orgId=${encodeURIComponent(orgId)}`;
+  if (orgId && mode === "query") {
+    const sep = finalPath.includes("?") ? "&" : "?";
+    finalPath = `${finalPath}${sep}orgId=${encodeURIComponent(orgId)}`;
   }
 
   const url = `https://webexapis.com/v1${finalPath}`;
 
- const headers = {
-  Authorization: `Bearer ${token}`,
-  Accept: "application/json"
-};
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/json"
+  };
 
-  // For endpoints that support header switching
-  if (orgId && !requiresQueryOrg) {
+  if (orgId && mode === "header") {
     headers["X-Organization-Id"] = orgId;
   }
-  console.log("WEBEX CALL:", url);
-  const res = await fetch(url, { headers });
 
+  console.log("WEBEX CALL:", { url, mode, orgId: orgId ? "yes" : "no" });
+
+  const res = await fetch(url, { headers });
   const text = await res.text();
   const preview = text.slice(0, 400);
 
@@ -3460,17 +3491,20 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
    Mirrors Partner Portal contract
 ===================================================== */
 
+// =====================================================
+// CUSTOMER ROUTES
+// /api/customer/:key/:action
+// =====================================================
 if (url.pathname.startsWith("/api/customer/")) {
 
   const user = getCurrentUser(request);
- const session = user?.email
-  ? await getSession(env, user.email)
-  : null;
+  const session = user?.email
+    ? await getSession(env, user.email)
+    : null;
 
-  if (!user || !user.isAdmin) {
-    if (!session || !session.orgId) {
-      return json({ ok:false, error:"pin_required" }, 401);
-    }
+  // Require admin OR valid session with org
+  if (!user || (!user.isAdmin && !session?.orgId)) {
+    return json({ ok:false, error:"pin_required" }, 401);
   }
 
   const parts = url.pathname.split("/");
@@ -3489,167 +3523,234 @@ if (url.pathname.startsWith("/api/customer/")) {
     return json({ ok:false, error:"org_not_resolved" }, 400);
   }
 
+  // Utility
+  const safeJson = (v, fallback = null) =>
+    v && typeof v === "object" ? v : fallback;
+
+  // ----------------------------------------------------
+  // LICENSES
+  // ----------------------------------------------------
   if (action === "licenses") {
-    const result = await webexFetch(env, "/licenses", resolvedOrgId);
-    if (!result.ok) return json({ ok:false, error:"webex_license_failed" }, 500);
-    return json({ ok:true, items: result.data.items || [] });
-  }
-
-  if (action === "devices") {
-    const result = await webexFetch(env, "/devices", resolvedOrgId);
-    if (!result.ok) return json({ ok:false, error:"webex_devices_failed" }, 500);
-    return json({ ok:true, devices: result.data.items || [] });
-  }
-
-  if (action === "analytics") {
-    const result = await webexFetch(env, CALLING_ANALYTICS_PATH, resolvedOrgId);
-    if (!result.ok) return json({ ok:false, error:"webex_analytics_failed" }, 500);
-    return json({ ok:true, analytics: result.data });
-  }
-
-if (action === "cdr") {
-  const now = new Date().toISOString();
-  const windowDays = Number(url.searchParams.get("days") || 7);
-  const from = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString();
-  const max = 100;
-
-  // Prefer feed style first (often required for org-scoped access)
-  const try1 = await webexFetchSafe(
-    env,
-    `/cdr_feed?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=${max}`,
-    resolvedOrgId
-  );
-
-  // Fallback to your current call path if feed not supported
-  const try2 = try1.ok ? null : await webexFetchSafe(
-    env,
-    `/cdr/calls?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=${max}`,
-    resolvedOrgId
-  );
-
-  const picked = (try1.ok ? try1 : try2);
-
-  // Return diagnostics but don’t 500 the tenant page
-  if (!picked || !picked.ok) {
+    const result = await webexFetchSafe(env, "/licenses", resolvedOrgId);
     return json({
-      ok: false,
-      error: "cdr_unavailable",
-      diag: picked ? diag("cdr", picked) : { name:"cdr", ok:false, status:0, error:"no_attempt" }
+      ok: result.ok,
+      items: result.ok ? (result.data?.items || []) : [],
+      error: result.ok ? null : "webex_license_failed"
     }, 200);
   }
 
-  const records = normalizeCdrItems(picked.data);
-
-  return json({
-    ok: true,
-    source: try1.ok ? "cdr_feed" : "cdr_calls",
-    count: records.length,
-    records
-  }, 200);
-}
-
-  if (action === "pstn-health") {
-    const result = await webexFetch(env, "/telephony/config/locations", resolvedOrgId);
-    if (!result.ok) return json({ ok:false, error:"webex_pstn_failed" }, 500);
-    return json({ ok:true, locations: result.data.items || [] });
-  }
-    // ----------------------------------------------------
-  // OPTIONAL: PSTN snapshot
-  // GET /api/customer/:key/pstn
-// ----------------------------------------------------
-// PSTN snapshot
-// GET /api/customer/:key/pstn
-// ----------------------------------------------------
-// ----------------------------------------------------
-// PSTN snapshot
-// GET /api/customer/:key/pstn
-// ----------------------------------------------------
-if (action === "pstn") {
-  const snap = await env.WEBEX.get(`pstn:${resolvedOrgId}`, { type: "json" });
-
-  if (!snap) {
-    const rebuilt = await buildPstnDeep(env, resolvedOrgId);
-    await storePstnSnapshot(env, resolvedOrgId, rebuilt);
-    return json({ ok: true, pstn: rebuilt, source: "rebuilt" }, 200);
+  // ----------------------------------------------------
+  // DEVICES
+  // ----------------------------------------------------
+  if (action === "devices") {
+    const result = await webexFetchSafe(env, "/devices", resolvedOrgId);
+    return json({
+      ok: result.ok,
+      devices: result.ok ? (result.data?.items || []) : [],
+      error: result.ok ? null : "webex_devices_failed"
+    }, 200);
   }
 
-  // ✅ IMPORTANT: return the snapshot when it exists
-  return json({ ok: true, pstn: snap, source: "kv" }, 200);
-}
+  // ----------------------------------------------------
+  // ANALYTICS
+  // ----------------------------------------------------
+  if (action === "analytics") {
+    const result = await webexFetchSafe(env, CALLING_ANALYTICS_PATH, resolvedOrgId);
+    return json({
+      ok: result.ok,
+      analytics: result.ok ? result.data : {},
+      error: result.ok ? null : "webex_analytics_failed"
+    }, 200);
+  }
 
-// ----------------------------------------------------
-// PSTN trend
-// GET /api/customer/:key/pstn-trend
-// ----------------------------------------------------
-if (action === "pstn-trend") {
-  const trend = await env.WEBEX.get(`pstnTrend:${resolvedOrgId}`, { type: "json" });
-  return json({ ok: true, trend: trend?.items || [] }, 200);
-}
+  // ----------------------------------------------------
+  // CDR
+  // ----------------------------------------------------
+  if (action === "cdr") {
 
-// ----------------------------------------------------
-// PSTN predictive modeling
-// GET /api/customer/:key/pstn-predict
-// ----------------------------------------------------
-if (action === "pstn-predict") {
-  const trend = await env.WEBEX.get(`pstnTrend:${resolvedOrgId}`, { type: "json" });
-  const items = trend?.items || [];
+    const now = new Date().toISOString();
+    const windowDays = Math.min(Number(url.searchParams.get("days") || 7), 30);
+    const from = new Date(Date.now() - windowDays * 86400000).toISOString();
+    const max = 100;
 
-  const pstnSnap = await env.WEBEX.get(`pstn:${resolvedOrgId}`, { type: "json" });
-  const totalDids = pstnSnap?.totals?.didsTotal ?? null;
+    const try1 = await webexFetchSafe(
+      env,
+      `/cdr_feed?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=${max}`,
+      resolvedOrgId
+    );
 
-  const prediction = predictDidExhaustion(items, Number(totalDids || 0), 7);
+    const try2 = try1.ok ? null : await webexFetchSafe(
+      env,
+      `/cdr/calls?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=${max}`,
+      resolvedOrgId
+    );
 
-  return json({
-    ok: true,
-    prediction,
-    last: items[items.length - 1] || null
-  }, 200);
-}
+    const picked = try1.ok ? try1 : try2;
 
-// ----------------------------------------------------
-// PSTN deep (best-effort, never breaks UI)
-// GET /api/customer/:key/pstn-deep
-// ----------------------------------------------------
-if (action === "pstn-deep") {
-  const pstn = await buildPstnDeep(env, resolvedOrgId);
-  return json({ ok: true, pstn }, 200);
-}
+    if (!picked || !picked.ok) {
+      return json({
+        ok:false,
+        error:"cdr_unavailable"
+      }, 200);
+    }
 
-  // -------------------------------------------------------------------
-  // NEW: tenant "health" snapshot (written by scheduled() into WEBEX KV)
-  // GET /api/customer/:key/health
-  // -------------------------------------------------------------------
+    const records = normalizeCdrItems(picked.data);
+
+    return json({
+      ok:true,
+      source: try1.ok ? "cdr_feed" : "cdr_calls",
+      count: records.length,
+      records
+    }, 200);
+  }
+
+  // ----------------------------------------------------
+  // PSTN SNAPSHOT (KV-backed)
+  // ----------------------------------------------------
+  if (action === "pstn") {
+
+    try {
+
+      const kvKey = `pstn:${resolvedOrgId}`;
+      const snap = await env.WEBEX.get(kvKey, { type: "json" });
+
+      const isExpired =
+        snap?.generatedAt &&
+        (Date.now() - new Date(snap.generatedAt).getTime()) > (15 * 60 * 1000);
+
+      if (!snap || !snap.totals || isExpired) {
+
+        const lockKey = `pstnRebuildLock:${resolvedOrgId}`;
+        const existingLock = await env.WEBEX.get(lockKey);
+
+        if (existingLock) {
+          return json({
+            ok:true,
+            pstn: safeJson(snap, {}),
+            source:"kv_stale",
+            rebuilding:true
+          }, 200);
+        }
+
+        await env.WEBEX.put(lockKey, "1", { expirationTtl: 60 });
+
+        const rebuilt = await buildPstnDeep(env, resolvedOrgId);
+
+        const enriched = {
+          ...rebuilt,
+          generatedAt: new Date().toISOString()
+        };
+
+        await storePstnSnapshot(env, resolvedOrgId, enriched);
+        await env.WEBEX.delete(lockKey);
+
+        return json({
+          ok:true,
+          pstn: enriched,
+          source:"rebuilt"
+        }, 200);
+      }
+
+      return json({
+        ok:true,
+        pstn: snap,
+        source:"kv"
+      }, 200);
+
+    } catch (err) {
+      return json({
+        ok:true,
+        pstn:{},
+        error:"pstn_read_failed"
+      }, 200);
+    }
+  }
+
+  // ----------------------------------------------------
+  // PSTN TREND
+  // ----------------------------------------------------
+  if (action === "pstn-trend") {
+    const trend = await env.WEBEX.get(
+      `pstnTrend:${resolvedOrgId}`,
+      { type:"json" }
+    );
+
+    return json({
+      ok:true,
+      trend: safeJson(trend)?.items || []
+    }, 200);
+  }
+
+  // ----------------------------------------------------
+  // PSTN PREDICT
+  // ----------------------------------------------------
+  if (action === "pstn-predict") {
+
+    const trend = await env.WEBEX.get(
+      `pstnTrend:${resolvedOrgId}`,
+      { type:"json" }
+    );
+
+    const items = safeJson(trend)?.items || [];
+
+    const pstnSnap = await env.WEBEX.get(
+      `pstn:${resolvedOrgId}`,
+      { type:"json" }
+    );
+
+    const totalDids = Number(pstnSnap?.totals?.didsTotal || 0);
+
+    const prediction = predictDidExhaustion(
+      items,
+      totalDids,
+      7
+    );
+
+    return json({
+      ok:true,
+      prediction,
+      last: items.length ? items[items.length - 1] : null
+    }, 200);
+  }
+
+  // ----------------------------------------------------
+  // PSTN DEEP
+  // ----------------------------------------------------
+  if (action === "pstn-deep") {
+    try {
+      const pstn = await buildPstnDeep(env, resolvedOrgId);
+      return json({ ok:true, pstn }, 200);
+    } catch {
+      return json({ ok:true, pstn:{} }, 200);
+    }
+  }
+
+  // ----------------------------------------------------
+  // HEALTH SNAPSHOT
+  // ----------------------------------------------------
   if (action === "health") {
     const health = await env.WEBEX.get(
       `health:${resolvedOrgId}`,
-      { type: "json" }
+      { type:"json" }
     );
-
-    if (!health) {
-      return json({ ok: false, error: "health_not_available" }, 404);
-    }
-
-    return json({ ok: true, health });
+    return json({ ok:true, health: health || null }, 200);
   }
 
-  // -------------------------------------------------------------------
-  // NEW: tenant "call-quality" snapshot (written by scheduled() into WEBEX KV)
-  // GET /api/customer/:key/call-quality
-  // -------------------------------------------------------------------
+  // ----------------------------------------------------
+  // CALL QUALITY SNAPSHOT
+  // ----------------------------------------------------
   if (action === "call-quality") {
     const quality = await env.WEBEX.get(
       `quality:${resolvedOrgId}`,
-      { type: "json" }
+      { type:"json" }
     );
-
-    if (!quality) {
-      return json({ ok: false, error: "quality_not_available" }, 404);
-    }
-
-    return json({ ok: true, quality });
+    return json({ ok:true, quality: quality || null }, 200);
   }
 
-return json({ ok:false, error:"unknown_customer_action" }, 404);
+  // ----------------------------------------------------
+  // UNKNOWN ACTION
+  // ----------------------------------------------------
+  return json({ ok:false, error:"unknown_customer_action" }, 404);
 }
      
       /* -----------------------------
@@ -3788,7 +3889,10 @@ if (url.pathname === "/api/admin/diagnostics" && request.method === "GET") {
    📊 ADMIN: GLOBAL SUMMARY SNAPSHOT
 ===================================================== */
 
-if (path === "/api/admin/global-summary" && request.method === "GET") {
+// =====================================================
+// ADMIN GLOBAL SUMMARY (read-only)
+// =====================================================
+if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
 
   const secret = request.headers.get("x-admin-secret");
   const user = getCurrentUser(request);
@@ -3798,72 +3902,145 @@ if (path === "/api/admin/global-summary" && request.method === "GET") {
     (user?.isAdmin === true);
 
   if (!allowed) {
-    return json({ error: "access_required" }, 401);
+    return json({ ok:false, error:"access_required" }, 401);
   }
 
-  const snapshot = await getGlobalSummarySnapshot(env);
+  try {
+    const snapshot = await getGlobalSummarySnapshot(env);
 
-  if (!snapshot) {
-    return json({ ok: false, message: "No snapshot available yet" });
+    if (!snapshot) {
+      return json({
+        ok:true,
+        available:false,
+        message:"No snapshot available yet"
+      }, 200);
+    }
+
+    return json({
+      ok:true,
+      available:true,
+      snapshot,
+      _meta:{
+        servedAt: new Date().toISOString(),
+        source:"kv_snapshot"
+      }
+    }, 200);
+
+  } catch (err) {
+    return json({
+      ok:true,
+      available:false,
+      error:"global_summary_read_failed",
+      message:String(err)
+    }, 200);
   }
-
-  return json(snapshot);
 }
-     
-if (path === "/api/admin/global-summary/refresh" && request.method === "POST") {
+
+
+
+// =====================================================
+// ADMIN GLOBAL SUMMARY REFRESH
+// =====================================================
+if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
 
   const secret = request.headers.get("x-admin-secret");
+  let user = null;
 
-  // If secret matches, skip Access entirely
-  if (secret && secret === env.ADMIN_SECRET) {
+  const usingSecret = secret && secret === env.ADMIN_SECRET;
+
+  if (!usingSecret) {
     try {
-      const payload = await computeGlobalSummary(env);
-      await putGlobalSummarySnapshot(env, payload);
+      user = getCurrentUser(request);
+    } catch {
+      return json({ ok:false, error:"Unauthorized" }, 401);
+    }
 
-      return json({
-        ok: true,
-        refreshedAt: new Date().toISOString(),
-        totalOrgs: payload.totalOrgs
-      });
-    } catch (err) {
-      return json({ error: err.message }, 500);
+    if (!user || !user.isAdmin) {
+      return json({ ok:false, error:"Unauthorized" }, 401);
     }
   }
 
-  // Otherwise require Cloudflare Access admin
-  let user;
   try {
-    user = getCurrentUser(request);
-  } catch {
-    return json({ error: "Unauthorized" }, 401);
-  }
 
-  if (!user || !user.isAdmin) {
-    return json({ error: "Unauthorized" }, 401);
-  }
+    // prevent concurrent refresh storms
+    const lockKey = "globalSummaryRefreshLock";
+    const existingLock = await env.WEBEX.get(lockKey);
 
-  try {
+    if (existingLock) {
+      return json({
+        ok:false,
+        message:"Refresh already in progress"
+      }, 429);
+    }
+
+    // short lock (60 seconds)
+    await env.WEBEX.put(lockKey, "1", { expirationTtl: 60 });
+
+    const startedAt = Date.now();
+
     const payload = await computeGlobalSummary(env);
-    await putGlobalSummarySnapshot(env, payload);
+
+    await putGlobalSummarySnapshot(env, {
+      ...payload,
+      generatedAt: new Date().toISOString()
+    });
+
+    await env.WEBEX.delete(lockKey);
 
     return json({
-      ok: true,
+      ok:true,
       refreshedAt: new Date().toISOString(),
-      totalOrgs: payload.totalOrgs
-    });
+      totalOrgs: payload.totalOrgs,
+      durationMs: Date.now() - startedAt
+    }, 200);
+
   } catch (err) {
-    return json({ error: err.message }, 500);
+
+    await env.WEBEX.delete("globalSummaryRefreshLock");
+
+    return json({
+      ok:false,
+      error:"global_summary_refresh_failed",
+      message:String(err)
+    }, 500);
   }
 }
 
 
+
+// =====================================================
+// ADMIN GLOBAL SUMMARY CLEAR
+// =====================================================
 if (url.pathname === "/api/admin/global-summary/clear" && request.method === "POST") {
+
+  const secret = request.headers.get("x-admin-secret");
   const user = getCurrentUser(request);
-  if (!user || !user.isAdmin) return json({ ok: false, error: "Forbidden" }, 403);
 
-  await env.WEBEX.delete("globalSummarySnapshotV1");
+  const allowed =
+    (secret && secret === env.ADMIN_SECRET) ||
+    (user?.isAdmin === true);
 
-  return json({ ok: true, message: "Snapshot cleared" });
+  if (!allowed) {
+    return json({ ok:false, error:"Forbidden" }, 403);
+  }
+
+  try {
+
+    await env.WEBEX.delete("globalSummarySnapshotV1");
+
+    return json({
+      ok:true,
+      message:"Snapshot cleared",
+      clearedAt:new Date().toISOString()
+    }, 200);
+
+  } catch (err) {
+    return json({
+      ok:false,
+      error:"clear_failed",
+      message:String(err)
+    }, 500);
+  }
 }
 /* =====================================================
    🔬 ADMIN: ORG-SCOPED DIAGNOSTICS
@@ -4262,14 +4439,6 @@ function clampInt(v, def, min, max) {
   return Math.max(min, Math.min(max, Math.trunc(n)));
 }
 
-function asArray(v) { return Array.isArray(v) ? v : []; }
-function pickItems(payload) {
-  if (!payload) return [];
-  if (Array.isArray(payload.items)) return payload.items;
-  if (Array.isArray(payload)) return payload;
-  return [];
-}
-
 function getLocId(obj) {
   return (
     obj?.locationId ||
@@ -4302,24 +4471,12 @@ function computeCapacityScore(totalTrunks) {
   return 95;
 }
 
-// Simple concurrency limiter for per-location calls
-async function mapLimit(arr, limit, workerFn) {
-  const out = new Array(arr.length);
-  let i = 0;
-  const runners = Array.from({ length: Math.min(limit, arr.length) }, async () => {
-    while (true) {
-      const idx = i++;
-      if (idx >= arr.length) break;
-      out[idx] = await workerFn(arr[idx], idx);
-    }
-  });
-  await Promise.all(runners);
-  return out;
-}
-
 // -----------------------------------------------------
 // 1) Org-level PSTN summary endpoint
 // -----------------------------------------------------
+// =====================================================
+// PSTN SUMMARY (fast, org-level, no fan-out)
+// =====================================================
 if (
   (url.pathname === "/api/pstn/summary" || url.pathname === "/api/pstn/summary/") &&
   request.method === "GET"
@@ -4332,106 +4489,184 @@ if (
 
   let resolvedOrgId;
   if (user.isAdmin) {
-    if (!requestedOrgId) return json({ ok:false, error:"missing_orgId" }, 400);
+    if (!requestedOrgId) {
+      return json({ ok:false, error:"missing_orgId" }, 400);
+    }
     resolvedOrgId = requestedOrgId;
   } else {
-    if (!session?.orgId) return json({ ok:false, error:"pin_required" }, 401);
+    if (!session?.orgId) {
+      return json({ ok:false, error:"pin_required" }, 401);
+    }
     resolvedOrgId = session.orgId;
   }
 
-  // cache settings (summary can be cached a bit longer)
-  const ttl = clampInt(url.searchParams.get("ttl"), 120, 30, 600);
-  const cacheKeyReq = cacheKeyFromRequest(request, "pstn_summary_v1");
+  // -----------------------------------------------------
+  // Cache controls
+  // -----------------------------------------------------
+  const ttl = clampInt(url.searchParams.get("ttl"), 180, 60, 900);
+  const cacheKey = `pstn_summary:${resolvedOrgId}`;
 
-  const cached = await cacheGetJson(cacheKeyReq);
-  if (cached) return json({ ...cached, _cache: "HIT" }, 200);
+  const cached = await cacheGetJson(cacheKey);
+  if (cached) {
+    return json({ ...cached, _cache: "HIT" }, 200);
+  }
 
-  const diagnostics = [];
-  const diag = (name, r) => diagnostics.push({ name, ok: !!r?.ok, status: r?.status ?? null });
-
+  // -----------------------------------------------------
+  // Safe Webex wrapper (always scoped)
+  // -----------------------------------------------------
   const safe = (path) => webexFetchSafe(env, path, resolvedOrgId);
 
-  // minimal, fast calls only
-  const locRes = await safe("/telephony/config/locations");
-  diag("telephony/config/locations", locRes);
+  const diagnostics = [];
+  const diag = (name, r) =>
+    diagnostics.push({
+      name,
+      ok: !!r?.ok,
+      status: r?.status ?? null
+    });
 
-  if (!locRes.ok) {
+  try {
+
+    // -----------------------------------------------------
+    // Minimal required calls (fast, parallel)
+    // -----------------------------------------------------
+    const [locRes, numbersRes, trunksRes, redskyRes] = await Promise.all([
+      safe("/telephony/config/locations"),
+      safe("/telephony/config/numbers"),
+      safe("/telephony/config/premisePstn/trunks"),
+      safe("/telephony/config/redSky/complianceStatus")
+    ]);
+
+    diag("telephony/config/locations", locRes);
+    diag("telephony/config/numbers", numbersRes);
+    diag("telephony/config/premisePstn/trunks", trunksRes);
+    diag("telephony/config/redSky/complianceStatus", redskyRes);
+
+    if (!locRes.ok) {
+      const payload = {
+        ok:true,
+        pstnSummary:{
+          orgId: resolvedOrgId,
+          callingAvailable:false,
+          reason:"Calling API not accessible for this org",
+          totals:{ trunks:0, didsTotal:0, locations:0 },
+          compliance:null,
+          misconfigurations:[],
+          diagnostics,
+          scores:{ pstnCapacityScore:0 }
+        }
+      };
+
+      await cachePutJson(cacheKey, payload, ttl);
+      return json({ ...payload, _cache:"MISS" }, 200);
+    }
+
+    // -----------------------------------------------------
+    // Normalize data safely
+    // -----------------------------------------------------
+    const locationsRaw = asArray(locRes.data?.locations);
+    const numbersRaw = numbersRes.ok
+      ? asArray(numbersRes.data?.phoneNumbers || numbersRes.data?.items)
+      : [];
+
+    const trunksRaw = trunksRes.ok
+      ? asArray(trunksRes.data?.trunks || trunksRes.data?.items)
+      : [];
+
+    const totalTrunks = trunksRaw.length;
+    const totalDids = numbersRaw.length;
+    const capacityScore = computeCapacityScore(totalTrunks);
+
+    // -----------------------------------------------------
+    // Per-location quick scan (no API fan-out)
+    // -----------------------------------------------------
+    const perLoc = locationsRaw.map(loc => {
+
+      const locId = loc.id;
+
+      const locNumbers = numbersRaw.filter(n =>
+        String(getLocId(n)) === String(locId)
+      );
+
+      const locTrunks = trunksRaw.filter(t =>
+        String(getLocId(t)) === String(locId)
+      );
+
+      return {
+        id: locId,
+        name: loc.name || "Unknown Location",
+        trunkCount: locTrunks.length,
+        didsTotal: locNumbers.length,
+        didsUnassigned: locNumbers.filter(isUnassignedNumber).length
+      };
+    });
+
+    // -----------------------------------------------------
+    // Risk detection
+    // -----------------------------------------------------
+    const misconfigurations = [];
+
+    for (const l of perLoc) {
+
+      if (l.trunkCount === 0) {
+        misconfigurations.push({
+          location: l.name,
+          issue: "No trunk detected (Cloud PSTN or not configured)"
+        });
+      }
+
+      if (l.trunkCount === 1) {
+        misconfigurations.push({
+          location: l.name,
+          issue: "Single trunk no redundancy"
+        });
+      }
+
+      if (l.didsTotal > 0 && l.didsUnassigned === l.didsTotal) {
+        misconfigurations.push({
+          location: l.name,
+          issue: "All numbers appear unassigned"
+        });
+      }
+    }
+
     const payload = {
-      ok: true,
-      pstnSummary: {
+      ok:true,
+      pstnSummary:{
         orgId: resolvedOrgId,
-        callingAvailable: false,
-        reason: "Calling API not accessible for this org",
-        totals: { trunks: 0, didsTotal: 0, locations: 0 },
-        scores: { pstnCapacityScore: 0 },
-        misconfigurations: [],
-        diagnostics
+        callingAvailable:true,
+        totals:{
+          trunks: totalTrunks,
+          didsTotal: totalDids,
+          locations: perLoc.length
+        },
+        compliance: redskyRes.ok ? redskyRes.data : null,
+        misconfigurations,
+        diagnostics,
+        scores:{
+          pstnCapacityScore: capacityScore
+        },
+        generatedAt: new Date().toISOString()
       }
     };
-    await cachePutJson(cacheKeyReq, payload, ttl);
-    return json({ ...payload, _cache: "MISS" }, 200);
+
+    await cachePutJson(cacheKey, payload, ttl);
+
+    return json({ ...payload, _cache:"MISS" }, 200);
+
+  } catch (err) {
+
+    return json({
+      ok:true,
+      pstnSummary:{
+        orgId: resolvedOrgId,
+        callingAvailable:false,
+        error:"pstn_summary_exception",
+        message:String(err),
+        diagnostics
+      }
+    }, 200);
   }
-
-  const [numbersRes, trunksRes, redskyGlobal] = await Promise.all([
-    safe("/telephony/config/numbers"),
-    safe("/telephony/config/premisePstn/trunks"),
-    safe("/telephony/config/redSky/complianceStatus")
-  ]);
-
-  diag("telephony/config/numbers", numbersRes);
-  diag("premisePstn/trunks", trunksRes);
-  diag("redSky/complianceStatus", redskyGlobal);
-
-  const locationsRaw = asArray(locRes.data?.locations);
-  const numbersRaw = numbersRes.ok ? asArray(numbersRes.data?.phoneNumbers || numbersRes.data?.items) : [];
-  const trunksRaw = trunksRes.ok ? asArray(trunksRes.data?.trunks || trunksRes.data?.items) : [];
-
-  const totalTrunks = trunksRaw.length;
-  const totalDids = numbersRaw.length;
-  const capacityScore = computeCapacityScore(totalTrunks);
-
-  // quick health scan (no per-location API fan-out)
-  const perLoc = locationsRaw.map((loc) => {
-    const locId = loc.id;
-    const locNumbers = numbersRaw.filter(n => String(getLocId(n)) === String(locId));
-    const locTrunks = trunksRaw.filter(t => String(getLocId(t)) === String(locId));
-    return {
-      id: locId,
-      name: loc.name || "Unknown Location",
-      trunkCount: locTrunks.length,
-      didsTotal: locNumbers.length,
-      didsUnassigned: locNumbers.filter(isUnassignedNumber).length
-    };
-  });
-
-  const misconfigurations = [];
-  for (const l of perLoc) {
-    if (l.trunkCount === 0) misconfigurations.push({ location: l.name, issue: "No trunk found (may be Cloud PSTN or not configured)" });
-    if (l.trunkCount === 1) misconfigurations.push({ location: l.name, issue: "Single trunk no redundancy" });
-    if (l.didsTotal > 0 && l.didsUnassigned === l.didsTotal) misconfigurations.push({ location: l.name, issue: "All numbers appear unassigned" });
-  }
-
-  const payload = {
-    ok: true,
-    pstnSummary: {
-      orgId: resolvedOrgId,
-      callingAvailable: true,
-      totals: {
-        trunks: totalTrunks,
-        didsTotal: totalDids,
-        locations: perLoc.length
-      },
-      compliance: redskyGlobal.ok ? redskyGlobal.data : null,
-      misconfigurations,
-      diagnostics,
-      scores: { pstnCapacityScore: capacityScore }
-    }
-  };
-
-  await cachePutJson(cacheKeyReq, payload, ttl);
-  return json({ ...payload, _cache: "MISS" }, 200);
 }
-
 // -----------------------------------------------------
 // 2) Full PSTN endpoint (detailed), hardened + caching
 // -----------------------------------------------------
