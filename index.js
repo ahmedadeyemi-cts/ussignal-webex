@@ -3119,13 +3119,14 @@ else {
 
   const result = await webexFetch(env, "/licenses", resolvedOrgId);
 
-  if (!result.ok) {
-    return json({
-      ok:false,
-      error:"webex_license_failed",
-      status: result.status
-    }, 500);
-  }
+ if (!result.ok) {
+  return json({
+    ok:false,
+    error:"webex_license_failed",
+    status: result.status,
+    webexBody: result.data
+  }, 500);
+}
 
   const raw = result.data?.items || [];
 
