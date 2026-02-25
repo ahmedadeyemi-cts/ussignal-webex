@@ -1,20 +1,1084 @@
-<main>
-  <h1>Support & Escalation</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Support | US Signal Webex Portal</title>
 
-  <div class="card">
-    <h3>Business Hours</h3>
-    <p>
-      Contact US Signal Customer Support<br />
-      📧 DLD-customercare@ussignal.com<br />
-      ☎️ 515-334-5755
-    </p>
-  </div>
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.08);
+  --shadow:0 10px 28px rgba(15,23,42,.08);
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+  --chip:#eef2ff;
+}
 
-  <div class="card">
-    <h3>After Hours Support</h3>
-    <p>
-      A valid support PIN is required.<br />
-      ☎️ OneAssist: 844-462-3828
-    </p>
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* Wrapper to align with your layout.html-style structure */
+.layout{ display:flex; min-height:100vh; }
+
+/* If your sidebar is injected elsewhere, this content area still works */
+.content{
+  flex:1;
+  padding:40px;
+  max-width:1180px;
+  margin:0 auto;
+}
+
+.page-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:14px;
+}
+
+h1{ margin:0; font-size:28px; font-weight:650; }
+.subtitle{ margin:6px 0 0; color:var(--muted); line-height:1.4; }
+
+.pills{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:flex-end;
+}
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 14px;
+  border-radius:999px;
+  font-size:13px;
+  font-weight:650;
+  background:rgba(15,98,254,.10);
+  color:var(--accent);
+  border:1px solid rgba(15,98,254,.15);
+}
+.pill.muted{
+  background:rgba(15,23,42,.04);
+  color:var(--muted);
+  border:1px solid var(--line);
+}
+.pill.good{ background:rgba(22,163,74,.12); color:var(--good); border-color:rgba(22,163,74,.18); }
+.pill.warn{ background:rgba(245,158,11,.16); color:var(--warn); border-color:rgba(245,158,11,.22); }
+.pill.bad{ background:rgba(220,38,38,.10); color:var(--bad); border-color:rgba(220,38,38,.18); }
+
+.grid{
+  display:grid;
+  grid-template-columns: 1.3fr .7fr;
+  gap:22px;
+  margin-top:22px;
+}
+@media (max-width: 980px){
+  .grid{ grid-template-columns:1fr; }
+  .pills{ justify-content:flex-start; }
+}
+
+.card{
+  background:var(--card);
+  border-radius:14px;
+  padding:24px;
+  box-shadow:var(--shadow);
+  border:1px solid var(--line);
+}
+
+.card + .card{ margin-top:22px; }
+
+.card-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:14px;
+}
+.card h3{ margin:0; font-size:18px; font-weight:650; }
+
+.badge{
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+}
+.badge.business{ background:rgba(22,163,74,.12); color:var(--good); }
+.badge.afterhours{ background:rgba(245,158,11,.16); color:var(--warn); }
+
+.block{
+  border-radius:12px;
+  border:1px solid var(--line);
+  padding:16px;
+  background:rgba(15,98,254,.05);
+}
+.block strong{ font-weight:700; }
+
+.row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:12px;
+}
+.kv{
+  flex:1;
+  min-width:220px;
+  padding:12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:rgba(15,23,42,.03);
+}
+.kv .k{ font-size:12px; color:var(--muted); margin-bottom:6px; }
+.kv .v{ font-size:14px; font-weight:650; }
+
+hr.sep{
+  border:none;
+  border-top:1px solid var(--line);
+  margin:18px 0;
+}
+
+.notice{
+  margin-top:12px;
+  font-size:14px;
+  color:var(--muted);
+  line-height:1.45;
+}
+
+.banner-critical{
+  display:none;
+  background:rgba(220,38,38,.09);
+  border:1px solid rgba(220,38,38,.18);
+  border-left:5px solid var(--bad);
+  padding:16px;
+  border-radius:14px;
+  margin:18px 0 0;
+}
+.banner-critical .title{
+  font-weight:800;
+  color:var(--bad);
+  margin-bottom:6px;
+}
+.banner-critical .text{
+  color:var(--text);
+  font-size:14px;
+  line-height:1.45;
+}
+
+/* Buttons */
+.actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:16px;
+}
+button{
+  font-family:inherit;
+  border-radius:10px;
+  padding:12px 16px;
+  font-weight:700;
+  border:1px solid var(--line);
+  cursor:pointer;
+  background:#fff;
+  color:var(--text);
+}
+button.primary{
+  background:var(--accent);
+  border-color:rgba(15,98,254,.25);
+  color:#fff;
+}
+button.primary:hover{ background:var(--accent2); }
+button:disabled{
+  cursor:not-allowed;
+  opacity:.55;
+}
+a.link{
+  color:var(--accent);
+  text-decoration:none;
+  font-weight:650;
+}
+a.link:hover{ text-decoration:underline; }
+
+.small{
+  font-size:12px;
+  color:var(--muted);
+}
+
+/* Right rail widgets */
+.widgetTitle{
+  font-size:14px;
+  font-weight:800;
+  margin:0 0 12px;
+}
+.sparkWrap{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:10px;
+}
+canvas{ width:100%; height:56px; display:block; }
+.sparkMeta{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(15,23,42,.04);
+  border:1px solid var(--line);
+  font-size:12px;
+  font-weight:700;
+  color:var(--text);
+}
+.chip span{ color:var(--muted); font-weight:700; }
+
+/* Modal */
+.modalBackdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:22px;
+  z-index:9999;
+}
+
+.modal{
+  width:min(860px, 100%);
+  background:var(--card);
+  border-radius:16px;
+  border:1px solid var(--line);
+  box-shadow:0 18px 60px rgba(0,0,0,.22);
+  overflow:hidden;
+}
+
+.modalHead{
+  padding:18px 20px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.modalHead h2{
+  margin:0;
+  font-size:18px;
+  font-weight:850;
+}
+.modalHead .hint{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.4;
+}
+.modalBody{
+  padding:18px 20px 20px;
+}
+.formGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:14px 14px;
+}
+@media (max-width: 860px){
+  .formGrid{ grid-template-columns:1fr; }
+}
+.field label{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  font-weight:750;
+  margin-bottom:6px;
+}
+.field input, .field select, .field textarea{
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:11px 12px;
+  font:inherit;
+  background:#fff;
+}
+.field textarea{ min-height:120px; resize:vertical; }
+
+.readonlyBox{
+  background:rgba(15,98,254,.06);
+  border:1px solid rgba(15,98,254,.18);
+  padding:12px;
+  border-radius:12px;
+  margin-bottom:14px;
+}
+.readonlyGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+}
+@media (max-width: 860px){
+  .readonlyGrid{ grid-template-columns:1fr; }
+}
+.roLine{
+  font-size:13px;
+  color:var(--text);
+  font-weight:700;
+}
+.roLine span{
+  color:var(--muted);
+  font-weight:750;
+  margin-right:8px;
+}
+
+.modalFoot{
+  padding:14px 20px;
+  border-top:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.toast{
+  display:none;
+  margin-top:12px;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:rgba(22,163,74,.08);
+}
+.toast.bad{
+  background:rgba(220,38,38,.08);
+  border-color:rgba(220,38,38,.18);
+}
+.toast .tTitle{ font-weight:900; margin-bottom:4px; }
+.toast .tText{ color:var(--muted); font-size:13px; line-height:1.4; }
+</style>
+</head>
+
+<body>
+<div class="layout">
+  <!-- Your existing sidebar/nav can be provided by layout.html. This page only defines content. -->
+
+  <div class="content">
+
+    <div class="page-top">
+      <div>
+        <h1>Support & Escalation</h1>
+        <div class="subtitle">
+          Standard support is available <strong>8:00 AM – 5:00 PM CST</strong>.
+          After hours, urgent incidents require a valid support PIN and are handled via OneAssist.
+        </div>
+      </div>
+
+      <div class="pills">
+        <div id="orgPill" class="pill">Loading organization…</div>
+        <div id="pinPill" class="pill muted">PIN: Checking…</div>
+        <div id="hoursPill" class="pill muted">Business Hours: Checking…</div>
+      </div>
+    </div>
+
+    <div id="criticalBanner" class="banner-critical">
+      <div class="title">Critical: Tenant Service Degradation Detected</div>
+      <div class="text">
+        We are currently detecting indicators of degraded health for this tenant. If your issue is
+        production-impacting, please escalate immediately using After Hours Support.
+      </div>
+    </div>
+
+    <div class="grid">
+
+      <!-- Left: Support Paths -->
+      <div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Business Hours Support</h3>
+            <span class="badge business">Standard Support</span>
+          </div>
+
+          <div class="block">
+            <div><strong>US Signal Customer Care</strong></div>
+            <div style="margin-top:10px; line-height:1.7;">
+              📧 <strong>Email:</strong> <span id="ccEmail">DLD-customercare@ussignal.com</span><br/>
+              ☎️ <strong>Phone:</strong> 515-334-5755
+            </div>
+          </div>
+
+          <div class="notice">
+            Recommended for non-critical issues, configuration requests, service inquiries, and general assistance during business hours.
+          </div>
+
+          <div class="actions">
+            <button id="submitBtn" class="primary" disabled>Submit Ticket</button>
+            <span id="submitDisabledHint" class="small">
+              PIN validation is required to submit a ticket. Please <a class="link" href="/pin">validate your PIN</a>.
+            </span>
+          </div>
+
+          <div id="submitToast" class="toast">
+            <div class="tTitle">Ticket submitted</div>
+            <div class="tText" id="submitToastText"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>After Hours / Emergency Support</h3>
+            <span class="badge afterhours">Priority Escalation</span>
+          </div>
+
+          <div class="block">
+            <div><strong>OneAssist (After Hours)</strong></div>
+            <div style="margin-top:10px; line-height:1.7;">
+              ☎️ <strong>Phone:</strong> 844-462-3828
+            </div>
+          </div>
+
+          <div class="notice">
+            A valid support PIN is required for after-hours engagement. Please be ready to provide your organization name, Org ID, impact details, and a callback number.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right: Health/SLA/Sparkline -->
+      <div>
+
+        <div class="card">
+          <div class="widgetTitle">Tenant Health Snapshot</div>
+
+          <div class="row">
+            <div class="kv">
+              <div class="k">Health Status</div>
+              <div id="healthStatus" class="v">Loading…</div>
+            </div>
+            <div class="kv">
+              <div class="k">Health Score</div>
+              <div id="healthScore" class="v">—</div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="kv">
+              <div class="k">Last Updated</div>
+              <div id="healthUpdated" class="v">—</div>
+            </div>
+            <div class="kv">
+              <div class="k">Signal</div>
+              <div id="healthSignal" class="v">—</div>
+            </div>
+          </div>
+
+          <div class="notice">
+            This snapshot is automatically attached to submitted support tickets to speed triage and reduce back-and-forth.
+          </div>
+
+          <hr class="sep"/>
+
+          <div class="widgetTitle">SLA Timer</div>
+          <div class="notice" style="margin-top:6px;">
+            The SLA timer starts when you submit a ticket from this portal (tracked locally in your browser).
+          </div>
+
+          <div class="row">
+            <div class="kv">
+              <div class="k">Ticket Submitted</div>
+              <div id="slaStart" class="v">Not started</div>
+            </div>
+            <div class="kv">
+              <div class="k">Elapsed Time</div>
+              <div id="slaElapsed" class="v">—</div>
+            </div>
+          </div>
+
+          <div class="small" style="margin-top:10px;">
+            Note: Official SLA measurement is managed by US Signal systems. This timer is intended for customer visibility.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="widgetTitle">30-Day Outage Trend</div>
+
+          <div class="sparkWrap">
+            <div style="flex:1;">
+              <canvas id="sparkCanvas" width="600" height="80" aria-label="30-day outage sparkline"></canvas>
+            </div>
+          </div>
+
+          <div class="sparkMeta" style="margin-top:10px;">
+            <div class="chip"><span>Days:</span> <span id="sparkDays">30</span></div>
+            <div class="chip"><span>Outage Days:</span> <span id="sparkOutageDays">—</span></div>
+            <div class="chip"><span>Latest:</span> <span id="sparkLatest">—</span></div>
+          </div>
+
+          <div class="notice">
+            Trend reflects outage/degradation indicators. If this tenant is currently degraded, use the After Hours path for urgent production impact.
+          </div>
+        </div>
+
+      </div>
+
+    </div>
   </div>
-</main>
+</div>
+
+<!-- Modal -->
+<div id="modalBackdrop" class="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modalHead">
+      <div>
+        <h2 id="modalTitle">Submit Support Ticket</h2>
+        <div class="hint">
+          Customer Care will receive this ticket by email automatically. Please provide impact, symptoms, and the best contact method.
+        </div>
+      </div>
+      <button id="modalCloseBtn" title="Close">✕</button>
+    </div>
+
+    <div class="modalBody">
+
+      <div class="readonlyBox">
+        <div class="readonlyGrid">
+          <div class="roLine"><span>Customer:</span> <span id="roCustomer">—</span></div>
+          <div class="roLine"><span>Org ID:</span> <span id="roOrgId">—</span></div>
+          <div class="roLine"><span>Health:</span> <span id="roHealth">—</span></div>
+          <div class="roLine"><span>Score:</span> <span id="roScore">—</span></div>
+        </div>
+      </div>
+
+      <div class="formGrid">
+
+        <div class="field">
+          <label for="subject">Subject</label>
+          <input id="subject" type="text" placeholder="Example: Users unable to place outbound calls" maxlength="120" />
+        </div>
+
+        <div class="field">
+          <label for="severity">Severity</label>
+          <select id="severity">
+            <option value="P1">P1 (Critical - major outage)</option>
+            <option value="P2" selected>P2 (High - significant impact)</option>
+            <option value="P3">P3 (Normal - limited impact)</option>
+            <option value="P4">P4 (Low - informational/request)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="impact">Business Impact</label>
+          <select id="impact">
+            <option value="Production outage">Production outage</option>
+            <option value="Degraded service" selected>Degraded service</option>
+            <option value="Single site / subset of users">Single site / subset of users</option>
+            <option value="Question / request">Question / request</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="callback">Callback Number</label>
+          <input id="callback" type="tel" placeholder="Example: +1 555 555 5555" maxlength="40" />
+        </div>
+
+        <div class="field">
+          <label for="contactPref">Preferred Contact Method</label>
+          <select id="contactPref">
+            <option value="Email" selected>Email</option>
+            <option value="Phone">Phone</option>
+            <option value="Either">Either</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="bestTime">Best Time to Reach You</label>
+          <input id="bestTime" type="text" placeholder="Example: Today 2–4pm CST" maxlength="80" />
+        </div>
+
+        <div class="field" style="grid-column:1 / -1;">
+          <label for="details">Issue Details (Symptoms, when it started, scope, troubleshooting)</label>
+          <textarea id="details" placeholder="Include: start time, affected sites/users, error messages, call examples, what changed recently, and any steps already taken."></textarea>
+        </div>
+
+      </div>
+
+      <div class="small" style="margin-top:12px;">
+        The portal automatically attaches your tenant health snapshot and 30-day trend metadata to accelerate triage.
+      </div>
+
+      <div id="modalToast" class="toast" style="margin-top:14px;">
+        <div class="tTitle">Submitted</div>
+        <div class="tText" id="modalToastText"></div>
+      </div>
+
+      <div id="modalToastBad" class="toast bad" style="margin-top:14px;">
+        <div class="tTitle">Unable to submit</div>
+        <div class="tText" id="modalToastBadText"></div>
+      </div>
+
+    </div>
+
+    <div class="modalFoot">
+      <div class="small">
+        Routed to: <strong id="routedTo">DLD-customercare@ussignal.com</strong>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button id="cancelBtn">Cancel</button>
+        <button id="sendBtn" class="primary">Submit Ticket</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * Enterprise-grade support page wiring.
+ *
+ * Assumed Worker endpoints (align these with your Worker implementation):
+ * - GET  /api/session
+ *    -> { ok:true, orgId, orgName, pinValidated:true/false, userEmail? }
+ *
+ * - GET  /api/tenant/health?orgId=...
+ *    -> { ok:true, status:"healthy|warning|critical", score:number, updatedAt:ISO, signal?:string, snapshot?:object }
+ *
+ * - GET  /api/tenant/outage-trend?orgId=...
+ *    -> { ok:true, days:[{ day:"YYYY-MM-DD", value:0|1|... }...] }  // value can be "outage minutes" or 0/1
+ *
+ * - POST /api/support/ticket
+ *    -> expects JSON payload below; Worker sends email to Customer Care and returns { ok:true, ticketId, routedTo }
+ *
+ * NOTE: The frontend handles modal UX; actual routing-to-email must be done in the Worker.
+ */
+
+const SUPPORT_EMAIL = "DLD-customercare@ussignal.com";
+const BUSINESS_HOURS = { startHour: 8, endHour: 17, tz: "America/Chicago" }; // 8AM–5PM CST (Chicago)
+const SLA_STORAGE_KEY = "ussignal_support_sla_start_ts";
+
+let session = { orgId:null, orgName:null, pinValidated:false, userEmail:null };
+let health = { status:null, score:null, updatedAt:null, signal:null, raw:null };
+let outageSeries = []; // [{day, value}]
+let outageMeta = { outageDays: 0, latest: null };
+
+const $ = (id)=>document.getElementById(id);
+
+function safeText(v, fallback="—"){
+  if (v === null || v === undefined) return fallback;
+  const s = String(v).trim();
+  return s ? s : fallback;
+}
+
+function statusPillClass(status){
+  if (status === "critical") return "bad";
+  if (status === "warning") return "warn";
+  if (status === "healthy") return "good";
+  return "muted";
+}
+
+function formatISOToLocal(iso){
+  try{
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? "—" : d.toLocaleString();
+  }catch(e){ return "—"; }
+}
+
+function nowInBusinessHoursChicago(){
+  try{
+    const now = new Date();
+    // Get Chicago time components using Intl
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: BUSINESS_HOURS.tz,
+      hour12: false,
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+    const parts = fmt.formatToParts(now);
+    const hour = parseInt(parts.find(p=>p.type==="hour")?.value || "0", 10);
+    const weekday = parts.find(p=>p.type==="weekday")?.value || "";
+    const isWeekend = (weekday === "Sat" || weekday === "Sun");
+    const inRange = hour >= BUSINESS_HOURS.startHour && hour < BUSINESS_HOURS.endHour;
+    return { ok: (!isWeekend && inRange), weekday, hour };
+  }catch(e){
+    return { ok:false, weekday:"", hour:0 };
+  }
+}
+
+function setBusinessHoursPill(){
+  const bh = nowInBusinessHoursChicago();
+  const label = bh.ok ? "Business Hours: Open (CST)" : "Business Hours: Closed (CST)";
+  const cls = bh.ok ? "good" : "muted";
+  const pill = $("hoursPill");
+  pill.className = `pill ${cls}`;
+  pill.textContent = label;
+}
+
+function setOrgAndPinPills(){
+  $("orgPill").textContent = safeText(session.orgName, "Organization");
+  $("pinPill").className = `pill ${session.pinValidated ? "good" : "muted"}`;
+  $("pinPill").textContent = session.pinValidated ? "PIN: Validated" : "PIN: Not validated";
+}
+
+function setSubmitEnabled(){
+  const enabled = !!session.pinValidated;
+  $("submitBtn").disabled = !enabled;
+  $("submitDisabledHint").style.display = enabled ? "none" : "inline";
+}
+
+function showCriticalBannerIfNeeded(){
+  const isCritical = (health.status === "critical") || (typeof health.score === "number" && health.score < 70);
+  $("criticalBanner").style.display = isCritical ? "block" : "none";
+}
+
+function updateHealthUI(){
+  const s = safeText(health.status, "Unknown");
+  const score = (typeof health.score === "number") ? String(health.score) : "—";
+  $("healthStatus").textContent = s.toUpperCase();
+  $("healthScore").textContent = score;
+  $("healthUpdated").textContent = health.updatedAt ? formatISOToLocal(health.updatedAt) : "—";
+  $("healthSignal").textContent = safeText(health.signal, "—");
+
+  // Update modal read-only
+  $("roCustomer").textContent = safeText(session.orgName, "—");
+  $("roOrgId").textContent = safeText(session.orgId, "—");
+  $("roHealth").textContent = safeText(health.status, "Unknown").toUpperCase();
+  $("roScore").textContent = (typeof health.score === "number") ? String(health.score) : "—";
+
+  showCriticalBannerIfNeeded();
+}
+
+function updateSparkMeta(){
+  $("sparkDays").textContent = "30";
+  $("sparkOutageDays").textContent = (outageMeta.outageDays ?? "—");
+  $("sparkLatest").textContent = safeText(outageMeta.latest, "—");
+}
+
+function drawSparkline(){
+  const canvas = $("sparkCanvas");
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // Clear
+  ctx.clearRect(0,0,w,h);
+
+  // If no data, draw baseline + text
+  if (!outageSeries || outageSeries.length === 0){
+    ctx.globalAlpha = 0.7;
+    ctx.fillText("No trend data available", 14, 24);
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.moveTo(12, h-18);
+    ctx.lineTo(w-12, h-18);
+    ctx.stroke();
+    return;
+  }
+
+  // Normalize values
+  const vals = outageSeries.map(d => (typeof d.value === "number" ? d.value : 0));
+  const max = Math.max(1, ...vals);
+  const min = Math.min(0, ...vals);
+
+  const padX = 10;
+  const padY = 12;
+  const innerW = w - padX*2;
+  const innerH = h - padY*2;
+
+  // Baseline
+  ctx.globalAlpha = 0.25;
+  ctx.beginPath();
+  ctx.moveTo(padX, h-padY);
+  ctx.lineTo(w-padX, h-padY);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Line
+  ctx.beginPath();
+  vals.forEach((v, i) => {
+    const x = padX + (i/(vals.length-1)) * innerW;
+    const y = padY + (1 - ((v - min)/(max - min))) * innerH;
+    if (i === 0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Dot on last point
+  const lastIdx = vals.length - 1;
+  const lx = padX + (lastIdx/(vals.length-1)) * innerW;
+  const ly = padY + (1 - ((vals[lastIdx]-min)/(max-min))) * innerH;
+  ctx.beginPath();
+  ctx.arc(lx, ly, 3, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function setSLAStart(ts){
+  try{
+    localStorage.setItem(SLA_STORAGE_KEY, String(ts));
+  }catch(e){}
+  refreshSLATimer();
+}
+
+function getSLAStart(){
+  try{
+    const v = localStorage.getItem(SLA_STORAGE_KEY);
+    const n = v ? parseInt(v, 10) : NaN;
+    return isNaN(n) ? null : n;
+  }catch(e){ return null; }
+}
+
+function clearSLA(){
+  try{ localStorage.removeItem(SLA_STORAGE_KEY); }catch(e){}
+  refreshSLATimer();
+}
+
+function refreshSLATimer(){
+  const start = getSLAStart();
+  if (!start){
+    $("slaStart").textContent = "Not started";
+    $("slaElapsed").textContent = "—";
+    return;
+  }
+  const d = new Date(start);
+  $("slaStart").textContent = d.toLocaleString();
+
+  const ms = Date.now() - start;
+  const sec = Math.max(0, Math.floor(ms/1000));
+  const hh = Math.floor(sec/3600);
+  const mm = Math.floor((sec%3600)/60);
+  const ss = sec%60;
+  $("slaElapsed").textContent = `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
+}
+
+/* Modal controls */
+function openModal(){
+  // preload read-only and defaults
+  $("routedTo").textContent = SUPPORT_EMAIL;
+
+  // prefill subject if tenant is critical
+  const critical = (health.status === "critical") || (typeof health.score === "number" && health.score < 70);
+  if (critical && !$("subject").value){
+    $("subject").value = "Service degradation observed - assistance requested";
+    $("severity").value = "P1";
+    $("impact").value = "Degraded service";
+  }
+
+  $("modalToast").style.display = "none";
+  $("modalToastBad").style.display = "none";
+
+  $("modalBackdrop").style.display = "flex";
+  // focus first field
+  setTimeout(()=> $("subject").focus(), 50);
+}
+function closeModal(){
+  $("modalBackdrop").style.display = "none";
+}
+
+function toast(el, title, text){
+  el.style.display = "block";
+  el.querySelector(".tTitle").textContent = title;
+  el.querySelector(".tText").textContent = text;
+}
+
+/* API helpers */
+async function apiGet(path){
+  const r = await fetch(path, { method:"GET", headers:{ "Accept":"application/json" }});
+  const t = await r.text();
+  let j = null;
+  try{ j = t ? JSON.parse(t) : null; }catch(e){}
+  if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+  return j;
+}
+
+async function apiPost(path, body){
+  const r = await fetch(path, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json", "Accept":"application/json" },
+    body: JSON.stringify(body)
+  });
+  const t = await r.text();
+  let j = null;
+  try{ j = t ? JSON.parse(t) : null; }catch(e){}
+  if (!r.ok || j?.ok === false) throw new Error(j?.error || `HTTP ${r.status}`);
+  return j;
+}
+
+/* Loaders */
+async function loadSession(){
+  // If your worker already has a different endpoint name, update here.
+  const j = await apiGet("/api/session");
+  // expected: { ok:true, orgId, orgName, pinValidated, userEmail }
+  session.orgId = j?.orgId || null;
+  session.orgName = j?.orgName || null;
+  session.pinValidated = !!j?.pinValidated;
+  session.userEmail = j?.userEmail || null;
+
+  setOrgAndPinPills();
+  setSubmitEnabled();
+}
+
+async function loadHealth(){
+  if (!session.orgId) return;
+  const j = await apiGet(`/api/tenant/health?orgId=${encodeURIComponent(session.orgId)}`);
+  // expected: { ok:true, status, score, updatedAt, signal, snapshot }
+  health.status = j?.status || null;
+  health.score = (typeof j?.score === "number") ? j.score : null;
+  health.updatedAt = j?.updatedAt || j?.updated_at || null;
+  health.signal = j?.signal || null;
+  health.raw = j; // keep the whole thing to attach to ticket
+  updateHealthUI();
+}
+
+async function loadOutageTrend(){
+  if (!session.orgId) return;
+  const j = await apiGet(`/api/tenant/outage-trend?orgId=${encodeURIComponent(session.orgId)}`);
+
+  // expected: { ok:true, days:[{day,value}] } for last 30 days
+  outageSeries = Array.isArray(j?.days) ? j.days.slice(-30) : [];
+
+  // meta
+  let outageDays = 0;
+  let latest = null;
+  for (const d of outageSeries){
+    const v = (typeof d?.value === "number") ? d.value : 0;
+    if (v > 0) outageDays++;
+    latest = d?.day || latest;
+  }
+  outageMeta = { outageDays, latest };
+
+  updateSparkMeta();
+  drawSparkline();
+}
+
+/* Ticket submit */
+function validateTicketForm(){
+  const subject = $("subject").value.trim();
+  const details = $("details").value.trim();
+  const callback = $("callback").value.trim();
+
+  if (!subject) return { ok:false, msg:"Please provide a subject." };
+  if (!details || details.length < 20) return { ok:false, msg:"Please provide more detailed symptoms (at least ~20 characters)." };
+  if (!callback) return { ok:false, msg:"Please provide a callback number." };
+
+  return { ok:true };
+}
+
+async function submitTicketFromModal(){
+  $("sendBtn").disabled = true;
+  $("modalToast").style.display = "none";
+  $("modalToastBad").style.display = "none";
+
+  const check = validateTicketForm();
+  if (!check.ok){
+    toast($("modalToastBad"), "Missing required information", check.msg);
+    $("sendBtn").disabled = false;
+    return;
+  }
+
+  // Attach snapshot and trend metadata
+  const payload = {
+    // identity
+    orgId: session.orgId,
+    orgName: session.orgName,
+    userEmail: session.userEmail || null,
+
+    // ticket fields
+    subject: $("subject").value.trim(),
+    severity: $("severity").value,
+    impact: $("impact").value,
+    callback: $("callback").value.trim(),
+    contactPref: $("contactPref").value,
+    bestTime: $("bestTime").value.trim(),
+    details: $("details").value.trim(),
+
+    // automatic attachments
+    tenantHealthSnapshot: health.raw || null,
+    outageTrend30d: outageSeries || [],
+    createdAt: new Date().toISOString(),
+    routedTo: SUPPORT_EMAIL
+  };
+
+  try{
+    // Worker should email Customer Care and return a ticketId
+    const res = await apiPost("/api/support/ticket", payload);
+
+    // Start SLA timer locally
+    setSLAStart(Date.now());
+
+    // UI feedback
+    const ticketId = res?.ticketId ? String(res.ticketId) : "Submitted";
+    const routedTo = res?.routedTo || SUPPORT_EMAIL;
+
+    toast($("modalToast"), "Ticket submitted", `Ticket ${ticketId} has been routed to ${routedTo}. A support engineer will respond using your preferred contact method.`);
+    $("routedTo").textContent = routedTo;
+
+    // Also show a page-level toast
+    $("submitToast").style.display = "block";
+    $("submitToast").classList.remove("bad");
+    $("submitToastText").textContent = `Ticket ${ticketId} submitted and routed to ${routedTo}.`;
+
+    // Optionally auto-close after a brief pause
+    setTimeout(()=> closeModal(), 900);
+
+  }catch(err){
+    toast($("modalToastBad"), "Unable to submit", `${err?.message || err}`);
+    $("submitToast").style.display = "block";
+    $("submitToast").classList.add("bad");
+    $("submitToastText").textContent = `Submission failed: ${err?.message || err}`;
+  }finally{
+    $("sendBtn").disabled = false;
+  }
+}
+
+/* Wire events */
+$("submitBtn").addEventListener("click", openModal);
+$("modalCloseBtn").addEventListener("click", closeModal);
+$("cancelBtn").addEventListener("click", closeModal);
+$("modalBackdrop").addEventListener("click", (e)=>{ if (e.target === $("modalBackdrop")) closeModal(); });
+document.addEventListener("keydown", (e)=>{ if (e.key === "Escape" && $("modalBackdrop").style.display === "flex") closeModal(); });
+
+$("sendBtn").addEventListener("click", submitTicketFromModal);
+
+/* Init */
+(async function init(){
+  setBusinessHoursPill();
+  setInterval(setBusinessHoursPill, 60*1000);
+
+  refreshSLATimer();
+  setInterval(refreshSLATimer, 1000);
+
+  try{
+    await loadSession();
+  }catch(e){
+    // If session fails, keep UI safe and disable submission
+    session.pinValidated = false;
+    setOrgAndPinPills();
+    setSubmitEnabled();
+  }
+
+  try{ await loadHealth(); }catch(e){
+    // Health is optional; keep unknown state
+    health.status = null; health.score = null; health.updatedAt = null; health.signal = null; health.raw = null;
+    updateHealthUI();
+  }
+
+  try{ await loadOutageTrend(); }catch(e){
+    outageSeries = [];
+    outageMeta = { outageDays:"—", latest:"—" };
+    updateSparkMeta();
+    drawSparkline();
+  }
+})();
+</script>
+
+</body>
+</html>
