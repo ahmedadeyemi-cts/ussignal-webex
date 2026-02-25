@@ -870,28 +870,46 @@
   let TENANTS = [];
   let LAST_SNAPSHOT = null;
 
-  async function loadTenants(){
-    // Prefer your KV-backed customer list if present.
-    // Expected: [{ key, orgName, orgId, ... }]
-    const data = await api("/api/customers");
-    const list = Array.isArray(data?.customers) ? data.customers : (Array.isArray(data) ? data : []);
-    TENANTS = list.filter(x => x?.orgId && x?.orgName);
-    const sel = $("tenantSelect");
-    sel.innerHTML = "";
+ async function loadTenants(){
 
-    const d = defaultTenantOption();
-    const opt0 = document.createElement("option");
-    opt0.value = "";
-    opt0.textContent = d.orgName;
-    sel.appendChild(opt0);
+  const data = await api("/api/customers");
 
-    for(const t of TENANTS){
-      const o = document.createElement("option");
-      o.value = t.key || t.orgId;
-      o.textContent = t.orgName;
-      sel.appendChild(o);
-    }
+  let list = [];
+
+  if(Array.isArray(data)){
+    list = data;
   }
+  else if(Array.isArray(data?.customers)){
+    list = data.customers;
+  }
+  else if(Array.isArray(data?.orgs)){
+    list = data.orgs;
+  }
+  else if(Array.isArray(data?.items)){
+    list = data.items;
+  }
+
+  TENANTS = list.map(x => ({
+    key: x.key || x.orgId,
+    orgId: x.orgId,
+    orgName: x.orgName || x.name || x.displayName
+  })).filter(x => x.orgId && x.orgName);
+
+  const sel = $("tenantSelect");
+  sel.innerHTML = "";
+
+  const opt0 = document.createElement("option");
+  opt0.value = "";
+  opt0.textContent = "Select tenant…";
+  sel.appendChild(opt0);
+
+  for(const t of TENANTS){
+    const o = document.createElement("option");
+    o.value = t.key || t.orgId;
+    o.textContent = t.orgName;
+    sel.appendChild(o);
+  }
+}
 
   function getSelectedTenant(){
     const v = $("tenantSelect").value;
