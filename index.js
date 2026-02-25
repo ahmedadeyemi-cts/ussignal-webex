@@ -2186,12 +2186,9 @@ if (url.pathname === "/customer/incidents" && request.method === "GET") {
   });
 }
 
-if (url.pathname === "/admin/tenant-resolution") {
-  return new Response(tenantResolutionHtml, {
-    headers: {
-      "content-type": "text/html;charset=UTF-8",
-      "cache-control": "no-store"
-    }
+if (url.pathname === "/admin/tenant-resolution" && request.method === "GET") {
+  return text(await renderTenantResolutionHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
   });
 }
 
