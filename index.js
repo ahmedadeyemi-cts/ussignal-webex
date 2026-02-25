@@ -4134,7 +4134,16 @@ if (url.pathname === "/api/support/ticket" && request.method === "POST") {
 
   try {
 
-    const body = await request.json();
+    let body = {};
+
+    const contentType = request.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      body = await request.json();
+    } else if (contentType.includes("form")) {
+      const form = await request.formData();
+      body = Object.fromEntries(form.entries());
+    }
 
     const {
       name,
@@ -4142,16 +4151,19 @@ if (url.pathname === "/api/support/ticket" && request.method === "POST") {
       company,
       severity,
       subject,
-      description
+      description,
+      message   // fallback support
     } = body || {};
 
-    if (!name || !email || !subject || !description) {
-      return json({ ok:false, error:"missing_fields" }, 400);
-    }
+    const finalDescription = description || message;
 
-    // =====================================================
-    // OPTION 1 — Send via Brevo (if using it already)
-    // =====================================================
+    if (!name || !email || !subject || !finalDescription) {
+      return json({
+        ok:false,
+        error:"missing_fields",
+        received: body
+      }, 400);
+    }
 
     if (!env.BREVO_API_KEY || !env.BREVO_SENDER_EMAIL) {
       return json({ ok:false, error:"email_not_configured" }, 500);
@@ -4173,7 +4185,7 @@ if (url.pathname === "/api/support/ticket" && request.method === "POST") {
         <p><strong>Company:</strong> ${company || "N/A"}</p>
         <p><strong>Severity:</strong> ${severity || "Normal"}</p>
         <hr/>
-        <p>${description.replace(/\n/g, "<br/>")}</p>
+        <p>${finalDescription.replace(/\n/g, "<br/>")}</p>
       `
     };
 
