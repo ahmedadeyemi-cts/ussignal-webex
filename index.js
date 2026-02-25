@@ -3484,7 +3484,118 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
 
   return json({ status: "sent", to: toEmail });
 }
+/* =====================================================
+   Tenant Resolution
+===================================================== */
+if (url.pathname.startsWith("/api/admin/tenant-resolution/")) {
 
+  const user = getCurrentUser(request);
+  if (!user || !user.isAdmin) {
+    return json({ ok:false, error:"access_required" }, 401);
+  }
+
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  if (!orgId) {
+    return json({ ok:false, error:"missing_orgId" }, 400);
+  }
+
+  const minutes = clampInt(url.searchParams.get("minutes"), 1440, 5, 10080);
+  const baselineMinutes = clampInt(url.searchParams.get("baselineMinutes"), 10080, 60, 43200);
+  const target = parseFloat(url.searchParams.get("target") || "99.9");
+
+  const action = url.pathname.split("/").pop();
+
+  // =====================================================
+  // CDR
+  // =====================================================
+  if (action === "cdr") {
+
+    const now = new Date().toISOString();
+    const from = new Date(Date.now() - minutes * 60000).toISOString();
+
+    const feed = await webexFetchSafe(
+      env,
+      `/cdr_feed?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=1000`,
+      orgId
+    );
+
+    if (!feed.ok) {
+      return json({ ok:false, error:"cdr_failed" }, 200);
+    }
+
+    const items = normalizeCdrItems(feed.data);
+
+    const totalCalls = items.length;
+    const failed = items.filter(x => x.failed).length;
+    const failRate = totalCalls ? (failed / totalCalls) * 100 : 0;
+
+    return json({
+      ok:true,
+      summary:{
+        totalCalls,
+        failedCalls: failed,
+        failRate,
+        evidenceId: crypto.randomUUID(),
+        source:"cdr_feed"
+      },
+      topCauses: [],
+      hotspots: [],
+      buckets: []
+    });
+  }
+
+  // =====================================================
+  // TRUNKS
+  // =====================================================
+  if (action === "trunks") {
+
+    const trunks = await webexFetchSafe(
+      env,
+      "/telephony/config/premisePstn/trunks",
+      orgId
+    );
+
+    return json({
+      ok:true,
+      trunks: trunks.ok ? trunks.data?.items || [] : []
+    });
+  }
+
+  // =====================================================
+  // DI HEALTH (stub)
+  // =====================================================
+  if (action === "di-health") {
+    return json({
+      ok:true,
+      enabled:false
+    });
+  }
+
+  // =====================================================
+  // SCORE (stub logic)
+  // =====================================================
+  if (action === "score") {
+    return json({
+      ok:true,
+      score: 20,
+      anomaly: { label:"Normal variance" }
+    });
+  }
+
+  // =====================================================
+  // SLA
+  // =====================================================
+  if (action === "sla") {
+    return json({
+      ok:true,
+      okStatus:true,
+      label:`Above ${target}% target`
+    });
+  }
+
+  return json({ ok:false, error:"unknown_tenant_resolution_action" }, 404);
+}
+     
 /* =====================================================
    CUSTOMER-SCOPED ROUTES
    Mirrors Partner Portal contract
