@@ -7,11 +7,11 @@
 
 <style>
 /* ======================================================
-   SUPPORT & ESCALATION (ENTERPRISE)
-   Aligned 1:1 with License Intelligence architecture
+   SUPPORT & ESCALATION (ENTERPRISE DROP-IN)
+   Matches your layout.html / devices/licenses architecture
 ====================================================== */
 
-/* ---- THEME TOKENS (same structure as your working file) ---- */
+/* ---------- Theme Tokens (LIGHT default) ---------- */
 :root{
   --bg:#f6f8fb;
   --card:#ffffff;
@@ -27,10 +27,17 @@
   --warn:#f59e0b;
   --bad:#dc2626;
 
+  --chip:rgba(15,98,254,.08);
+  --chipText:#1d4ed8;
+
+  --rowHover:rgba(15,98,254,.04);
   --pillBg:#fff;
   --pillBorder:rgba(15,23,42,.14);
+
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
+/* ---------- Theme Tokens (DARK) ---------- */
 html[data-theme="dark"]{
   --bg:#0b1220;
   --card:#0f172a;
@@ -46,11 +53,16 @@ html[data-theme="dark"]{
   --warn:#f59e0b;
   --bad:#ef4444;
 
+  --chip:rgba(59,130,246,.18);
+  --chipText:#bfdbfe;
+
+  --rowHover:rgba(59,130,246,.10);
   --pillBg:rgba(15,23,42,.35);
   --pillBorder:rgba(226,232,240,.14);
 }
 
-*{box-sizing:border-box;}
+/* ---------- Base ---------- */
+*{ box-sizing:border-box; }
 body{
   margin:0;
   font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
@@ -60,7 +72,9 @@ body{
   min-height:100vh;
 }
 
-/* ============ SIDEBAR (IDENTICAL STRUCTURE) ============ */
+/* ======================================================
+   SIDEBAR (MATCH YOUR DEVICES/LICS)
+====================================================== */
 .sidebar{
   width:270px;
   background:var(--card);
@@ -70,7 +84,6 @@ body{
   flex-direction:column;
   gap:14px;
 }
-
 .brand{
   display:flex;
   align-items:center;
@@ -79,12 +92,11 @@ body{
   border-bottom:1px solid var(--line);
 }
 .brand img{ height:34px; border-radius:8px; }
+.brand .title{ display:flex; flex-direction:column; }
+.brand .title b{ font-size:14px; letter-spacing:.2px; }
+.brand .title span{ font-size:12px; color:var(--muted); }
 
-.nav{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
+.nav{ display:flex; flex-direction:column; gap:6px; }
 .nav a{
   padding:10px;
   border-radius:12px;
@@ -93,7 +105,7 @@ body{
   text-decoration:none;
   color:var(--text);
 }
-.nav a:hover{ background:rgba(15,98,254,.08); color:var(--accent2); }
+.nav a:hover{ background:var(--chip); color:var(--accent2); }
 .nav a.active{
   background:rgba(15,98,254,.12);
   border:1px solid rgba(15,98,254,.20);
@@ -108,10 +120,35 @@ body{
   border-top:1px solid var(--line);
 }
 
+.ragPill{
+  padding:10px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
+  font-size:12px;
+  font-weight:1000;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.ragDot{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--good);
+  box-shadow:0 0 0 3px rgba(22,163,74,.15);
+}
+.ragPill.amber .ragDot{ background:var(--warn); box-shadow:0 0 0 3px rgba(245,158,11,.15); }
+.ragPill.red .ragDot{ background:var(--bad); box-shadow:0 0 0 3px rgba(239,68,68,.15); }
+.ragText{ display:flex; flex-direction:column; line-height:1.1; }
+.ragText b{ font-size:12px; }
+.ragText span{ font-size:11px; color:var(--muted); font-weight:800; }
+.mono{ font-family:var(--mono); }
 .sideBtnRow{ display:flex; gap:10px; }
 .sideBtnRow button{ width:100%; }
 
-/* ============ MAIN ============ */
+/* ======================================================
+   MAIN
+====================================================== */
 .main{
   flex:1;
   padding:22px;
@@ -131,7 +168,16 @@ body{
   align-items:flex-start;
   gap:12px;
 }
+.header-left{ display:flex; flex-direction:column; gap:4px; }
+.header-left .h{ font-size:16px; font-weight:1000; }
+.header-left .sub{ font-size:12px; color:var(--muted); }
 
+.header-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
 .pill{
   padding:8px 10px;
   border-radius:999px;
@@ -150,16 +196,51 @@ body{
   padding:16px;
 }
 
-button{
-  background:var(--accent);
-  color:#fff;
-  border:none;
-  padding:8px 14px;
-  border-radius:10px;
-  font-weight:900;
-  cursor:pointer;
+.grid2{
+  display:grid;
+  grid-template-columns: 1.2fr .8fr;
+  gap:12px;
 }
-button:disabled{opacity:.6;cursor:not-allowed;}
+@media (max-width: 1100px){
+  .grid2{ grid-template-columns:1fr; }
+}
+
+.sectionTitle{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:10px;
+  margin-bottom:10px;
+}
+.sectionTitle h2{
+  margin:0;
+  font-size:14px;
+  font-weight:1000;
+}
+.sectionTitle .hint{
+  font-size:12px;
+  color:var(--muted);
+  font-weight:900;
+}
+
+.row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.muted{ font-size:12px; color:var(--muted); font-weight:800; }
+
+.kpi{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(255,255,255,.02);
+}
+.kpi .label{ font-size:12px;color:var(--muted);font-weight:900; }
+.kpi .value{ font-size:18px;font-weight:1000;margin-top:6px; }
+.kpi .sub{ font-size:12px;color:var(--muted);margin-top:6px; font-weight:800; }
 
 .badge{
   display:inline-flex;
@@ -172,8 +253,70 @@ button:disabled{opacity:.6;cursor:not-allowed;}
   font-size:11px;
   background:var(--pillBg);
 }
+.badge.good{ color:var(--good); }
+.badge.warn{ color:var(--warn); }
+.badge.bad{ color:var(--bad); }
+.dot{ width:8px;height:8px;border-radius:50%; background:currentColor; opacity:.9; }
 
-/* MODAL */
+/* Buttons / Inputs */
+button{
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:900;
+  cursor:pointer;
+}
+button:disabled{ opacity:.65; cursor:not-allowed; }
+.btn-outline{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--text);
+}
+input[type="text"], input[type="email"], input[type="tel"], select, textarea{
+  padding:8px 12px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--text);
+  font-size:13px;
+}
+textarea{ min-height:110px; resize:vertical; }
+
+.spinner{
+  width:14px;height:14px;
+  border:2px solid rgba(255,255,255,.4);
+  border-top:2px solid #fff;
+  border-radius:50%;
+  animation:spin .6s linear infinite;
+  display:inline-block;
+  vertical-align:middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Critical banner */
+.criticalBanner{
+  display:none;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(220,38,38,.35);
+  background:rgba(220,38,38,.10);
+  color:var(--bad);
+  font-weight:1000;
+  box-shadow:var(--shadow);
+}
+
+/* Sparkline */
+.sparkWrap{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(255,255,255,.02);
+}
+canvas{ width:100%; height:80px; display:block; }
+
+/* Modal */
 .modalOverlay{
   position:fixed;
   inset:0;
@@ -182,49 +325,61 @@ button:disabled{opacity:.6;cursor:not-allowed;}
   align-items:center;
   justify-content:center;
   z-index:999;
+  padding:16px;
 }
 .modal{
   background:var(--card);
-  border-radius:16px;
-  width:600px;
-  max-width:95%;
+  border:1px solid var(--line);
   box-shadow:var(--shadow);
+  border-radius:16px;
+  width:980px;
+  max-width:100%;
+  max-height:90vh;
+  overflow:auto;
 }
-.modalHeader,.modalFooter{
+.modalHeader{
   padding:14px 16px;
   border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
 }
+.modalHeader h3{
+  margin:0;
+  font-size:15px;
+  font-weight:1000;
+}
+.modalBody{ padding:16px; }
 .modalFooter{
+  padding:14px 16px;
   border-top:1px solid var(--line);
-  border-bottom:none;
   display:flex;
   justify-content:flex-end;
   gap:10px;
 }
-.modalBody{ padding:16px; }
-input,textarea{
-  width:100%;
-  padding:8px;
-  border-radius:8px;
-  border:1px solid var(--line);
-  margin-top:6px;
-  background:transparent;
-  color:var(--text);
+.small{ font-size:12px; color:var(--muted); font-weight:800; }
+.hr{
+  border:none;
+  border-top:1px solid var(--line);
+  margin:14px 0;
 }
-textarea{ min-height:120px; resize:vertical; }
 </style>
 </head>
 
 <body>
 
+<!-- ============================= -->
 <!-- SIDEBAR -->
+<!-- ============================= -->
 <div class="sidebar">
+
   <div>
     <div class="brand">
-      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
-      <div>
-        <b>US Signal</b><br>
-        <span style="font-size:12px;color:var(--muted)">Customer Portal</span>
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" alt="US Signal" />
+      <div class="title">
+        <b>US Signal</b>
+        <span>Customer Portal</span>
       </div>
     </div>
 
@@ -244,145 +399,1062 @@ textarea{ min-height:120px; resize:vertical; }
   </div>
 
   <div class="sidebarFooter">
+    <div id="ragPill" class="ragPill">
+      <span class="ragDot" id="ragDot"></span>
+      <div class="ragText">
+        <b id="ragTitle">GREEN</b>
+        <span id="ragSub">Healthy</span>
+      </div>
+      <span class="mono" id="ragScore">100</span>
+    </div>
+
     <div class="sideBtnRow">
-      <button id="btnTheme">Dark Mode</button>
-      <button id="btnLogout">Logout</button>
+      <button class="btn-outline" id="btnTheme">Dark Mode</button>
+      <button class="btn-outline" id="btnLogout">Logout</button>
+    </div>
+
+    <div class="muted" id="buildHint" style="font-weight:900;">
+      Support & Escalation
     </div>
   </div>
+
 </div>
 
+<!-- ============================= -->
 <!-- MAIN -->
+<!-- ============================= -->
 <div class="main">
 
+  <!-- HEADER -->
   <div class="header-card">
-    <div>
-      <div style="font-weight:1000;font-size:16px;">Support & Escalation</div>
-      <div id="whoLine" style="font-size:12px;color:var(--muted)">Loading...</div>
+    <div class="header-left">
+      <div class="h">Support & Escalation</div>
+      <div class="sub" id="whoLine">Loading…</div>
     </div>
 
-    <div style="display:flex;gap:8px;">
+    <div class="header-actions">
       <div class="pill" id="tenantPill">Tenant: —</div>
-      <div class="pill" id="businessHoursPill">Checking hours...</div>
+      <div class="pill" id="hoursPill">Hours: —</div>
+      <div class="pill" id="sessionPill">Session: —</div>
+      <button class="btn-outline" id="btnRefresh">Refresh</button>
     </div>
   </div>
 
-  <div class="card">
-    <b>Business Hours Support</b>
-    <div style="margin-top:10px;">
-      📧 DLD-customercare@ussignal.com<br>
-      ☎ 515-334-5755
-    </div>
-    <div style="margin-top:12px;">
-      <button id="btnOpenTicket">Submit Ticket</button>
-    </div>
+  <!-- CRITICAL BANNER -->
+  <div class="criticalBanner" id="criticalBanner">
+    CRITICAL: Tenant health is currently degraded. If this is impacting production calling or business operations, submit a ticket and follow the After Hours escalation path if outside business hours.
   </div>
 
-  <div class="card">
-    <b>After Hours / Emergency</b>
-    <div style="margin-top:10px;">
-      ☎ OneAssist: 844-462-3828
-    </div>
-    <div style="margin-top:8px;font-size:12px;color:var(--muted)">
-      Business hours: 8:00 AM – 5:00 PM CST
-    </div>
-  </div>
+  <div class="grid2">
 
+    <!-- LEFT: SUPPORT PATHS -->
+    <div class="card">
+      <div class="sectionTitle">
+        <h2>Support Paths</h2>
+        <div class="hint">Business hours: 8:00 AM – 5:00 PM CST</div>
+      </div>
+
+      <div class="card" style="box-shadow:none;">
+        <div class="row" style="justify-content:space-between;">
+          <div style="font-weight:1000;">Business Hours Support</div>
+          <span class="badge good"><span class="dot"></span>STANDARD SUPPORT</span>
+        </div>
+
+        <div style="height:8px"></div>
+        <div class="muted" style="font-weight:900;">
+          For non-critical issues, configuration requests, service inquiries, and general assistance during business hours.
+        </div>
+
+        <div style="height:10px"></div>
+
+        <div class="kpi">
+          <div class="label">US Signal Customer Care</div>
+          <div class="value" style="font-size:14px;">📧 <span class="mono">DLD-customercare@ussignal.com</span></div>
+          <div class="sub" style="font-size:13px;">☎️ <span class="mono">515-334-5755</span></div>
+        </div>
+
+        <div style="height:12px"></div>
+
+        <div class="row">
+          <button id="btnOpenTicket" disabled>Submit Ticket</button>
+          <span class="muted" id="submitHint" style="font-weight:900;">Valid session required.</span>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div class="card" style="box-shadow:none;">
+        <div class="row" style="justify-content:space-between;">
+          <div style="font-weight:1000;">After Hours / Emergency</div>
+          <span class="badge warn"><span class="dot"></span>PRIORITY ESCALATION</span>
+        </div>
+
+        <div style="height:8px"></div>
+        <div class="muted" style="font-weight:900;">
+          For urgent incidents outside business hours, contact OneAssist. Please be ready to provide your organization name, Org ID, impact details, and a callback number.
+        </div>
+
+        <div style="height:10px"></div>
+
+        <div class="kpi">
+          <div class="label">OneAssist (After Hours)</div>
+          <div class="value" style="font-size:14px;">☎️ <span class="mono">844-462-3828</span></div>
+          <div class="sub">Support PIN is managed by US Signal. If you are logged into this portal, you can submit a ticket without entering a PIN.</div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div class="card" style="box-shadow:none;">
+        <div class="sectionTitle" style="margin-bottom:6px;">
+          <h2>Ticket SLA Visibility</h2>
+          <div class="hint">Local portal timer</div>
+        </div>
+
+        <div class="grid2" style="grid-template-columns:1fr 1fr;">
+          <div class="kpi">
+            <div class="label">Ticket Submitted</div>
+            <div class="value" style="font-size:14px;" id="slaSubmitted">Not started</div>
+            <div class="sub">Starts when you submit a ticket from this portal.</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Elapsed Time</div>
+            <div class="value" style="font-size:14px;" id="slaElapsed">—</div>
+            <div class="sub">Official SLA tracking is handled by US Signal systems.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: HEALTH SNAPSHOT -->
+    <div class="card">
+      <div class="sectionTitle">
+        <h2>Tenant Health Snapshot</h2>
+        <div class="hint">Combined signals and attached to tickets</div>
+      </div>
+
+      <div class="kpi">
+        <div class="label">Health Status</div>
+        <div class="value" id="healthStatus">Loading…</div>
+        <div class="sub" id="healthStatusSub">Collecting signals…</div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="grid2" style="grid-template-columns:1fr 1fr;">
+        <div class="kpi">
+          <div class="label">Health Score</div>
+          <div class="value" id="healthScore">—</div>
+          <div class="sub" id="healthScoreSub">Weighted score from multiple signals</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Last Updated</div>
+          <div class="value" style="font-size:14px;" id="healthUpdated">—</div>
+          <div class="sub">Refresh uses live APIs and cached snapshots.</div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div class="sparkWrap">
+        <div class="row" style="justify-content:space-between; margin-bottom:8px;">
+          <div class="muted" style="font-weight:1000;">30-Day Trend</div>
+          <div class="muted" id="sparkHint" style="font-weight:900;">Loading…</div>
+        </div>
+        <canvas id="spark" width="900" height="120"></canvas>
+        <div class="muted" style="margin-top:10px; font-weight:900;">
+          Trend represents daily combined health score. If server history is unavailable, the portal stores a local daily point for visibility.
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div class="card" style="box-shadow:none;">
+        <div class="sectionTitle" style="margin-bottom:6px;">
+          <h2>Signals</h2>
+          <div class="hint">Best-effort collection</div>
+        </div>
+        <div class="muted" style="font-weight:900;" id="signalsNote">Loading…</div>
+        <div style="height:10px"></div>
+        <div id="signalsList" class="muted" style="font-weight:900; line-height:1.6;"></div>
+      </div>
+
+    </div>
+
+  </div>
 </div>
 
-<!-- MODAL -->
-<div id="ticketModal" class="modalOverlay">
-  <div class="modal">
+<!-- ============================= -->
+<!-- TICKET MODAL -->
+<!-- ============================= -->
+<div id="ticketModalOverlay" class="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ticketModalTitle">
     <div class="modalHeader">
-      <b>Create Support Ticket</b>
+      <div>
+        <h3 id="ticketModalTitle">Submit Support Ticket</h3>
+        <div class="small" id="ticketModalSub">Auto-populated from your authenticated portal session.</div>
+      </div>
+      <div class="row">
+        <span class="badge" id="ticketHealthBadge"><span class="dot"></span><span id="ticketHealthText">Health: —</span></span>
+        <button class="btn-outline" id="btnCloseTicketModal">Close</button>
+      </div>
     </div>
+
     <div class="modalBody">
-      <label>Customer Name</label>
-      <input id="ticketOrg" disabled>
 
-      <label>Org ID</label>
-      <input id="ticketOrgId" disabled>
+      <div class="grid2" style="grid-template-columns:1fr 1fr;">
+        <div>
+          <div class="muted" style="font-weight:1000;">Customer (Org Name)</div>
+          <input id="tOrgName" type="text" disabled />
+        </div>
+        <div>
+          <div class="muted" style="font-weight:1000;">Org ID</div>
+          <input id="tOrgId" type="text" disabled />
+        </div>
+      </div>
 
-      <label>Your Email</label>
-      <input id="ticketEmail" disabled>
+      <div style="height:10px"></div>
 
-      <label>Issue Description</label>
-      <textarea id="ticketDescription" placeholder="Describe the issue in detail..."></textarea>
+      <div class="grid2" style="grid-template-columns:1fr 1fr;">
+        <div>
+          <div class="muted" style="font-weight:1000;">Point of Contact Email</div>
+          <input id="tEmail" type="email" disabled />
+        </div>
+        <div>
+          <div class="muted" style="font-weight:1000;">Callback Number (optional)</div>
+          <input id="tPhone" type="tel" placeholder="Example: 555-555-5555" />
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="grid2" style="grid-template-columns:1fr 1fr;">
+        <div>
+          <div class="muted" style="font-weight:1000;">Severity</div>
+          <select id="tSeverity">
+            <option value="P1">P1 Critical (Outage / Major business impact)</option>
+            <option value="P2" selected>P2 High (Degraded service / Significant impact)</option>
+            <option value="P3">P3 Medium (Limited impact / Workaround exists)</option>
+            <option value="P4">P4 Low (Question / Request / Cosmetic)</option>
+          </select>
+        </div>
+        <div>
+          <div class="muted" style="font-weight:1000;">Category</div>
+          <select id="tCategory">
+            <option value="Calling" selected>Calling</option>
+            <option value="PSTN">PSTN</option>
+            <option value="Devices">Devices</option>
+            <option value="Analytics">Analytics</option>
+            <option value="Licenses">Licenses</option>
+            <option value="Portal">Portal / Access</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div>
+        <div class="muted" style="font-weight:1000;">Issue Summary</div>
+        <input id="tSummary" type="text" placeholder="Short summary of the issue" />
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div>
+        <div class="muted" style="font-weight:1000;">Detailed Description</div>
+        <textarea id="tDescription" placeholder="Provide details: what changed, when it started, scope of impact, affected locations/users, steps already taken, screenshots (if available), and any time sensitivity."></textarea>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="muted" style="font-weight:900;">
+        The portal will automatically attach a tenant health snapshot (combined signals) and diagnostics to speed triage.
+        Ticket submissions route to <span class="mono">DLD-customercare@ussignal.com</span> and include your email as the point of contact.
+      </div>
+
+      <div style="height:10px"></div>
+      <div class="muted" id="ticketStatus" style="font-weight:900;"></div>
+
     </div>
+
     <div class="modalFooter">
-      <button onclick="closeModal()">Cancel</button>
-      <button onclick="submitTicket()">Submit</button>
+      <button class="btn-outline" id="btnTicketCancel">Cancel</button>
+      <button id="btnTicketSubmit">Submit Ticket</button>
     </div>
   </div>
 </div>
 
 <script>
-const $ = id => document.getElementById(id);
+/* ======================================================
+   SUPPORT & ESCALATION (SCRIPT)
+   Required endpoints:
+   - GET  /api/me
+   - POST /api/logout (optional)
+   - POST /api/support/ticket  (Cloudflare Worker endpoint)
+   Health collection is best-effort (combine signals):
+   - tries several endpoints; failures do not break UI
+   - attaches combined snapshot to ticket
+====================================================== */
 
-/* THEME */
-$("btnTheme").onclick = ()=>{
-  const cur = document.documentElement.getAttribute("data-theme");
-  const next = cur==="dark"?"light":"dark";
-  document.documentElement.setAttribute("data-theme",next);
-};
+const $ = (id) => document.getElementById(id);
 
-/* LOGOUT */
-$("btnLogout").onclick = async ()=>{
-  try{ await fetch("/api/logout",{method:"POST"});}catch{}
-  window.location.href="/pin";
-};
+let ME = null;
+let HEALTH = null;
+let DIAGS = [];
 
-/* LOAD USER */
-async function loadUser(){
-  const r = await fetch("/api/me");
-  if(!r.ok){ window.location.href="/pin"; return; }
-  const me = await r.json();
+/* -----------------------------
+   THEME
+----------------------------- */
+function loadTheme(){
+  const saved = localStorage.getItem("uiTheme");
+  const theme = saved === "dark" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  $("btnTheme").textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme") || "light";
+  const next = cur === "dark" ? "light" : "dark";
+  localStorage.setItem("uiTheme", next);
+  loadTheme();
+}
+$("btnTheme").addEventListener("click", toggleTheme);
+loadTheme();
 
-  $("whoLine").textContent = me.email + " (" + me.role + ")";
-  $("tenantPill").textContent = "Tenant: " + (me.orgName||"—");
-
-  $("ticketOrg").value = me.orgName||"";
-  $("ticketOrgId").value = me.orgId||"";
-  $("ticketEmail").value = me.email||"";
+/* -----------------------------
+   API helper (safe JSON parsing)
+----------------------------- */
+async function api(path, opts){
+  const started = Date.now();
+  let res, txt, data;
+  try{
+    res = await fetch(path, opts);
+    txt = await res.text();
+    try{ data = txt ? JSON.parse(txt) : null; }
+    catch{ data = { raw: txt }; }
+  } catch (e){
+    return { ok:false, status:0, data:{ error:String(e) }, ms: Date.now()-started };
+  }
+  return { ok: res.ok, status: res.status, data, ms: Date.now()-started };
 }
 
-/* BUSINESS HOURS CHECK (CST) */
-function updateBusinessHours(){
+/* -----------------------------
+   Logout
+----------------------------- */
+$("btnLogout").addEventListener("click", async ()=>{
+  try{ await fetch("/api/logout", { method:"POST" }); } catch {}
+  try{ localStorage.removeItem("USER_SESSION"); } catch {}
+  window.location.href = "/pin";
+});
+
+/* -----------------------------
+   Business hours (8AM-5PM CST)
+----------------------------- */
+function setHoursPill(){
   const now = new Date();
-  const cst = new Date(now.toLocaleString("en-US",{timeZone:"America/Chicago"}));
+  const cst = new Date(now.toLocaleString("en-US",{ timeZone:"America/Chicago" }));
   const hour = cst.getHours();
-  const open = hour>=8 && hour<17;
+  const open = hour >= 8 && hour < 17;
 
-  const pill = $("businessHoursPill");
-  pill.textContent = open?"Business Hours: OPEN (CST)":"Business Hours: CLOSED (CST)";
-  pill.style.color = open?"var(--good)":"var(--bad)";
+  const pill = $("hoursPill");
+  pill.textContent = open ? "Business Hours: OPEN (CST)" : "Business Hours: CLOSED (CST)";
+  pill.style.color = open ? cssVar("--good") : cssVar("--bad");
 }
 
-/* MODAL */
-$("btnOpenTicket").onclick = ()=> $("ticketModal").style.display="flex";
-function closeModal(){ $("ticketModal").style.display="none"; }
+/* -----------------------------
+   Session timer pill
+   - If /api/me includes sessionExpiresAt (ms or ISO), show countdown
+   - Otherwise show "Active"
+----------------------------- */
+let SESSION_TIMER = null;
 
-/* SUBMIT */
+function parseExpire(v){
+  if (!v) return null;
+  if (typeof v === "number") return v;
+  const t = Date.parse(v);
+  return Number.isFinite(t) ? t : null;
+}
+
+function fmtDur(ms){
+  if (!Number.isFinite(ms) || ms < 0) return "0m 0s";
+  const s = Math.floor(ms/1000);
+  const m = Math.floor(s/60);
+  const r = s%60;
+  return `${m}m ${String(r).padStart(2,"0")}s`;
+}
+
+function startSessionTimer(expiresAt){
+  if (SESSION_TIMER) clearInterval(SESSION_TIMER);
+
+  const pill = $("sessionPill");
+  if (!expiresAt){
+    pill.textContent = "Session: Active";
+    pill.style.color = cssVar("--good");
+    return;
+  }
+
+  function tick(){
+    const left = expiresAt - Date.now();
+    if (left <= 0){
+      pill.textContent = "Session: Expired";
+      pill.style.color = cssVar("--bad");
+      return;
+    }
+    pill.textContent = `Session: ${fmtDur(left)}`;
+    pill.style.color = left < 5*60*1000 ? cssVar("--warn") : cssVar("--good");
+  }
+  tick();
+  SESSION_TIMER = setInterval(tick, 1000);
+}
+
+/* -----------------------------
+   SLA timer (local visibility)
+----------------------------- */
+const SLA_KEY = "SUPPORT_SLA_START_TS";
+
+function loadSla(){
+  const ts = Number(localStorage.getItem(SLA_KEY) || 0);
+  if (!ts){
+    $("slaSubmitted").textContent = "Not started";
+    $("slaElapsed").textContent = "—";
+    return;
+  }
+  $("slaSubmitted").textContent = new Date(ts).toLocaleString();
+  updateSla();
+}
+function updateSla(){
+  const ts = Number(localStorage.getItem(SLA_KEY) || 0);
+  if (!ts){
+    $("slaElapsed").textContent = "—";
+    return;
+  }
+  $("slaElapsed").textContent = fmtDur(Date.now() - ts);
+}
+setInterval(updateSla, 1000);
+
+/* -----------------------------
+   Sparkline history
+   Prefer server history if available; fallback to local.
+----------------------------- */
+function histKey(orgId){ return `SUPPORT_HEALTH_HIST::${orgId || "unknown"}`; }
+
+function todayKey(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function loadLocalHist(orgId){
+  try{
+    const raw = localStorage.getItem(histKey(orgId));
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+function saveLocalHist(orgId, arr){
+  try{ localStorage.setItem(histKey(orgId), JSON.stringify(arr)); } catch {}
+}
+function pruneHist(arr){
+  const map = new Map();
+  for (const p of (arr||[])){
+    if (p && p.day) map.set(p.day, p);
+  }
+  const uniq = Array.from(map.values()).sort((a,b)=> (a.day||"").localeCompare(b.day||""));
+  return uniq.slice(Math.max(0, uniq.length - 30));
+}
+
+function cssVar(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function drawSpark(points){
+  const canvas = $("spark");
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0,0,w,h);
+
+  if (!points || points.length < 2){
+    ctx.fillStyle = cssVar("--muted");
+    ctx.font = "12px system-ui";
+    ctx.fillText("No 30-day history yet. A local daily point is captured on refresh.", 10, 20);
+    return;
+  }
+
+  const vals = points.map(p => Number(p.score || 0));
+  const min = Math.min(...vals, 0);
+  const max = Math.max(...vals, 100);
+
+  // background line
+  ctx.strokeStyle = cssVar("--line");
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, h-1);
+  ctx.lineTo(w, h-1);
+  ctx.stroke();
+
+  // line
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = cssVar("--accent");
+  ctx.beginPath();
+
+  for (let i=0;i<vals.length;i++){
+    const x = (w-10) * (i/(vals.length-1)) + 5;
+    const t = (vals[i] - min) / ((max-min) || 1);
+    const y = (h-10) - (t * (h-20)) + 5;
+
+    if (i === 0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // end dot
+  const lastVal = vals[vals.length-1];
+  const t = (lastVal - min)/((max-min)||1);
+  const lx = (w-10) * ((vals.length-1)/(vals.length-1)) + 5;
+  const ly = (h-10) - (t * (h-20)) + 5;
+  ctx.fillStyle = cssVar("--accent2");
+  ctx.beginPath();
+  ctx.arc(lx, ly, 3, 0, Math.PI*2);
+  ctx.fill();
+}
+
+/* -----------------------------
+   Health: combine multiple signals (best-effort)
+   Strategy:
+   - Collect signal objects: {name, ok, score(0-100), status, notes}
+   - Compute weighted score, map to GREEN/AMBER/RED
+   - Display + attach to ticket
+   Notes:
+   - The endpoints below are best-effort. If some do not exist yet, they are skipped.
+   - This page remains stable even when endpoints 404.
+----------------------------- */
+function normalizeStatus(s){
+  const x = String(s||"").toLowerCase();
+  if (x.includes("crit") || x.includes("down") || x.includes("outage") || x.includes("red")) return "red";
+  if (x.includes("degrad") || x.includes("warn") || x.includes("amber") || x.includes("yellow")) return "amber";
+  if (x.includes("ok") || x.includes("green") || x.includes("healthy")) return "green";
+  return "unknown";
+}
+
+function scoreToRag(score){
+  if (score >= 85) return "green";
+  if (score >= 65) return "amber";
+  return "red";
+}
+
+function ragLabel(rag){
+  if (rag === "green") return { t:"GREEN", c:cssVar("--good"), sub:"Healthy posture" };
+  if (rag === "amber") return { t:"AMBER", c:cssVar("--warn"), sub:"Degraded or at risk" };
+  return { t:"RED", c:cssVar("--bad"), sub:"Degraded, outage, or critical risk" };
+}
+
+function safeStr(v){ return (v === null || v === undefined) ? "" : String(v); }
+
+async function collectSignals(orgId){
+  DIAGS = [];
+  const addDiag = (name, r) => DIAGS.push({ name, ok: !!r?.ok, status: r?.status ?? null, ms: r?.ms ?? null });
+
+  const signals = [];
+
+  // Signal A: dedicated tenant health endpoint (if your worker has it)
+  {
+    const r = await api(`/api/tenant/health?orgId=${encodeURIComponent(orgId)}`);
+    addDiag("tenant_health", r);
+    if (r.ok && r.data){
+      const st = normalizeStatus(r.data.status || r.data.health || r.data.rag);
+      const score = Number.isFinite(Number(r.data.score)) ? Number(r.data.score) : (st === "green" ? 95 : st === "amber" ? 75 : st === "red" ? 45 : 70);
+      signals.push({
+        name:"Tenant Health",
+        weight: 0.35,
+        ok:true,
+        score,
+        status: st,
+        notes: r.data.notes || r.data.message || "Worker health signal"
+      });
+    } else {
+      signals.push({ name:"Tenant Health", weight:0.35, ok:false, score:null, status:"unknown", notes:"Endpoint unavailable or unauthorized." });
+    }
+  }
+
+  // Signal B: status summary (if you have /customer/status page backend)
+  {
+    const r = await api(`/api/status?orgId=${encodeURIComponent(orgId)}`);
+    addDiag("status", r);
+    if (r.ok && r.data){
+      const st = normalizeStatus(r.data.status || r.data.rag || r.data.health);
+      const score = Number.isFinite(Number(r.data.score)) ? Number(r.data.score) : (st === "green" ? 92 : st === "amber" ? 72 : st === "red" ? 40 : 70);
+      signals.push({
+        name:"Service Status",
+        weight: 0.20,
+        ok:true,
+        score,
+        status: st,
+        notes: r.data.summary || r.data.message || "Status signal"
+      });
+    } else {
+      signals.push({ name:"Service Status", weight:0.20, ok:false, score:null, status:"unknown", notes:"Status endpoint unavailable." });
+    }
+  }
+
+  // Signal C: incidents (degrade if open incidents exist)
+  {
+    const r = await api(`/api/incidents?orgId=${encodeURIComponent(orgId)}`);
+    addDiag("incidents", r);
+    if (r.ok && r.data){
+      const items = Array.isArray(r.data.items) ? r.data.items : Array.isArray(r.data) ? r.data : [];
+      const open = items.filter(x => {
+        const s = String(x.status||x.state||"").toLowerCase();
+        return s && !s.includes("resolved") && !s.includes("closed");
+      }).length;
+
+      let score = 95;
+      let st = "green";
+      let note = "No open incidents detected.";
+      if (open > 0){
+        score = Math.max(35, 90 - open*15);
+        st = open >= 2 ? "red" : "amber";
+        note = `${open} open incident(s) detected.`;
+      }
+
+      signals.push({
+        name:"Incidents",
+        weight: 0.20,
+        ok:true,
+        score,
+        status: st,
+        notes: note
+      });
+    } else {
+      signals.push({ name:"Incidents", weight:0.20, ok:false, score:null, status:"unknown", notes:"Incidents endpoint unavailable." });
+    }
+  }
+
+  // Signal D: maintenance (planned maintenance is amber, active/outage is red)
+  {
+    const r = await api(`/api/maintenance?orgId=${encodeURIComponent(orgId)}`);
+    addDiag("maintenance", r);
+    if (r.ok && r.data){
+      const items = Array.isArray(r.data.items) ? r.data.items : Array.isArray(r.data) ? r.data : [];
+      const active = items.filter(x => {
+        const s = String(x.status||x.state||"").toLowerCase();
+        return s.includes("active") || s.includes("in progress") || s.includes("in_progress");
+      }).length;
+
+      const upcoming = items.filter(x => {
+        const s = String(x.status||x.state||"").toLowerCase();
+        return s.includes("scheduled") || s.includes("upcoming");
+      }).length;
+
+      let score = 95;
+      let st = "green";
+      let note = "No active maintenance detected.";
+      if (active > 0){
+        score = 65;
+        st = "amber";
+        note = `${active} active maintenance event(s).`;
+      } else if (upcoming > 0){
+        score = 80;
+        st = "amber";
+        note = `${upcoming} scheduled maintenance event(s).`;
+      }
+
+      signals.push({
+        name:"Maintenance",
+        weight: 0.10,
+        ok:true,
+        score,
+        status: st,
+        notes: note
+      });
+    } else {
+      signals.push({ name:"Maintenance", weight:0.10, ok:false, score:null, status:"unknown", notes:"Maintenance endpoint unavailable." });
+    }
+  }
+
+  // Signal E: call quality snapshot (if your scheduled job stores KV and you expose it)
+  {
+    const r = await api(`/api/quality?orgId=${encodeURIComponent(orgId)}`);
+    addDiag("quality", r);
+    if (r.ok && r.data){
+      // Expect something like: {score:0-100, rag:"green|amber|red", notes:"..."}
+      const st = normalizeStatus(r.data.rag || r.data.status || r.data.health);
+      const score = Number.isFinite(Number(r.data.score)) ? Number(r.data.score) : (st === "green" ? 90 : st === "amber" ? 70 : st === "red" ? 45 : 75);
+      signals.push({
+        name:"Call Quality",
+        weight: 0.15,
+        ok:true,
+        score,
+        status: st === "unknown" ? scoreToRag(score) : st,
+        notes: r.data.notes || r.data.summary || "Quality snapshot"
+      });
+    } else {
+      // Non-fatal, just reduces confidence
+      signals.push({ name:"Call Quality", weight:0.15, ok:false, score:null, status:"unknown", notes:"Quality snapshot unavailable." });
+    }
+  }
+
+  // Compute combined score (weighted, ignoring missing signals)
+  let wSum = 0;
+  let sSum = 0;
+
+  for (const s of signals){
+    if (s.ok && Number.isFinite(s.score)){
+      wSum += s.weight;
+      sSum += s.score * s.weight;
+    }
+  }
+
+  // If everything failed, default to amber with low confidence
+  const combinedScore = (wSum > 0) ? Math.round(sSum / wSum) : 70;
+  const combinedRag = scoreToRag(combinedScore);
+
+  // Confidence: based on weighted coverage
+  const coverage = Math.round((wSum / 1.0) * 100); // 0-100
+  const updated = new Date().toISOString();
+
+  return {
+    orgId,
+    score: combinedScore,
+    rag: combinedRag,
+    coverage,
+    updated,
+    signals,
+    diagnostics: DIAGS
+  };
+}
+
+/* -----------------------------
+   Render health UI
+----------------------------- */
+function setSidebarRag(score, rag){
+  const pill = $("ragPill");
+  pill.classList.remove("red","amber");
+  const meta = ragLabel(rag);
+
+  $("ragTitle").textContent = meta.t;
+  $("ragSub").textContent = meta.sub;
+  $("ragScore").textContent = String(score);
+
+  $("ragDot").style.background = meta.c;
+
+  if (rag === "amber") pill.classList.add("amber");
+  if (rag === "red") pill.classList.add("red");
+}
+
+function setTicketHealthBadge(rag, score){
+  const b = $("ticketHealthBadge");
+  b.className = "badge " + (rag === "green" ? "good" : rag === "amber" ? "warn" : "bad");
+  b.querySelector(".dot").style.color = rag === "green" ? cssVar("--good") : rag === "amber" ? cssVar("--warn") : cssVar("--bad");
+  $("ticketHealthText").textContent = `Health: ${rag.toUpperCase()} (${score}/100)`;
+}
+
+function renderSignals(health){
+  const list = $("signalsList");
+  const note = $("signalsNote");
+
+  const okCount = health.signals.filter(s => s.ok).length;
+  note.textContent = `Signals collected: ${okCount}/${health.signals.length}. Coverage: ${health.coverage}% (weighted).`;
+
+  list.innerHTML = health.signals.map(s => {
+    const st = s.ok ? (s.status || scoreToRag(s.score)) : "unknown";
+    const cls = st === "green" ? "good" : st === "amber" ? "warn" : st === "red" ? "bad" : "warn";
+    const dispScore = s.ok && Number.isFinite(s.score) ? `${Math.round(s.score)}/100` : "—";
+    const msg = s.notes ? safeStr(s.notes) : "";
+    return `
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line);">
+        <div style="font-weight:1000;">${safeStr(s.name)}</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span class="badge ${cls}"><span class="dot"></span>${st.toUpperCase()}</span>
+          <span class="mono">${dispScore}</span>
+        </div>
+      </div>
+      <div class="muted" style="margin-top:-4px;margin-bottom:6px;">${escapeHtml(msg)}</div>
+    `;
+  }).join("");
+}
+
+function escapeHtml(str){
+  return String(str || "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+/* -----------------------------
+   Load /api/me and init page
+----------------------------- */
+function setSubmitEnabled(enabled, hint){
+  $("btnOpenTicket").disabled = !enabled;
+  $("submitHint").textContent = hint || (enabled ? "Ready to submit a ticket." : "Valid session required.");
+}
+
+async function loadMe(){
+  const r = await api("/api/me");
+  if (!r.ok){
+    // If customer is not authenticated, go to PIN page (your standard flow)
+    window.location.href = "/pin";
+    return false;
+  }
+
+  ME = r.data;
+
+  const email = ME?.email || "Unknown";
+  const role = ME?.role || "user";
+  const orgName = ME?.orgName || "—";
+  const orgId = ME?.orgId || "";
+
+  $("whoLine").textContent = `${email} (${role})`;
+  $("tenantPill").textContent = `Tenant: ${orgName}`;
+
+  // Pre-fill ticket modal fields
+  $("tOrgName").value = orgName;
+  $("tOrgId").value = orgId;
+  $("tEmail").value = email;
+
+  // Session timer
+  const exp = parseExpire(ME?.sessionExpiresAt || ME?.expiresAt || ME?.exp);
+  startSessionTimer(exp);
+
+  // Enable submit when orgId exists
+  if (orgId){
+    setSubmitEnabled(true, "Submit a ticket for support. Your email will be included as the point of contact.");
+  } else {
+    setSubmitEnabled(false, "Tenant is not resolved. Contact US Signal if you believe this is incorrect.");
+  }
+
+  return true;
+}
+
+/* -----------------------------
+   History: prefer server history if available
+   If endpoint exists, expects: {points:[{day,score}], ...}
+   Otherwise: use local history and capture a daily point on refresh.
+----------------------------- */
+async function loadSparkHistory(orgId, combinedScore){
+  // Try server history first
+  const r = await api(`/api/health/history?orgId=${encodeURIComponent(orgId)}`);
+  if (r.ok && r.data && Array.isArray(r.data.points)){
+    $("sparkHint").textContent = `Source: server (${r.data.points.length} points)`;
+    drawSpark(r.data.points.slice(-30));
+    return;
+  }
+
+  // Fallback: local history
+  let hist = loadLocalHist(orgId);
+
+  // Capture today's point (overwrite)
+  const day = todayKey();
+  hist = pruneHist([...(hist||[]), { day, score: combinedScore, ts: Date.now() }]);
+  saveLocalHist(orgId, hist);
+
+  $("sparkHint").textContent = `Source: local (${hist.length} points)`;
+  drawSpark(hist);
+}
+
+/* -----------------------------
+   Refresh everything
+----------------------------- */
+async function refreshAll(){
+  setHoursPill();
+  loadSla();
+
+  if (!ME?.orgId){
+    $("healthStatus").textContent = "Unavailable";
+    $("healthScore").textContent = "—";
+    $("healthUpdated").textContent = "—";
+    $("healthStatusSub").textContent = "Tenant not resolved.";
+    return;
+  }
+
+  $("healthStatus").textContent = "Loading…";
+  $("healthScore").textContent = "—";
+  $("healthUpdated").textContent = "—";
+  $("healthStatusSub").textContent = "Collecting signals…";
+  $("criticalBanner").style.display = "none";
+
+  HEALTH = await collectSignals(ME.orgId);
+
+  // Render main snapshot
+  $("healthScore").textContent = `${HEALTH.score}/100`;
+  $("healthUpdated").textContent = new Date(HEALTH.updated).toLocaleString();
+  $("healthStatus").textContent = HEALTH.rag.toUpperCase();
+  $("healthStatus").style.color = HEALTH.rag === "green" ? cssVar("--good") : HEALTH.rag === "amber" ? cssVar("--warn") : cssVar("--bad");
+
+  $("healthStatusSub").textContent =
+    `Combined signals. Coverage: ${HEALTH.coverage}%. Collected: ${new Date(HEALTH.updated).toLocaleTimeString()}.`;
+
+  // Sidebar RAG
+  setSidebarRag(HEALTH.score, HEALTH.rag);
+
+  // Critical banner
+  if (HEALTH.rag === "red"){
+    $("criticalBanner").style.display = "block";
+  }
+
+  // Signals panel
+  renderSignals(HEALTH);
+
+  // Sparkline history
+  await loadSparkHistory(ME.orgId, HEALTH.score);
+
+  // Ticket badge
+  setTicketHealthBadge(HEALTH.rag, HEALTH.score);
+}
+
+/* -----------------------------
+   Modal: open/close
+----------------------------- */
+function openTicketModal(){
+  // Badge refresh before showing
+  if (HEALTH){
+    setTicketHealthBadge(HEALTH.rag, HEALTH.score);
+  } else {
+    setTicketHealthBadge("amber", 70);
+  }
+  $("ticketStatus").textContent = "";
+  $("ticketModalOverlay").style.display = "flex";
+}
+function closeTicketModal(){
+  $("ticketModalOverlay").style.display = "none";
+}
+
+$("btnOpenTicket").addEventListener("click", openTicketModal);
+$("btnCloseTicketModal").addEventListener("click", closeTicketModal);
+$("btnTicketCancel").addEventListener("click", closeTicketModal);
+
+$("ticketModalOverlay").addEventListener("click", (e)=>{
+  if (e.target && e.target.id === "ticketModalOverlay") closeTicketModal();
+});
+document.addEventListener("keydown", (e)=>{
+  if (e.key === "Escape") closeTicketModal();
+});
+
+/* -----------------------------
+   Submit Ticket
+   - Routes to Cloudflare Worker endpoint: POST /api/support/ticket
+   - Auto-attaches HEALTH + diagnostics + minimal client metadata
+   - Starts SLA timer locally on success
+----------------------------- */
+function validateTicket(){
+  const summary = $("tSummary").value.trim();
+  const desc = $("tDescription").value.trim();
+
+  if (!summary) return "Please provide an Issue Summary.";
+  if (summary.length < 6) return "Issue Summary should be at least 6 characters.";
+  if (!desc) return "Please provide a Detailed Description.";
+  if (desc.length < 20) return "Detailed Description should be at least 20 characters.";
+  return null;
+}
+
+$("btnTicketSubmit").addEventListener("click", submitTicket);
+
 async function submitTicket(){
-  const desc = $("ticketDescription").value.trim();
-  if(!desc){ alert("Please describe the issue."); return; }
+  const err = validateTicket();
+  const status = $("ticketStatus");
+  status.style.color = cssVar("--muted");
+  status.textContent = "";
 
-  await fetch("/api/support/ticket",{
-    method:"POST",
-    headers:{"content-type":"application/json"},
-    body:JSON.stringify({
-      orgName:$("ticketOrg").value,
-      orgId:$("ticketOrgId").value,
-      email:$("ticketEmail").value,
-      description:desc
-    })
-  });
+  if (err){
+    status.style.color = cssVar("--bad");
+    status.textContent = err;
+    return;
+  }
 
-  alert("Ticket submitted successfully.");
-  closeModal();
+  const btn = $("btnTicketSubmit");
+  btn.disabled = true;
+  const original = btn.innerHTML;
+  btn.innerHTML = `<span class="spinner"></span> Submitting`;
+
+  try{
+    const payload = {
+      source: "customer_portal_support",
+      submittedAt: new Date().toISOString(),
+      orgName: ME?.orgName || $("tOrgName").value,
+      orgId: ME?.orgId || $("tOrgId").value,
+      contactEmail: ME?.email || $("tEmail").value,
+
+      callbackNumber: $("tPhone").value.trim() || null,
+      severity: $("tSeverity").value,
+      category: $("tCategory").value,
+      summary: $("tSummary").value.trim(),
+      description: $("tDescription").value.trim(),
+
+      // Auto-attach combined snapshot and diagnostics
+      tenantHealthSnapshot: HEALTH || null,
+      diagnostics: DIAGS || [],
+
+      // Minimal client meta
+      client: {
+        ua: navigator.userAgent,
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
+        page: "/customer/support"
+      }
+    };
+
+    const r = await api("/api/support/ticket", {
+      method:"POST",
+      headers:{ "content-type":"application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!r.ok){
+      const msg = (r.data && (r.data.message || r.data.error)) || `Ticket submission failed (HTTP ${r.status}).`;
+      status.style.color = cssVar("--bad");
+      status.textContent = msg;
+      return;
+    }
+
+    // Start SLA timer locally
+    localStorage.setItem(SLA_KEY, String(Date.now()));
+    loadSla();
+
+    status.style.color = cssVar("--good");
+    status.textContent = "Ticket submitted successfully. US Signal Customer Care has been notified. Your email is included as the point of contact.";
+
+    // Optional: clear form fields
+    $("tPhone").value = "";
+    $("tSummary").value = "";
+    $("tDescription").value = "";
+
+    setTimeout(()=> closeTicketModal(), 600);
+
+  } catch (e){
+    status.style.color = cssVar("--bad");
+    status.textContent = e?.message || String(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
 }
 
-loadUser();
-updateBusinessHours();
+/* -----------------------------
+   Refresh button
+----------------------------- */
+$("btnRefresh").addEventListener("click", refreshAll);
+
+/* -----------------------------
+   Init
+----------------------------- */
+async function init(){
+  setHoursPill();
+  loadSla();
+
+  const ok = await loadMe();
+  if (!ok) return;
+
+  await refreshAll();
+}
+
+init();
 </script>
 
 </body>
