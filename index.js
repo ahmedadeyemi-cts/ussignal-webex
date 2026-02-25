@@ -4017,7 +4017,7 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
 /*if (url.pathname === "/api/analytics" && request.method === "GET") {
   return await apiCallingAnalytics(env, request);
 }*/
-    if (url.pathname === "/api/analytics" && request.method === "GET") {
+   if (url.pathname === "/api/analytics" && request.method === "GET") {
 
   const user = getCurrentUser(request);
   if (!user) return json({ ok:false, error:"access_required" }, 401);
@@ -4039,71 +4039,61 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
     resolvedOrgId = session.orgId;
   }
 
-  try {
+  const now = new Date();
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    const now = new Date();
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const from = sevenDaysAgo.toISOString();
+  const to = now.toISOString();
 
-    const from = sevenDaysAgo.toISOString();
-    const to = now.toISOString();
+  const path =
+    `/analytics/calling/callRecords` +
+    `?from=${encodeURIComponent(from)}` +
+    `&to=${encodeURIComponent(to)}`;
 
-    const result = await webexFetch(
-      env,
-      `/analytics/calling/callRecords?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-      resolvedOrgId
-    );
+  const result = await webexFetchSafe(env, path, resolvedOrgId);
 
-    if (!result.ok) {
-      return json({
-        ok:false,
-        error:"webex_analytics_failed",
-        status: result.status,
-        preview: result.preview
-      }, 500);
-    }
-
-    const records = result.data?.items || [];
-
-    const volume7d = records.length;
-
-    const last24h = records.filter(r =>
-      new Date(r.startTime) > new Date(Date.now() - 24*60*60*1000)
-    ).length;
-
-    const failedCalls = records.filter(r =>
-      r.callResult && r.callResult.toLowerCase().includes("fail")
-    ).length;
-
-    const peakConcurrency = Math.max(1, Math.round(volume7d / 24));
-
-    const availabilityPercent =
-      volume7d === 0 ? 100 :
-      Math.max(90, 100 - (failedCalls / volume7d) * 100);
-
-    return json({
-      ok:true,
-      orgId: resolvedOrgId,
-
-      volume7d,
-      volume24h: last24h,
-      peakConcurrency,
-      failedCalls,
-      availabilityPercent: Number(availabilityPercent.toFixed(2))
-    });
-
-  } catch (err) {
+  if (!result.ok) {
     return json({
       ok:false,
-      error:"analytics_exception",
-      message:String(err)
-    }, 500);
+      orgId: resolvedOrgId,
+      error:"webex_analytics_failed",
+      upstreamStatus: result.status,
+      upstreamPreview: result.preview
+    }, 200); // 🔥 never crash UI
   }
-}
 
+  const records = result.data?.items || [];
+
+  const volume7d = records.length;
+
+  const last24h = records.filter(r =>
+    new Date(r.startTime) > new Date(Date.now() - 24*60*60*1000)
+  ).length;
+
+  const failedCalls = records.filter(r =>
+    r.callResult && r.callResult.toLowerCase().includes("fail")
+  ).length;
+
+  const peakConcurrency = Math.max(1, Math.round(volume7d / 24));
+
+  const availabilityPercent =
+    volume7d === 0 ? 100 :
+    Math.max(90, 100 - (failedCalls / volume7d) * 100);
+
+  return json({
+    ok:true,
+    orgId: resolvedOrgId,
+    volume7d,
+    volume24h: last24h,
+    peakConcurrency,
+    failedCalls,
+    availabilityPercent: Number(availabilityPercent.toFixed(2))
+  }, 200);
+}
 /* if (url.pathname === "/api/cdr" && request.method === "GET") {
   return await apiCDR(env, request);
 } */
-  if (url.pathname === "/api/cdr" && request.method === "GET") {
+ if (url.pathname === "/api/cdr" && request.method === "GET") {
 
   const user = getCurrentUser(request);
   if (!user) return json({ error: "access_required" }, 401);
@@ -4111,7 +4101,7 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
   const session = await getSession(env, user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
-  let resolvedOrgId = null;
+  let resolvedOrgId;
 
   if (user.isAdmin) {
     if (!requestedOrgId) {
@@ -4119,38 +4109,38 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
     }
     resolvedOrgId = requestedOrgId;
   } else {
-    if (!session?.orgId) return json({ error: "pin_required" }, 401);
+    if (!session?.orgId) {
+      return json({ error: "pin_required" }, 401);
+    }
     resolvedOrgId = session.orgId;
   }
 
-  const windowDays = Math.min(
-    Number(url.searchParams.get("days") || 7),
-    30
-  );
-
-  const max = Math.min(
-    Number(url.searchParams.get("max") || 200),
-    1000
-  );
+  const windowDays = Math.min(Number(url.searchParams.get("days") || 7), 30);
+  const max = Math.min(Number(url.searchParams.get("max") || 200), 1000);
 
   const now = new Date().toISOString();
   const from = new Date(
     Date.now() - windowDays * 24 * 60 * 60 * 1000
   ).toISOString();
 
-  // 🔹 Prefer CDR Feed
-  const tryFeed = await webexFetchSafe(
-    env,
-    `/cdr_feed?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=${max}`,
-    resolvedOrgId
-  );
+  // 🔹 Try CDR Feed first
+  const feedPath =
+    `/cdr_feed?startTime=${encodeURIComponent(from)}` +
+    `&endTime=${encodeURIComponent(now)}` +
+    `&max=${max}`;
 
-  // 🔹 Fallback
-  const tryCalls = tryFeed.ok ? null : await webexFetchSafe(
-    env,
-    `/cdr/calls?startTime=${encodeURIComponent(from)}&endTime=${encodeURIComponent(now)}&max=${max}`,
-    resolvedOrgId
-  );
+  const tryFeed = await webexFetchSafe(env, feedPath, resolvedOrgId);
+
+  // 🔹 Fallback to legacy CDR
+  let tryCalls = null;
+  if (!tryFeed.ok) {
+    const callsPath =
+      `/cdr/calls?startTime=${encodeURIComponent(from)}` +
+      `&endTime=${encodeURIComponent(now)}` +
+      `&max=${max}`;
+
+    tryCalls = await webexFetchSafe(env, callsPath, resolvedOrgId);
+  }
 
   const picked = tryFeed.ok ? tryFeed : tryCalls;
 
@@ -4159,13 +4149,9 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
       ok: false,
       orgId: resolvedOrgId,
       error: "cdr_unavailable",
-      diag: picked ? diag("cdr", picked) : {
-        name: "cdr",
-        ok: false,
-        status: 0,
-        error: "no_attempt"
-      }
-    }, 200); // 🔥 never 500 tenant page
+      upstreamStatus: picked?.status ?? 0,
+      upstreamPreview: picked?.preview ?? null
+    }, 200); // 🔥 never crash UI
   }
 
   const records = normalizeCdrItems(picked.data);
@@ -4224,6 +4210,233 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
   }
 } */
 
+// =====================================================
+// /api/pstn (GET) — hardened multi-tenant + caching + summary
+// - Always scopes org via ?orgId= (NO header switching / NO null orgId)
+// - Adds short TTL cache (Cloudflare Cache API) to reduce Webex calls
+// - Adds lightweight org-level summary endpoint: /api/pstn/summary
+// =====================================================
+
+// ---------- Cache helpers (place near your other helpers if you want) ----------
+function cacheKeyFromRequest(request, suffix = "") {
+  // Cache varies by URL (includes orgId), plus a suffix for endpoint versioning.
+  const u = new URL(request.url);
+  u.searchParams.sort?.(); // safe in modern runtimes; no-op if undefined
+  u.hash = "";
+  // Ensure cache key is stable
+  return new Request(u.toString() + (suffix ? `#${suffix}` : ""), request);
+}
+
+async function cacheGetJson(request) {
+  try {
+    const cache = caches.default;
+    const hit = await cache.match(request);
+    if (!hit) return null;
+    // only cache JSON responses we created
+    const ct = hit.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) return null;
+    return await hit.json();
+  } catch {
+    return null;
+  }
+}
+
+async function cachePutJson(cacheKeyReq, payload, ttlSeconds = 60) {
+  try {
+    const cache = caches.default;
+    const headers = new Headers({
+      "Content-Type": "application/json; charset=utf-8",
+      // Cache in CF edge for ttlSeconds; clients still get fresh-ish data
+      "Cache-Control": `public, max-age=${ttlSeconds}`,
+      // Helpful for debugging
+      "X-Cache-TTL": String(ttlSeconds)
+    });
+    const res = new Response(JSON.stringify(payload), { status: 200, headers });
+    await cache.put(cacheKeyReq, res);
+  } catch {
+    // ignore cache failures; never break API response
+  }
+}
+
+function clampInt(v, def, min, max) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return def;
+  return Math.max(min, Math.min(max, Math.trunc(n)));
+}
+
+function asArray(v) { return Array.isArray(v) ? v : []; }
+function pickItems(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload.items)) return payload.items;
+  if (Array.isArray(payload)) return payload;
+  return [];
+}
+
+function getLocId(obj) {
+  return (
+    obj?.locationId ||
+    obj?.callingLocationId ||
+    obj?.location?.id ||
+    obj?.location?.locationId ||
+    null
+  );
+}
+
+function normalizePstnType(conn) {
+  const t = String(
+    conn?.connectionType ||
+    conn?.type ||
+    conn?.pstnType ||
+    ""
+  ).toUpperCase();
+
+  if (!t) return "NO_PSTN";
+  if (t.includes("CLOUD")) return "CLOUD_CONNECT";
+  if (t.includes("CISCO")) return "CISCO_PSTN";
+  if (t.includes("PREMISE") || t.includes("LOCAL") || t.includes("GATEWAY"))
+    return "LOCAL_GATEWAY";
+  return "UNKNOWN";
+}
+
+function computeCapacityScore(totalTrunks) {
+  if (totalTrunks === 0) return 0;
+  if (totalTrunks === 1) return 75;
+  return 95;
+}
+
+// Simple concurrency limiter for per-location calls
+async function mapLimit(arr, limit, workerFn) {
+  const out = new Array(arr.length);
+  let i = 0;
+  const runners = Array.from({ length: Math.min(limit, arr.length) }, async () => {
+    while (true) {
+      const idx = i++;
+      if (idx >= arr.length) break;
+      out[idx] = await workerFn(arr[idx], idx);
+    }
+  });
+  await Promise.all(runners);
+  return out;
+}
+
+// -----------------------------------------------------
+// 1) Org-level PSTN summary endpoint
+// -----------------------------------------------------
+if (
+  (url.pathname === "/api/pstn/summary" || url.pathname === "/api/pstn/summary/") &&
+  request.method === "GET"
+) {
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
+  const session = await getSession(env, user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId;
+  if (user.isAdmin) {
+    if (!requestedOrgId) return json({ ok:false, error:"missing_orgId" }, 400);
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) return json({ ok:false, error:"pin_required" }, 401);
+    resolvedOrgId = session.orgId;
+  }
+
+  // cache settings (summary can be cached a bit longer)
+  const ttl = clampInt(url.searchParams.get("ttl"), 120, 30, 600);
+  const cacheKeyReq = cacheKeyFromRequest(request, "pstn_summary_v1");
+
+  const cached = await cacheGetJson(cacheKeyReq);
+  if (cached) return json({ ...cached, _cache: "HIT" }, 200);
+
+  const diagnostics = [];
+  const diag = (name, r) => diagnostics.push({ name, ok: !!r?.ok, status: r?.status ?? null });
+
+  const safe = (path) => webexFetchSafe(env, path, resolvedOrgId);
+
+  // minimal, fast calls only
+  const locRes = await safe("/telephony/config/locations");
+  diag("telephony/config/locations", locRes);
+
+  if (!locRes.ok) {
+    const payload = {
+      ok: true,
+      pstnSummary: {
+        orgId: resolvedOrgId,
+        callingAvailable: false,
+        reason: "Calling API not accessible for this org",
+        totals: { trunks: 0, didsTotal: 0, locations: 0 },
+        scores: { pstnCapacityScore: 0 },
+        misconfigurations: [],
+        diagnostics
+      }
+    };
+    await cachePutJson(cacheKeyReq, payload, ttl);
+    return json({ ...payload, _cache: "MISS" }, 200);
+  }
+
+  const [numbersRes, trunksRes, redskyGlobal] = await Promise.all([
+    safe("/telephony/config/numbers"),
+    safe("/telephony/config/premisePstn/trunks"),
+    safe("/telephony/config/redSky/complianceStatus")
+  ]);
+
+  diag("telephony/config/numbers", numbersRes);
+  diag("premisePstn/trunks", trunksRes);
+  diag("redSky/complianceStatus", redskyGlobal);
+
+  const locationsRaw = asArray(locRes.data?.locations);
+  const numbersRaw = numbersRes.ok ? asArray(numbersRes.data?.phoneNumbers || numbersRes.data?.items) : [];
+  const trunksRaw = trunksRes.ok ? asArray(trunksRes.data?.trunks || trunksRes.data?.items) : [];
+
+  const totalTrunks = trunksRaw.length;
+  const totalDids = numbersRaw.length;
+  const capacityScore = computeCapacityScore(totalTrunks);
+
+  // quick health scan (no per-location API fan-out)
+  const perLoc = locationsRaw.map((loc) => {
+    const locId = loc.id;
+    const locNumbers = numbersRaw.filter(n => String(getLocId(n)) === String(locId));
+    const locTrunks = trunksRaw.filter(t => String(getLocId(t)) === String(locId));
+    return {
+      id: locId,
+      name: loc.name || "Unknown Location",
+      trunkCount: locTrunks.length,
+      didsTotal: locNumbers.length,
+      didsUnassigned: locNumbers.filter(isUnassignedNumber).length
+    };
+  });
+
+  const misconfigurations = [];
+  for (const l of perLoc) {
+    if (l.trunkCount === 0) misconfigurations.push({ location: l.name, issue: "No trunk found (may be Cloud PSTN or not configured)" });
+    if (l.trunkCount === 1) misconfigurations.push({ location: l.name, issue: "Single trunk no redundancy" });
+    if (l.didsTotal > 0 && l.didsUnassigned === l.didsTotal) misconfigurations.push({ location: l.name, issue: "All numbers appear unassigned" });
+  }
+
+  const payload = {
+    ok: true,
+    pstnSummary: {
+      orgId: resolvedOrgId,
+      callingAvailable: true,
+      totals: {
+        trunks: totalTrunks,
+        didsTotal: totalDids,
+        locations: perLoc.length
+      },
+      compliance: redskyGlobal.ok ? redskyGlobal.data : null,
+      misconfigurations,
+      diagnostics,
+      scores: { pstnCapacityScore: capacityScore }
+    }
+  };
+
+  await cachePutJson(cacheKeyReq, payload, ttl);
+  return json({ ...payload, _cache: "MISS" }, 200);
+}
+
+// -----------------------------------------------------
+// 2) Full PSTN endpoint (detailed), hardened + caching
+// -----------------------------------------------------
 if (url.pathname === "/api/pstn" && request.method === "GET") {
 
   const user = getCurrentUser(request);
@@ -4241,22 +4454,22 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     resolvedOrgId = session.orgId;
   }
 
-  // =====================================================
-  // 🔐 ORG CONTEXT LOGIC (CRITICAL FIX)
-  // =====================================================
+  // Multi-tenant scaling knobs
+  const ttl = clampInt(url.searchParams.get("ttl"), 60, 15, 300);                 // cache TTL seconds
+  const fanout = clampInt(url.searchParams.get("fanout"), 4, 1, 8);               // concurrency for per-location calls
+  const perLocTimeoutMs = clampInt(url.searchParams.get("perLocTimeoutMs"), 12000, 3000, 25000);
 
-  const shouldForceOrg =
-    user.isAdmin &&
-    requestedOrgId &&
-    requestedOrgId !== user.orgId;
+  // Cached response (safe because URL includes orgId, plus knob params)
+  const cacheKeyReq = cacheKeyFromRequest(request, "pstn_full_v2");
+  const cached = await cacheGetJson(cacheKeyReq);
+  if (cached) return json({ ...cached, _cache: "HIT" }, 200);
 
-  const safe = (path) =>
-    webexFetchSafe(env, path, shouldForceOrg ? resolvedOrgId : null);
+  // ✅ Always force org scoping (NO null orgId, NO header switching)
+  const safe = (path) => webexFetchSafe(env, path, resolvedOrgId);
 
   // =====================================================
   // Diagnostics
   // =====================================================
-
   const diagnostics = [];
   const diag = (name, r) => diagnostics.push({
     name,
@@ -4264,44 +4477,14 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     status: r?.status ?? null
   });
 
-  const getLocId = (obj) =>
-    obj?.locationId ||
-    obj?.callingLocationId ||
-    obj?.location?.id ||
-    obj?.location?.locationId ||
-    null;
-
-  function normalizePstnType(conn){
-    const t = String(
-      conn?.connectionType ||
-      conn?.type ||
-      conn?.pstnType ||
-      ""
-    ).toUpperCase();
-
-    if (!t) return "NO_PSTN";
-    if (t.includes("CLOUD")) return "CLOUD_CONNECT";
-    if (t.includes("CISCO")) return "CISCO_PSTN";
-    if (t.includes("PREMISE") || t.includes("LOCAL") || t.includes("GATEWAY"))
-      return "LOCAL_GATEWAY";
-    return "UNKNOWN";
-  }
-
-  function computeCapacityScore(totalTrunks){
-    if (totalTrunks === 0) return 0;
-    if (totalTrunks === 1) return 75;
-    return 95;
-  }
-
   // =====================================================
   // 1️⃣ Locations (BASELINE CHECK)
   // =====================================================
-
   const locRes = await safe("/telephony/config/locations");
   diag("telephony/config/locations", locRes);
 
   if (!locRes.ok) {
-    return json({
+    const payload = {
       ok:true,
       pstn:{
         orgId: resolvedOrgId,
@@ -4313,70 +4496,75 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
         numbers:[],
         routeGroups:[],
         misconfigurations:[],
-        diagnostics
+        diagnostics,
+        scores:{ pstnCapacityScore: 0 }
       }
-    });
+    };
+    await cachePutJson(cacheKeyReq, payload, ttl);
+    return json({ ...payload, _cache: "MISS" }, 200);
   }
 
-  const locationsRaw = locRes.data?.locations || [];
+  const locationsRaw = asArray(locRes.data?.locations);
 
   // =====================================================
-  // 2️⃣ OPTIONAL CALLING ENDPOINTS
+  // 2️⃣ OPTIONAL CALLING ENDPOINTS (parallelized)
   // =====================================================
+  const [numbersRes, trunksRes, routeRes, redskyGlobal] = await Promise.all([
+    safe("/telephony/config/numbers"),
+    safe("/telephony/config/premisePstn/trunks"),
+    safe("/telephony/config/premisePstn/routeGroups"),
+    safe("/telephony/config/redSky/complianceStatus")
+  ]);
 
-  const numbersRes = await safe("/telephony/config/numbers");
   diag("telephony/config/numbers", numbersRes);
-  const numbersRaw = numbersRes.ok
-    ? (numbersRes.data?.phoneNumbers || numbersRes.data?.items || [])
-    : [];
-
-  const trunksRes = await safe("/telephony/config/premisePstn/trunks");
   diag("premisePstn/trunks", trunksRes);
-  const trunksRaw = trunksRes.ok
-    ? (trunksRes.data?.trunks || trunksRes.data?.items || [])
-    : [];
-
-  const routeRes = await safe("/telephony/config/premisePstn/routeGroups");
   diag("premisePstn/routeGroups", routeRes);
-  const routeGroupsRaw = routeRes.ok
-    ? (routeRes.data?.routeGroups || routeRes.data?.items || [])
-    : [];
-
-  const redskyGlobal = await safe("/telephony/config/redSky/complianceStatus");
   diag("redSky/complianceStatus", redskyGlobal);
 
-  // =====================================================
-  // 3️⃣ ENRICH LOCATIONS
-  // =====================================================
+  const numbersRaw = numbersRes.ok
+    ? asArray(numbersRes.data?.phoneNumbers || numbersRes.data?.items)
+    : [];
 
-  const enrichedLocations = [];
+  const trunksRaw = trunksRes.ok
+    ? asArray(trunksRes.data?.trunks || trunksRes.data?.items)
+    : [];
 
-  for (const loc of locationsRaw) {
+  const routeGroupsRaw = routeRes.ok
+    ? asArray(routeRes.data?.routeGroups || routeRes.data?.items)
+    : [];
+
+  // =====================================================
+  // 3️⃣ ENRICH LOCATIONS (fan-out with concurrency limit + timeout)
+  // =====================================================
+  function withTimeout(promise, ms) {
+    let t;
+    const timeout = new Promise((resolve) => {
+      t = setTimeout(() => resolve({ ok:false, status:0, error:"timeout", data:null, preview:`timeout_${ms}ms` }), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(t));
+  }
+
+  const enrichedLocations = await mapLimit(locationsRaw, fanout, async (loc) => {
 
     const locId = loc.id;
 
-    const conn = await safe(`/telephony/pstn/locations/${locId}/connection`);
+    const conn = await withTimeout(safe(`/telephony/pstn/locations/${locId}/connection`), perLocTimeoutMs);
     diag(`pstn/locations/${locId}/connection`, conn);
 
-    const redskyStatus = await safe(`/telephony/config/locations/${locId}/redSky/status`);
+    const redskyStatus = await withTimeout(safe(`/telephony/config/locations/${locId}/redSky/status`), perLocTimeoutMs);
     diag(`locations/${locId}/redSky/status`, redskyStatus);
 
-    const emergencyNotif = await safe(`/telephony/config/locations/${locId}/emergencyCallNotification`);
+    const emergencyNotif = await withTimeout(safe(`/telephony/config/locations/${locId}/emergencyCallNotification`), perLocTimeoutMs);
     diag(`locations/${locId}/emergencyCallNotification`, emergencyNotif);
 
-    const locNumbers = numbersRaw.filter(n =>
-      String(getLocId(n)) === String(locId)
-    );
-
-    const locTrunks = trunksRaw.filter(t =>
-      String(getLocId(t)) === String(locId)
-    );
+    const locNumbers = numbersRaw.filter(n => String(getLocId(n)) === String(locId));
+    const locTrunks = trunksRaw.filter(t => String(getLocId(t)) === String(locId));
 
     const trunkCount = locTrunks.length;
     const didTotal = locNumbers.length;
     const didUnassigned = locNumbers.filter(isUnassignedNumber).length;
 
-    const pstnType = normalizePstnType(conn.data);
+    const pstnType = normalizePstnType(conn?.data);
 
     const redundancyScore =
       trunkCount >= 2 ? 100 :
@@ -4389,35 +4577,45 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
       95;
 
     const emergencyConfigured =
-      redskyStatus.ok &&
-      String(redskyStatus.data?.complianceStatus).toUpperCase() === "COMPLIANT";
+      redskyStatus?.ok &&
+      String(redskyStatus?.data?.complianceStatus).toUpperCase() === "COMPLIANT";
 
-    enrichedLocations.push({
+    return {
       id: locId,
       name: loc.name || "Unknown Location",
       callingEnabled: true,
-      pstnConnection: conn.data || null,
+
+      pstnConnection: conn?.ok ? (conn.data || null) : null,
       pstnOption: pstnType,
+
       trunkCount,
-      dids:{
+      dids: {
         total: didTotal,
         unassigned: didUnassigned
       },
+
       redundancyScore,
       blastRadius,
       emergencyConfigured,
-      raw:{
-        connection: conn.data || null,
-        redSky: redskyStatus.data || null,
-        emergencyNotification: emergencyNotif.data || null
+
+      // Make failures visible but non-breaking
+      fetchHealth: {
+        connectionOk: !!conn?.ok,
+        redSkyOk: !!redskyStatus?.ok,
+        emergencyNotifOk: !!emergencyNotif?.ok
+      },
+
+      raw: {
+        connection: conn?.ok ? (conn.data || null) : null,
+        redSky: redskyStatus?.ok ? (redskyStatus.data || null) : null,
+        emergencyNotification: emergencyNotif?.ok ? (emergencyNotif.data || null) : null
       }
-    });
-  }
+    };
+  });
 
   // =====================================================
-  // 4️⃣ ORG TOTALS
+  // 4️⃣ ORG TOTALS + MISCONFIGURATIONS + SCORES
   // =====================================================
-
   const totalTrunks = trunksRaw.length;
   const totalDids = numbersRaw.length;
   const capacityScore = computeCapacityScore(totalTrunks);
@@ -4426,41 +4624,58 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
 
   for (const l of enrichedLocations) {
     if (l.pstnOption === "NO_PSTN")
-      misconfigurations.push({ location:l.name, issue:"No PSTN configured" });
+      misconfigurations.push({ location: l.name, issue: "No PSTN configured" });
 
     if (l.trunkCount === 1)
-      misconfigurations.push({ location:l.name, issue:"Single trunk no redundancy" });
+      misconfigurations.push({ location: l.name, issue: "Single trunk no redundancy" });
 
     if (!l.emergencyConfigured)
-      misconfigurations.push({ location:l.name, issue:"E911 not compliant" });
+      misconfigurations.push({ location: l.name, issue: "E911 not compliant" });
+
+    // extra hardening signals
+    if (l.fetchHealth && (!l.fetchHealth.connectionOk || !l.fetchHealth.redSkyOk))
+      misconfigurations.push({ location: l.name, issue: "Partial PSTN API visibility (connection/redsky lookup failed)" });
   }
 
   // =====================================================
-  // ✅ FINAL RESPONSE
+  // ✅ FINAL RESPONSE (cached)
   // =====================================================
-
-  return json({
+  const payload = {
     ok:true,
     pstn:{
       orgId: resolvedOrgId,
       callingAvailable:true,
+
       totals:{
         trunks: totalTrunks,
         didsTotal: totalDids,
         locations: enrichedLocations.length
       },
+
       locations: enrichedLocations,
       trunks: trunksRaw,
       numbers: numbersRaw,
       routeGroups: routeGroupsRaw,
+
       compliance: redskyGlobal.ok ? redskyGlobal.data : null,
       misconfigurations,
       diagnostics,
+
       scores:{
         pstnCapacityScore: capacityScore
+      },
+
+      // helpful metadata for tuning
+      tuning: {
+        cacheTtlSeconds: ttl,
+        perLocationConcurrency: fanout,
+        perLocationTimeoutMs
       }
     }
-  });
+  };
+
+  await cachePutJson(cacheKeyReq, payload, ttl);
+  return json({ ...payload, _cache: "MISS" }, 200);
 }
       /* -----------------------------
          🔎 DEBUG: seed + read a PIN
