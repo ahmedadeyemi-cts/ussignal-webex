@@ -149,7 +149,9 @@ const requiresQueryOrg =
   path.startsWith("/analytics") ||
   path.startsWith("/cdr") ||
   path.startsWith("/telephony") ||
-  path.startsWith("/licenses");
+  path.startsWith("/licenses") ||
+  path.startsWith("/pstn") ||
+  path.startsWith("/devices");
 
   if (orgId && requiresQueryOrg) {
     const sep = path.includes("?") ? "&" : "?";
@@ -3243,7 +3245,7 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
     resolvedOrgId = session.orgId;
   }
 
-  const result = await webexFetch(env, "/devices", resolvedOrgId);
+  const result = await webexFetchSafe(env, "/devices", resolvedOrgId);
 
   if (!result.ok) {
     return json({
@@ -3251,7 +3253,7 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
       error: "webex_devices_failed",
       status: result.status,
       preview: result.preview
-    }, 500);
+    }, 200);
   }
 
   const raw = result.data?.items || [];
@@ -3331,17 +3333,15 @@ if (url.pathname === "/api/devices" && request.method === "GET") {
     };
   });
 
-  const summary = {
-    totalDevices: normalized.length,
-    online,
-    offline,
-    unknown
-  };
-
   return json({
     ok: true,
     orgId: resolvedOrgId,
-    summary,
+    summary: {
+      totalDevices: normalized.length,
+      online,
+      offline,
+      unknown
+    },
     items: normalized
   });
 }
