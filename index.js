@@ -3862,7 +3862,90 @@ if (url.pathname.startsWith("/api/customer/")) {
   // ----------------------------------------------------
   return json({ ok:false, error:"unknown_customer_action" }, 404);
 }
-     
+ // =====================================================
+// ADMIN ALERTS
+// GET /api/alerts?orgId=
+// =====================================================
+if (url.pathname === "/api/alerts" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user || !user.isAdmin) {
+    return json({ ok:false, error:"access_required" }, 401);
+  }
+
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  if (!orgId) {
+    return json({ ok:false, error:"missing_orgId" }, 400);
+  }
+
+  // You can wire this to real data later.
+  // For now return a safe structure so UI doesn’t explode.
+
+  return json({
+    ok: true,
+    alerts: [],
+    orgId,
+    generatedAt: new Date().toISOString()
+  }, 200);
+}
+     // =====================================================
+// GET /api/alerts/summary
+// =====================================================
+if (url.pathname === "/api/alerts/summary" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user || !user.isAdmin) {
+    return json({ ok:false, error:"access_required" }, 401);
+  }
+
+  return json({
+    ok:true,
+    total:0,
+    critical:0,
+    warning:0,
+    info:0,
+    generatedAt:new Date().toISOString()
+  });
+}
+     // =====================================================
+// GET /api/devices/summary
+// =====================================================
+if (url.pathname === "/api/devices/summary" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user || !user.isAdmin) {
+    return json({ ok:false, error:"access_required" }, 401);
+  }
+
+  return json({
+    ok:true,
+    total:0,
+    online:0,
+    offline:0,
+    unknown:0,
+    generatedAt:new Date().toISOString()
+  });
+}
+     // =====================================================
+// GET /api/pstn/health
+// =====================================================
+if (url.pathname === "/api/pstn/health" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user || !user.isAdmin) {
+    return json({ ok:false, error:"access_required" }, 401);
+  }
+
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  return json({
+    ok:true,
+    orgId,
+    health:"unknown",
+    trunkCount:0,
+    lastChecked:new Date().toISOString()
+  });
+}
       /* -----------------------------
          /api/admin/pin/rotate (POST)
          Admin-only: rotate PIN for an org
