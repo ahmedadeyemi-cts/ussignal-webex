@@ -870,22 +870,22 @@
   let TENANTS = [];
   let LAST_SNAPSHOT = null;
 
- async function loadTenants(){
+async function loadTenants(){
 
-  const data = await api("/api/customers");
+  const data = await api("/api/admin/orgs");
 
   let list = [];
 
-  if(Array.isArray(data)){
+  if (Array.isArray(data)) {
     list = data;
   }
-  else if(Array.isArray(data?.customers)){
-    list = data.customers;
-  }
-  else if(Array.isArray(data?.orgs)){
+  else if (Array.isArray(data?.orgs)) {
     list = data.orgs;
   }
-  else if(Array.isArray(data?.items)){
+  else if (Array.isArray(data?.customers)) {
+    list = data.customers;
+  }
+  else if (Array.isArray(data?.items)) {
     list = data.items;
   }
 
@@ -910,7 +910,6 @@
     sel.appendChild(o);
   }
 }
-
   function getSelectedTenant(){
     const v = $("tenantSelect").value;
     if(!v) return null;
