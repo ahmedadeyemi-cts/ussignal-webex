@@ -32,6 +32,24 @@ const JSON_HEADERS = {
   "content-type": "application/json",
   "cache-control": "no-store",
 };
+// =============================================
+// Webex API Base URLs
+// =============================================
+
+const WEBEX_API_BASE_DEFAULT = "https://webexapis.com/v1";
+
+const ANALYTICS_BASE_DEFAULT = "https://analytics.webexapis.com/v1";
+// If you prefer the partner host instead, set:
+// WEBEX_ANALYTICS_BASE = https://analytics-calling.webexapis.com/v1
+
+function webexBase(env) {
+  return (env.WEBEX_API_BASE || WEBEX_API_BASE_DEFAULT).replace(/\/+$/, "");
+}
+
+function analyticsBase(env) {
+  return (env.WEBEX_ANALYTICS_BASE || ANALYTICS_BASE_DEFAULT).replace(/\/+$/, "");
+}
+
 // Global throttle configuration (set per request inside fetch)
 let PIN_THROTTLE_WINDOW_SECONDS = 900;
 let PIN_MAX_ATTEMPTS = 5;
@@ -92,40 +110,53 @@ async function resolveOrgIdForAdmin(env, key) {
 async function apiCDR(env, request) {
   const url = new URL(request.url);
   const orgId = url.searchParams.get("orgId");
-  const max = Math.min(
-    Number(url.searchParams.get("max") || 100),
-    1000
-  );
-  const days = Math.min(
-    Number(url.searchParams.get("days") || 1),
-    30
-  );
 
   if (!orgId) {
     return json({ error: "missing_orgId" }, 400);
   }
 
-  const to = new Date().toISOString();
-  const from = new Date(
+  const max = Math.min(Number(url.searchParams.get("max") || 500), 5000);
+  const days = Math.min(Number(url.searchParams.get("days") || 1), 30);
+
+  const endTime = new Date().toISOString();
+  const startTime = new Date(
     Date.now() - days * 24 * 60 * 60 * 1000
   ).toISOString();
 
-  const path =
-    `/cdr/calls?startTime=${encodeURIComponent(from)}` +
-    `&endTime=${encodeURIComponent(to)}` +
+  await ensureDelegation(env, orgId);
+  const token = await getAccessToken(env);
+
+  const base =
+    (env.WEBEX_ANALYTICS_BASE ||
+      "https://analytics-calling.webexapis.com/v1")
+      .replace(/\/+$/, "");
+
+  const endpoint =
+    `${base}/cdr_feed?` +
+    `startTime=${encodeURIComponent(startTime)}` +
+    `&endTime=${encodeURIComponent(endTime)}` +
     `&max=${max}`;
 
-  const result = await webexFetch(env, path, orgId);
+  const res = await fetch(endpoint, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "X-Organization-Id": orgId,
+      Accept: "application/json"
+    }
+  });
 
-  if (!result.ok) {
+  const text = await res.text();
+
+  try {
+    const data = JSON.parse(text);
+    return json({ ok: true, records: data.items || [] }, 200);
+  } catch {
     return json({
-      error: "webex_cdr_failed",
-      status: result.status,
-      preview: result.preview
+      ok: false,
+      error: "invalid_json",
+      preview: text.slice(0, 400)
     }, 500);
   }
-
-  return json(result.data, 200);
 }
 function escapeHtml(s) {
   return String(s)
@@ -135,7 +166,50 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+async function apiAnalytics(env, request) {
+  const url = new URL(request.url);
+  const orgId = url.searchParams.get("orgId");
 
+  if (!orgId) {
+    return json({ error: "missing_orgId" }, 400);
+  }
+
+  await ensureDelegation(env, orgId);
+
+  const token = await getAccessToken(env);
+  const base = analyticsBase(env);
+
+  const analyticsUrl =
+    `${base}/calling/analytics/summary`;
+
+  console.log("ANALYTICS CALL:", analyticsUrl);
+
+  const res = await fetch(analyticsUrl, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "X-Organization-Id": orgId
+    }
+  });
+
+  const text = await res.text();
+
+  try {
+    const data = JSON.parse(text);
+
+    return json({
+      ok: res.ok,
+      status: res.status,
+      analytics: data
+    }, res.ok ? 200 : 500);
+
+  } catch {
+    return json({
+      error: "analytics_not_json",
+      preview: text.slice(0, 400)
+    }, 500);
+  }
+}
 async function getGlobalSummarySnapshot(env) {
   return await env.WEBEX.get(GLOBAL_SUMMARY_KEY, { type: "json" });
 }
@@ -175,11 +249,11 @@ function scopeModeForPath(path) {
   return rule ? rule.mode : "header";
 }
 async function webexFetch(env, path, orgId = null) {
- if (orgId) {
-  await ensureDelegation(env, orgId);
-}
-  const token = await getAccessToken(env);
+  if (orgId) {
+    await ensureDelegation(env, orgId);
+  }
 
+  const token = await getAccessToken(env);
   const mode = scopeModeForPath(path);
 
   // Build finalPath (only mutate for query mode)
@@ -190,18 +264,43 @@ async function webexFetch(env, path, orgId = null) {
     finalPath = `${finalPath}${sep}orgId=${encodeURIComponent(orgId)}`;
   }
 
-  const url = `https://webexapis.com/v1${finalPath}`;
+  // Decide which base host to call
+  // Expand analytics detection to cover the patterns you’re using / may use
+  const isAnalytics =
+    finalPath.startsWith("/analytics") ||
+    finalPath.startsWith("/calling/analytics") ||
+    finalPath.startsWith("/cdr_feed") ||
+    finalPath.startsWith("/reports");
+
+  const base = isAnalytics ? analyticsBase(env) : webexBase(env);
+  const url = `${base}${finalPath}`;
 
   const headers = {
     Authorization: `Bearer ${token}`,
     Accept: "application/json"
   };
 
+  /**
+   * 🔥 Key Fix:
+   * For analytics-host calls (cdr_feed / analytics), always include X-Organization-Id
+   * Many tenants will return empty/403/partial without it.
+   */
+  if (orgId && isAnalytics) {
+    headers["X-Organization-Id"] = orgId;
+  }
+
+  // Keep your existing behavior for header-mode endpoints
   if (orgId && mode === "header") {
     headers["X-Organization-Id"] = orgId;
   }
 
-  console.log("WEBEX CALL:", { url, mode, orgId: orgId ? "yes" : "no" });
+  console.log("WEBEX CALL:", {
+    url,
+    mode,
+    base,
+    orgId: orgId ? "yes" : "no",
+    isAnalytics
+  });
 
   const res = await fetch(url, { headers });
   const text = await res.text();
@@ -4027,7 +4126,77 @@ if (url.pathname.startsWith("/api/admin/tenant-resolution/")) {
    CUSTOMER-SCOPED ROUTES
    Mirrors Partner Portal contract
 ===================================================== */
+// =====================================================
+// SUPPORT TICKET SUBMISSION
+// POST /api/support/ticket
+// =====================================================
+if (url.pathname === "/api/support/ticket" && request.method === "POST") {
 
+  try {
+
+    const body = await request.json();
+
+    const {
+      name,
+      email,
+      company,
+      severity,
+      subject,
+      description
+    } = body || {};
+
+    if (!name || !email || !subject || !description) {
+      return json({ ok:false, error:"missing_fields" }, 400);
+    }
+
+    // =====================================================
+    // OPTION 1 — Send via Brevo (if using it already)
+    // =====================================================
+
+    if (!env.BREVO_API_KEY || !env.BREVO_SENDER_EMAIL) {
+      return json({ ok:false, error:"email_not_configured" }, 500);
+    }
+
+    const emailPayload = {
+      sender: {
+        name: "US Signal Webex Portal",
+        email: env.BREVO_SENDER_EMAIL
+      },
+      to: [
+        { email: env.SUPPORT_EMAIL || "DLD-customercare@ussignal.com" }
+      ],
+      subject: `[Support Ticket] ${severity || "Normal"} - ${subject}`,
+      htmlContent: `
+        <h2>New Support Ticket</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Company:</strong> ${company || "N/A"}</p>
+        <p><strong>Severity:</strong> ${severity || "Normal"}</p>
+        <hr/>
+        <p>${description.replace(/\n/g, "<br/>")}</p>
+      `
+    };
+
+    const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": env.BREVO_API_KEY
+      },
+      body: JSON.stringify(emailPayload)
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      return json({ ok:false, error:"email_failed", details:text }, 500);
+    }
+
+    return json({ ok:true, message:"Ticket submitted successfully" });
+
+  } catch (e) {
+    return json({ ok:false, error:"server_exception", details:String(e) }, 500);
+  }
+}
 // =====================================================
 // CUSTOMER ROUTES
 // /api/customer/:key/:action
