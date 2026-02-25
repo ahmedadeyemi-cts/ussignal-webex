@@ -152,6 +152,38 @@ pre{
   font-size:12px;
   line-height:1.55;
 }
+.arch-img{
+  width:100%;
+  max-height:650px;
+  object-fit:contain;
+  border-radius:14px;
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+  margin-top:14px;
+  cursor:pointer;
+  transition:.25s ease;
+}
+
+.arch-img:hover{
+  transform:scale(1.01);
+}
+
+.arch-caption{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:8px;
+}
+
+.image-grid{
+  display:grid;
+  gap:18px;
+}
+
+@media (min-width:1100px){
+  .image-grid{
+    grid-template-columns:1fr 1fr;
+  }
+}
 </style>
 </head>
 
@@ -266,34 +298,226 @@ legacy analog support, and enterprise survivability models.
 <div class="v">Best-effort support for AudioCodes, Ribbon</div>
 </div>
 </div>
+<div class="card">
+<h3>Webex Calling PSTN Architecture Overview</h3>
 
+<div class="image-grid">
+
+  <div>
+    <img class="arch-img"
+         src="/assets/LocalGatewayArchitecture.jpg"
+         alt="Webex Calling Local Gateway Architecture"
+         onerror="this.src='https://webex.onenecklab.com/assets/LocalGatewayArchitecture.jpg'">
+    <div class="arch-caption">
+      Hybrid Webex Calling deployment using Local Gateway (CUBE) with PSTN and multi-location enterprise routing.
+    </div>
+  </div>
+
+  <div>
+    <img class="arch-img"
+         src="/assets/PSTNWBX.png"
+         alt="Webex Calling PSTN Call Flow"
+         onerror="this.src='https://webex.onenecklab.com/assets/PSTNWBX.png'">
+    <div class="arch-caption">
+      Detailed call flow mapping showing dial-peer routing between Webex Cloud and PSTN via CUBE.
+    </div>
+  </div>
+
+</div>
+</div>
 <!-- CUBE HA Dual Router -->
 <div class="card">
 <h3>CUBE HA Dual Router Sample Configuration</h3>
 
 <pre>
-interface GigabitEthernet0/0
- description WAN
- ip address 203.0.113.10 255.255.255.248
- no shut
+  Router 1 (ACTIVE):
+  Inside IP: 10.10.10.11
+  Outside IP: 203.0.113.11
 
+Router 2 (STANDBY):
+  Inside IP: 10.10.10.12
+  Outside IP: 203.0.113.12
+
+Virtual IP (Public):
+  203.0.113.10
+
+Virtual IP (Inside):
+  10.10.10.10
+
+HA Link:
+  Gi0/2
+  R1: 192.168.255.1
+  R2: 192.168.255.2
+
+CUCM:
+  10.10.20.5
+
+Webex LGW FQDN:
+  customer.lgw.webex.com
+  ROUTER 1 CONFIG (PRIMARY)
+!
+hostname CUBE1
+ip domain name ussignal.com
+!
+!
+interface GigabitEthernet0/0
+ description INSIDE
+ ip address 10.10.10.11 255.255.255.0
+ standby 1 ip 10.10.10.10
+ standby 1 priority 110
+ standby 1 preempt
+ standby 1 track 10 decrement 20
+ no shut
+!
+interface GigabitEthernet0/1
+ description OUTSIDE
+ ip address 203.0.113.11 255.255.255.248
+ standby 2 ip 203.0.113.10
+ standby 2 priority 110
+ standby 2 preempt
+ standby 2 track 10 decrement 20
+ no shut
+!
+interface GigabitEthernet0/2
+ description HA-LINK
+ ip address 192.168.255.1 255.255.255.252
+ no shut
+!
+track 10 interface GigabitEthernet0/1 line-protocol
+!
+ip route 0.0.0.0 0.0.0.0 203.0.113.9
+!
+!
 redundancy
  mode sso
- main-cpu
-  standby console enable
-
+!
+!
 voice service voip
+ mode border-element
+ allow-connections sip to sip
  sip
-  registrar server dns:webex.com
-  bind control source-interface GigabitEthernet0/0
-  bind media source-interface GigabitEthernet0/0
-
+  bind control source-interface GigabitEthernet0/1
+  bind media source-interface GigabitEthernet0/1
+  transport tcp tls v1.2
+  early-offer forced
+  midcall-signaling passthru
+  options-keepalive 30
+  srtp
+!
+!
+voice class codec 1
+ codec preference 1 g711ulaw
+ codec preference 2 g711alaw
+!
+!
+crypto pki trustpoint WEBEX-TP
+ enrollment terminal
+ subject-name CN=cube.ussignal.com
+ rsakeypair WEBEX-KEY 2048
+!
+voice class tls-profile 1
+ trustpoint WEBEX-TP
+!
+!
+sip-ua
+ transport tcp tls v1.2
+ registrar dns:customer.lgw.webex.com expires 3600
+ sip-server dns:customer.lgw.webex.com
+ connection-reuse
+ authentication username example@ussignal.com password 0 MySecurePassword realm ussignal.com
+ crypto signaling default trustpoint WEBEX-TP
+!
+!
+voice translation-rule 1
+ rule 1 /^9\(1[2-9]..[2-9]......\)$/ /+\1/
+!
+voice translation-profile TO-WEBEX
+ translate called 1
+!
+!
 dial-peer voice 100 voip
+ description OUTBOUND TO WEBEX
  destination-pattern +T
- session target dns:webex.com
- codec g711ulaw
+ session protocol sipv2
+ session target dns:customer.lgw.webex.com
+ voice-class codec 1
+ voice-class sip tls-profile 1
+ translation-profile outgoing TO-WEBEX
+ transport tcp tls
  dtmf-relay rtp-nte
+ srtp
  no vad
+!
+!
+dial-peer voice 200 voip
+ description INBOUND FROM WEBEX
+ incoming uri via customer.lgw.webex.com
+ voice-class codec 1
+ dtmf-relay rtp-nte
+ srtp
+ no vad
+!
+!
+dial-peer voice 300 voip
+ description TO-CUCM
+ destination-pattern +1[2-9]..[2-9]......
+ session target ipv4:10.10.20.5
+ voice-class codec 1
+ no vad
+!
+!
+dial-peer voice 400 voip
+ description FROM-CUCM
+ incoming called-number .
+ voice-class codec 1
+ no vad
+!
+!
+voice service voip
+  redundancy
+   mode active
+   peer 192.168.255.2
+   timer 3
+!
+!
+end
+  ROUTER 2 CONFIG (SECONDARY)
+!
+hostname CUBE2
+ip domain name ussignal.com
+!
+!
+interface GigabitEthernet0/0
+ ip address 10.10.10.12 255.255.255.0
+ standby 1 ip 10.10.10.10
+ standby 1 priority 100
+ standby 1 preempt
+ no shut
+!
+interface GigabitEthernet0/1
+ ip address 203.0.113.12 255.255.255.248
+ standby 2 ip 203.0.113.10
+ standby 2 priority 100
+ standby 2 preempt
+ no shut
+!
+interface GigabitEthernet0/2
+ ip address 192.168.255.2 255.255.255.252
+ no shut
+!
+redundancy
+ mode sso
+!
+voice service voip
+ redundancy
+  mode standby
+  peer 192.168.255.1
+  timer 3
+!
+!
+! (All remaining SIP / dial-peer config SAME as Router 1)
+!
+end
 </pre>
 </div>
 
@@ -302,34 +526,164 @@ dial-peer voice 100 voip
 <h3>Full CUBE Configuration Sample</h3>
 
 <pre>
+!
+! ==========================================
+! BASIC SYSTEM
+! ==========================================
+hostname CUBE-WEBEX-LGW
+ip domain name ussignal.com
+!
+!
+interface GigabitEthernet0/0
+ description INSIDE-LAN
+ ip address 10.10.10.10 255.255.255.0
+ no shut
+!
+interface GigabitEthernet0/1
+ description OUTSIDE-INTERNET
+ ip address 203.0.113.10 255.255.255.248
+ no shut
+!
+ip route 0.0.0.0 0.0.0.0 203.0.113.9
+!
+!
+! ==========================================
+! VOICE SERVICE GLOBAL
+! ==========================================
 voice service voip
+ mode border-element
+ allow-connections sip to sip
  ip address trusted list
-  ipv4 0.0.0.0 0.0.0.0
+  ipv4 10.10.20.5
+  ipv4 203.0.113.0 255.255.255.0
+ !
  sip
-  registrar server dns:webex.com expires 3600
-  authentication username cube password 0 securepassword
-  tls trustpoint Webex-TP
-  bind control source-interface GigabitEthernet0/0
-  bind media source-interface GigabitEthernet0/0
-
-dial-peer voice 101 voip
- description To Webex
+  bind control source-interface GigabitEthernet0/1
+  bind media source-interface GigabitEthernet0/1
+  transport tcp tls v1.2
+  no pass-thru content sdp
+  midcall-signaling passthru
+  early-offer forced
+  options-keepalive 30
+  srtp
+!
+!
+! ==========================================
+! CODEC CLASS
+! ==========================================
+voice class codec 1
+ codec preference 1 g711ulaw
+ codec preference 2 g711alaw
+!
+!
+! ==========================================
+! TLS CONFIGURATION
+! ==========================================
+crypto pki trustpoint WEBEX-TP
+ enrollment terminal
+ subject-name CN=cube.ussignal.com
+ rsakeypair WEBEX-KEY 2048
+!
+voice class tls-profile 1
+ trustpoint WEBEX-TP
+!
+!
+! ==========================================
+! SIP UA CONFIG
+! ==========================================
+sip-ua
+ transport tcp tls v1.2
+ registrar dns:customer.lgw.webex.com expires 3600
+ sip-server dns:customer.lgw.webex.com
+ connection-reuse
+ authentication username example@ussignal.com password 0 MySecurePassword realm ussignal.com
+ crypto signaling default trustpoint WEBEX-TP
+!
+!
+! ==========================================
+! SIP PROFILE (Optional Header Fix)
+! ==========================================
+voice class sip-profiles 1
+ request INVITE sip-header Contact modify "<sip:(.*)>" "<sip:\1;transport=tls>"
+!
+!
+! ==========================================
+! TRANSLATION RULES (E.164)
+! ==========================================
+voice translation-rule 1
+ rule 1 /^9\(1[2-9]..[2-9]......\)$/ /+\1/
+!
+voice translation-profile TO-WEBEX
+ translate called 1
+!
+!
+! ==========================================
+! DIAL-PEER TO WEBEX (OUTBOUND)
+! ==========================================
+dial-peer voice 100 voip
+ description OUTBOUND TO WEBEX
  destination-pattern +T
  session protocol sipv2
- session target dns:webex.com
+ session target dns:customer.lgw.webex.com
+ voice-class codec 1
+ voice-class sip tls-profile 1
+ voice-class sip profiles 1
+ voice-class sip options-keepalive up-interval 30 down-interval 30 retry 3
+ translation-profile outgoing TO-WEBEX
+ transport tcp tls
+ dtmf-relay rtp-nte
+ srtp
+ no vad
+!
+!
+! ==========================================
+! DIAL-PEER FROM WEBEX (INBOUND)
+! ==========================================
+dial-peer voice 200 voip
+ description INBOUND FROM WEBEX
+ incoming uri via customer.lgw.webex.com
+ session protocol sipv2
  voice-class codec 1
  dtmf-relay rtp-nte
  srtp
  no vad
-
-dial-peer voice 201 voip
- description To Carrier
- destination-pattern 9T
+!
+!
+! ==========================================
+! DIAL-PEER TO CUCM
+! ==========================================
+dial-peer voice 300 voip
+ description TO-CUCM
+ destination-pattern +1[2-9]..[2-9]......
  session protocol sipv2
- session target ipv4:198.51.100.20
+ session target ipv4:10.10.20.5
  voice-class codec 1
  dtmf-relay rtp-nte
  no vad
+!
+!
+! ==========================================
+! DIAL-PEER FROM CUCM
+! ==========================================
+dial-peer voice 400 voip
+ description FROM-CUCM
+ incoming called-number .
+ session protocol sipv2
+ voice-class codec 1
+ no vad
+!
+!
+! ==========================================
+! SIP OPTIONS KEEPALIVE
+! ==========================================
+dial-peer voice 100 voip
+ voice-class sip options-keepalive up-interval 30 down-interval 30 retry 3
+!
+!
+! ==========================================
+! END CONFIG
+! ==========================================
+!
 </pre>
 </div>
 
