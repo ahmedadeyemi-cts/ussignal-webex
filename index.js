@@ -148,7 +148,8 @@ async function webexFetch(env, path, orgId = null) {
 const requiresQueryOrg =
   path.startsWith("/analytics") ||
   path.startsWith("/cdr") ||
-  path.startsWith("/telephony");
+  path.startsWith("/telephony") ||
+  path.startsWith("/licenses");
 
   if (orgId && requiresQueryOrg) {
     const sep = path.includes("?") ? "&" : "?";
@@ -3084,29 +3085,28 @@ if (url.pathname === "/api/licenses" && request.method === "GET") {
 
   let resolvedOrgId;
 
-if (user.isAdmin) {
-  if (!requestedOrgId) {
-    return json({ ok:false, error:"missing_orgId" }, 400);
-  }
-  resolvedOrgId = requestedOrgId;
-}
-else {
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ ok:false, error:"missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
     if (!session?.orgId) {
       return json({ ok:false, error:"pin_required" }, 401);
     }
     resolvedOrgId = session.orgId;
   }
 
-  const result = await webexFetch(env, "/licenses", resolvedOrgId);
+  const result = await webexFetchSafe(env, "/licenses", resolvedOrgId);
 
-if (!result.ok) {
-  return json({
-    ok:false,
-    error:"webex_license_failed",
-    status: result.status,
-    webexResponse: result.data
-  }, 500);
-}
+  if (!result.ok) {
+    return json({
+      ok:false,
+      error:"webex_license_failed",
+      status: result.status,
+      preview: result.preview
+    }, 200); // keep UI alive
+  }
 
   const raw = result.data?.items || [];
 
@@ -3119,6 +3119,7 @@ if (!result.ok) {
     const available = total - consumed;
 
     const deficit = available < 0 ? Math.abs(available) : 0;
+
     const status =
       total === -1 ? "UNLIMITED" :
       deficit > 0 ? "DEFICIT" :
@@ -3141,13 +3142,11 @@ if (!result.ok) {
   return json({
     ok: true,
     orgId: resolvedOrgId,
-
     summary: {
       totalConsumed,
       totalDeficit,
       hasDeficit: totalDeficit > 0
     },
-
     items
   });
 }
