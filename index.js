@@ -2009,7 +2009,217 @@ if (!pstnResult.ok) {
   tenants
 };
 }
+/* =====================================================
+   🕒 SCHEDULED REPORT ENGINE (Partner multi-tenant)
+   Place near computeGlobalSummary(), before export default
+===================================================== */
 
+function slaFromHealthLike({ score, alerts, metrics }) {
+  // Simple, defensible SLA rollup using what you already compute
+  // You can evolve this later without changing storage contract.
+  const availability = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : null;
+
+  const breachSignals = [
+    alerts?.severeCallFailures,
+    alerts?.pstnE911Risk,
+    alerts?.pstnCapacityRed,
+    alerts?.apiDegraded
+  ].filter(Boolean).length;
+
+  const status =
+    availability == null ? "UNKNOWN" :
+    availability >= 99 ? "MEETS_TARGET" :
+    availability >= 95 ? "AT_RISK" :
+    "BREACH";
+
+  return {
+    status,
+    availabilityPercent: availability,
+    breachSignals,
+    inputs: {
+      score,
+      failureRate: metrics?.failureRate ?? null,
+      pstnScore: metrics?.pstnScore ?? null
+    }
+  };
+}
+
+async function buildLicensesDaily(env, orgId) {
+  const r = await webexFetchSafe(env, "/licenses", orgId);
+  if (!r.ok) return { ok:false, diag: diag("licenses", r) };
+
+  const items = r.data?.items || [];
+  let totalConsumed = 0, totalDeficit = 0;
+
+  const normalized = items.map(l => {
+    const total = Number(l.totalUnits ?? 0);
+    const consumed = Number(l.consumedUnits ?? 0);
+    const available = total - consumed;
+    const deficit = available < 0 ? Math.abs(available) : 0;
+    totalConsumed += consumed;
+    totalDeficit += deficit;
+
+    return {
+      name: l.name,
+      total,
+      consumed,
+      available,
+      deficit,
+      status:
+        total === -1 ? "UNLIMITED" :
+        deficit > 0 ? "DEFICIT" :
+        available === 0 ? "FULL" :
+        "HEALTHY"
+    };
+  });
+
+  return {
+    ok:true,
+    summary: { totalConsumed, totalDeficit, hasDeficit: totalDeficit > 0 },
+    items: normalized
+  };
+}
+
+async function buildAnalyticsDaily(env, orgId) {
+  // Reuse your calling analytics path (7d). For daily, store “today snapshot + last 7d rollup”.
+  const r = await webexFetchSafe(env, CALLING_ANALYTICS_PATH, orgId);
+  if (!r.ok) return { ok:false, diag: diag("analytics/calling", r) };
+
+  const rows = r.data?.items || [];
+  const totalCalls = rows.reduce((a, r) => a + (r.totalCalls || 0), 0);
+  const failedCalls = rows.reduce((a, r) => a + (r.failedCalls || 0), 0);
+  const failureRate = totalCalls ? (failedCalls / totalCalls) * 100 : 0;
+
+  return {
+    ok:true,
+    rollup7d: {
+      totalCalls,
+      failedCalls,
+      failureRate: Number(failureRate.toFixed(2))
+    },
+    raw: { items: rows }
+  };
+}
+
+async function buildSlaDaily(env, orgId) {
+  // Use your existing health snapshot logic as the SLA input.
+  const health = await computeTenantHealth(env, orgId);
+  const sla = slaFromHealthLike(health);
+  return { ok:true, health, sla };
+}
+
+// ---- Global scheduled job ----
+async function runDailyPartnerReports(env, ctx, { fanout = 6 } = {}) {
+  // Lock to avoid storms
+  const lockKey = `reportsDailyLock:${dayKeyUTC()}`;
+  const existing = await env.WEBEX.get(lockKey);
+  if (existing) return { ok:false, error:"locked" };
+  await env.WEBEX.put(lockKey, "1", { expirationTtl: 60 * 30 });
+
+  const day = dayKeyUTC();
+  const startedAt = Date.now();
+
+  const orgRes = await webexFetch(env, "/organizations");
+  if (!orgRes.ok) {
+    await env.WEBEX.delete(lockKey);
+    return { ok:false, error:"org_list_failed", status: orgRes.status, preview: orgRes.preview };
+  }
+
+  const orgs = (orgRes.data?.items || [])
+    .filter(o => o?.id)
+    .map(o => ({ orgId: o.id, orgName: o.displayName || o.name || "Unknown" }));
+
+  const results = await mapLimit(orgs, fanout, async (o) => {
+    const orgId = o.orgId;
+
+    // PSTN: prefer snapshot builder you already have
+    let pstnPayload = null;
+    try {
+      const deep = await buildPstnDeep(env, orgId);
+      pstnPayload = deep;
+      await storePstnSnapshot(env, orgId, deep); // keep your existing snapshot hot
+      // Optional: append trend point (daily)
+      const didsAssigned = Number(deep?.totals?.didsAssigned || 0);
+      const didsTotal = Number(deep?.totals?.didsTotal || 0);
+      await appendPstnTrend(env, orgId, {
+        day,
+        assignedDids: didsAssigned,
+        totalDids: didsTotal,
+        pstnScore: deep?.scores?.pstnObservabilityScore ?? null
+      });
+    } catch (e) {
+      pstnPayload = { ok:false, error:"pstn_build_failed", message:String(e?.message || e) };
+    }
+
+    const licenses = await buildLicensesDaily(env, orgId);
+    const analytics = await buildAnalyticsDaily(env, orgId);
+    const sla = await buildSlaDaily(env, orgId);
+
+    // Persist daily reports with retention
+    await writeReport(env, {
+      type: "pstn_daily",
+      orgId,
+      day,
+      payload: pstnPayload,
+      meta: { orgName: o.orgName }
+    });
+
+    await writeReport(env, {
+      type: "licenses_daily",
+      orgId,
+      day,
+      payload: licenses,
+      meta: { orgName: o.orgName }
+    });
+
+    await writeReport(env, {
+      type: "analytics_daily",
+      orgId,
+      day,
+      payload: analytics,
+      meta: { orgName: o.orgName }
+    });
+
+    await writeReport(env, {
+      type: "sla_daily",
+      orgId,
+      day,
+      payload: sla,
+      meta: { orgName: o.orgName }
+    });
+
+    return {
+      orgId,
+      orgName: o.orgName,
+      ok: true,
+      slaStatus: sla?.sla?.status || "UNKNOWN",
+      licenseDeficit: !!licenses?.summary?.hasDeficit,
+      pstnScore: pstnPayload?.scores?.pstnObservabilityScore ?? null
+    };
+  });
+
+  // Build admin-wide snapshot for dashboard
+  const snapshot = {
+    day,
+    generatedAt: new Date().toISOString(),
+    durationMs: Date.now() - startedAt,
+    totals: {
+      orgs: results.length,
+      slaBreaches: results.filter(r => r.slaStatus === "BREACH").length,
+      slaAtRisk: results.filter(r => r.slaStatus === "AT_RISK").length,
+      licenseDeficitTenants: results.filter(r => r.licenseDeficit).length,
+      pstnUnknown: results.filter(r => r.pstnScore == null).length
+    },
+    tenants: results
+  };
+
+  await env.WEBEX.put("adminReportsSnapshotV1", JSON.stringify(snapshot), {
+    expirationTtl: 60 * 60 * 24 * 8
+  });
+
+  await env.WEBEX.delete(lockKey);
+  return { ok:true, snapshot };
+}
 export default {
   async fetch(request, env, ctx) {
     try {
@@ -4244,7 +4454,153 @@ async function cacheJson(cacheSeconds, urlStr, computeFn){
 
   return resp;
 }
+/* =====================================================
+   📦 REPORTS PIPELINE CORE (KV + Retention + CSV→JSON)
+   Place AFTER cacheJson() helper block
+===================================================== */
 
+// --- Env-driven retention (days) ---
+function retentionDaysFor(type, env) {
+  // Allow per-type tuning:
+  // REPORT_RETENTION_PSTN_DAYS=30, REPORT_RETENTION_LICENSES_DAYS=30, REPORT_RETENTION_SLA_DAYS=60, REPORT_RETENTION_ANALYTICS_DAYS=30
+  const map = {
+    pstn_daily: "REPORT_RETENTION_PSTN_DAYS",
+    licenses_daily: "REPORT_RETENTION_LICENSES_DAYS",
+    sla_daily: "REPORT_RETENTION_SLA_DAYS",
+    analytics_daily: "REPORT_RETENTION_ANALYTICS_DAYS",
+    webex_report: "REPORT_RETENTION_WEBEX_REPORT_DAYS",
+  };
+  const key = map[type] || "REPORT_RETENTION_DAYS";
+  const n = Number(env[key] || env.REPORT_RETENTION_DAYS || 30);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
+}
+
+function dayKeyUTC(d = new Date()) {
+  return new Date(d).toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+function reportKey(type, orgId, day) {
+  return `rpt:${type}:${orgId}:${day}`;
+}
+
+function reportIndexKey(type, orgId) {
+  return `rptIndex:${type}:${orgId}`; // { items:[{day, key, generatedAt, meta}] }
+}
+
+async function writeReport(env, { type, orgId, day, payload, meta = {} }) {
+  const generatedAt = new Date().toISOString();
+  const key = reportKey(type, orgId, day);
+
+  // Store report payload
+  await env.WEBEX.put(key, JSON.stringify({
+    type, orgId, day,
+    generatedAt,
+    meta,
+    payload
+  }), { expirationTtl: 60 * 60 * 24 * (retentionDaysFor(type, env) + 7) }); // KV TTL slightly > retention
+
+  // Update index
+  const idxKey = reportIndexKey(type, orgId);
+  const existing = await env.WEBEX.get(idxKey, { type: "json" });
+  const items = Array.isArray(existing?.items) ? existing.items : [];
+
+  // Upsert day
+  const next = items.filter(x => x?.day !== day);
+  next.push({ day, key, generatedAt, meta });
+
+  // Sort asc and keep last N days
+  next.sort((a, b) => String(a.day).localeCompare(String(b.day)));
+  const keep = retentionDaysFor(type, env);
+  const trimmed = next.slice(Math.max(0, next.length - keep));
+
+  await env.WEBEX.put(idxKey, JSON.stringify({ items: trimmed }), {
+    expirationTtl: 60 * 60 * 24 * (keep + 10)
+  });
+
+  // Best-effort: delete keys that fell out of retention
+  const dropped = next.slice(0, Math.max(0, next.length - keep));
+  if (dropped.length) {
+    await Promise.all(dropped.map(x => env.WEBEX.delete(x.key).catch(()=>null)));
+  }
+
+  return { ok: true, key, indexCount: trimmed.length };
+}
+
+async function readReportIndex(env, type, orgId) {
+  const idx = await env.WEBEX.get(reportIndexKey(type, orgId), { type: "json" });
+  return Array.isArray(idx?.items) ? idx.items : [];
+}
+
+async function readReport(env, type, orgId, day) {
+  return await env.WEBEX.get(reportKey(type, orgId, day), { type: "json" });
+}
+
+// --- CSV parsing (robust enough for Webex CSV) ---
+function parseCsvToJson(csvText, { maxRows = 50000 } = {}) {
+  const text = String(csvText || "");
+  if (!text.trim()) return { headers: [], rows: [] };
+
+  const rows = [];
+  let row = [];
+  let cur = "";
+  let i = 0;
+  let inQuotes = false;
+
+  while (i < text.length) {
+    const ch = text[i];
+
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { // escaped quote
+          cur += '"';
+          i += 2;
+          continue;
+        }
+        inQuotes = false;
+        i++;
+        continue;
+      }
+      cur += ch;
+      i++;
+      continue;
+    }
+
+    if (ch === '"') { inQuotes = true; i++; continue; }
+    if (ch === ",") { row.push(cur); cur = ""; i++; continue; }
+    if (ch === "\r") { i++; continue; }
+    if (ch === "\n") {
+      row.push(cur);
+      rows.push(row);
+      if (rows.length >= maxRows) break;
+      row = [];
+      cur = "";
+      i++;
+      continue;
+    }
+
+    cur += ch;
+    i++;
+  }
+
+  // flush last line if any
+  if (cur.length || row.length) {
+    row.push(cur);
+    rows.push(row);
+  }
+
+  const headers = (rows.shift() || []).map(h => String(h || "").trim());
+  const out = rows
+    .filter(r => r.some(x => String(x || "").trim() !== ""))
+    .map(r => {
+      const obj = {};
+      for (let c = 0; c < headers.length; c++) {
+        obj[headers[c] || `col_${c}`] = r[c] ?? "";
+      }
+      return obj;
+    });
+
+  return { headers, rows: out };
+}
       /* -----------------------------
          /api/admin/pin/list (POST)
          Admin-only: returns current org->pin mappings (best-effort)
@@ -4347,7 +4703,85 @@ if (url.pathname === "/api/admin/global-summary" && request.method === "GET") {
 }
 
 
+/* =====================================================
+   📊 ADMIN REPORTS API (Unified)
+   Place near other /api/admin/* routes
+===================================================== */
 
+if (url.pathname === "/api/admin/reports/snapshot" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  if (!user || !user.isAdmin) return json({ ok:false, error:"admin_only" }, 403);
+
+  const snap = await env.WEBEX.get("adminReportsSnapshotV1", { type: "json" });
+  return json({ ok:true, snapshot: snap || null }, 200);
+}
+
+if (url.pathname === "/api/admin/reports/run-daily" && request.method === "POST") {
+  // manual trigger (admin)
+  const user = getCurrentUser(request);
+  if (!user || !user.isAdmin) return json({ ok:false, error:"admin_only" }, 403);
+
+  const r = await runDailyPartnerReports(env, ctx, { fanout: 6 });
+  return json({ ok: r.ok, result: r }, 200);
+}
+
+if (url.pathname === "/api/admin/reports/org" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  if (!user || !user.isAdmin) return json({ ok:false, error:"admin_only" }, 403);
+
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  const type = String(url.searchParams.get("type") || "sla_daily");
+
+  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 400);
+
+  const index = await readReportIndex(env, type, orgId);
+  const days = index.map(x => x.day);
+
+  return json({ ok:true, orgId, type, days, index }, 200);
+}
+
+if (url.pathname === "/api/admin/reports/org/latest" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  if (!user || !user.isAdmin) return json({ ok:false, error:"admin_only" }, 403);
+
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  const type = String(url.searchParams.get("type") || "sla_daily");
+  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 400);
+
+  const index = await readReportIndex(env, type, orgId);
+  const last = index.length ? index[index.length - 1] : null;
+  if (!last) return json({ ok:true, orgId, type, report: null }, 200);
+
+  const report = await env.WEBEX.get(last.key, { type: "json" });
+  return json({ ok:true, orgId, type, report: report || null }, 200);
+}
+
+if (url.pathname === "/api/admin/reports/org/day" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  if (!user || !user.isAdmin) return json({ ok:false, error:"admin_only" }, 403);
+
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  const type = String(url.searchParams.get("type") || "sla_daily");
+  const day = String(url.searchParams.get("day") || "").trim();
+
+  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 400);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return json({ ok:false, error:"invalid_day" }, 400);
+
+  const report = await readReport(env, type, orgId, day);
+  return json({ ok:true, orgId, type, day, report: report || null }, 200);
+}
+
+/* OPTIONAL: CSV→JSON transform endpoint (admin-only)
+   Useful for manual imports or if Webex report download returns CSV.
+*/
+if (url.pathname === "/api/admin/reports/csv-to-json" && request.method === "POST") {
+  const user = getCurrentUser(request);
+  if (!user || !user.isAdmin) return json({ ok:false, error:"admin_only" }, 403);
+
+  const textBody = await request.text();
+  const parsed = parseCsvToJson(textBody, { maxRows: 200000 });
+  return json({ ok:true, headers: parsed.headers, rows: parsed.rows.slice(0, 5000), rowCount: parsed.rows.length }, 200);
+}
 // =====================================================
 // ADMIN GLOBAL SUMMARY REFRESH
 // =====================================================
@@ -5553,6 +5987,7 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
   },
 async scheduled(event, env, ctx) {
   ctx.waitUntil((async () => {
+   ctx.waitUntil(runDailyPartnerReports(env, ctx, { fanout: 6 }));
     try {
 
       const orgResult = await webexFetch(env, "/organizations");
