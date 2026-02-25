@@ -4131,36 +4131,51 @@ if (url.pathname.startsWith("/api/admin/tenant-resolution/")) {
 // POST /api/support/ticket
 // =====================================================
 if (url.pathname === "/api/support/ticket" && request.method === "POST") {
-
   try {
 
     let body = {};
-
     const contentType = request.headers.get("content-type") || "";
 
     if (contentType.includes("application/json")) {
       body = await request.json();
-    } else if (contentType.includes("form")) {
+    } else {
       const form = await request.formData();
       body = Object.fromEntries(form.entries());
     }
 
-    const {
-      name,
-      email,
-      company,
-      severity,
-      subject,
-      description,
-      message   // fallback support
-    } = body || {};
+    // Map UI fields to backend fields
+    const name =
+      body.name ||
+      body.fullName ||
+      body.orgName ||
+      "Portal User";
 
-    const finalDescription = description || message;
+    const email =
+      body.email ||
+      body.contactEmail ||
+      body.pointOfContact ||
+      null;
 
-    if (!name || !email || !subject || !finalDescription) {
+    const subject =
+      body.subject ||
+      body.summary ||
+      body.issueSummary ||
+      null;
+
+    const description =
+      body.description ||
+      body.details ||
+      body.message ||
+      null;
+
+    const severity = body.severity || "Normal";
+    const company = body.orgName || body.company || "Unknown";
+    const callback = body.callback || body.callbackNumber || "";
+
+    if (!email || !subject || !description) {
       return json({
-        ok:false,
-        error:"missing_fields",
+        ok: false,
+        error: "missing_fields",
         received: body
       }, 400);
     }
@@ -4175,17 +4190,18 @@ if (url.pathname === "/api/support/ticket" && request.method === "POST") {
         email: env.BREVO_SENDER_EMAIL
       },
       to: [
-        { email: env.SUPPORT_EMAIL || "DLD-customercare@ussignal.com" }
+        { email: env.SUPPORT_EMAIL || "support@ussignal.com" }
       ],
-      subject: `[Support Ticket] ${severity || "Normal"} - ${subject}`,
+      subject: `[Support Ticket] ${severity} - ${subject}`,
       htmlContent: `
         <h2>New Support Ticket</h2>
-        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Customer:</strong> ${company}</p>
+        <p><strong>Submitted By:</strong> ${name}</p>
         <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Company:</strong> ${company || "N/A"}</p>
-        <p><strong>Severity:</strong> ${severity || "Normal"}</p>
+        <p><strong>Callback:</strong> ${callback}</p>
+        <p><strong>Severity:</strong> ${severity}</p>
         <hr/>
-        <p>${finalDescription.replace(/\n/g, "<br/>")}</p>
+        <p>${description.replace(/\n/g, "<br/>")}</p>
       `
     };
 
@@ -4203,7 +4219,7 @@ if (url.pathname === "/api/support/ticket" && request.method === "POST") {
       return json({ ok:false, error:"email_failed", details:text }, 500);
     }
 
-    return json({ ok:true, message:"Ticket submitted successfully" });
+    return json({ ok:true });
 
   } catch (e) {
     return json({ ok:false, error:"server_exception", details:String(e) }, 500);
