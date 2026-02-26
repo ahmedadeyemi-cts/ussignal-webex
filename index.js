@@ -5737,14 +5737,13 @@ if (
     // -----------------------------------------------------
     // Minimal required calls (fast, parallel)
     // -----------------------------------------------------
-    const [locRes, numbersRes, trunksRes, redskyRes] = await Promise.all([
-      safe("/telephony/config/locations"),
-      safe("/telephony/config/numbers"),
-      safe("/telephony/config/premisePstn/trunks"),
-      safe("/telephony/config/redSky/complianceStatus")
-    ]);
-
-    diag("telephony/config/locations", locRes);
+const [locRes, numbersRes, trunksRes, redskyRes] = await Promise.all([
+  safe(`/locations?orgId=${encodeURIComponent(resolvedOrgId)}`),
+  safe("/telephony/config/numbers"),
+  safe("/telephony/config/premisePstn/trunks"),
+  safe("/telephony/config/redSky/complianceStatus")
+]);
+ diag("locations", locRes);
     diag("telephony/config/numbers", numbersRes);
     diag("telephony/config/premisePstn/trunks", trunksRes);
     diag("telephony/config/redSky/complianceStatus", redskyRes);
@@ -5771,7 +5770,9 @@ if (
     // -----------------------------------------------------
     // Normalize data safely
     // -----------------------------------------------------
-    const locationsRaw = asArray(locRes.data?.locations);
+   const locationsRaw = Array.isArray(locRes.data?.items)
+  ? locRes.data.items
+  : [];
     const numbersRaw = numbersRes.ok
       ? asArray(numbersRes.data?.phoneNumbers || numbersRes.data?.items)
       : [];
@@ -5910,36 +5911,36 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
       status: r?.status ?? null
     });
 
-    // ================================
-    // 1️⃣ Locations
-    // ================================
+   // ================================
+// 1️⃣ Locations (FIXED FOR CUSTOMER ORG)
+// ================================
 
-    const locRes = await safe("/telephony/config/locations");
-    diag("telephony/config/locations", locRes);
+const locRes = await safe(`/locations?orgId=${encodeURIComponent(resolvedOrgId)}`);
+diag("locations", locRes);
 
-    if (!locRes.ok) {
-      return json({
-        ok:true,
-        pstn:{
-          orgId: resolvedOrgId,
-          callingAvailable:false,
-          reason:"Calling API not accessible for this org",
-          totals:{ trunks:0, didsTotal:0, locations:0 },
-          locations:[],
-          trunks:[],
-          numbers:[],
-          routeGroups:[],
-          misconfigurations:[],
-          diagnostics,
-          scores:{ pstnCapacityScore: 0 }
-        }
-      }, 200);
+if (!locRes.ok) {
+  return json({
+    ok:true,
+    pstn:{
+      orgId: resolvedOrgId,
+      callingAvailable:false,
+      reason:"Locations API not accessible for this org",
+      totals:{ trunks:0, didsTotal:0, locations:0 },
+      locations:[],
+      trunks:[],
+      numbers:[],
+      routeGroups:[],
+      misconfigurations:[],
+      diagnostics,
+      scores:{ pstnCapacityScore: 0 }
     }
+  }, 200);
+}
 
-    const locationsRaw = Array.isArray(locRes.data?.locations)
-      ? locRes.data.locations
-      : [];
-
+// IMPORTANT: /locations returns data.items (NOT data.locations)
+const locationsRaw = Array.isArray(locRes.data?.items)
+  ? locRes.data.items
+  : [];
     // ================================
     // 2️⃣ Optional Endpoints
     // ================================
