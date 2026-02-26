@@ -1132,6 +1132,13 @@ async function renderAdminImplementationHTML() {
   if (!res.ok) throw new Error("Failed to load admin implementation UI");
   return await res.text();
 }
+async function renderAdminProvisioningHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/provisioning.html"
+  );
+  if (!res.ok) throw new Error("Failed to load admin provisioning UI");
+  return await res.text();
+}
 
 async function renderAdminPSTNHTML() {
   const res = await fetch(
@@ -2586,6 +2593,13 @@ if (url.pathname === "/admin/support" && request.method === "GET") {
 
 if (url.pathname === "/admin/implementation" && request.method === "GET") {
   return text(await renderAdminImplementationHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+
+     
+if (url.pathname === "/admin/provisioning" && request.method === "GET") {
+  return text(await renderAdminProvisioningHTML(), 200, {
     "content-type": "text/html; charset=utf-8",
   });
 }
