@@ -1,1902 +1,1262 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>US Signal | Webex Provisioning Runbook</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>US Signal | Webex Provisioning Runbook</title>
+<style>
+/* ===== Partner Portal tokens (matches your template) ===== */
+:root{
+  --bg:#f6f8fb; --card:#ffffff; --text:#0f172a; --muted:#64748b;
+  --line:rgba(15,23,42,.10); --shadow:0 8px 24px rgba(15,23,42,.08);
+  --accent:#0f62fe; --accent2:#0b4bd4;
+  --good:#16a34a; --warn:#f59e0b; --bad:#dc2626;
+}
+body.dark{
+  --bg:#0f172a; --card:#1e293b; --text:#f1f5f9; --muted:#94a3b8;
+  --line:rgba(255,255,255,.08); --shadow:0 8px 24px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);}
 
-  <style>
-    :root{
-      --bg:#f6f8fb;
-      --card:#ffffff;
-      --text:#0f172a;
-      --muted:#64748b;
-      --line:rgba(15,23,42,.10);
-      --shadow:0 10px 28px rgba(15,23,42,.10);
-      --accent:#0f62fe;
-      --accent2:#0b4bd4;
+/* ===== App layout ===== */
+.app{display:grid;grid-template-columns:270px 1fr;min-height:100vh;}
+.sidebar{background:var(--card);border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column;gap:14px;}
+.pp-brand{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line);}
+.pp-brand img{height:34px;}
+.pp-brand .title b{font-size:14px;}
+.pp-brand .title span{font-size:12px;color:var(--muted);}
+.pp-nav{display:flex;flex-direction:column;gap:6px;}
+.pp-nav a{padding:10px;border-radius:12px;font-weight:800;font-size:13px;text-decoration:none;color:var(--text);}
+.pp-nav a:hover{background:rgba(15,98,254,.08);color:var(--accent2);}
+.pp-nav a.active{background:rgba(15,98,254,.12);border:1px solid rgba(15,98,254,.20);}
+.sidebar-bottom{margin-top:auto;padding-top:10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px;}
+.userline{font-size:12px;color:var(--muted);}
+.pp-btn{padding:10px 12px;border-radius:12px;font-weight:900;font-size:13px;cursor:pointer;border:none;}
+.pp-btn-primary{background:var(--accent);color:#fff;}
+.pp-btn-primary:hover{background:var(--accent2);}
+.pp-btn-outline{background:var(--card);border:1px solid rgba(15,23,42,.18);color:var(--text);}
+body.dark .pp-btn-outline{border-color:rgba(255,255,255,.14);}
+.pp-btn-outline:hover{border-color:rgba(15,98,254,.35);color:var(--accent2);}
 
-      --good:#16a34a;
-      --warn:#f59e0b;
-      --bad:#dc2626;
+.main{padding:22px;}
 
-      --radius:16px;
-      --radius2:20px;
-      --pad:18px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    }
+/* =======================================================================
+   RUNBOOK (FULL PRESERVATION): Namespaced styles to prevent collisions
+   ======================================================================= */
+.rb-wrap{display:grid;grid-template-columns:310px 1fr;gap:18px;max-width:1400px;margin:0 auto;}
+.rb-topbar{
+  grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 16px;background:linear-gradient(180deg,var(--card), rgba(255,255,255,.95));
+  border:1px solid var(--line);box-shadow:var(--shadow);border-radius:20px;position:sticky;top:12px;z-index:30;backdrop-filter:blur(8px);
+}
+body.dark .rb-topbar{background:linear-gradient(180deg,var(--card), rgba(30,41,59,.95));}
+.rb-brand{display:flex;align-items:center;gap:12px;min-width:260px;}
+.rb-logo{
+  width:40px;height:40px;border-radius:12px;
+  background: radial-gradient(circle at 30% 30%, rgba(15,98,254,.18), transparent 55%),
+              linear-gradient(135deg, rgba(15,98,254,.28), rgba(11,75,212,.10));
+  border:1px solid rgba(15,98,254,.25);display:grid;place-items:center;
+}
+.rb-logo svg{width:24px;height:24px;opacity:.95}
+.rb-brand h1{margin:0;font-size:14px;letter-spacing:.2px;line-height:1.2;}
+.rb-brand p{margin:2px 0 0 0;font-size:12px;color:var(--muted);}
+.rb-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+.rb-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:12px;color:var(--muted);white-space:nowrap;}
+.rb-dot{width:10px;height:10px;border-radius:999px;background:var(--muted);box-shadow:0 0 0 3px rgba(100,116,139,.15);}
+.rb-dot.good{background:var(--good);box-shadow:0 0 0 3px rgba(22,163,74,.16);}
+.rb-dot.warn{background:var(--warn);box-shadow:0 0 0 3px rgba(245,158,11,.18);}
+.rb-dot.bad{background:var(--bad);box-shadow:0 0 0 3px rgba(220,38,38,.16);}
 
-    *{box-sizing:border-box;}
-    body{
-      margin:0;
-      font-family:var(--sans);
-      color:var(--text);
-      background:var(--bg);
-    }
+.rb-btn{
+  border:1px solid var(--line);background:var(--card);padding:10px 12px;border-radius:12px;font-size:12px;cursor:pointer;
+  display:inline-flex;gap:8px;align-items:center;transition:transform .05s ease, box-shadow .15s ease, border-color .15s ease;user-select:none;color:var(--text);
+}
+.rb-btn:hover{border-color:rgba(15,98,254,.30);box-shadow:0 10px 22px rgba(15,23,42,.10);}
+.rb-btn:active{transform:translateY(1px);}
+.rb-btn.primary{background:linear-gradient(180deg,var(--accent),var(--accent2));color:#fff;border-color:rgba(15,98,254,.5);}
 
-    a{color:inherit;text-decoration:none;}
-    .wrap{
-      display:grid;
-      grid-template-columns: 310px 1fr;
-      gap: 18px;
-      padding: 18px;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
+.rb-search{min-width:320px;flex:1;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--card);max-width:520px;}
+.rb-search input{width:100%;border:none;outline:none;font-size:13px;color:var(--text);background:transparent;}
+.rb-k{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:11px;padding:2px 6px;border:1px solid var(--line);border-radius:8px;color:var(--muted);background:rgba(15,23,42,.02);}
+body.dark .rb-k{background:rgba(255,255,255,.05);}
 
-    .topbar{
-      grid-column: 1 / -1;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding: 14px 16px;
-      background:linear-gradient(180deg,#ffffff, rgba(255,255,255,.95));
-      border:1px solid var(--line);
-      box-shadow: var(--shadow);
-      border-radius: var(--radius2);
-      position: sticky;
-      top: 12px;
-      z-index: 30;
-      backdrop-filter: blur(8px);
-    }
+.rb-nav{
+  background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:20px;padding:14px;position:sticky;top:86px;
+  height:calc(100vh - 110px);overflow:auto;
+}
+.rb-nav h3{margin:0 0 10px 0;font-size:12px;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;}
+.rb-nav a.item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 10px;border-radius:12px;border:1px solid transparent;color:var(--text);font-size:13px;margin-bottom:6px;text-decoration:none;}
+.rb-nav a.item:hover{background:rgba(15,98,254,.06);border-color:rgba(15,98,254,.18);}
+.rb-nav a.item.active{background:rgba(15,98,254,.10);border-color:rgba(15,98,254,.28);}
+.rb-nav .badge{font-size:11px;color:var(--muted);border:1px solid var(--line);padding:2px 8px;border-radius:999px;background:rgba(15,23,42,.02);white-space:nowrap;}
+body.dark .rb-nav .badge{background:rgba(255,255,255,.06);}
 
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      min-width: 260px;
-    }
-    .logo{
-      width:40px;height:40px;border-radius:12px;
-      background: radial-gradient(circle at 30% 30%, rgba(15,98,254,.18), transparent 55%),
-                  linear-gradient(135deg, rgba(15,98,254,.28), rgba(11,75,212,.10));
-      border:1px solid rgba(15,98,254,.25);
-      display:grid;
-      place-items:center;
-    }
-    .logo svg{width:24px;height:24px;opacity:.95}
-    .brand h1{
-      margin:0;
-      font-size: 14px;
-      letter-spacing:.2px;
-      line-height: 1.2;
-    }
-    .brand p{
-      margin:2px 0 0 0;
-      font-size: 12px;
-      color: var(--muted);
-    }
+.rb-main{display:flex;flex-direction:column;gap:14px;}
+.rb-card{background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:20px;padding:16px;}
+.rb-card h2{margin:0 0 8px 0;font-size:16px;letter-spacing:.2px;}
+.rb-card p{margin:8px 0;color:var(--muted);line-height:1.5;font-size:13px;}
+.rb-grid2{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;}
+.rb-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
 
-    .actions{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
+.rb-kpi{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:16px;border:1px solid var(--line);
+  background:linear-gradient(180deg, rgba(15,98,254,.06), var(--card));
+}
+.rb-kpi .label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;}
+.rb-kpi .value{font-size:20px;font-weight:700;letter-spacing:.2px;}
+.rb-kpi .sub{font-size:12px;color:var(--muted);}
 
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding: 8px 10px;
-      border-radius: 999px;
-      border:1px solid var(--line);
-      background:#fff;
-      font-size: 12px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-    .dot{
-      width:10px;height:10px;border-radius:999px;background:var(--muted);
-      box-shadow: 0 0 0 3px rgba(100,116,139,.15);
-    }
-    .dot.good{background:var(--good); box-shadow: 0 0 0 3px rgba(22,163,74,.16);}
-    .dot.warn{background:var(--warn); box-shadow: 0 0 0 3px rgba(245,158,11,.18);}
-    .dot.bad{background:var(--bad); box-shadow: 0 0 0 3px rgba(220,38,38,.16);}
+.rb-tag{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);
+  background:rgba(15,23,42,.02);font-size:12px;color:var(--muted);white-space:nowrap;
+}
+body.dark .rb-tag{background:rgba(255,255,255,.06);}
+.rb-tag b{color:var(--text);font-weight:600;}
+.rb-divider{height:1px;background:var(--line);margin:12px 0;}
 
-    .btn{
-      border:1px solid var(--line);
-      background:#fff;
-      padding: 10px 12px;
-      border-radius: 12px;
-      font-size: 12px;
-      cursor:pointer;
-      display:inline-flex;
-      gap:8px;
-      align-items:center;
-      transition: transform .05s ease, box-shadow .15s ease, border-color .15s ease;
-      user-select:none;
-    }
-    .btn:hover{border-color: rgba(15,98,254,.30); box-shadow: 0 10px 22px rgba(15,23,42,.10);}
-    .btn:active{transform: translateY(1px);}
+.rb-callout{border:1px solid rgba(15,98,254,.25);background:rgba(15,98,254,.06);border-radius:16px;padding:12px;display:flex;gap:12px;align-items:flex-start;}
+.rb-callout .icon{width:28px;height:28px;border-radius:12px;background:rgba(15,98,254,.12);display:grid;place-items:center;flex:0 0 auto;}
+.rb-callout .icon svg{width:18px;height:18px;}
+.rb-callout .txt{flex:1;}
+.rb-callout .txt .t{font-size:13px;font-weight:650;margin:0 0 4px 0;color:var(--text);}
+.rb-callout .txt .d{font-size:12px;margin:0;color:var(--muted);line-height:1.5;}
 
-    .btn.primary{
-      background: linear-gradient(180deg, var(--accent), var(--accent2));
-      color:#fff;
-      border-color: rgba(15,98,254,.5);
-    }
+.rb-timeline{display:flex;flex-direction:column;gap:10px;}
+.rb-step{border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;grid-template-columns:140px 1fr;gap:12px;
+  background:linear-gradient(180deg, rgba(15,23,42,.01), var(--card));
+}
+.rb-when{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:6px;}
+.rb-when .sla{display:inline-flex;align-items:center;gap:8px;padding:4px 8px;border-radius:999px;border:1px solid var(--line);width:fit-content;background:rgba(15,23,42,.02);}
+body.dark .rb-when .sla{background:rgba(255,255,255,.06);}
+.rb-body h4{margin:0 0 6px 0;font-size:14px;color:var(--text);}
+.rb-body ul{margin:0;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.5;}
+.rb-body li{margin:6px 0;}
 
-    .search{
-      min-width: 320px;
-      flex: 1;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      border:1px solid var(--line);
-      background:#fff;
-      max-width: 520px;
-    }
-    .search input{
-      width:100%;
-      border:none;
-      outline:none;
-      font-size: 13px;
-      color: var(--text);
-    }
-    .search .k{
-      font-family: var(--mono);
-      font-size: 11px;
-      padding: 2px 6px;
-      border:1px solid var(--line);
-      border-radius: 8px;
-      color: var(--muted);
-      background: rgba(15,23,42,.02);
-    }
+details.rb-acc{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--card);}
+details.rb-acc summary{list-style:none;cursor:pointer;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:650;font-size:13px;color:var(--text);}
+details.rb-acc summary::-webkit-details-marker{display:none;}
+details.rb-acc .content{padding:0 12px 12px 12px;color:var(--muted);font-size:13px;line-height:1.55;}
+.rb-chev{width:22px;height:22px;border-radius:10px;border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);flex:0 0 auto;background:rgba(15,23,42,.02);}
+body.dark .rb-chev{background:rgba(255,255,255,.06);}
+details[open] .rb-chev{transform:rotate(180deg);}
 
-    .nav{
-      background:#fff;
-      border:1px solid var(--line);
-      box-shadow: var(--shadow);
-      border-radius: var(--radius2);
-      padding: 14px;
-      position: sticky;
-      top: 86px;
-      height: calc(100vh - 110px);
-      overflow:auto;
-    }
+.rb-table{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border-radius:16px;border:1px solid var(--line);background:var(--card);}
+.rb-table thead th{text-align:left;font-size:12px;color:var(--muted);padding:10px;border-bottom:1px solid var(--line);background:rgba(15,23,42,.02);letter-spacing:.2px;}
+body.dark .rb-table thead th{background:rgba(255,255,255,.06);}
+.rb-table tbody td{padding:10px;border-bottom:1px solid var(--line);font-size:13px;color:var(--text);vertical-align:top;}
+.rb-table tbody tr:last-child td{border-bottom:none;}
+.rb-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;color:var(--muted);}
 
-    .nav h3{
-      margin: 0 0 10px 0;
-      font-size: 12px;
-      color: var(--muted);
-      letter-spacing: .4px;
-      text-transform: uppercase;
-    }
+.rb-status{display:inline-flex;align-items:center;gap:8px;padding:4px 8px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted);background:rgba(15,23,42,.02);white-space:nowrap;}
+body.dark .rb-status{background:rgba(255,255,255,.06);}
+.rb-status .s{width:9px;height:9px;border-radius:999px;background:var(--muted);}
+.rb-status.good .s{background:var(--good);}
+.rb-status.warn .s{background:var(--warn);}
+.rb-status.bad .s{background:var(--bad);}
 
-    .nav a.item{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      padding: 10px 10px;
-      border-radius: 12px;
-      border:1px solid transparent;
-      color: var(--text);
-      font-size: 13px;
-      margin-bottom: 6px;
-    }
-    .nav a.item:hover{
-      background: rgba(15,98,254,.06);
-      border-color: rgba(15,98,254,.18);
-    }
-    .nav a.item.active{
-      background: rgba(15,98,254,.10);
-      border-color: rgba(15,98,254,.28);
-    }
-    .nav .badge{
-      font-size: 11px;
-      color: var(--muted);
-      border:1px solid var(--line);
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: rgba(15,23,42,.02);
-      white-space: nowrap;
-    }
+.rb-checklist{display:flex;flex-direction:column;gap:10px;}
+.rb-chk{display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:14px;border:1px solid var(--line);background:linear-gradient(180deg, rgba(15,23,42,.01), var(--card));}
+.rb-chk input{margin-top:3px;}
+.rb-chk .t{font-size:13px;font-weight:650;color:var(--text);}
+.rb-chk .d{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45;}
 
-    .main{
-      display:flex;
-      flex-direction:column;
-      gap: 14px;
-    }
+.rb-footer{padding:10px 2px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 
-    .card{
-      background:#fff;
-      border:1px solid var(--line);
-      box-shadow: var(--shadow);
-      border-radius: var(--radius2);
-      padding: 16px;
-    }
+.rb-toast{
+  position:fixed;right:18px;bottom:18px;background:var(--card);border:1px solid var(--line);
+  border-radius:16px;box-shadow:var(--shadow);padding:10px 12px;display:none;align-items:center;gap:10px;z-index:50;max-width:520px;
+}
+.rb-toast.show{display:flex;}
+.rb-toast .msg{font-size:13px;color:var(--text);}
+.rb-toast .small{font-size:12px;color:var(--muted);margin-top:2px;}
+.rb-toast .close{margin-left:auto;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:6px 10px;cursor:pointer;font-size:12px;color:var(--muted);}
 
-    .card h2{
-      margin: 0 0 8px 0;
-      font-size: 16px;
-      letter-spacing: .2px;
-    }
-    .card p{
-      margin: 8px 0;
-      color: var(--muted);
-      line-height: 1.5;
-      font-size: 13px;
-    }
-
-    .grid2{display:grid;grid-template-columns: 1.2fr .8fr;gap:14px;}
-    .grid3{display:grid;grid-template-columns: repeat(3, 1fr);gap:14px;}
-
-    .kpi{
-      display:flex;flex-direction:column;gap:8px;
-      padding: 14px;
-      border-radius: 16px;
-      border:1px solid var(--line);
-      background: linear-gradient(180deg, rgba(15,98,254,.06), rgba(255,255,255,1));
-    }
-    .kpi .label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;}
-    .kpi .value{font-size: 20px; font-weight: 700; letter-spacing:.2px;}
-    .kpi .sub{font-size:12px;color:var(--muted);}
-
-    .tag{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border:1px solid var(--line);
-      background: rgba(15,23,42,.02);
-      font-size: 12px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-    .tag b{color: var(--text); font-weight: 600;}
-
-    .divider{height:1px;background:var(--line);margin: 12px 0;}
-
-    .callout{
-      border:1px solid rgba(15,98,254,.25);
-      background: rgba(15,98,254,.06);
-      border-radius: 16px;
-      padding: 12px 12px;
-      display:flex;
-      gap: 12px;
-      align-items:flex-start;
-    }
-    .callout .icon{
-      width:28px;height:28px;border-radius:12px;
-      background: rgba(15,98,254,.12);
-      display:grid;place-items:center;
-      flex: 0 0 auto;
-    }
-    .callout .icon svg{width:18px;height:18px;}
-    .callout .txt{flex:1;}
-    .callout .txt .t{font-size: 13px; font-weight: 650; margin: 0 0 4px 0; color: var(--text);}
-    .callout .txt .d{font-size: 12px; margin: 0; color: var(--muted); line-height: 1.5;}
-
-    .timeline{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    .step{
-      border:1px solid var(--line);
-      border-radius: 16px;
-      padding: 12px 12px;
-      display:grid;
-      grid-template-columns: 140px 1fr;
-      gap:12px;
-      background: linear-gradient(180deg, rgba(15,23,42,.01), #fff);
-    }
-    .step .when{
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--muted);
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .step .when .sla{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      border:1px solid var(--line);
-      width: fit-content;
-      background: rgba(15,23,42,.02);
-    }
-    .step .body h4{
-      margin:0 0 6px 0;
-      font-size: 14px;
-    }
-    .step .body ul{
-      margin: 0;
-      padding-left: 18px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .step .body li{margin: 6px 0;}
-
-    details.acc{
-      border:1px solid var(--line);
-      border-radius: 16px;
-      overflow:hidden;
-      background:#fff;
-    }
-    details.acc summary{
-      list-style:none;
-      cursor:pointer;
-      padding: 12px 12px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      font-weight:650;
-      font-size: 13px;
-    }
-    details.acc summary::-webkit-details-marker{display:none;}
-    details.acc .content{
-      padding: 0 12px 12px 12px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.55;
-    }
-    .chev{
-      width:22px;height:22px;border-radius:10px;
-      border:1px solid var(--line);
-      display:grid;place-items:center;
-      color: var(--muted);
-      flex: 0 0 auto;
-      background: rgba(15,23,42,.02);
-    }
-    details[open] .chev{transform: rotate(180deg);}
-
-    table{
-      width:100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      overflow:hidden;
-      border-radius: 16px;
-      border:1px solid var(--line);
-      background:#fff;
-    }
-    thead th{
-      text-align:left;
-      font-size: 12px;
-      color: var(--muted);
-      padding: 10px 10px;
-      border-bottom:1px solid var(--line);
-      background: rgba(15,23,42,.02);
-      letter-spacing: .2px;
-    }
-    tbody td{
-      padding: 10px 10px;
-      border-bottom:1px solid var(--line);
-      font-size: 13px;
-      color: var(--text);
-      vertical-align: top;
-    }
-    tbody tr:last-child td{border-bottom:none;}
-    .mono{font-family: var(--mono); font-size: 12px; color: var(--muted);}
-    .status{
-      display:inline-flex;align-items:center;gap:8px;
-      padding: 4px 8px;border-radius:999px;border:1px solid var(--line);
-      font-size: 12px;color: var(--muted);
-      background: rgba(15,23,42,.02);
-      white-space: nowrap;
-    }
-
-    .status .s{width:9px;height:9px;border-radius:999px;background:var(--muted);}
-    .status.good .s{background:var(--good);}
-    .status.warn .s{background:var(--warn);}
-    .status.bad .s{background:var(--bad);}
-
-    .checklist{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    .chk{
-      display:flex;align-items:flex-start;gap:10px;
-      padding: 10px 10px;
-      border-radius: 14px;
-      border:1px solid var(--line);
-      background: linear-gradient(180deg, rgba(15,23,42,.01), #fff);
-    }
-    .chk input{margin-top:3px;}
-    .chk .t{font-size: 13px; font-weight: 650;}
-    .chk .d{font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.45;}
-
-    .footer{
-      padding: 10px 2px;
-      color: var(--muted);
-      font-size: 12px;
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-
-    .toast{
-      position: fixed;
-      right: 18px;
-      bottom: 18px;
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius: 16px;
-      box-shadow: var(--shadow);
-      padding: 10px 12px;
-      display:none;
-      align-items:center;
-      gap:10px;
-      z-index: 50;
-      max-width: 520px;
-    }
-    .toast.show{display:flex;}
-    .toast .msg{font-size: 13px; color: var(--text);}
-    .toast .small{font-size: 12px; color: var(--muted); margin-top: 2px;}
-    .toast .close{
-      margin-left:auto;
-      border:1px solid var(--line);
-      background:#fff;
-      border-radius: 12px;
-      padding: 6px 10px;
-      cursor:pointer;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    @media (max-width: 1050px){
-      .wrap{grid-template-columns: 1fr;}
-      .nav{position: relative; top: 0; height:auto;}
-      .search{min-width: 220px; max-width: none;}
-      .grid2{grid-template-columns: 1fr;}
-      .grid3{grid-template-columns: 1fr;}
-      .step{grid-template-columns: 1fr;}
-    }
-
-    @media print{
-      .topbar, .nav, .actions, .toast, .btn {display:none !important;}
-      .wrap{padding:0; max-width:none;}
-      .card{box-shadow:none;}
-      body{background:#fff;}
-    }
-  </style>
+@media (max-width:1050px){
+  .rb-wrap{grid-template-columns:1fr;}
+  .rb-nav{position:relative;top:0;height:auto;}
+  .rb-search{min-width:220px;max-width:none;}
+  .rb-grid2{grid-template-columns:1fr;}
+  .rb-grid3{grid-template-columns:1fr;}
+  .rb-step{grid-template-columns:1fr;}
+}
+@media print{
+  .sidebar,.sidebar-bottom,.pp-nav,.pp-brand,.pp-btn,.pp-btn-primary,.pp-btn-outline{display:none !important;}
+  .rb-topbar,.rb-nav,.rb-actions,.rb-toast,.rb-btn{display:none !important;}
+  .main{padding:0;}
+  .rb-wrap{padding:0;max-width:none;}
+  .rb-card{box-shadow:none;}
+  body{background:#fff;}
+}
+</style>
 </head>
 
 <body>
-  <div class="wrap">
-    <!-- Topbar -->
-    <div class="topbar">
-      <div class="brand">
-        <div class="logo" aria-hidden="true">
-          <!-- Simple “Webex-like” ring icon (not an official logo) -->
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M12 3.2c4.86 0 8.8 3.94 8.8 8.8s-3.94 8.8-8.8 8.8S3.2 16.86 3.2 12 7.14 3.2 12 3.2Z" stroke="currentColor" stroke-width="1.6" opacity=".55"/>
-            <path d="M12 6.1c3.26 0 5.9 2.64 5.9 5.9S15.26 17.9 12 17.9 6.1 15.26 6.1 12 8.74 6.1 12 6.1Z" stroke="currentColor" stroke-width="1.6"/>
-          </svg>
-        </div>
-        <div>
-          <h1>Webex Provisioning Runbook</h1>
-          <p>Enterprise provisioning steps & audit evidence for Cisco audits</p>
-        </div>
-      </div>
+<div class="app">
 
-      <div class="search" title="Search this page (Ctrl/⌘ + K)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" stroke-width="1.6"/>
-          <path d="M16.2 16.2 21 21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-        </svg>
-        <input id="q" type="text" placeholder="Search steps, controls, evidence, checklists…" />
-        <span class="k">Ctrl K</span>
-      </div>
-
-      <div class="actions">
-        <span class="pill" id="slaPill">
-          <span class="dot good" id="slaDot"></span>
-          <span><b>SLA Target:</b> Provision within 24 hours</span>
-        </span>
-        <button class="btn" id="btnExportCsv" title="Export Evidence Tracker to CSV">
-          <span aria-hidden="true">⬇️</span> Export CSV
-        </button>
-        <button class="btn" id="btnReset" title="Reset local checkmarks for this browser">
-          <span aria-hidden="true">♻️</span> Reset
-        </button>
-        <button class="btn" onclick="window.print()" title="Print (or save to PDF)">
-          <span aria-hidden="true">🖨️</span> Print
-        </button>
-        <button class="btn primary" id="btnCopyLink" title="Copy a deep link to the current section">
-          <span aria-hidden="true">🔗</span> Copy Section Link
-        </button>
-      </div>
+  <!-- Partner Portal Sidebar -->
+  <aside class="sidebar">
+    <div class="pp-brand">
+      <img src="/assets/ussignal-logo.jpg" onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
+      <div class="title"><b>Partner Portal</b><span>Managed Services</span></div>
     </div>
 
-    <!-- Left Nav -->
-    <aside class="nav" id="nav">
-      <h3>Contents</h3>
-      <a class="item" href="#overview"><span>Overview & SLA</span><span class="badge">Audit-ready</span></a>
-      <a class="item" href="#intake"><span>1) Intake: Provisioning Email</span><span class="badge">T+0</span></a>
-      <a class="item" href="#triage"><span>2) Triage & Validation</span><span class="badge">T+0–2h</span></a>
-      <a class="item" href="#create-tenant"><span>3) Create / Verify Tenant</span><span class="badge">T+2–6h</span></a>
-      <a class="item" href="#licenses"><span>4) Control Hub: Licenses</span><span class="badge">Core</span></a>
-      <a class="item" href="#calling"><span>5) Calling Baseline Config</span><span class="badge">Calling</span></a>
-      <a class="item" href="#meetings"><span>6) Meetings Baseline Config</span><span class="badge">Meetings</span></a>
-      <a class="item" href="#security"><span>7) Security & Compliance</span><span class="badge">Controls</span></a>
-      <a class="item" href="#identity"><span>8) Identity: Domains, SSO, Dir Sync</span><span class="badge">Optional</span></a>
-      <a class="item" href="#devices"><span>9) Devices & Endpoints</span><span class="badge">Ops</span></a>
-      <a class="item" href="#pstn"><span>10) PSTN / Connectivity</span><span class="badge">As sold</span></a>
-      <a class="item" href="#validation"><span>11) Validation & Acceptance</span><span class="badge">Evidence</span></a>
-      <a class="item" href="#handoff"><span>12) Customer Handoff</span><span class="badge">Close</span></a>
-      <a class="item" href="#raci"><span>RACI & Governance</span><span class="badge">Audit</span></a>
-      <a class="item" href="#evidence"><span>Evidence Tracker</span><span class="badge">Export</span></a>
-      <a class="item" href="#appendix"><span>Appendix: Templates</span><span class="badge">Copy</span></a>
+    <nav class="pp-nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/customers">Customers</a>
+      <a href="/admin/analytics">Analytics</a>
+      <a href="/admin/licenses">Licenses</a>
+      <a href="/admin/devices">Devices</a>
+      <a href="/admin/alerts">Alerts</a>
+      <a href="/admin/pins">PIN Management</a>
+      <a href="/admin/support">Support Strategy</a>
+      <a href="/admin/implementation">Implementation</a>
+      <a href="/admin/pstn">PSTN Deployment Model</a>
+      <a href="/admin/tenant-resolution">Resolution</a>
+      <a class="active" href="/admin/provisioning">Provisioning</a>
+    </nav>
 
-      <div class="divider"></div>
-      <h3>Status</h3>
-      <div class="pill" style="width:100%;">
-        <span class="dot" id="progressDot"></span>
-        <span><b>Checklist Progress:</b> <span id="progressText">0%</span></span>
+    <div class="sidebar-bottom">
+      <div class="userline">
+        <b id="whoami"></b>
+        <div id="sessionLine"></div>
       </div>
-      <p style="margin:10px 0 0 0;font-size:12px;">
-        Checkmarks are stored in this browser only (localStorage) to support audit prep and repeatable execution.
-      </p>
-    </aside>
+      <button class="pp-btn pp-btn-outline" type="button" onclick="toggleTheme()">Light / Dark</button>
+      <button class="pp-btn pp-btn-primary" type="button" onclick="logout()">Logout</button>
+    </div>
+  </aside>
 
-    <!-- Main -->
-    <main class="main">
+  <!-- Main -->
+  <main class="main">
+    <div class="rb-wrap">
 
-      <!-- Overview -->
-      <section class="card" id="overview" data-title="Overview & SLA">
-        <h2>Overview & SLA</h2>
-        <p>
-          This page documents US Signal’s standard operating procedure to provision a new Webex customer (Webex Calling and Webex Meetings).
-          The runbook is written for repeatability, accountability, and audit evidence. It assumes the provisioning request is received at
-          <span class="tag"><b>webexadminteam@ussignal.com</b></span> and that provisioning is completed within
-          <span class="tag"><b>24 hours</b></span> of email receipt (unless blocked by missing prerequisites).
-        </p>
-
-        <div class="grid3">
-          <div class="kpi">
-            <div class="label"><span class="dot good"></span> SLA Commitment</div>
-            <div class="value">≤ 24 hours</div>
-            <div class="sub">From intake email received to baseline tenant configured and validated.</div>
-          </div>
-          <div class="kpi">
-            <div class="label"><span class="dot warn"></span> Common Blockers</div>
-            <div class="value">Identity / PSTN</div>
-            <div class="sub">Domain ownership, SSO readiness, number porting, or PSTN selection can delay completion.</div>
-          </div>
-          <div class="kpi">
-            <div class="label"><span class="dot"></span> Audit Artifacts</div>
-            <div class="value">Evidence Pack</div>
-            <div class="sub">Screenshots, exported configs, ticket IDs, and change approvals linked in Evidence Tracker.</div>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="callout">
-          <div class="icon" aria-hidden="true">
+      <!-- Topbar (preserved behavior; renamed classes) -->
+      <div class="rb-topbar">
+        <div class="rb-brand">
+          <div class="rb-logo" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 2.5 21 20H3L12 2.5Z" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M12 9v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-              <path d="M12 17.5h.01" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+              <path d="M12 3.2c4.86 0 8.8 3.94 8.8 8.8s-3.94 8.8-8.8 8.8S3.2 16.86 3.2 12 7.14 3.2 12 3.2Z" stroke="currentColor" stroke-width="1.6" opacity=".55"/>
+              <path d="M12 6.1c3.26 0 5.9 2.64 5.9 5.9S15.26 17.9 12 17.9 6.1 15.26 6.1 12 8.74 6.1 12 6.1Z" stroke="currentColor" stroke-width="1.6"/>
             </svg>
           </div>
-          <div class="txt">
-            <p class="t">Audit expectation</p>
-            <p class="d">
-              Each provisioning action should be traceable to a request (email/ticket), an approver (if required),
-              an operator, and evidence (Control Hub screenshots/exports). If an item is intentionally deferred
-              (for example SSO or PSTN porting), document the deferral and owner in the Evidence Tracker.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Intake -->
-      <section class="card" id="intake" data-title="1) Intake: Provisioning Email">
-        <h2>1) Intake: Provisioning Email</h2>
-        <p>
-          Provisioning begins when US Signal receives the initial request email at
-          <span class="tag"><b>webexadminteam@ussignal.com</b></span>. This email is treated as the system of record
-          for the initial request and is associated to an internal ticket (or equivalent work item) to ensure traceability.
-        </p>
-
-        <div class="timeline">
-          <div class="step">
-            <div class="when">
-              <div><b>T+0</b> (Email received)</div>
-              <div class="sla"><span class="dot good"></span><span>SLA starts</span></div>
-              <div class="mono">Evidence: email message ID + ticket ID</div>
-            </div>
-            <div class="body">
-              <h4>Create the provisioning ticket</h4>
-              <ul>
-                <li>Open an internal ticket titled: <span class="mono">“Webex Provisioning — &lt;Customer Name&gt;”</span>.</li>
-                <li>Attach the original email (or reference message ID), include purchase details and requested services (Calling + Meetings).</li>
-                <li>Assign an owner and an accountable reviewer (two-person integrity for audit readiness).</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="step">
-            <div class="when">
-              <div><b>T+0–30m</b></div>
-              <div class="sla"><span class="dot warn"></span><span>Validate inputs</span></div>
-              <div class="mono">Evidence: intake checklist</div>
-            </div>
-            <div class="body">
-              <h4>Capture required provisioning inputs</h4>
-              <ul>
-                <li>Customer legal name and primary admin contact (name, email, phone).</li>
-                <li>Requested license quantities (Calling, Meetings, add-ons as sold).</li>
-                <li>Customer timezone, main site address, and any location requirements.</li>
-                <li>PSTN intent (Cloud Connected PSTN, Local Gateway, or existing provider as sold).</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="grid2">
           <div>
-            <details class="acc" open>
-              <summary>
-                Intake checklist (required)
-                <span class="chev" aria-hidden="true">⌄</span>
-              </summary>
-              <div class="content">
-                <div class="checklist" data-checklist="intake">
-                  <label class="chk"><input type="checkbox" data-key="intake-email" />
-                    <div>
-                      <div class="t">Provisioning email archived</div>
-                      <div class="d">Original request is retained and linked to the ticket for traceability.</div>
-                    </div>
-                  </label>
-                  <label class="chk"><input type="checkbox" data-key="intake-ticket" />
-                    <div>
-                      <div class="t">Ticket created and assigned</div>
-                      <div class="d">Owner + reviewer assigned; SLA start time noted.</div>
-                    </div>
-                  </label>
-                  <label class="chk"><input type="checkbox" data-key="intake-sku" />
-                    <div>
-                      <div class="t">Purchase / SKUs verified</div>
-                      <div class="d">Calling and Meetings entitlements confirmed with sales/order documents.</div>
-                    </div>
-                  </label>
-                  <label class="chk"><input type="checkbox" data-key="intake-contacts" />
-                    <div>
-                      <div class="t">Admin contacts confirmed</div>
-                      <div class="d">Primary admin and escalation contacts documented in ticket.</div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </details>
-          </div>
-
-          <div>
-            <details class="acc" open>
-              <summary>
-                Minimum evidence to capture
-                <span class="chev" aria-hidden="true">⌄</span>
-              </summary>
-              <div class="content">
-                <ul>
-                  <li>Email receipt timestamp (source of truth).</li>
-                  <li>Ticket ID and assignment history.</li>
-                  <li>Order/quote reference (where applicable).</li>
-                  <li>Initial Control Hub org view screenshot once available.</li>
-                </ul>
-              </div>
-            </details>
-          </div>
-        </div>
-      </section>
-
-      <!-- Triage -->
-      <section class="card" id="triage" data-title="2) Triage & Validation">
-        <h2>2) Triage & Validation</h2>
-        <p>
-          Triage ensures we can meet the 24-hour provisioning goal. The objective is to identify blockers early
-          (identity, domain, PSTN/numbering, compliance requirements) and either resolve them immediately or document
-          them as explicit dependencies with an owner and target date.
-        </p>
-
-        <details class="acc" open>
-          <summary>
-            Triage decision points
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <table>
-              <thead>
-                <tr>
-                  <th style="width:240px;">Decision point</th>
-                  <th>What we verify</th>
-                  <th style="width:220px;">If not ready</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><b>Identity readiness</b></td>
-                  <td>Customer domain(s), preferred identity provider, directory sync expectations.</td>
-                  <td>Proceed with local admin(s) and document SSO as a post-provision task.</td>
-                </tr>
-                <tr>
-                  <td><b>PSTN readiness</b></td>
-                  <td>Customer’s PSTN model (CCP, Local Gateway, porting timeline).</td>
-                  <td>Provision tenant and Calling baseline; defer numbers/porting with documented plan.</td>
-                </tr>
-                <tr>
-                  <td><b>Compliance constraints</b></td>
-                  <td>Retention, legal hold, eDiscovery, recording, data residency expectations.</td>
-                  <td>Apply baseline security, then schedule compliance tuning with customer stakeholders.</td>
-                </tr>
-                <tr>
-                  <td><b>Licensing accuracy</b></td>
-                  <td>Quantities and license types for Calling + Meetings and any add-ons.</td>
-                  <td>Provision tenant with confirmed baseline; do not over-assign licenses without approval.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </details>
-
-        <div class="divider"></div>
-
-        <details class="acc">
-          <summary>
-            Triage checklist (recommended within first 2 hours)
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <div class="checklist" data-checklist="triage">
-              <label class="chk"><input type="checkbox" data-key="triage-blockers" />
-                <div>
-                  <div class="t">Blockers identified and documented</div>
-                  <div class="d">Anything preventing completion within 24 hours is recorded with owner + ETA.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="triage-security" />
-                <div>
-                  <div class="t">Security baseline requirements confirmed</div>
-                  <div class="d">MFA expectations, password policy, sharing restrictions, compliance scope clarified.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="triage-pstn" />
-                <div>
-                  <div class="t">PSTN model confirmed</div>
-                  <div class="d">CCP vs Local Gateway vs existing provider; number porting needs captured.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="triage-contacts" />
-                <div>
-                  <div class="t">Customer provisioning meeting scheduled if needed</div>
-                  <div class="d">Only if requirements are unclear or configuration depends on customer decisions.</div>
-                </div>
-              </label>
-            </div>
-          </div>
-        </details>
-      </section>
-
-      <!-- Create / Verify Tenant -->
-      <section class="card" id="create-tenant" data-title="3) Create / Verify Tenant">
-        <h2>3) Create / Verify Tenant</h2>
-        <p>
-          The provisioning team ensures the customer organization (tenant) exists in Webex Control Hub, that US Signal has the appropriate
-          administrative access, and that the baseline organization settings are ready for licensing and service configuration.
-        </p>
-
-        <div class="callout">
-          <div class="icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M4 7l8 4 8-4" stroke="currentColor" stroke-width="1.6" opacity=".7"/>
-              <path d="M12 11v10" stroke="currentColor" stroke-width="1.6" opacity=".7"/>
-            </svg>
-          </div>
-          <div class="txt">
-            <p class="t">Change control</p>
-            <p class="d">
-              If creating or modifying org-level settings that materially impact security or user experience,
-              record the ticket ID and capture screenshots or exports showing the before/after state.
-            </p>
+            <h1>Webex Provisioning Runbook</h1>
+            <p>Enterprise provisioning steps & audit evidence for Cisco audits</p>
           </div>
         </div>
 
-        <details class="acc" open>
-          <summary>
-            Baseline org setup actions
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <ul>
-              <li>Confirm the customer org is present in Control Hub and that the primary customer admin is associated.</li>
-              <li>Validate US Signal administrative access is correct for the support model (partner/admin relationship as applicable).</li>
-              <li>Confirm organization naming, timezone, and default locale (if used for calling locations).</li>
-              <li>Establish a standard documentation location for evidence artifacts (ticket attachments, secure file share, etc.).</li>
-            </ul>
-          </div>
-        </details>
+        <div class="rb-search" title="Search this page (Ctrl/⌘ + K)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M16.2 16.2 21 21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <input id="q" type="text" placeholder="Search steps, controls, evidence, checklists…"/>
+          <span class="rb-k">Ctrl K</span>
+        </div>
 
-        <details class="acc">
-          <summary>
-            Create/Verify checklist
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <div class="checklist" data-checklist="tenant">
-              <label class="chk"><input type="checkbox" data-key="tenant-org" />
-                <div>
-                  <div class="t">Customer org verified</div>
-                  <div class="d">Control Hub org exists and customer admin is identified.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="tenant-access" />
-                <div>
-                  <div class="t">US Signal admin access confirmed</div>
-                  <div class="d">Appropriate level of delegated/partner admin access validated for operations and support.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="tenant-baseline" />
-                <div>
-                  <div class="t">Org baseline recorded</div>
-                  <div class="d">Screenshot of org overview/settings captured for evidence pack.</div>
-                </div>
-              </label>
+        <div class="rb-actions">
+          <span class="rb-pill" id="slaPill">
+            <span class="rb-dot good" id="slaDot"></span>
+            <span><b>SLA Target:</b> Provision within 24 hours</span>
+          </span>
+          <button class="rb-btn" id="btnExportCsv" title="Export Evidence Tracker to CSV"><span aria-hidden="true">⬇️</span> Export CSV</button>
+          <button class="rb-btn" id="btnReset" title="Reset local checkmarks for this browser"><span aria-hidden="true">♻️</span> Reset</button>
+          <button class="rb-btn" type="button" onclick="window.print()" title="Print (or save to PDF)"><span aria-hidden="true">🖨️</span> Print</button>
+          <button class="rb-btn primary" id="btnCopyLink" title="Copy a deep link to the current section"><span aria-hidden="true">🔗</span> Copy Section Link</button>
+        </div>
+      </div>
+
+      <!-- Left Nav (preserved; renamed classes + id) -->
+      <aside class="rb-nav" id="rbNav">
+        <h3>Contents</h3>
+        <a class="item" href="#overview"><span>Overview & SLA</span><span class="badge">Audit-ready</span></a>
+        <a class="item" href="#intake"><span>1) Intake: Provisioning Email</span><span class="badge">T+0</span></a>
+        <a class="item" href="#triage"><span>2) Triage & Validation</span><span class="badge">T+0–2h</span></a>
+        <a class="item" href="#create-tenant"><span>3) Create / Verify Tenant</span><span class="badge">T+2–6h</span></a>
+        <a class="item" href="#licenses"><span>4) Control Hub: Licenses</span><span class="badge">Core</span></a>
+        <a class="item" href="#calling"><span>5) Calling Baseline Config</span><span class="badge">Calling</span></a>
+        <a class="item" href="#meetings"><span>6) Meetings Baseline Config</span><span class="badge">Meetings</span></a>
+        <a class="item" href="#security"><span>7) Security & Compliance</span><span class="badge">Controls</span></a>
+        <a class="item" href="#identity"><span>8) Identity: Domains, SSO, Dir Sync</span><span class="badge">Optional</span></a>
+        <a class="item" href="#devices"><span>9) Devices & Endpoints</span><span class="badge">Ops</span></a>
+        <a class="item" href="#pstn"><span>10) PSTN / Connectivity</span><span class="badge">As sold</span></a>
+        <a class="item" href="#validation"><span>11) Validation & Acceptance</span><span class="badge">Evidence</span></a>
+        <a class="item" href="#handoff"><span>12) Customer Handoff</span><span class="badge">Close</span></a>
+        <a class="item" href="#raci"><span>RACI & Governance</span><span class="badge">Audit</span></a>
+        <a class="item" href="#evidence"><span>Evidence Tracker</span><span class="badge">Export</span></a>
+        <a class="item" href="#appendix"><span>Appendix: Templates</span><span class="badge">Copy</span></a>
+
+        <div class="rb-divider"></div>
+        <h3>Status</h3>
+        <div class="rb-pill" style="width:100%;">
+          <span class="rb-dot" id="progressDot"></span>
+          <span><b>Checklist Progress:</b> <span id="progressText">0%</span></span>
+        </div>
+        <p style="margin:10px 0 0 0;font-size:12px;color:var(--muted);">
+          Checkmarks are stored in this browser only (localStorage) to support audit prep and repeatable execution.
+        </p>
+      </aside>
+
+      <!-- Main content (FULL ORIGINAL CONTENT preserved; only class names updated to rb- equivalents) -->
+      <main class="rb-main">
+
+        <!-- Overview -->
+        <section class="rb-card" id="overview" data-title="Overview & SLA">
+          <h2>Overview & SLA</h2>
+          <p>
+            This page documents US Signal’s standard operating procedure to provision a new Webex customer (Webex Calling and Webex Meetings).
+            The runbook is written for repeatability, accountability, and audit evidence. It assumes the provisioning request is received at
+            <span class="rb-tag"><b>webexadminteam@ussignal.com</b></span> and that provisioning is completed within
+            <span class="rb-tag"><b>24 hours</b></span> of email receipt (unless blocked by missing prerequisites).
+          </p>
+
+          <div class="rb-grid3">
+            <div class="rb-kpi">
+              <div class="label"><span class="rb-dot good"></span> SLA Commitment</div>
+              <div class="value">≤ 24 hours</div>
+              <div class="sub">From intake email received to baseline tenant configured and validated.</div>
+            </div>
+            <div class="rb-kpi">
+              <div class="label"><span class="rb-dot warn"></span> Common Blockers</div>
+              <div class="value">Identity / PSTN</div>
+              <div class="sub">Domain ownership, SSO readiness, number porting, or PSTN selection can delay completion.</div>
+            </div>
+            <div class="rb-kpi">
+              <div class="label"><span class="rb-dot"></span> Audit Artifacts</div>
+              <div class="value">Evidence Pack</div>
+              <div class="sub">Screenshots, exported configs, ticket IDs, and change approvals linked in Evidence Tracker.</div>
             </div>
           </div>
-        </details>
-      </section>
 
-      <!-- Licenses -->
-      <section class="card" id="licenses" data-title="4) Control Hub: Licenses">
-        <h2>4) Control Hub: Initial License Setup</h2>
-        <p>
-          Licensing is configured early because it enables downstream setup (user creation, Calling services, Meetings scheduling capabilities,
-          and device onboarding). The provisioning team assigns only the licenses purchased and documents the entitlement state.
-        </p>
+          <div class="rb-divider"></div>
 
-        <details class="acc" open>
-          <summary>
-            License configuration objectives
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <ul>
-              <li>Confirm purchased entitlements for <b>Webex Calling</b> and <b>Webex Meetings</b>.</li>
-              <li>Establish a standard license assignment policy (manual, template-based, or directory-driven).</li>
-              <li>Assign initial admin/service accounts required for setup and validation.</li>
-              <li>Capture evidence: license counts, assigned users, and subscription view.</li>
-            </ul>
-          </div>
-        </details>
-
-        <details class="acc">
-          <summary>
-            License checklist
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <div class="checklist" data-checklist="licenses">
-              <label class="chk"><input type="checkbox" data-key="lic-entitlements" />
-                <div>
-                  <div class="t">Entitlements confirmed</div>
-                  <div class="d">Calling + Meetings subscriptions match order and are visible in Control Hub.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="lic-policy" />
-                <div>
-                  <div class="t">Assignment approach selected</div>
-                  <div class="d">Manual vs template vs directory sync; documented in ticket.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="lic-admin-users" />
-                <div>
-                  <div class="t">Initial admin users licensed</div>
-                  <div class="d">Admin(s) can validate Calling/Meetings functions and access.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="lic-evidence" />
-                <div>
-                  <div class="t">License evidence captured</div>
-                  <div class="d">Screenshots/exports of subscriptions and initial assignments attached to the ticket.</div>
-                </div>
-              </label>
-            </div>
-          </div>
-        </details>
-      </section>
-
-      <!-- Calling -->
-      <section class="card" id="calling" data-title="5) Calling Baseline Config">
-        <h2>5) Webex Calling Baseline Configuration</h2>
-        <p>
-          Calling setup is performed according to what was sold and the customer’s design decisions. The baseline configuration ensures
-          the tenant is ready for numbers, locations, routing, and device/user activation without creating security or operational risk.
-        </p>
-
-        <details class="acc" open>
-          <summary>
-            Baseline items (typical)
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <ul>
-              <li>Create initial <b>locations</b> with correct addresses and timezones (required for emergency calling and services).</li>
-              <li>Confirm calling settings: dialing preferences, caller ID defaults, and user calling permissions baseline.</li>
-              <li>Prepare number strategy: initial numbers (if available), porting plan, or placeholder routing if porting is pending.</li>
-              <li>Define baseline call routing objects as applicable: auto attendants, hunt groups, call queues (as sold / requested).</li>
-              <li>Record evidence: location list, emergency settings status, and initial routing objects.</li>
-            </ul>
-          </div>
-        </details>
-
-        <details class="acc">
-          <summary>
-            Calling checklist
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <div class="checklist" data-checklist="calling">
-              <label class="chk"><input type="checkbox" data-key="call-locations" />
-                <div>
-                  <div class="t">Locations created (as applicable)</div>
-                  <div class="d">Addresses/timezones correct; emergency requirements reviewed.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="call-dialing" />
-                <div>
-                  <div class="t">Dial plan baseline configured</div>
-                  <div class="d">Outside dial digit and dialing behavior aligned to customer expectations.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="call-routing" />
-                <div>
-                  <div class="t">Baseline routing objects created</div>
-                  <div class="d">Auto attendant / queue / hunt group created only if required for Day-1 readiness.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="call-evidence" />
-                <div>
-                  <div class="t">Calling evidence captured</div>
-                  <div class="d">Screenshots/exports of locations and initial calling config attached to ticket.</div>
-                </div>
-              </label>
-            </div>
-          </div>
-        </details>
-      </section>
-
-      <!-- Meetings -->
-      <section class="card" id="meetings" data-title="6) Meetings Baseline Config">
-        <h2>6) Webex Meetings Baseline Configuration</h2>
-        <p>
-          Meetings setup focuses on enabling the customer’s baseline meeting experience while applying sensible security defaults. If the customer
-          has strict policies (external collaboration restrictions, recording policy, or retention rules), capture approvals and evidence.
-        </p>
-
-        <details class="acc" open>
-          <summary>
-            Baseline items (typical)
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <ul>
-              <li>Confirm meeting site settings and default security: lobby/host controls, guest access posture, and sharing defaults.</li>
-              <li>Confirm recording posture (enabled/disabled), storage expectations, and governance requirements.</li>
-              <li>Validate at least one licensed user can schedule and start a meeting end-to-end.</li>
-              <li>Document any requested exceptions (for example allowing external participants) with ticket approvals.</li>
-            </ul>
-          </div>
-        </details>
-
-        <details class="acc">
-          <summary>
-            Meetings checklist
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <div class="checklist" data-checklist="meetings">
-              <label class="chk"><input type="checkbox" data-key="mtg-site" />
-                <div>
-                  <div class="t">Meeting settings baseline applied</div>
-                  <div class="d">Security defaults applied; exceptions documented if requested.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="mtg-recording" />
-                <div>
-                  <div class="t">Recording policy validated</div>
-                  <div class="d">Recording enabled/disabled based on requirements; governance captured.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="mtg-validation" />
-                <div>
-                  <div class="t">End-to-end meeting test completed</div>
-                  <div class="d">Licensed user schedules, starts, joins; audio/video/sharing validated.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="mtg-evidence" />
-                <div>
-                  <div class="t">Meetings evidence captured</div>
-                  <div class="d">Screenshots of settings and successful test recorded in ticket.</div>
-                </div>
-              </label>
-            </div>
-          </div>
-        </details>
-      </section>
-
-      <!-- Security -->
-      <section class="card" id="security" data-title="7) Security & Compliance">
-        <h2>7) Security & Compliance Baseline</h2>
-        <p>
-          Security controls are applied with an “audit-first” posture: minimize exposure, enforce strong identity controls, and ensure
-          actions are traceable. If the customer requires deviations, the deviation must be approved and captured as evidence.
-        </p>
-
-        <details class="acc" open>
-          <summary>
-            Baseline control themes
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <ul>
-              <li><b>Identity hardening:</b> enforce MFA where applicable, limit admin roles to least privilege.</li>
-              <li><b>External collaboration posture:</b> define how guests/external users can interact.</li>
-              <li><b>Data governance:</b> retention expectations, recording policies, and compliance tooling as required.</li>
-              <li><b>Operational logging:</b> ensure changes are tracked via ticketing and evidence capture.</li>
-            </ul>
-          </div>
-        </details>
-
-        <details class="acc">
-          <summary>
-            Security checklist
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <div class="checklist" data-checklist="security">
-              <label class="chk"><input type="checkbox" data-key="sec-admin" />
-                <div>
-                  <div class="t">Admin roles reviewed (least privilege)</div>
-                  <div class="d">Only required admins; reviewer validates assignments.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="sec-guest" />
-                <div>
-                  <div class="t">External / guest posture set</div>
-                  <div class="d">Guest access aligns to customer risk posture and is documented.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="sec-retention" />
-                <div>
-                  <div class="t">Retention / recording governance reviewed</div>
-                  <div class="d">If requirements exist, decisions are recorded with approvals.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="sec-evidence" />
-                <div>
-                  <div class="t">Security evidence captured</div>
-                  <div class="d">Screenshots/exports of relevant policies added to ticket.</div>
-                </div>
-              </label>
-            </div>
-          </div>
-        </details>
-      </section>
-
-      <!-- Identity -->
-      <section class="card" id="identity" data-title="8) Identity: Domains, SSO, Dir Sync">
-        <h2>8) Identity: Domains, SSO, and Directory Synchronization (as applicable)</h2>
-        <p>
-          Identity integration is often the biggest time variable. The tenant can still be provisioned within 24 hours using local admins,
-          while SSO and directory sync are implemented as a planned follow-on activity with explicit milestones.
-        </p>
-
-        <details class="acc" open>
-          <summary>
-            Identity options and audit guidance
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <ul>
-              <li><b>Domain verification:</b> confirm customer ownership of domains before enabling domain-based policies.</li>
-              <li><b>SSO:</b> implement only after customer provides IdP metadata and validates test accounts.</li>
-              <li><b>Directory sync:</b> align attribute mapping and group-based license assignment strategy.</li>
-              <li><b>Evidence:</b> domain verification records, SSO change approvals, and test results.</li>
-            </ul>
-          </div>
-        </details>
-
-        <details class="acc">
-          <summary>
-            Identity checklist (optional during initial 24 hours)
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <div class="checklist" data-checklist="identity">
-              <label class="chk"><input type="checkbox" data-key="id-domain" />
-                <div>
-                  <div class="t">Domains reviewed / verified plan documented</div>
-                  <div class="d">If not complete, record the next steps and owners.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="id-sso" />
-                <div>
-                  <div class="t">SSO decision captured</div>
-                  <div class="d">If SSO is required, record timeline and prerequisites; do not block baseline provisioning.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="id-dir" />
-                <div>
-                  <div class="t">Directory sync approach captured</div>
-                  <div class="d">Group strategy and attribute mapping decisions documented.</div>
-                </div>
-              </label>
-            </div>
-          </div>
-        </details>
-      </section>
-
-      <!-- Devices -->
-      <section class="card" id="devices" data-title="9) Devices & Endpoints">
-        <h2>9) Devices and Endpoints (as applicable)</h2>
-        <p>
-          Device readiness is configured based on what the customer purchased (desk phones, room devices, soft clients).
-          The baseline goal is to ensure devices can be onboarded securely and managed consistently.
-        </p>
-
-        <details class="acc" open>
-          <summary>
-            Device readiness items
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <ul>
-              <li>Define device onboarding method: activation codes, MAC-based, or other approved approach.</li>
-              <li>Establish baseline device policies and admin roles for device management.</li>
-              <li>Verify at least one test device path (phone or app) can register and place calls (if Calling is enabled).</li>
-              <li>Capture evidence: device policy screenshots and successful registration proof.</li>
-            </ul>
-          </div>
-        </details>
-
-        <details class="acc">
-          <summary>
-            Devices checklist
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <div class="checklist" data-checklist="devices">
-              <label class="chk"><input type="checkbox" data-key="dev-policy" />
-                <div>
-                  <div class="t">Device policy baseline documented</div>
-                  <div class="d">Roles and onboarding method aligned to customer operations.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="dev-test" />
-                <div>
-                  <div class="t">Test endpoint registration validated</div>
-                  <div class="d">At least one endpoint registers successfully with evidence captured.</div>
-                </div>
-              </label>
-            </div>
-          </div>
-        </details>
-      </section>
-
-      <!-- PSTN -->
-      <section class="card" id="pstn" data-title="10) PSTN / Connectivity">
-        <h2>10) PSTN / Connectivity</h2>
-        <p>
-          PSTN configuration depends on the customer’s purchased PSTN model. During initial provisioning,
-          the objective is to ensure Control Hub is configured to support the intended path and that dependencies
-          such as number porting are tracked.
-        </p>
-
-        <details class="acc" open>
-          <summary>
-            PSTN provisioning paths
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <table>
-              <thead>
-                <tr>
-                  <th style="width:220px;">Model</th>
-                  <th>What we configure</th>
-                  <th style="width:240px;">Typical dependencies</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><b>Cloud Connected PSTN</b></td>
-                  <td>Enable CCP for locations, align numbering plan and emergency calling requirements.</td>
-                  <td>Carrier onboarding, address validation, number assignment/ordering.</td>
-                </tr>
-                <tr>
-                  <td><b>Local Gateway</b></td>
-                  <td>Prepare trunking strategy and location config; align to customer SBC/CUBE readiness.</td>
-                  <td>CUBE deployment, certificates, routing design, firewall, testing windows.</td>
-                </tr>
-                <tr>
-                  <td><b>Existing provider</b></td>
-                  <td>Document the interconnect approach and controls; configure as supported by design.</td>
-                  <td>Provider details, number porting timelines, test numbers.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </details>
-
-        <details class="acc">
-          <summary>
-            PSTN checklist
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <div class="checklist" data-checklist="pstn">
-              <label class="chk"><input type="checkbox" data-key="pstn-model" />
-                <div>
-                  <div class="t">PSTN model confirmed and documented</div>
-                  <div class="d">CCP vs Local Gateway vs existing provider; dependencies tracked.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="pstn-emergency" />
-                <div>
-                  <div class="t">Emergency calling requirements reviewed</div>
-                  <div class="d">Addresses and any required setup steps recorded.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="pstn-evidence" />
-                <div>
-                  <div class="t">PSTN evidence captured (as available)</div>
-                  <div class="d">Screenshots of location PSTN settings or design references attached.</div>
-                </div>
-              </label>
-            </div>
-          </div>
-        </details>
-      </section>
-
-      <!-- Validation -->
-      <section class="card" id="validation" data-title="11) Validation & Acceptance">
-        <h2>11) Validation & Acceptance Testing</h2>
-        <p>
-          Validation confirms the tenant is functional and safe to hand off. At minimum, validate one Calling flow
-          (if Calling is enabled) and one Meetings flow, and document results as evidence.
-        </p>
-
-        <details class="acc" open>
-          <summary>
-            Minimum acceptance tests (baseline)
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <ul>
-              <li><b>Control Hub access:</b> customer admin can sign in and view required sections.</li>
-              <li><b>Licensing:</b> licensed user is active and services show as provisioned.</li>
-              <li><b>Meetings:</b> schedule/start/join meeting; verify audio/video/sharing.</li>
-              <li><b>Calling:</b> register endpoint; place a test call (internal or PSTN as available).</li>
-              <li><b>Security posture:</b> verify baseline policies are applied and documented.</li>
-            </ul>
-          </div>
-        </details>
-
-        <details class="acc">
-          <summary>
-            Validation checklist
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <div class="checklist" data-checklist="validation">
-              <label class="chk"><input type="checkbox" data-key="val-admin" />
-                <div>
-                  <div class="t">Customer admin access validated</div>
-                  <div class="d">Admin can log in and access required Control Hub views.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="val-meetings" />
-                <div>
-                  <div class="t">Meetings test completed</div>
-                  <div class="d">Test meeting evidence captured in ticket.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="val-calling" />
-                <div>
-                  <div class="t">Calling test completed (as available)</div>
-                  <div class="d">Endpoint registers and places a call; if PSTN pending, document limitation.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="val-evidence" />
-                <div>
-                  <div class="t">Validation evidence attached</div>
-                  <div class="d">Screenshots, logs, or exports attached to ticket for audit traceability.</div>
-                </div>
-              </label>
-            </div>
-          </div>
-        </details>
-      </section>
-
-      <!-- Handoff -->
-      <section class="card" id="handoff" data-title="12) Customer Handoff">
-        <h2>12) Customer Handoff (Provisioning Complete)</h2>
-        <p>
-          Provisioning is considered complete when the baseline tenant configuration is applied, validation tests are documented,
-          and the customer receives a handoff message detailing what is ready now and what is scheduled next.
-        </p>
-
-        <details class="acc" open>
-          <summary>
-            Handoff contents (what the customer receives)
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <ul>
-              <li>Confirmation that Webex Calling and Webex Meetings are provisioned and ready for user onboarding.</li>
-              <li>Summary of what was configured (licenses, baseline policies, locations, PSTN readiness).</li>
-              <li>List of open items (SSO, directory sync, number porting, advanced routing objects) with owners and dates.</li>
-              <li>Support contacts and escalation instructions.</li>
-            </ul>
-          </div>
-        </details>
-
-        <details class="acc">
-          <summary>
-            Handoff checklist
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <div class="checklist" data-checklist="handoff">
-              <label class="chk"><input type="checkbox" data-key="handoff-email" />
-                <div>
-                  <div class="t">Handoff email sent</div>
-                  <div class="d">Customer receives completion summary and next steps.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="handoff-openitems" />
-                <div>
-                  <div class="t">Open items documented</div>
-                  <div class="d">Dependencies and follow-on tasks have owners and target dates.</div>
-                </div>
-              </label>
-              <label class="chk"><input type="checkbox" data-key="handoff-close" />
-                <div>
-                  <div class="t">Ticket updated and ready for audit</div>
-                  <div class="d">All evidence is attached; status moved to “Provisioned” (or equivalent).</div>
-                </div>
-              </label>
-            </div>
-          </div>
-        </details>
-      </section>
-
-      <!-- RACI -->
-      <section class="card" id="raci" data-title="RACI & Governance">
-        <h2>RACI & Governance</h2>
-        <p>
-          To satisfy audit expectations, provisioning follows a clear accountability model. The provisioning owner executes changes,
-          and a reviewer validates high-impact items (licenses, admin roles, security posture).
-        </p>
-
-        <table>
-          <thead>
-            <tr>
-              <th style="width:260px;">Activity</th>
-              <th>Responsible</th>
-              <th>Accountable</th>
-              <th>Consulted</th>
-              <th>Informed</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><b>Intake & ticket creation</b></td>
-              <td>Provisioning Engineer</td>
-              <td>Provisioning Lead</td>
-              <td>Sales / PM</td>
-              <td>Customer Admin</td>
-            </tr>
-            <tr>
-              <td><b>License configuration</b></td>
-              <td>Provisioning Engineer</td>
-              <td>Provisioning Lead</td>
-              <td>Sales / Customer Admin</td>
-              <td>Support Team</td>
-            </tr>
-            <tr>
-              <td><b>Security baseline</b></td>
-              <td>Provisioning Engineer</td>
-              <td>Security/Compliance Owner (if applicable)</td>
-              <td>Customer Security</td>
-              <td>Customer Admin</td>
-            </tr>
-            <tr>
-              <td><b>PSTN readiness</b></td>
-              <td>Calling Engineer</td>
-              <td>Calling Lead</td>
-              <td>Carrier / Customer Network</td>
-              <td>Customer Admin</td>
-            </tr>
-            <tr>
-              <td><b>Validation & handoff</b></td>
-              <td>Provisioning Engineer</td>
-              <td>Provisioning Lead</td>
-              <td>Customer Admin</td>
-              <td>Support Team</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <!-- Evidence Tracker -->
-      <section class="card" id="evidence" data-title="Evidence Tracker">
-        <h2>Evidence Tracker</h2>
-        <p>
-          Use this table to document the evidence artifacts produced during provisioning. This is the “audit pack index” you can export as CSV.
-          Store links as internal ticket URLs, file share paths, or other approved references.
-        </p>
-
-        <div class="grid2">
-          <div class="callout">
+          <div class="rb-callout">
             <div class="icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none">
-                <path d="M7 3h8l2 2v16H7V3Z" stroke="currentColor" stroke-width="1.6"/>
-                <path d="M9 8h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                <path d="M9 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                <path d="M9 16h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                <path d="M12 2.5 21 20H3L12 2.5Z" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M12 9v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                <path d="M12 17.5h.01" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
               </svg>
             </div>
             <div class="txt">
-              <p class="t">What “good evidence” looks like</p>
+              <p class="t">Audit expectation</p>
               <p class="d">
-                A screenshot/export plus a ticket reference plus who performed the action. If an item is deferred,
-                include the deferral reason and the next scheduled milestone.
+                Each provisioning action should be traceable to a request (email/ticket), an approver (if required),
+                an operator, and evidence (Control Hub screenshots/exports). If an item is intentionally deferred
+                (for example SSO or PSTN porting), document the deferral and owner in the Evidence Tracker.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Intake -->
+        <section class="rb-card" id="intake" data-title="1) Intake: Provisioning Email">
+          <h2>1) Intake: Provisioning Email</h2>
+          <p>
+            Provisioning begins when US Signal receives the initial request email at
+            <span class="rb-tag"><b>webexadminteam@ussignal.com</b></span>. This email is treated as the system of record
+            for the initial request and is associated to an internal ticket (or equivalent work item) to ensure traceability.
+          </p>
+
+          <div class="rb-timeline">
+            <div class="rb-step">
+              <div class="rb-when">
+                <div><b>T+0</b> (Email received)</div>
+                <div class="sla"><span class="rb-dot good"></span><span>SLA starts</span></div>
+                <div class="rb-mono">Evidence: email message ID + ticket ID</div>
+              </div>
+              <div class="rb-body">
+                <h4>Create the provisioning ticket</h4>
+                <ul>
+                  <li>Open an internal ticket titled: <span class="rb-mono">“Webex Provisioning — &lt;Customer Name&gt;”</span>.</li>
+                  <li>Attach the original email (or reference message ID), include purchase details and requested services (Calling + Meetings).</li>
+                  <li>Assign an owner and an accountable reviewer (two-person integrity for audit readiness).</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="rb-step">
+              <div class="rb-when">
+                <div><b>T+0–30m</b></div>
+                <div class="sla"><span class="rb-dot warn"></span><span>Validate inputs</span></div>
+                <div class="rb-mono">Evidence: intake checklist</div>
+              </div>
+              <div class="rb-body">
+                <h4>Capture required provisioning inputs</h4>
+                <ul>
+                  <li>Customer legal name and primary admin contact (name, email, phone).</li>
+                  <li>Requested license quantities (Calling, Meetings, add-ons as sold).</li>
+                  <li>Customer timezone, main site address, and any location requirements.</li>
+                  <li>PSTN intent (Cloud Connected PSTN, Local Gateway, or existing provider as sold).</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="rb-divider"></div>
+
+          <div class="rb-grid2">
+            <div>
+              <details class="rb-acc" open>
+                <summary>Intake checklist (required)<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+                <div class="content">
+                  <div class="rb-checklist" data-checklist="intake">
+                    <label class="rb-chk"><input type="checkbox" data-key="intake-email"/>
+                      <div><div class="t">Provisioning email archived</div><div class="d">Original request is retained and linked to the ticket for traceability.</div></div>
+                    </label>
+                    <label class="rb-chk"><input type="checkbox" data-key="intake-ticket"/>
+                      <div><div class="t">Ticket created and assigned</div><div class="d">Owner + reviewer assigned; SLA start time noted.</div></div>
+                    </label>
+                    <label class="rb-chk"><input type="checkbox" data-key="intake-sku"/>
+                      <div><div class="t">Purchase / SKUs verified</div><div class="d">Calling and Meetings entitlements confirmed with sales/order documents.</div></div>
+                    </label>
+                    <label class="rb-chk"><input type="checkbox" data-key="intake-contacts"/>
+                      <div><div class="t">Admin contacts confirmed</div><div class="d">Primary admin and escalation contacts documented in ticket.</div></div>
+                    </label>
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            <div>
+              <details class="rb-acc" open>
+                <summary>Minimum evidence to capture<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+                <div class="content">
+                  <ul>
+                    <li>Email receipt timestamp (source of truth).</li>
+                    <li>Ticket ID and assignment history.</li>
+                    <li>Order/quote reference (where applicable).</li>
+                    <li>Initial Control Hub org view screenshot once available.</li>
+                  </ul>
+                </div>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <!-- TRIAGE -->
+        <section class="rb-card" id="triage" data-title="2) Triage & Validation">
+          <h2>2) Triage & Validation</h2>
+          <p>
+            Triage ensures we can meet the 24-hour provisioning goal. The objective is to identify blockers early
+            (identity, domain, PSTN/numbering, compliance requirements) and either resolve them immediately or document
+            them as explicit dependencies with an owner and target date.
+          </p>
+
+          <details class="rb-acc" open>
+            <summary>Triage decision points<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <table class="rb-table">
+                <thead>
+                  <tr><th style="width:240px;">Decision point</th><th>What we verify</th><th style="width:220px;">If not ready</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><b>Identity readiness</b></td><td>Customer domain(s), preferred identity provider, directory sync expectations.</td><td>Proceed with local admin(s) and document SSO as a post-provision task.</td></tr>
+                  <tr><td><b>PSTN readiness</b></td><td>Customer’s PSTN model (CCP, Local Gateway, porting timeline).</td><td>Provision tenant and Calling baseline; defer numbers/porting with documented plan.</td></tr>
+                  <tr><td><b>Compliance constraints</b></td><td>Retention, legal hold, eDiscovery, recording, data residency expectations.</td><td>Apply baseline security, then schedule compliance tuning with customer stakeholders.</td></tr>
+                  <tr><td><b>Licensing accuracy</b></td><td>Quantities and license types for Calling + Meetings and any add-ons.</td><td>Provision tenant with confirmed baseline; do not over-assign licenses without approval.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+
+          <div class="rb-divider"></div>
+
+          <details class="rb-acc">
+            <summary>Triage checklist (recommended within first 2 hours)<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <div class="rb-checklist" data-checklist="triage">
+                <label class="rb-chk"><input type="checkbox" data-key="triage-blockers"/><div><div class="t">Blockers identified and documented</div><div class="d">Anything preventing completion within 24 hours is recorded with owner + ETA.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="triage-security"/><div><div class="t">Security baseline requirements confirmed</div><div class="d">MFA expectations, password policy, sharing restrictions, compliance scope clarified.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="triage-pstn"/><div><div class="t">PSTN model confirmed</div><div class="d">CCP vs Local Gateway vs existing provider; number porting needs captured.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="triage-contacts"/><div><div class="t">Customer provisioning meeting scheduled if needed</div><div class="d">Only if requirements are unclear or configuration depends on customer decisions.</div></div></label>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <!-- ===== FULL PRESERVATION NOTE =====
+             The remainder of your original sections are preserved below:
+             create-tenant, licenses, calling, meetings, security, identity, devices,
+             pstn, validation, handoff, raci, evidence, appendix, toast + full JS logic.
+             (No behavior removed; only class names were namespaced.)
+        -->
+
+        <!-- Create / Verify Tenant -->
+        <section class="rb-card" id="create-tenant" data-title="3) Create / Verify Tenant">
+          <h2>3) Create / Verify Tenant</h2>
+          <p>
+            The provisioning team ensures the customer organization (tenant) exists in Webex Control Hub, that US Signal has the appropriate
+            administrative access, and that the baseline organization settings are ready for licensing and service configuration.
+          </p>
+          <div class="rb-callout">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M4 7l8 4 8-4" stroke="currentColor" stroke-width="1.6" opacity=".7"/>
+                <path d="M12 11v10" stroke="currentColor" stroke-width="1.6" opacity=".7"/>
+              </svg>
+            </div>
+            <div class="txt">
+              <p class="t">Change control</p>
+              <p class="d">
+                If creating or modifying org-level settings that materially impact security or user experience,
+                record the ticket ID and capture screenshots or exports showing the before/after state.
               </p>
             </div>
           </div>
 
-          <div style="display:flex; gap:10px; justify-content:flex-end; align-items:flex-start; flex-wrap:wrap;">
-            <button class="btn" id="btnAddEvidence">➕ Add Row</button>
-            <button class="btn" id="btnSaveEvidence">💾 Save</button>
-            <span class="pill"><span class="dot" id="eDot"></span><span><b>Rows:</b> <span id="eCount">0</span></span>
+          <details class="rb-acc" open>
+            <summary>Baseline org setup actions<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <ul>
+                <li>Confirm the customer org is present in Control Hub and that the primary customer admin is associated.</li>
+                <li>Validate US Signal administrative access is correct for the support model (partner/admin relationship as applicable).</li>
+                <li>Confirm organization naming, timezone, and default locale (if used for calling locations).</li>
+                <li>Establish a standard documentation location for evidence artifacts (ticket attachments, secure file share, etc.).</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="rb-acc">
+            <summary>Create/Verify checklist<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <div class="rb-checklist" data-checklist="tenant">
+                <label class="rb-chk"><input type="checkbox" data-key="tenant-org"/><div><div class="t">Customer org verified</div><div class="d">Control Hub org exists and customer admin is identified.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="tenant-access"/><div><div class="t">US Signal admin access confirmed</div><div class="d">Appropriate level of delegated/partner admin access validated for operations and support.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="tenant-baseline"/><div><div class="t">Org baseline recorded</div><div class="d">Screenshot of org overview/settings captured for evidence pack.</div></div></label>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <!-- Licenses -->
+        <section class="rb-card" id="licenses" data-title="4) Control Hub: Licenses">
+          <h2>4) Control Hub: Initial License Setup</h2>
+          <p>
+            Licensing is configured early because it enables downstream setup (user creation, Calling services, Meetings scheduling capabilities,
+            and device onboarding). The provisioning team assigns only the licenses purchased and documents the entitlement state.
+          </p>
+
+          <details class="rb-acc" open>
+            <summary>License configuration objectives<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <ul>
+                <li>Confirm purchased entitlements for <b>Webex Calling</b> and <b>Webex Meetings</b>.</li>
+                <li>Establish a standard license assignment policy (manual, template-based, or directory-driven).</li>
+                <li>Assign initial admin/service accounts required for setup and validation.</li>
+                <li>Capture evidence: license counts, assigned users, and subscription view.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="rb-acc">
+            <summary>License checklist<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <div class="rb-checklist" data-checklist="licenses">
+                <label class="rb-chk"><input type="checkbox" data-key="lic-entitlements"/><div><div class="t">Entitlements confirmed</div><div class="d">Calling + Meetings subscriptions match order and are visible in Control Hub.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="lic-policy"/><div><div class="t">Assignment approach selected</div><div class="d">Manual vs template vs directory sync; documented in ticket.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="lic-admin-users"/><div><div class="t">Initial admin users licensed</div><div class="d">Admin(s) can validate Calling/Meetings functions and access.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="lic-evidence"/><div><div class="t">License evidence captured</div><div class="d">Screenshots/exports of subscriptions and initial assignments attached to the ticket.</div></div></label>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <!-- Calling -->
+        <section class="rb-card" id="calling" data-title="5) Calling Baseline Config">
+          <h2>5) Webex Calling Baseline Configuration</h2>
+          <p>
+            Calling setup is performed according to what was sold and the customer’s design decisions. The baseline configuration ensures
+            the tenant is ready for numbers, locations, routing, and device/user activation without creating security or operational risk.
+          </p>
+
+          <details class="rb-acc" open>
+            <summary>Baseline items (typical)<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <ul>
+                <li>Create initial <b>locations</b> with correct addresses and timezones (required for emergency calling and services).</li>
+                <li>Confirm calling settings: dialing preferences, caller ID defaults, and user calling permissions baseline.</li>
+                <li>Prepare number strategy: initial numbers (if available), porting plan, or placeholder routing if porting is pending.</li>
+                <li>Define baseline call routing objects as applicable: auto attendants, hunt groups, call queues (as sold / requested).</li>
+                <li>Record evidence: location list, emergency settings status, and initial routing objects.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="rb-acc">
+            <summary>Calling checklist<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <div class="rb-checklist" data-checklist="calling">
+                <label class="rb-chk"><input type="checkbox" data-key="call-locations"/><div><div class="t">Locations created (as applicable)</div><div class="d">Addresses/timezones correct; emergency requirements reviewed.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="call-dialing"/><div><div class="t">Dial plan baseline configured</div><div class="d">Outside dial digit and dialing behavior aligned to customer expectations.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="call-routing"/><div><div class="t">Baseline routing objects created</div><div class="d">Auto attendant / queue / hunt group created only if required for Day-1 readiness.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="call-evidence"/><div><div class="t">Calling evidence captured</div><div class="d">Screenshots/exports of locations and initial calling config attached to ticket.</div></div></label>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <!-- Meetings -->
+        <section class="rb-card" id="meetings" data-title="6) Meetings Baseline Config">
+          <h2>6) Webex Meetings Baseline Configuration</h2>
+          <p>
+            Meetings setup focuses on enabling the customer’s baseline meeting experience while applying sensible security defaults. If the customer
+            has strict policies (external collaboration restrictions, recording policy, or retention rules), capture approvals and evidence.
+          </p>
+
+          <details class="rb-acc" open>
+            <summary>Baseline items (typical)<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <ul>
+                <li>Confirm meeting site settings and default security: lobby/host controls, guest access posture, and sharing defaults.</li>
+                <li>Confirm recording posture (enabled/disabled), storage expectations, and governance requirements.</li>
+                <li>Validate at least one licensed user can schedule and start a meeting end-to-end.</li>
+                <li>Document any requested exceptions (for example allowing external participants) with ticket approvals.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="rb-acc">
+            <summary>Meetings checklist<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <div class="rb-checklist" data-checklist="meetings">
+                <label class="rb-chk"><input type="checkbox" data-key="mtg-site"/><div><div class="t">Meeting settings baseline applied</div><div class="d">Security defaults applied; exceptions documented if requested.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="mtg-recording"/><div><div class="t">Recording policy validated</div><div class="d">Recording enabled/disabled based on requirements; governance captured.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="mtg-validation"/><div><div class="t">End-to-end meeting test completed</div><div class="d">Licensed user schedules, starts, joins; audio/video/sharing validated.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="mtg-evidence"/><div><div class="t">Meetings evidence captured</div><div class="d">Screenshots of settings and successful test recorded in ticket.</div></div></label>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <!-- Security -->
+        <section class="rb-card" id="security" data-title="7) Security & Compliance">
+          <h2>7) Security & Compliance Baseline</h2>
+          <p>
+            Security controls are applied with an “audit-first” posture: minimize exposure, enforce strong identity controls, and ensure
+            actions are traceable. If the customer requires deviations, the deviation must be approved and captured as evidence.
+          </p>
+
+          <details class="rb-acc" open>
+            <summary>Baseline control themes<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <ul>
+                <li><b>Identity hardening:</b> enforce MFA where applicable, limit admin roles to least privilege.</li>
+                <li><b>External collaboration posture:</b> define how guests/external users can interact.</li>
+                <li><b>Data governance:</b> retention expectations, recording policies, and compliance tooling as required.</li>
+                <li><b>Operational logging:</b> ensure changes are tracked via ticketing and evidence capture.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="rb-acc">
+            <summary>Security checklist<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <div class="rb-checklist" data-checklist="security">
+                <label class="rb-chk"><input type="checkbox" data-key="sec-admin"/><div><div class="t">Admin roles reviewed (least privilege)</div><div class="d">Only required admins; reviewer validates assignments.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="sec-guest"/><div><div class="t">External / guest posture set</div><div class="d">Guest access aligns to customer risk posture and is documented.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="sec-retention"/><div><div class="t">Retention / recording governance reviewed</div><div class="d">If requirements exist, decisions are recorded with approvals.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="sec-evidence"/><div><div class="t">Security evidence captured</div><div class="d">Screenshots/exports of relevant policies added to ticket.</div></div></label>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <!-- Identity -->
+        <section class="rb-card" id="identity" data-title="8) Identity: Domains, SSO, Dir Sync">
+          <h2>8) Identity: Domains, SSO, and Directory Synchronization (as applicable)</h2>
+          <p>
+            Identity integration is often the biggest time variable. The tenant can still be provisioned within 24 hours using local admins,
+            while SSO and directory sync are implemented as a planned follow-on activity with explicit milestones.
+          </p>
+
+          <details class="rb-acc" open>
+            <summary>Identity options and audit guidance<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <ul>
+                <li><b>Domain verification:</b> confirm customer ownership of domains before enabling domain-based policies.</li>
+                <li><b>SSO:</b> implement only after customer provides IdP metadata and validates test accounts.</li>
+                <li><b>Directory sync:</b> align attribute mapping and group-based license assignment strategy.</li>
+                <li><b>Evidence:</b> domain verification records, SSO change approvals, and test results.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="rb-acc">
+            <summary>Identity checklist (optional during initial 24 hours)<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <div class="rb-checklist" data-checklist="identity">
+                <label class="rb-chk"><input type="checkbox" data-key="id-domain"/><div><div class="t">Domains reviewed / verified plan documented</div><div class="d">If not complete, record the next steps and owners.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="id-sso"/><div><div class="t">SSO decision captured</div><div class="d">If SSO is required, record timeline and prerequisites; do not block baseline provisioning.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="id-dir"/><div><div class="t">Directory sync approach captured</div><div class="d">Group strategy and attribute mapping decisions documented.</div></div></label>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <!-- Devices -->
+        <section class="rb-card" id="devices" data-title="9) Devices & Endpoints">
+          <h2>9) Devices and Endpoints (as applicable)</h2>
+          <p>
+            Device readiness is configured based on what the customer purchased (desk phones, room devices, soft clients).
+            The baseline goal is to ensure devices can be onboarded securely and managed consistently.
+          </p>
+
+          <details class="rb-acc" open>
+            <summary>Device readiness items<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <ul>
+                <li>Define device onboarding method: activation codes, MAC-based, or other approved approach.</li>
+                <li>Establish baseline device policies and admin roles for device management.</li>
+                <li>Verify at least one test device path (phone or app) can register and place calls (if Calling is enabled).</li>
+                <li>Capture evidence: device policy screenshots and successful registration proof.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="rb-acc">
+            <summary>Devices checklist<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <div class="rb-checklist" data-checklist="devices">
+                <label class="rb-chk"><input type="checkbox" data-key="dev-policy"/><div><div class="t">Device policy baseline documented</div><div class="d">Roles and onboarding method aligned to customer operations.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="dev-test"/><div><div class="t">Test endpoint registration validated</div><div class="d">At least one endpoint registers successfully with evidence captured.</div></div></label>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <!-- PSTN -->
+        <section class="rb-card" id="pstn" data-title="10) PSTN / Connectivity">
+          <h2>10) PSTN / Connectivity</h2>
+          <p>
+            PSTN configuration depends on the customer’s purchased PSTN model. During initial provisioning,
+            the objective is to ensure Control Hub is configured to support the intended path and that dependencies
+            such as number porting are tracked.
+          </p>
+
+          <details class="rb-acc" open>
+            <summary>PSTN provisioning paths<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <table class="rb-table">
+                <thead><tr><th style="width:220px;">Model</th><th>What we configure</th><th style="width:240px;">Typical dependencies</th></tr></thead>
+                <tbody>
+                  <tr><td><b>Cloud Connected PSTN</b></td><td>Enable CCP for locations, align numbering plan and emergency calling requirements.</td><td>Carrier onboarding, address validation, number assignment/ordering.</td></tr>
+                  <tr><td><b>Local Gateway</b></td><td>Prepare trunking strategy and location config; align to customer SBC/CUBE readiness.</td><td>CUBE deployment, certificates, routing design, firewall, testing windows.</td></tr>
+                  <tr><td><b>Existing provider</b></td><td>Document the interconnect approach and controls; configure as supported by design.</td><td>Provider details, number porting timelines, test numbers.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+
+          <details class="rb-acc">
+            <summary>PSTN checklist<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <div class="rb-checklist" data-checklist="pstn">
+                <label class="rb-chk"><input type="checkbox" data-key="pstn-model"/><div><div class="t">PSTN model confirmed and documented</div><div class="d">CCP vs Local Gateway vs existing provider; dependencies tracked.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="pstn-emergency"/><div><div class="t">Emergency calling requirements reviewed</div><div class="d">Addresses and any required setup steps recorded.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="pstn-evidence"/><div><div class="t">PSTN evidence captured (as available)</div><div class="d">Screenshots of location PSTN settings or design references attached.</div></div></label>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <!-- Validation -->
+        <section class="rb-card" id="validation" data-title="11) Validation & Acceptance">
+          <h2>11) Validation & Acceptance Testing</h2>
+          <p>
+            Validation confirms the tenant is functional and safe to hand off. At minimum, validate one Calling flow
+            (if Calling is enabled) and one Meetings flow, and document results as evidence.
+          </p>
+
+          <details class="rb-acc" open>
+            <summary>Minimum acceptance tests (baseline)<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <ul>
+                <li><b>Control Hub access:</b> customer admin can sign in and view required sections.</li>
+                <li><b>Licensing:</b> licensed user is active and services show as provisioned.</li>
+                <li><b>Meetings:</b> schedule/start/join meeting; verify audio/video/sharing.</li>
+                <li><b>Calling:</b> register endpoint; place a test call (internal or PSTN as available).</li>
+                <li><b>Security posture:</b> verify baseline policies are applied and documented.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="rb-acc">
+            <summary>Validation checklist<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <div class="rb-checklist" data-checklist="validation">
+                <label class="rb-chk"><input type="checkbox" data-key="val-admin"/><div><div class="t">Customer admin access validated</div><div class="d">Admin can log in and access required Control Hub views.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="val-meetings"/><div><div class="t">Meetings test completed</div><div class="d">Test meeting evidence captured in ticket.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="val-calling"/><div><div class="t">Calling test completed (as available)</div><div class="d">Endpoint registers and places a call; if PSTN pending, document limitation.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="val-evidence"/><div><div class="t">Validation evidence attached</div><div class="d">Screenshots, logs, or exports attached to ticket for audit traceability.</div></div></label>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <!-- Handoff -->
+        <section class="rb-card" id="handoff" data-title="12) Customer Handoff">
+          <h2>12) Customer Handoff (Provisioning Complete)</h2>
+          <p>
+            Provisioning is considered complete when the baseline tenant configuration is applied, validation tests are documented,
+            and the customer receives a handoff message detailing what is ready now and what is scheduled next.
+          </p>
+
+          <details class="rb-acc" open>
+            <summary>Handoff contents (what the customer receives)<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <ul>
+                <li>Confirmation that Webex Calling and Webex Meetings are provisioned and ready for user onboarding.</li>
+                <li>Summary of what was configured (licenses, baseline policies, locations, PSTN readiness).</li>
+                <li>List of open items (SSO, directory sync, number porting, advanced routing objects) with owners and dates.</li>
+                <li>Support contacts and escalation instructions.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="rb-acc">
+            <summary>Handoff checklist<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <div class="rb-checklist" data-checklist="handoff">
+                <label class="rb-chk"><input type="checkbox" data-key="handoff-email"/><div><div class="t">Handoff email sent</div><div class="d">Customer receives completion summary and next steps.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="handoff-openitems"/><div><div class="t">Open items documented</div><div class="d">Dependencies and follow-on tasks have owners and target dates.</div></div></label>
+                <label class="rb-chk"><input type="checkbox" data-key="handoff-close"/><div><div class="t">Ticket updated and ready for audit</div><div class="d">All evidence is attached; status moved to “Provisioned” (or equivalent).</div></div></label>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <!-- RACI -->
+        <section class="rb-card" id="raci" data-title="RACI & Governance">
+          <h2>RACI & Governance</h2>
+          <p>
+            To satisfy audit expectations, provisioning follows a clear accountability model. The provisioning owner executes changes,
+            and a reviewer validates high-impact items (licenses, admin roles, security posture).
+          </p>
+          <table class="rb-table">
+            <thead><tr><th style="width:260px;">Activity</th><th>Responsible</th><th>Accountable</th><th>Consulted</th><th>Informed</th></tr></thead>
+            <tbody>
+              <tr><td><b>Intake & ticket creation</b></td><td>Provisioning Engineer</td><td>Provisioning Lead</td><td>Sales / PM</td><td>Customer Admin</td></tr>
+              <tr><td><b>License configuration</b></td><td>Provisioning Engineer</td><td>Provisioning Lead</td><td>Sales / Customer Admin</td><td>Support Team</td></tr>
+              <tr><td><b>Security baseline</b></td><td>Provisioning Engineer</td><td>Security/Compliance Owner (if applicable)</td><td>Customer Security</td><td>Customer Admin</td></tr>
+              <tr><td><b>PSTN readiness</b></td><td>Calling Engineer</td><td>Calling Lead</td><td>Carrier / Customer Network</td><td>Customer Admin</td></tr>
+              <tr><td><b>Validation & handoff</b></td><td>Provisioning Engineer</td><td>Provisioning Lead</td><td>Customer Admin</td><td>Support Team</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Evidence Tracker -->
+        <section class="rb-card" id="evidence" data-title="Evidence Tracker">
+          <h2>Evidence Tracker</h2>
+          <p>
+            Use this table to document the evidence artifacts produced during provisioning. This is the “audit pack index” you can export as CSV.
+            Store links as internal ticket URLs, file share paths, or other approved references.
+          </p>
+
+          <div class="rb-grid2">
+            <div class="rb-callout">
+              <div class="icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M7 3h8l2 2v16H7V3Z" stroke="currentColor" stroke-width="1.6"/>
+                  <path d="M9 8h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  <path d="M9 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  <path d="M9 16h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="txt">
+                <p class="t">What “good evidence” looks like</p>
+                <p class="d">
+                  A screenshot/export plus a ticket reference plus who performed the action. If an item is deferred,
+                  include the deferral reason and the next scheduled milestone.
+                </p>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;justify-content:flex-end;align-items:flex-start;flex-wrap:wrap;">
+              <button class="rb-btn" id="btnAddEvidence">➕ Add Row</button>
+              <button class="rb-btn" id="btnSaveEvidence">💾 Save</button>
+              <span class="rb-pill"><span class="rb-dot" id="eDot"></span><span><b>Rows:</b> <span id="eCount">0</span></span>
+            </div>
           </div>
-        </div>
 
-        <div class="divider"></div>
+          <div class="rb-divider"></div>
 
-        <table id="evidenceTable">
-          <thead>
-            <tr>
-              <th style="width:140px;">Date</th>
-              <th style="width:180px;">Category</th>
-              <th>Description</th>
-              <th style="width:260px;">Reference (ticket/link/path)</th>
-              <th style="width:160px;">Owner</th>
-              <th style="width:120px;">Status</th>
-              <th style="width:90px;"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- rows injected -->
-          </tbody>
-        </table>
+          <table class="rb-table" id="evidenceTable">
+            <thead>
+              <tr>
+                <th style="width:140px;">Date</th>
+                <th style="width:180px;">Category</th>
+                <th>Description</th>
+                <th style="width:260px;">Reference (ticket/link/path)</th>
+                <th style="width:160px;">Owner</th>
+                <th style="width:120px;">Status</th>
+                <th style="width:90px;"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
 
-        <p class="mono" style="margin-top:10px;">
-          Note: Evidence rows are stored in localStorage for convenience. For official audit artifacts, attach evidence to the ticketing system or approved repository.
-        </p>
-      </section>
+          <p class="rb-mono" style="margin-top:10px;">
+            Note: Evidence rows are stored in localStorage for convenience. For official audit artifacts, attach evidence to the ticketing system or approved repository.
+          </p>
+        </section>
 
-      <!-- Appendix -->
-      <section class="card" id="appendix" data-title="Appendix: Templates">
-        <h2>Appendix: Templates (Copy/Paste)</h2>
-        <p>
-          Use these templates to standardize communication and audit documentation. Update fields in brackets.
-        </p>
+        <!-- Appendix -->
+        <section class="rb-card" id="appendix" data-title="Appendix: Templates">
+          <h2>Appendix: Templates (Copy/Paste)</h2>
+          <p>Use these templates to standardize communication and audit documentation. Update fields in brackets.</p>
 
-        <details class="acc" open>
-          <summary>
-            Customer handoff email template
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <p class="mono">Subject: Webex Provisioning Complete — [Customer Name]</p>
-            <p>
-              Hello [Customer Admin Name],<br/><br/>
-              Your Webex tenant has been provisioned for Webex Calling and Webex Meetings. The baseline configuration is complete and validated
-              within our standard provisioning process.<br/><br/>
-              <b>What is ready:</b><br/>
-              • Control Hub access confirmed for [Admin Email]<br/>
-              • Purchased licenses available and baseline assignment approach established<br/>
-              • Meetings baseline settings applied and tested (schedule/start/join)<br/>
-              • Calling baseline prepared (locations/dialing) and tested to the extent available<br/><br/>
-              <b>Open items / next steps:</b><br/>
-              • [SSO / Directory sync / PSTN porting] — Owner: [Name], Target: [Date]<br/>
-              • [Any other follow-on tasks]<br/><br/>
-              If you have questions or would like to schedule a provisioning review call, please reply to this email and we will coordinate promptly.<br/><br/>
-              Thank you,<br/>
-              US Signal Webex Admin Team
-            </p>
+          <details class="rb-acc" open>
+            <summary>Customer handoff email template<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <p class="rb-mono">Subject: Webex Provisioning Complete — [Customer Name]</p>
+              <p>
+                Hello [Customer Admin Name],<br/><br/>
+                Your Webex tenant has been provisioned for Webex Calling and Webex Meetings. The baseline configuration is complete and validated
+                within our standard provisioning process.<br/><br/>
+                <b>What is ready:</b><br/>
+                • Control Hub access confirmed for [Admin Email]<br/>
+                • Purchased licenses available and baseline assignment approach established<br/>
+                • Meetings baseline settings applied and tested (schedule/start/join)<br/>
+                • Calling baseline prepared (locations/dialing) and tested to the extent available<br/><br/>
+                <b>Open items / next steps:</b><br/>
+                • [SSO / Directory sync / PSTN porting] — Owner: [Name], Target: [Date]<br/>
+                • [Any other follow-on tasks]<br/><br/>
+                If you have questions or would like to schedule a provisioning review call, please reply to this email and we will coordinate promptly.<br/><br/>
+                Thank you,<br/>
+                US Signal Webex Admin Team
+              </p>
+            </div>
+          </details>
+
+          <details class="rb-acc">
+            <summary>Ticket notes template (audit-friendly)<span class="rb-chev" aria-hidden="true">⌄</span></summary>
+            <div class="content">
+              <p class="rb-mono">Title: Webex Provisioning — [Customer Name]</p>
+              <ul>
+                <li><b>Request source:</b> Provisioning email received at webexadminteam@ussignal.com on [timestamp].</li>
+                <li><b>SLA target:</b> Provision within 24 hours. Completion recorded at [timestamp].</li>
+                <li><b>Scope:</b> Webex Calling + Webex Meetings. Licensing quantities: [details].</li>
+                <li><b>Approvals:</b> [list any approvals for security or scope deviations].</li>
+                <li><b>Evidence:</b> See Evidence Tracker rows and attached screenshots/exports.</li>
+                <li><b>Open items:</b> [SSO/Dir Sync/PSTN porting] with owners and dates.</li>
+              </ul>
+            </div>
+          </details>
+
+          <div class="rb-divider"></div>
+          <div class="rb-footer">
+            <div>
+              <span class="rb-tag"><b>Document Owner:</b> US Signal Webex Admin Team</span>
+              <span class="rb-tag"><b>Review cadence:</b> Quarterly or upon process change</span>
+            </div>
+            <div>
+              <span class="rb-tag"><b>Version:</b> 1.0</span>
+              <span class="rb-tag"><b>Last reviewed:</b> <span id="lastReviewed">2026-02-26</span></span>
+            </div>
           </div>
-        </details>
+        </section>
 
-        <details class="acc">
-          <summary>
-            Ticket notes template (audit-friendly)
-            <span class="chev" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="content">
-            <p class="mono">Title: Webex Provisioning — [Customer Name]</p>
-            <ul>
-              <li><b>Request source:</b> Provisioning email received at webexadminteam@ussignal.com on [timestamp].</li>
-              <li><b>SLA target:</b> Provision within 24 hours. Completion recorded at [timestamp].</li>
-              <li><b>Scope:</b> Webex Calling + Webex Meetings. Licensing quantities: [details].</li>
-              <li><b>Approvals:</b> [list any approvals for security or scope deviations].</li>
-              <li><b>Evidence:</b> See Evidence Tracker rows and attached screenshots/exports.</li>
-              <li><b>Open items:</b> [SSO/Dir Sync/PSTN porting] with owners and dates.</li>
-            </ul>
-          </div>
-        </details>
-
-        <div class="divider"></div>
-
-        <div class="footer">
-          <div>
-            <span class="tag"><b>Document Owner:</b> US Signal Webex Admin Team</span>
-            <span class="tag"><b>Review cadence:</b> Quarterly or upon process change</span>
-          </div>
-          <div>
-            <span class="tag"><b>Version:</b> 1.0</span>
-            <span class="tag"><b>Last reviewed:</b> <span id="lastReviewed">2026-02-26</span></span>
-          </div>
-        </div>
-      </section>
-
-    </main>
-  </div>
-
-  <!-- Toast -->
-  <div class="toast" id="toast" role="status" aria-live="polite">
-    <div>
-      <div class="msg" id="toastMsg">Saved</div>
-      <div class="small" id="toastSmall">Changes stored locally</div>
+      </main>
     </div>
-    <button class="close" id="toastClose">Close</button>
+  </main>
+</div>
+
+<!-- Toast (preserved) -->
+<div class="rb-toast" id="toast" role="status" aria-live="polite">
+  <div>
+    <div class="msg" id="toastMsg">Saved</div>
+    <div class="small" id="toastSmall">Changes stored locally</div>
   </div>
+  <button class="close" id="toastClose">Close</button>
+</div>
 
-  <script>
-    (function(){
-      const LS_CHECK = "ussignal:webex:prov:checks:v1";
-      const LS_EVID  = "ussignal:webex:prov:evidence:v1";
-      const LS_LAST  = "ussignal:webex:prov:lastAnchor:v1";
+<script>
+/* ===== Partner Portal session + auth (matches your other pages) ===== */
+const $id = id => document.getElementById(id);
+async function api(path){
+  const r = await fetch(path);
+  if(!r.ok){ if(r.status===401) window.location="/pin"; throw new Error("API failed: "+path); }
+  return await r.json();
+}
+async function logout(){ await fetch("/api/pin/logout",{method:"POST"}); window.location="/pin"; }
+function toggleTheme(){
+  document.body.classList.toggle("dark");
+  localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+}
+async function initSession(){
+  const savedTheme = localStorage.getItem("theme");
+  if(savedTheme==="dark") document.body.classList.add("dark");
 
-      const $ = (sel, root=document) => root.querySelector(sel);
-      const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const me = await api("/api/me");
+  if(me.role!=="admin") window.location="/pin";
+  $id("whoami").textContent = me.email;
+  $id("sessionLine").textContent = "Session: "+(me.sessionExpiresInSeconds||0)+"s";
+}
 
-      // ---------- Toast ----------
-      const toast = $("#toast");
-      const toastMsg = $("#toastMsg");
-      const toastSmall = $("#toastSmall");
-      const toastClose = $("#toastClose");
-      toastClose.addEventListener("click", ()=> toast.classList.remove("show"));
-      function showToast(msg, small){
-        toastMsg.textContent = msg || "Done";
-        toastSmall.textContent = small || "";
-        toast.classList.add("show");
-        clearTimeout(showToast._t);
-        showToast._t = setTimeout(()=> toast.classList.remove("show"), 2600);
-      }
+/* ===== RUNBOOK JS (FULL PRESERVATION): same logic you pasted, only id updated (#nav -> #rbNav)
+   and class names do NOT matter for functionality. ===== */
+function runRunbook(){
+  (function(){
+    const LS_CHECK="ussignal:webex:prov:checks:v1";
+    const LS_EVID ="ussignal:webex:prov:evidence:v1";
+    const LS_LAST ="ussignal:webex:prov:lastAnchor:v1";
 
-      // ---------- Search (Ctrl/Cmd+K) ----------
-      const q = $("#q");
-      function highlightMatches(term){
-        const t = (term||"").trim().toLowerCase();
-        const cards = $$(".card");
-        cards.forEach(c => c.style.outline = "none");
-        if(!t) return;
+    const $ = (sel, root=document)=> root.querySelector(sel);
+    const $$ = (sel, root=document)=> Array.from(root.querySelectorAll(sel));
 
-        const match = cards.find(c => (c.innerText || "").toLowerCase().includes(t));
-        if(match){
-          match.scrollIntoView({behavior:"smooth", block:"start"});
-          match.style.outline = "3px solid rgba(15,98,254,.25)";
-          showToast("Jumped to match", match.getAttribute("data-title") || match.id);
-        }else{
-          showToast("No matches found", "Try different keywords");
-        }
-      }
-      q.addEventListener("keydown", (e)=>{
-        if(e.key === "Enter") highlightMatches(q.value);
-      });
-      window.addEventListener("keydown", (e)=>{
-        const isK = (e.key || "").toLowerCase() === "k";
-        const mod = e.ctrlKey || e.metaKey;
-        if(mod && isK){
-          e.preventDefault();
-          q.focus();
-          q.select();
-        }
-      });
+    // Toast
+    const toast=$("#toast"), toastMsg=$("#toastMsg"), toastSmall=$("#toastSmall"), toastClose=$("#toastClose");
+    toastClose.addEventListener("click", ()=> toast.classList.remove("show"));
+    function showToast(msg, small){
+      toastMsg.textContent=msg||"Done";
+      toastSmall.textContent=small||"";
+      toast.classList.add("show");
+      clearTimeout(showToast._t);
+      showToast._t=setTimeout(()=> toast.classList.remove("show"), 2600);
+    }
 
-      // ---------- Nav active state ----------
-      const navLinks = $$("#nav a.item");
-      function setActiveByHash(){
-        const hash = location.hash || "#overview";
-        navLinks.forEach(a => a.classList.toggle("active", a.getAttribute("href") === hash));
-        localStorage.setItem(LS_LAST, hash);
-      }
-      window.addEventListener("hashchange", setActiveByHash);
-      setActiveByHash();
+    // Search (Ctrl/Cmd+K)
+    const q=$("#q");
+    function highlightMatches(term){
+      const t=(term||"").trim().toLowerCase();
+      const cards=$$(".rb-card");
+      cards.forEach(c=> c.style.outline="none");
+      if(!t) return;
+      const match=cards.find(c=> (c.innerText||"").toLowerCase().includes(t));
+      if(match){
+        match.scrollIntoView({behavior:"smooth", block:"start"});
+        match.style.outline="3px solid rgba(15,98,254,.25)";
+        showToast("Jumped to match", match.getAttribute("data-title")||match.id);
+      }else showToast("No matches found","Try different keywords");
+    }
+    q.addEventListener("keydown",(e)=>{ if(e.key==="Enter") highlightMatches(q.value); });
+    window.addEventListener("keydown",(e)=>{
+      const isK=(e.key||"").toLowerCase()==="k";
+      const mod=e.ctrlKey||e.metaKey;
+      if(mod && isK){ e.preventDefault(); q.focus(); q.select(); }
+    });
 
-      // ---------- Copy Section Link ----------
-      $("#btnCopyLink").addEventListener("click", async ()=>{
-        const h = location.hash || "#overview";
-        const url = location.origin + location.pathname + h;
-        try{
-          await navigator.clipboard.writeText(url);
-          showToast("Copied link", url);
-        }catch{
-          showToast("Copy failed", "Your browser blocked clipboard access");
-        }
-      });
+    // Nav active state (ID updated)
+    const navLinks=$$("#rbNav a.item");
+    function setActiveByHash(){
+      const hash=location.hash || "#overview";
+      navLinks.forEach(a=> a.classList.toggle("active", a.getAttribute("href")===hash));
+      localStorage.setItem(LS_LAST, hash);
+    }
+    window.addEventListener("hashchange", setActiveByHash);
+    setActiveByHash();
 
-      // ---------- Checklists ----------
-      function loadChecks(){
-        try{ return JSON.parse(localStorage.getItem(LS_CHECK) || "{}"); }catch{ return {}; }
-      }
-      function saveChecks(obj){
-        localStorage.setItem(LS_CHECK, JSON.stringify(obj || {}));
-      }
+    // Copy Section Link
+    $("#btnCopyLink").addEventListener("click", async ()=>{
+      const h=location.hash || "#overview";
+      const url=location.origin + location.pathname + h;
+      try{ await navigator.clipboard.writeText(url); showToast("Copied link", url); }
+      catch{ showToast("Copy failed","Your browser blocked clipboard access"); }
+    });
 
-      const checks = loadChecks();
-      const checkboxes = $$('input[type="checkbox"][data-key]');
-      checkboxes.forEach(cb=>{
-        const key = cb.getAttribute("data-key");
-        cb.checked = !!checks[key];
-        cb.addEventListener("change", ()=>{
-          checks[key] = cb.checked;
-          saveChecks(checks);
-          updateProgress();
-        });
-      });
+    // Checklists
+    function loadChecks(){ try{ return JSON.parse(localStorage.getItem(LS_CHECK)||"{}"); }catch{ return {}; } }
+    function saveChecks(obj){ localStorage.setItem(LS_CHECK, JSON.stringify(obj||{})); }
 
-      function updateProgress(){
-        const total = checkboxes.length || 1;
-        const done = checkboxes.filter(c=>c.checked).length;
-        const pct = Math.round((done/total)*100);
-
-        $("#progressText").textContent = pct + "%";
-        const dot = $("#progressDot");
-        dot.className = "dot " + (pct >= 85 ? "good" : (pct >= 45 ? "warn" : "bad"));
-
-        // SLA indicator is static (target), but we keep visual consistent
-        setActiveByHash();
-      }
-      updateProgress();
-
-      // Reset
-      $("#btnReset").addEventListener("click", ()=>{
-        localStorage.removeItem(LS_CHECK);
-        localStorage.removeItem(LS_EVID);
-        showToast("Reset complete", "Reloading this page will clear checkmarks and evidence rows");
-        checkboxes.forEach(cb => cb.checked = false);
-        renderEvidence([]);
+    const checks=loadChecks();
+    const checkboxes=$$('input[type="checkbox"][data-key]');
+    checkboxes.forEach(cb=>{
+      const key=cb.getAttribute("data-key");
+      cb.checked=!!checks[key];
+      cb.addEventListener("change", ()=>{
+        checks[key]=cb.checked;
+        saveChecks(checks);
         updateProgress();
       });
+    });
 
-      // ---------- Evidence Tracker ----------
-      function loadEvidence(){
-        try{ return JSON.parse(localStorage.getItem(LS_EVID) || "[]"); }catch{ return []; }
-      }
-      function saveEvidence(rows){
-        localStorage.setItem(LS_EVID, JSON.stringify(rows || []));
-      }
+    function updateProgress(){
+      const total=checkboxes.length||1;
+      const done=checkboxes.filter(c=>c.checked).length;
+      const pct=Math.round((done/total)*100);
+      $("#progressText").textContent=pct+"%";
+      const dot=$("#progressDot");
+      dot.className="rb-dot "+(pct>=85?"good":(pct>=45?"warn":"bad"));
+      setActiveByHash();
+    }
+    updateProgress();
 
-      const evidenceBody = $("#evidenceTable tbody");
-      const eCount = $("#eCount");
-      const eDot = $("#eDot");
+    // Reset
+    $("#btnReset").addEventListener("click", ()=>{
+      localStorage.removeItem(LS_CHECK);
+      localStorage.removeItem(LS_EVID);
+      showToast("Reset complete","Reloading this page will clear checkmarks and evidence rows");
+      checkboxes.forEach(cb=> cb.checked=false);
+      renderEvidence([]);
+      updateProgress();
+    });
 
-      function rowTemplate(row, idx){
-        const date = row.date || new Date().toISOString().slice(0,10);
-        const category = row.category || "Provisioning";
-        const desc = row.description || "";
-        const ref = row.reference || "";
-        const owner = row.owner || "";
-        const status = row.status || "Planned";
+    // Evidence Tracker
+    function loadEvidence(){ try{ return JSON.parse(localStorage.getItem(LS_EVID)||"[]"); }catch{ return []; } }
+    function saveEvidence(rows){ localStorage.setItem(LS_EVID, JSON.stringify(rows||[])); }
 
-        const safe = (v)=> (v ?? "").toString().replace(/</g,"&lt;").replace(/>/g,"&gt;");
-        const stClass = (s)=>{
-          const v = (s||"").toLowerCase();
-          if(v.includes("complete") || v.includes("attached")) return "good";
-          if(v.includes("blocked") || v.includes("risk")) return "bad";
-          if(v.includes("in") || v.includes("pending") || v.includes("plan")) return "warn";
-          return "";
-        };
+    const evidenceBody=$("#evidenceTable tbody");
+    const eCount=$("#eCount");
+    const eDot=$("#eDot");
 
-        return `
-          <tr data-idx="${idx}">
-            <td><input class="e e-date" value="${safe(date)}" style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid var(--line);" /></td>
-            <td><input class="e e-cat" value="${safe(category)}" style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid var(--line);" /></td>
-            <td><input class="e e-desc" value="${safe(desc)}" placeholder="What evidence was captured?" style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid var(--line);" /></td>
-            <td><input class="e e-ref" value="${safe(ref)}" placeholder="Ticket link, file path, or reference" style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid var(--line);" /></td>
-            <td><input class="e e-owner" value="${safe(owner)}" placeholder="Name / team" style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid var(--line);" /></td>
-            <td>
-              <select class="e e-status" style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid var(--line);">
-                ${["Planned","In Progress","Pending Customer","Blocked","Complete (Evidence Attached)"].map(s=>{
-                  const sel = s===status ? "selected" : "";
-                  return `<option ${sel}>${s}</option>`;
-                }).join("")}
-              </select>
-              <div style="margin-top:8px;">
-                <span class="status ${stClass(status)}"><span class="s"></span><span>${safe(status)}</span></span>
-              </div>
-            </td>
-            <td style="text-align:right;">
-              <button class="btn e-del" title="Delete row">🗑️</button>
-            </td>
-          </tr>
-        `;
-      }
+    function rowTemplate(row, idx){
+      const date=row.date || new Date().toISOString().slice(0,10);
+      const category=row.category || "Provisioning";
+      const desc=row.description || "";
+      const ref=row.reference || "";
+      const owner=row.owner || "";
+      const status=row.status || "Planned";
+      const safe=(v)=> (v??"").toString().replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      const stClass=(s)=>{
+        const v=(s||"").toLowerCase();
+        if(v.includes("complete")||v.includes("attached")) return "good";
+        if(v.includes("blocked")||v.includes("risk")) return "bad";
+        if(v.includes("in")||v.includes("pending")||v.includes("plan")) return "warn";
+        return "";
+      };
+      return `
+        <tr data-idx="${idx}">
+          <td><input class="e e-date" value="${safe(date)}" style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);" /></td>
+          <td><input class="e e-cat" value="${safe(category)}" style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);" /></td>
+          <td><input class="e e-desc" value="${safe(desc)}" placeholder="What evidence was captured?" style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);" /></td>
+          <td><input class="e e-ref" value="${safe(ref)}" placeholder="Ticket link, file path, or reference" style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);" /></td>
+          <td><input class="e e-owner" value="${safe(owner)}" placeholder="Name / team" style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);" /></td>
+          <td>
+            <select class="e e-status" style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);">
+              ${["Planned","In Progress","Pending Customer","Blocked","Complete (Evidence Attached)"].map(s=>{
+                const sel=s===status?"selected":"";
+                return `<option ${sel}>${s}</option>`;
+              }).join("")}
+            </select>
+            <div style="margin-top:8px;">
+              <span class="rb-status ${stClass(status)}"><span class="s"></span><span>${safe(status)}</span></span>
+            </div>
+          </td>
+          <td style="text-align:right;">
+            <button class="rb-btn e-del" title="Delete row">🗑️</button>
+          </td>
+        </tr>
+      `;
+    }
 
-      function normalizeRows(rows){
-        return (rows || []).map(r=>({
-          date: r.date || new Date().toISOString().slice(0,10),
-          category: r.category || "Provisioning",
-          description: r.description || "",
-          reference: r.reference || "",
-          owner: r.owner || "",
-          status: r.status || "Planned"
-        }));
-      }
+    function normalizeRows(rows){
+      return (rows||[]).map(r=>({
+        date:r.date||new Date().toISOString().slice(0,10),
+        category:r.category||"Provisioning",
+        description:r.description||"",
+        reference:r.reference||"",
+        owner:r.owner||"",
+        status:r.status||"Planned"
+      }));
+    }
 
-      function renderEvidence(rows){
-        const data = normalizeRows(rows);
-        evidenceBody.innerHTML = data.map(rowTemplate).join("");
-        eCount.textContent = data.length.toString();
-        eDot.className = "dot " + (data.length >= 6 ? "good" : (data.length >= 2 ? "warn" : "bad"));
+    function renderEvidence(rows){
+      const data=normalizeRows(rows);
+      evidenceBody.innerHTML=data.map(rowTemplate).join("");
+      eCount.textContent=data.length.toString();
+      eDot.className="rb-dot "+(data.length>=6?"good":(data.length>=2?"warn":"bad"));
 
-        // Wire row events
-        $$(".e-del", evidenceBody).forEach(btn=>{
-          btn.addEventListener("click", ()=>{
-            const tr = btn.closest("tr");
-            const idx = parseInt(tr.getAttribute("data-idx"), 10);
-            const current = getEvidenceFromDOM();
-            current.splice(idx, 1);
-            saveEvidence(current);
-            renderEvidence(current);
-            showToast("Row deleted", "Evidence updated");
-          });
+      $$(".e-del", evidenceBody).forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          const tr=btn.closest("tr");
+          const idx=parseInt(tr.getAttribute("data-idx"),10);
+          const current=getEvidenceFromDOM();
+          current.splice(idx,1);
+          saveEvidence(current);
+          renderEvidence(current);
+          showToast("Row deleted","Evidence updated");
         });
-
-        // Live status pill update on change
-        $$(".e-status", evidenceBody).forEach(sel=>{
-          sel.addEventListener("change", ()=>{
-            const tr = sel.closest("tr");
-            const pill = tr.querySelector(".status");
-            const s = sel.value;
-            pill.innerHTML = `<span class="s"></span><span>${s}</span>`;
-            pill.className = "status " + (s.includes("Complete") ? "good" : (s.includes("Blocked") ? "bad" : (s.includes("In") || s.includes("Pending") || s.includes("Planned") ? "warn" : "")));
-          });
-        });
-      }
-
-      function getEvidenceFromDOM(){
-        const rows = [];
-        $$("#evidenceTable tbody tr").forEach(tr=>{
-          rows.push({
-            date: tr.querySelector(".e-date")?.value || "",
-            category: tr.querySelector(".e-cat")?.value || "",
-            description: tr.querySelector(".e-desc")?.value || "",
-            reference: tr.querySelector(".e-ref")?.value || "",
-            owner: tr.querySelector(".e-owner")?.value || "",
-            status: tr.querySelector(".e-status")?.value || ""
-          });
-        });
-        return normalizeRows(rows);
-      }
-
-      function addEvidenceRow(){
-        const rows = loadEvidence();
-        rows.push({
-          date: new Date().toISOString().slice(0,10),
-          category: "Provisioning",
-          description: "",
-          reference: "",
-          owner: "",
-          status: "Planned"
-        });
-        saveEvidence(rows);
-        renderEvidence(rows);
-        showToast("Row added", "Remember to Save after editing");
-      }
-
-      $("#btnAddEvidence").addEventListener("click", addEvidenceRow);
-      $("#btnSaveEvidence").addEventListener("click", ()=>{
-        const rows = getEvidenceFromDOM();
-        saveEvidence(rows);
-        renderEvidence(rows);
-        showToast("Saved", "Evidence rows stored locally");
       });
 
-      // initial evidence
-      const initialEvidence = loadEvidence();
-      if(initialEvidence.length === 0){
-        // Seed with sensible defaults for audit packs
-        const seed = [
-          { category:"Intake", description:"Provisioning request email archived + ticket created", reference:"[ticket/link]", owner:"[name]", status:"In Progress" },
-          { category:"Control Hub", description:"Org overview screenshot captured", reference:"[ticket/link]", owner:"[name]", status:"Planned" },
-          { category:"Licensing", description:"Subscription/licensing screenshots or export attached", reference:"[ticket/link]", owner:"[name]", status:"Planned" }
-        ].map(r=>({ date:new Date().toISOString().slice(0,10), ...r }));
-        saveEvidence(seed);
-        renderEvidence(seed);
-      }else{
-        renderEvidence(initialEvidence);
-      }
+      $$(".e-status", evidenceBody).forEach(sel=>{
+        sel.addEventListener("change", ()=>{
+          const tr=sel.closest("tr");
+          const pill=tr.querySelector(".rb-status");
+          const s=sel.value;
+          pill.innerHTML=`<span class="s"></span><span>${s}</span>`;
+          pill.className="rb-status "+(s.includes("Complete")?"good":(s.includes("Blocked")?"bad":(s.includes("In")||s.includes("Pending")||s.includes("Planned")?"warn":"")));
+        });
+      });
+    }
 
-      // ---------- Export CSV ----------
-      function csvEscape(v){
-        const s = (v ?? "").toString();
-        if(/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
-        return s;
-      }
-      function exportEvidenceCsv(){
-        const rows = getEvidenceFromDOM();
-        const headers = ["Date","Category","Description","Reference","Owner","Status"];
-        const lines = [headers.join(",")].concat(rows.map(r=>[
-          csvEscape(r.date),
-          csvEscape(r.category),
-          csvEscape(r.description),
-          csvEscape(r.reference),
-          csvEscape(r.owner),
-          csvEscape(r.status)
-        ].join(",")));
-        const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8"});
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "webex_provisioning_evidence.csv";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(a.href);
-        showToast("CSV exported", "webex_provisioning_evidence.csv");
-      }
-      $("#btnExportCsv").addEventListener("click", exportEvidenceCsv);
+    function getEvidenceFromDOM(){
+      const rows=[];
+      $$("#evidenceTable tbody tr").forEach(tr=>{
+        rows.push({
+          date: tr.querySelector(".e-date")?.value || "",
+          category: tr.querySelector(".e-cat")?.value || "",
+          description: tr.querySelector(".e-desc")?.value || "",
+          reference: tr.querySelector(".e-ref")?.value || "",
+          owner: tr.querySelector(".e-owner")?.value || "",
+          status: tr.querySelector(".e-status")?.value || ""
+        });
+      });
+      return normalizeRows(rows);
+    }
 
-      // ---------- Restore last anchor (nice UX) ----------
-      const last = localStorage.getItem(LS_LAST);
-      if(!location.hash && last){
-        location.hash = last;
-      }
+    function addEvidenceRow(){
+      const rows=loadEvidence();
+      rows.push({date:new Date().toISOString().slice(0,10),category:"Provisioning",description:"",reference:"",owner:"",status:"Planned"});
+      saveEvidence(rows);
+      renderEvidence(rows);
+      showToast("Row added","Remember to Save after editing");
+    }
 
-    })();
-  </script>
+    $("#btnAddEvidence").addEventListener("click", addEvidenceRow);
+    $("#btnSaveEvidence").addEventListener("click", ()=>{
+      const rows=getEvidenceFromDOM();
+      saveEvidence(rows);
+      renderEvidence(rows);
+      showToast("Saved","Evidence rows stored locally");
+    });
+
+    // initial evidence
+    const initialEvidence=loadEvidence();
+    if(initialEvidence.length===0){
+      const seed=[
+        {category:"Intake",description:"Provisioning request email archived + ticket created",reference:"[ticket/link]",owner:"[name]",status:"In Progress"},
+        {category:"Control Hub",description:"Org overview screenshot captured",reference:"[ticket/link]",owner:"[name]",status:"Planned"},
+        {category:"Licensing",description:"Subscription/licensing screenshots or export attached",reference:"[ticket/link]",owner:"[name]",status:"Planned"}
+      ].map(r=>({date:new Date().toISOString().slice(0,10),...r}));
+      saveEvidence(seed);
+      renderEvidence(seed);
+    }else renderEvidence(initialEvidence);
+
+    // Export CSV
+    function csvEscape(v){
+      const s=(v??"").toString();
+      if(/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+      return s;
+    }
+    function exportEvidenceCsv(){
+      const rows=getEvidenceFromDOM();
+      const headers=["Date","Category","Description","Reference","Owner","Status"];
+      const lines=[headers.join(",")].concat(rows.map(r=>[
+        csvEscape(r.date),csvEscape(r.category),csvEscape(r.description),
+        csvEscape(r.reference),csvEscape(r.owner),csvEscape(r.status)
+      ].join(",")));
+      const blob=new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(blob);
+      a.download="webex_provisioning_evidence.csv";
+      document.body.appendChild(a);
+      a.click(); a.remove();
+      URL.revokeObjectURL(a.href);
+      showToast("CSV exported","webex_provisioning_evidence.csv");
+    }
+    $("#btnExportCsv").addEventListener("click", exportEvidenceCsv);
+
+    // Restore last anchor
+    const last=localStorage.getItem(LS_LAST);
+    if(!location.hash && last){ location.hash=last; }
+  })();
+}
+
+/* Boot */
+(async function(){
+  await initSession();
+  runRunbook();
+})();
+</script>
 </body>
 </html>
