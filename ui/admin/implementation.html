@@ -939,7 +939,220 @@ textarea.template{
 
       </div>
     </div>
+<!-- MIGRATION & DEPLOYMENT STRATEGY -->
+<div class="section">
+  <div class="card">
+    <h3>Migration and Deployment Strategy</h3>
+    <p>
+      US Signal owns the end-to-end implementation and migration lifecycle for Webex Calling
+      deployments. Migration approach varies based on the customer’s current telephony state,
+      business risk tolerance, and operational readiness.
+    </p>
 
+    <div class="hr"></div>
+
+    <div class="grid">
+
+      <div class="card" style="box-shadow:none;">
+        <h3>Common migration scenarios</h3>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Source Environment</th>
+                <th>Migration Model</th>
+                <th>Risk Profile</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>On-prem PBX (Cisco, Avaya, Mitel, etc.)</b></td>
+                <td>Phased user/site migration or Big Bang cutover</td>
+                <td>Medium to High (requires porting + routing shift)</td>
+              </tr>
+              <tr>
+                <td><b>Hybrid CUCM + PSTN</b></td>
+                <td>Trunk coexistence then staged migration</td>
+                <td>Medium (interop validation required)</td>
+              </tr>
+              <tr>
+                <td><b>Cloud calling provider</b></td>
+                <td>Number port + user reprovisioning</td>
+                <td>Low to Medium</td>
+              </tr>
+              <tr>
+                <td><b>Greenfield</b></td>
+                <td>Net new deployment</td>
+                <td>Low</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="box-shadow:none;">
+        <h3>Migration models</h3>
+
+        <div class="steps">
+          <div class="step">
+            <div class="n">A</div>
+            <div class="c">
+              <div class="t">Phased migration</div>
+              <div class="d">
+                Users or sites are migrated in waves. PSTN routing may temporarily coexist.
+                Used when business continuity risk is high.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">B</div>
+            <div class="c">
+              <div class="t">Big Bang cutover</div>
+              <div class="d">
+                All users and routing transition during a single change window.
+                Used for smaller environments or controlled downtime windows.
+              </div>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="n">C</div>
+            <div class="c">
+              <div class="t">Hybrid coexistence</div>
+              <div class="d">
+                Temporary SIP trunking between legacy PBX and Webex Calling
+                to allow staged migration without full downtime.
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <h3>Data Collection and Requirements Gathering</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Information Collected</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>User inventory</b></td>
+            <td>Name, email, DID, extension, license type, device type</td>
+            <td>Bulk provisioning accuracy</td>
+          </tr>
+          <tr>
+            <td><b>Number inventory</b></td>
+            <td>DID list, BTN, carrier details, CSR copy</td>
+            <td>Port submission and routing validation</td>
+          </tr>
+          <tr>
+            <td><b>Call flows</b></td>
+            <td>Auto attendants, hunt groups, queues, paging flows</td>
+            <td>Feature replication in Control Hub</td>
+          </tr>
+          <tr>
+            <td><b>Device mapping</b></td>
+            <td>MAC address, model, user assignment</td>
+            <td>Activation planning and shipping logistics</td>
+          </tr>
+          <tr>
+            <td><b>Network readiness</b></td>
+            <td>Firewall, QoS, WAN bandwidth, NAT behavior</td>
+            <td>Prevent post-cutover quality issues</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="hr"></div>
+
+    <h3>Phone and Device Rollout Plan</h3>
+
+    <div class="grid">
+
+      <div class="card" style="box-shadow:none;">
+        <h3>Pre-staging</h3>
+        <ul>
+          <li>Devices ordered and tracked by MAC address</li>
+          <li>Assigned in Control Hub before shipment</li>
+          <li>Firmware validated against Cisco recommended release</li>
+          <li>Emergency calling location verified per device</li>
+        </ul>
+      </div>
+
+      <div class="card" style="box-shadow:none;">
+        <h3>Deployment models</h3>
+        <ul>
+          <li><b>Ship to site bulk deployment</b> – coordinated install window</li>
+          <li><b>Direct to user home shipping</b> – remote workforce</li>
+          <li><b>White glove deployment</b> – onsite engineer staging</li>
+          <li><b>Self-activation model</b> – end user guided activation</li>
+        </ul>
+      </div>
+
+      <div class="card" style="box-shadow:none;">
+        <h3>Cutover day process</h3>
+        <ul>
+          <li>Bridge opened 30 minutes prior</li>
+          <li>Port activation monitoring</li>
+          <li>Inbound and outbound validation</li>
+          <li>Executive user validation first</li>
+          <li>All-call test complete before bridge close</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="hr"></div>
+
+    <h3>Post-Migration Stabilization (Hypercare)</h3>
+
+    <div class="steps">
+      <div class="step">
+        <div class="n">1</div>
+        <div class="c">
+          <div class="t">48–72 hour proactive monitoring</div>
+          <div class="d">Call quality analytics review and trunk monitoring.</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="n">2</div>
+        <div class="c">
+          <div class="t">Daily check-ins with customer owner</div>
+          <div class="d">Validate no business-impacting issues remain.</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="n">3</div>
+        <div class="c">
+          <div class="t">Formal migration closure</div>
+          <div class="d">Signoff document captured and archived.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <span class="badge good">Provider owned</span>
+    <span class="badge good">Documented procedures</span>
+    <span class="badge warn">Change controlled</span>
+    <span class="badge good">Audit ready</span>
+
+  </div>
+</div>
     <!-- VALIDATION -->
     <div class="section grid">
 
