@@ -230,7 +230,240 @@ Our primary architecture leverages Cisco CUBE Local Gateway for enterprise flexi
 while also supporting Cisco Calling Plans and Cloud Connected PSTN (CCP) models.
 </p>
 </div>
+<!-- ============================================= -->
+<!-- PSTN IMPLEMENTATION STRATEGY -->
+<!-- ============================================= -->
+<div class="card">
+<h3>PSTN Implementation Strategy</h3>
 
+<p>
+US Signal provides 24x7 proactive monitoring and lifecycle management of PSTN connectivity
+as part of its Managed Webex Calling Service. PSTN model selection, deployment,
+monitoring, and support are governed by documented operational procedures
+aligned to Cisco Powered Services requirements.
+</p>
+
+<div class="hr"></div>
+
+<div class="kv">
+<div class="k">Model Selection Criteria</div>
+<div class="v">
+Geographic availability, survivability requirements, regulatory compliance,
+existing carrier contracts, and enterprise redundancy design.
+</div>
+
+<div class="k">Architecture Review</div>
+<div class="v">Formal engineering design validation prior to trunk activation.</div>
+
+<div class="k">Change Control</div>
+<div class="v">All PSTN activations require approved change window.</div>
+
+<div class="k">Documentation</div>
+<div class="v">Deployment checklist archived per customer tenant.</div>
+
+<div class="k">Monitoring Model</div>
+<div class="v"><span class="badge good">24x7 NOC Proactive Monitoring</span></div>
+</div>
+</div>
+
+
+<!-- ============================================= -->
+<!-- INCIDENT PREVENTION / DETECTION / RESPONSE -->
+<!-- ============================================= -->
+<div class="card">
+<h3>PSTN Incident Prevention, Detection & Response</h3>
+
+<p>
+US Signal maintains documented incident management procedures
+consistent with Managed Services SLA commitments.
+</p>
+
+<div class="hr"></div>
+
+<h4 style="margin-top:0;">Incident Prevention Controls</h4>
+<div class="kv">
+<div class="k">SIP OPTIONS Keepalive</div>
+<div class="v">Configured with threshold monitoring</div>
+
+<div class="k">HA Redundancy</div>
+<div class="v">Dual CUBE / Carrier redundancy models supported</div>
+
+<div class="k">TLS Certificate Validation</div>
+<div class="v">Expiration monitoring and trustpoint validation</div>
+
+<div class="k">Dial Plan Validation</div>
+<div class="v">Pre-production call flow testing prior to cutover</div>
+
+<div class="k">Failover Testing</div>
+<div class="v">Periodic trunk failover simulation</div>
+</div>
+
+<div class="hr"></div>
+
+<h4>Incident Detection</h4>
+<div class="kv">
+<div class="k">Trunk Availability</div>
+<div class="v">SIP response and registration monitoring</div>
+
+<div class="k">CUBE Health</div>
+<div class="v">Interface state and CPU monitoring</div>
+
+<div class="k">Call Quality</div>
+<div class="v">MOS degradation alert thresholds</div>
+
+<div class="k">Packet Loss</div>
+<div class="v">Quality monitoring analytics</div>
+
+<div class="k">SIP Errors</div>
+<div class="v">4xx / 5xx anomaly alerting</div>
+</div>
+
+<div class="hr"></div>
+
+<h4>Incident Response & SLA Matrix</h4>
+
+<table style="width:100%; border-collapse:collapse; font-size:13px;">
+<thead>
+<tr style="text-align:left; color:var(--muted); text-transform:uppercase;">
+<th style="padding:10px;">Severity</th>
+<th style="padding:10px;">Description</th>
+<th style="padding:10px;">Response Time</th>
+<th style="padding:10px;">Escalation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="padding:10px;"><b>Sev 1</b></td>
+<td style="padding:10px;">Complete PSTN outage</td>
+<td style="padding:10px;">15 Minutes</td>
+<td style="padding:10px;">Collaboration Engineering + Director</td>
+</tr>
+<tr>
+<td style="padding:10px;"><b>Sev 2</b></td>
+<td style="padding:10px;">Partial outage or trunk instability</td>
+<td style="padding:10px;">1 Hour</td>
+<td style="padding:10px;">Engineering Escalation</td>
+</tr>
+<tr>
+<td style="padding:10px;"><b>Sev 3</b></td>
+<td style="padding:10px;">Call quality degradation</td>
+<td style="padding:10px;">4 Hours</td>
+<td style="padding:10px;">Standard Support Queue</td>
+</tr>
+</tbody>
+</table>
+
+<p style="margin-top:14px;">
+All PSTN incidents are tracked in the US Signal ticketing system and
+documented according to Managed Services SLA policy.
+</p>
+</div>
+
+
+<!-- ============================================= -->
+<!-- PSTN PROVISIONING & PORTING WORKFLOW -->
+<!-- ============================================= -->
+<div class="card">
+<h3>PSTN Provisioning & Porting Workflow</h3>
+
+<p>
+PSTN provisioning follows a standardized documented workflow
+specific to the selected PSTN model.
+</p>
+
+<div class="hr"></div>
+
+<h4 style="margin-top:0;">Porting Process Steps</h4>
+<div class="kv">
+<div class="k">1. CSR Collection</div>
+<div class="v">BTN validation and carrier record verification</div>
+
+<div class="k">2. DID Inventory Audit</div>
+<div class="v">Number mapping validation</div>
+
+<div class="k">3. Port Submission</div>
+<div class="v">Cisco Control Hub or carrier portal</div>
+
+<div class="k">4. FOC Confirmation</div>
+<div class="v">Carrier approved activation date</div>
+
+<div class="k">5. Test DID Validation</div>
+<div class="v">Inbound and outbound verification</div>
+
+<div class="k">6. Cutover Window</div>
+<div class="v">Approved change control execution</div>
+
+<div class="k">7. Post-Port Testing</div>
+<div class="v">Executive and call flow validation</div>
+</div>
+
+<div class="hr"></div>
+
+<h4>Provisioning Responsibility Matrix</h4>
+
+<table style="width:100%; border-collapse:collapse; font-size:13px;">
+<thead>
+<tr style="text-align:left; color:var(--muted); text-transform:uppercase;">
+<th style="padding:10px;">PSTN Model</th>
+<th style="padding:10px;">Provisioning Owner</th>
+<th style="padding:10px;">Monitoring Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="padding:10px;">Cisco Calling Plans</td>
+<td style="padding:10px;">US Signal + Cisco</td>
+<td style="padding:10px;">US Signal NOC</td>
+</tr>
+<tr>
+<td style="padding:10px;">Cloud Connected PSTN</td>
+<td style="padding:10px;">US Signal + Carrier</td>
+<td style="padding:10px;">US Signal NOC + Carrier SLA</td>
+</tr>
+<tr>
+<td style="padding:10px;">Local Gateway (CUBE)</td>
+<td style="padding:10px;">US Signal Engineering</td>
+<td style="padding:10px;">US Signal NOC</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+<!-- ============================================= -->
+<!-- CISCO POWERED SERVICE GOVERNANCE MAPPING -->
+<!-- ============================================= -->
+<div class="card">
+<h3>Cisco Powered Service Compliance Alignment</h3>
+
+<p>
+The following controls demonstrate alignment with Cisco Powered
+Cloud Calling PSTN operational requirements.
+</p>
+
+<div class="hr"></div>
+
+<div class="kv">
+<div class="k">PSTN Implementation Strategy Documented</div>
+<div class="v"><span class="badge good">Yes</span></div>
+
+<div class="k">Incident Prevention Controls</div>
+<div class="v"><span class="badge good">SIP OPTIONS + HA Design</span></div>
+
+<div class="k">Incident Detection</div>
+<div class="v"><span class="badge good">Proactive NOC Monitoring</span></div>
+
+<div class="k">Incident Response</div>
+<div class="v"><span class="badge good">SLA Severity Matrix</span></div>
+
+<div class="k">Provisioning Documentation</div>
+<div class="v"><span class="badge good">Porting Workflow Defined</span></div>
+
+<div class="k">Support Ownership</div>
+<div class="v"><span class="badge good">24x7 Managed Service</span></div>
+</div>
+</div>
+  
 <!-- Carrier Comparison Matrix -->
 <div class="card">
 <h3>PSTN Model Comparison Matrix</h3>
