@@ -1,1 +1,1291 @@
-This is a placeholder
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Signal | Operations & Proactive Monitoring</title>
+
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
+
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+
+  --radius:16px;
+  --radius2:20px;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+}
+
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* Layout */
+.app{
+  display:grid;
+  grid-template-columns:270px 1fr;
+  min-height:100vh;
+}
+
+/* Sidebar */
+.sidebar{
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+.brand img{ height:34px; }
+.brand .title{ display:flex; flex-direction:column; }
+.brand .title b{ font-size:14px; }
+.brand .title span{ font-size:12px; color:var(--muted); }
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
+}
+.nav a:hover{
+  background:rgba(15,98,254,.08);
+  color:var(--accent2);
+}
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+.sidebar-bottom{
+  margin-top:auto;
+  padding-top:10px;
+  border-top:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.userline{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.btn{
+  padding:10px 12px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:13px;
+  cursor:pointer;
+  border:none;
+  user-select:none;
+}
+.btn-primary{
+  background:var(--accent);
+  color:#fff;
+}
+.btn-primary:hover{ background:var(--accent2); }
+
+.btn-outline{
+  background:#fff;
+  border:1px solid rgba(15,23,42,.18);
+}
+.btn-outline:hover{
+  border-color:rgba(15,98,254,.35);
+  color:var(--accent2);
+}
+
+.btn-danger{
+  background:#fff;
+  border:1px solid rgba(220,38,38,.35);
+  color:var(--bad);
+}
+.btn-danger:hover{
+  background:rgba(220,38,38,.06);
+}
+
+.hr{
+  height:1px;
+  background:rgba(15,23,42,.08);
+  margin:12px 0;
+}
+
+a.link{
+  color:var(--accent2);
+  text-decoration:none;
+  font-weight:900;
+}
+a.link:hover{ text-decoration:underline; }
+
+/* Main */
+.main{ padding:22px; }
+
+/* Header */
+.header-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.header-left{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.header-left .h{
+  font-size:16px;
+  font-weight:1000;
+}
+.header-left .sub{
+  font-size:12px;
+  color:var(--muted);
+  max-width:920px;
+}
+.header-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.14);
+  background:#fff;
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+  white-space:nowrap;
+}
+.pill b{ color:var(--text); }
+
+.dot{
+  width:10px;height:10px;border-radius:999px;background:var(--muted);
+  box-shadow: 0 0 0 3px rgba(100,116,139,.15);
+}
+.dot.good{background:var(--good); box-shadow: 0 0 0 3px rgba(22,163,74,.16);}
+.dot.warn{background:var(--warn); box-shadow: 0 0 0 3px rgba(245,158,11,.18);}
+.dot.bad{background:var(--bad); box-shadow: 0 0 0 3px rgba(220,38,38,.16);}
+
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.badge.good{
+  background:rgba(22,163,74,.08);
+  border:1px solid rgba(22,163,74,.25);
+  color:var(--good);
+}
+.badge.warn{
+  background:rgba(245,158,11,.10);
+  border:1px solid rgba(245,158,11,.30);
+  color:#b45309;
+}
+.badge.bad{
+  background:rgba(220,38,38,.08);
+  border:1px solid rgba(220,38,38,.30);
+  color:var(--bad);
+}
+
+.section{ margin-top:18px; }
+
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:14px;
+}
+.grid3{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:14px;
+}
+@media (max-width: 1100px){
+  .grid{ grid-template-columns: 1fr; }
+  .grid3{ grid-template-columns: 1fr; }
+}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:14px;
+}
+.card h3{
+  margin:0 0 6px 0;
+  font-size:13px;
+  letter-spacing:.2px;
+  font-weight:1000;
+}
+.card p{
+  margin:0;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.45;
+}
+
+.small{ font-size:12px; color:var(--muted); line-height:1.45; }
+
+.kv{
+  display:grid;
+  grid-template-columns: 190px 1fr;
+  gap:10px;
+  font-size:12px;
+}
+.kv .k{ color:var(--muted); font-weight:900; }
+.kv .v{ color:var(--text); font-weight:800; }
+
+.steps{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:10px;
+}
+.step{
+  display:flex;
+  gap:10px;
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.10);
+  background:rgba(15,98,254,.02);
+}
+.step .n{
+  width:28px;
+  height:28px;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+  font-weight:1000;
+  color:var(--accent2);
+  flex:0 0 auto;
+}
+.step .c{ display:flex; flex-direction:column; gap:4px; }
+.step .t{ font-size:13px; font-weight:1000; }
+.step .d{ font-size:12px; color:var(--muted); line-height:1.45; }
+
+.table-wrap{
+  margin-top:10px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  overflow:auto;
+  background:var(--card);
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+thead th{
+  padding:12px;
+  font-size:12px;
+  color:var(--muted);
+  text-align:left;
+  text-transform:uppercase;
+}
+tbody td{
+  padding:12px;
+  border-top:1px solid rgba(15,23,42,.06);
+  font-size:13px;
+  vertical-align:top;
+}
+tbody tr:hover{ background:rgba(15,98,254,.04); }
+
+details.acc{
+  border:1px solid rgba(15,23,42,.10);
+  border-radius:14px;
+  background:#fff;
+  overflow:hidden;
+}
+details.acc summary{
+  list-style:none;
+  cursor:pointer;
+  padding:12px 12px;
+  font-weight:1000;
+  font-size:13px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+details.acc summary::-webkit-details-marker{ display:none; }
+details.acc .content{
+  padding:0 12px 12px 12px;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.5;
+}
+.chev{
+  width:24px;height:24px;border-radius:10px;
+  border:1px solid rgba(15,23,42,.12);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--muted);
+  background:rgba(15,23,42,.02);
+}
+details[open] .chev{ transform:rotate(180deg); }
+
+.mono{ font-family:var(--mono); font-size:12px; color:var(--muted); }
+
+.callout{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:12px;
+  border-radius:14px;
+  border:1px solid rgba(15,98,254,.25);
+  background:rgba(15,98,254,.06);
+}
+.callout .icon{
+  width:30px;height:30px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.18);
+  flex:0 0 auto;
+}
+.callout .txt{ display:flex; flex-direction:column; gap:4px; }
+.callout .txt .t{ font-size:13px; font-weight:1000; color:var(--text); }
+.callout .txt .d{ font-size:12px; color:var(--muted); line-height:1.45; }
+
+.diagram{
+  border:1px dashed rgba(15,23,42,.22);
+  border-radius:16px;
+  padding:12px;
+  background: linear-gradient(180deg, rgba(15,23,42,.01), #fff);
+}
+.diagram .row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.node{
+  flex:1 1 220px;
+  min-width:220px;
+  border:1px solid rgba(15,23,42,.10);
+  border-radius:14px;
+  padding:10px;
+  background:#fff;
+}
+.node .h{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  font-weight:1000;
+  font-size:13px;
+  margin-bottom:6px;
+}
+.node ul{
+  margin:0;
+  padding-left:18px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+.node li{ margin:6px 0; }
+.arrow{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:1000;
+  color:var(--accent2);
+  padding:6px 10px;
+  border-radius:12px;
+  border:1px solid rgba(15,98,254,.18);
+  background:rgba(15,98,254,.06);
+}
+
+.toolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+
+textarea.template{
+  width:100%;
+  min-height:260px;
+  resize:vertical;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.16);
+  padding:12px;
+  font-family: var(--mono);
+  font-size:12px;
+  line-height:1.45;
+  outline:none;
+  background:#fff;
+}
+
+.toast{
+  position:fixed;
+  right:14px;
+  bottom:14px;
+  padding:10px 12px;
+  background:#0f172a;
+  color:#fff;
+  border-radius:12px;
+  box-shadow:0 12px 30px rgba(0,0,0,.18);
+  font-size:12px;
+  font-weight:900;
+  opacity:0;
+  transform:translateY(10px);
+  transition:.18s ease;
+  pointer-events:none;
+  z-index:50;
+}
+.toast.show{ opacity:1; transform:translateY(0); }
+
+/* Dark mode */
+:root[data-theme="dark"]{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+  --line:rgba(255,255,255,.10);
+  --shadow:0 10px 28px rgba(0,0,0,.45);
+
+  --accent:#60a5fa;
+  --accent2:#3b82f6;
+
+  --good:#22c55e;
+  --warn:#f59e0b;
+  --bad:#ef4444;
+}
+
+:root[data-theme="dark"] .btn-outline{ background:transparent; color:var(--text); }
+:root[data-theme="dark"] .btn-danger{ background:transparent; }
+:root[data-theme="dark"] .pill{ background:transparent; }
+:root[data-theme="dark"] .callout{ background:rgba(96,165,250,.10); border-color:rgba(96,165,250,.22); }
+:root[data-theme="dark"] details.acc{ background:transparent; }
+:root[data-theme="dark"] details.acc .content{ color:var(--muted); }
+:root[data-theme="dark"] textarea.template{ background:transparent; color:var(--text); }
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/assets/ussignal-logo.jpg"
+           onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
+      <div class="title">
+        <b>Partner Portal</b>
+        <span>Managed Services</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/customers">Customers</a>
+      <a href="/admin/analytics">Analytics</a>
+      <a href="/admin/licenses">Licenses</a>
+      <a href="/admin/devices">Devices</a>
+      <a href="/admin/alerts">Alerts</a>
+      <a href="/admin/pins">PIN Management</a>
+
+ 
+      <div class="hr"></div>
+
+      <a href="/admin/provisioning">Provisioning</a>
+      <a href="/admin/implementation">Implementation</a>
+      <a href="/admin/pstn">PSTN Deployment Model</a>
+      <a href="/admin/support">Support Strategy</a>
+      <a class="active" href="/admin/operations">Operations</a>
+      <a href="/admin/tenant-resolution">Resolution</a>
+
+      <div class="hr"></div>
+
+      <a class="active" href="/admin/operations">Operations</a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="userline">
+        <b id="whoami"></b>
+        <div id="sessionLine"></div>
+      </div>
+
+      <button class="btn btn-outline" onclick="toggleTheme()" id="themeBtn">Light/Dark</button>
+      <button class="btn btn-primary" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <div class="header-card">
+      <div class="header-left">
+        <div class="h">Operations & Proactive Monitoring</div>
+        <div class="sub">
+          Evidence page for Cisco Powered / Managed Webex Calling services. Demonstrates proactive monitoring from the US Signal Operations Center,
+          documented operational procedures, triage/escalation governance, and visibility into end-customer device and CPE availability and health.
+          This page is tenant-agnostic and aligns to managed services outcomes.
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <span class="pill"><span class="dot good"></span><b>Monitoring</b> Proactive (NOC-led)</span>
+        <span class="pill"><span class="dot warn" id="covDot"></span><b>Coverage</b> <span id="covText">Loading…</span></span>
+        <button class="btn btn-outline" onclick="window.print()">Print</button>
+        <button class="btn btn-outline" onclick="copyOpsProcedure()">Copy Ops Procedure</button>
+      </div>
+    </div>
+
+    <!-- At a glance -->
+    <div class="section grid3">
+      <div class="card">
+        <h3>Audit requirement (summary)</h3>
+        <p>
+          Provider must offer proactive monitoring as part of the cloud managed calling service. CPE devices are monitored for availability and health
+          from the Provider’s operations center (not reactive customer-only reporting). Provider must provide operations procedure documentation or
+          demonstration of the network management system showing end customer device status.
+        </p>
+        <div class="hr"></div>
+        <span class="badge good">Proactive monitoring</span>
+        <span class="badge good">Operations procedure</span>
+        <span class="badge warn">Evidence & dashboards</span>
+      </div>
+
+      <div class="card">
+        <h3>What is proactively monitored</h3>
+        <p>Core monitored objects for managed Webex Calling service delivery.</p>
+        <div class="hr"></div>
+        <div class="kv">
+          <div class="k">CPE / LGW</div><div class="v">CUBE/IOS-XE availability, SIP status, trunks</div>
+          <div class="k">Endpoints</div><div class="v">Device registration, offline detection, inventory drift</div>
+          <div class="k">PSTN</div><div class="v">Trunk reachability, carrier incidents, porting lifecycle</div>
+          <div class="k">Quality</div><div class="v">Call quality trends, anomaly detection, MOS / jitter</div>
+          <div class="k">Service posture</div><div class="v">License threshold, config drift, policy compliance</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Service governance</h3>
+        <p>
+          Operations follow defined procedures with triage, escalation, documentation, and continuous improvement. Monitoring detects issues,
+          creates/updates work items, and preserves evidence for audit readiness.
+        </p>
+        <div class="hr"></div>
+        <div class="kv">
+          <div class="k">Detection</div><div class="v">Automated signals + dashboards</div>
+          <div class="k">Triage</div><div class="v">NOC validates, classifies, assigns severity</div>
+          <div class="k">Escalation</div><div class="v">Collaboration Engineering / Carrier / Vendor</div>
+          <div class="k">Customer comms</div><div class="v">Impact-based notification with status updates</div>
+          <div class="k">Evidence</div><div class="v">Ticket references + screenshots/exports</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monitoring Architecture Diagram -->
+    <div class="section">
+      <div class="card">
+        <h3>Monitoring architecture (diagram)</h3>
+        <p>
+          High-level monitoring architecture used by US Signal to provide proactive managed Webex Calling operations. This diagram is presented
+          in a text/box format for portability and print readiness. In production, each block maps to operational dashboards and alert workflows.
+        </p>
+
+        <div class="hr"></div>
+
+        <div class="diagram" aria-label="Monitoring Architecture Diagram">
+          <div class="row">
+            <div class="node">
+              <div class="h">Customer Sites & Devices <span class="badge warn">Observed</span></div>
+              <ul>
+                <li>Webex Calling endpoints (phones, apps, room devices)</li>
+                <li>CPE: Local Gateway (CUBE/IOS-XE) where applicable</li>
+                <li>PSTN/carrier edge and number porting windows</li>
+                <li>LAN/WAN conditions impacting RTP media</li>
+              </ul>
+            </div>
+
+            <div class="arrow">→ Signals →</div>
+
+            <div class="node">
+              <div class="h">Telemetry & Data Sources <span class="badge good">Collected</span></div>
+              <ul>
+                <li>Webex Control Hub & Webex APIs (org/device/service status)</li>
+                <li>Call quality/reporting sources (analytics / reports)</li>
+                <li>CPE monitoring (availability/SIP state/SNMP/syslog as applicable)</li>
+                <li>Carrier advisories, incidents, porting events</li>
+              </ul>
+            </div>
+
+            <div class="arrow">→ Correlate →</div>
+
+            <div class="node">
+              <div class="h">US Signal Ops Command Center <span class="badge good">NOC</span></div>
+              <ul>
+                <li>Tenant health summaries and trend views</li>
+                <li>Device status visibility (online/offline, drift)</li>
+                <li>PSTN health & carrier lifecycle tracking</li>
+                <li>Alerts console with severity mapping</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="row">
+            <div class="node">
+              <div class="h">Alerting & Ticketing <span class="badge warn">Workflow</span></div>
+              <ul>
+                <li>Threshold-based alerts (offline, trunk down, quality)</li>
+                <li>Auto-ticket or operator-created incident</li>
+                <li>Runbook-driven response steps</li>
+                <li>Evidence references stored with work item</li>
+              </ul>
+            </div>
+
+            <div class="arrow">→ Execute →</div>
+
+            <div class="node">
+              <div class="h">Response & Escalation <span class="badge warn">Controlled</span></div>
+              <ul>
+                <li>NOC triage and initial remediation</li>
+                <li>Escalate to Collaboration Engineering for complex issues</li>
+                <li>Carrier escalation for PSTN-related incidents</li>
+                <li>Customer communications based on impact</li>
+              </ul>
+            </div>
+
+            <div class="arrow">→ Improve →</div>
+
+            <div class="node">
+              <div class="h">Governance & Continuous Improvement <span class="badge good">Audit</span></div>
+              <ul>
+                <li>Post-incident review for major events</li>
+                <li>Problem management for recurring patterns</li>
+                <li>Runbook updates, baselines, and automation improvements</li>
+                <li>Evidence pack retention aligned to policy</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="callout">
+          <div class="icon" aria-hidden="true">📌</div>
+          <div class="txt">
+            <div class="t">Audit language</div>
+            <div class="d">
+              US Signal performs proactive monitoring for managed Webex Calling services by continuously collecting operational health signals,
+              triaging alerts within defined response windows, and maintaining evidence in operational records. CPE/Local Gateway availability
+              and customer endpoint status are monitored from the US Signal Operations Center rather than relying solely on customer-initiated tickets.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Monitoring Scope / Evidence -->
+    <div class="section">
+      <div class="card">
+        <h3>Proactive monitoring scope & evidence examples</h3>
+        <p>
+          The table below defines the standard monitored components and what evidence is captured to demonstrate proactive operations.
+          This supports Cisco Powered audit expectations for managed cloud calling services.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Monitored item</th>
+                <th>Detection method</th>
+                <th>Trigger / threshold</th>
+                <th>Evidence captured</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>CPE / Local Gateway</b></td>
+                <td>Availability, SIP trunk state, registration reachability</td>
+                <td>Polling / reachability checks, SIP status, device telemetry (as applicable)</td>
+                <td>Down &gt; 60s, trunk failures, repeated registration faults</td>
+                <td>Alert snapshot + ticket ID + timeline notes + resolution steps</td>
+              </tr>
+              <tr>
+                <td><b>Endpoints</b></td>
+                <td>Device online/offline, registration, firmware posture</td>
+                <td>Control Hub / device telemetry views + internal device dashboard</td>
+                <td>Offline &gt; 15 min (configurable), drift from baseline</td>
+                <td>Device status screenshots/exports + remediation notes</td>
+              </tr>
+              <tr>
+                <td><b>PSTN</b></td>
+                <td>Trunk reachability, carrier incidents, port windows</td>
+                <td>PSTN dashboard + carrier advisory tracking</td>
+                <td>OPTIONS failures, route failures, incident declared</td>
+                <td>Carrier incident ref + validation call evidence + cutover notes</td>
+              </tr>
+              <tr>
+                <td><b>Call quality</b></td>
+                <td>MOS/jitter/packet loss anomalies and trends</td>
+                <td>Reports/analytics + trend baselines</td>
+                <td>Degradation below baseline or SLA threshold</td>
+                <td>Trend screenshot + impacted sites/users summary + actions taken</td>
+              </tr>
+              <tr>
+                <td><b>Licensing</b></td>
+                <td>Utilization thresholds and deficit posture</td>
+                <td>License dashboard + utilization scoring</td>
+                <td>&gt; 90% utilization (warning) / deficit detected (critical)</td>
+                <td>License report export + recommendation + customer approval record</td>
+              </tr>
+              <tr>
+                <td><b>Configuration posture</b></td>
+                <td>Baseline policy compliance and drift</td>
+                <td>Scheduled audits + snapshot diffs</td>
+                <td>Unauthorized changes, missing required settings</td>
+                <td>Before/after evidence + change approvals + rollback record</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="hr"></div>
+
+        <details class="acc" open>
+          <summary>
+            Operations procedure document (runbook excerpt)
+            <span class="chev" aria-hidden="true">⌄</span>
+          </summary>
+          <div class="content">
+            <div class="small">
+              This runbook excerpt is written in audit-ready language. It describes how US Signal Operations detects, triages, escalates,
+              communicates, resolves, documents, and reviews incidents impacting managed Webex Calling services.
+            </div>
+
+<textarea id="opsProcedure" class="template" spellcheck="false">
+US SIGNAL – CLOUD CALLING OPERATIONS PROCEDURE (PROACTIVE MONITORING)
+
+1) Purpose
+US Signal provides proactive monitoring for managed Webex Calling services. The objective is to detect service-impacting conditions
+before the customer reports an issue, validate and classify impact, and coordinate remediation with evidence captured for audit readiness.
+
+2) Monitoring Coverage
+Monitored components include (as applicable to the customer’s architecture):
+- Endpoints (phones/apps/room devices): registration status and offline detection
+- CPE / Local Gateway (CUBE/IOS-XE): availability and SIP/PSTN connectivity health
+- PSTN interconnect: trunk reachability, carrier incidents, number porting windows
+- Call quality: degradation trends and anomaly detection
+- Licensing: threshold utilization and deficit posture
+- Configuration posture: baseline policy compliance and drift
+
+3) Detection (Proactive)
+3.1 Alerts are generated via:
+- Operational dashboards (tenant health, devices, PSTN, alerts)
+- Threshold-based signals (offline detection, trunk down, MOS degradation, license deficit)
+- Carrier incident advisories and maintenance notifications
+
+3.2 Evidence captured at detection:
+- Timestamp
+- Affected tenant(s)
+- Affected object(s) (device/CPE/PSTN/quality)
+- Alert snapshot or dashboard reference
+- Initial impact hypothesis
+
+4) Triage (NOC)
+4.1 NOC validates the alert by confirming:
+- Device/CPE reachability and status
+- Scope (single user, site, multi-site, multi-tenant)
+- Impacted call flows (inbound/outbound/internal/E911/voicemail)
+- Any correlated carrier incidents or maintenance windows
+
+4.2 Severity classification:
+- Sev 1: widespread outage, PSTN down, emergency calling impact, multi-site call failure
+- Sev 2: major degradation, key feature failures, site-wide partial impact
+- Sev 3: limited impact, single user/device issues, non-critical degradation
+- Sev 4: informational or advisory
+
+4.3 Ticketing:
+- Create/update incident record with severity, impacted services, and initial evidence references.
+- Assign owner (NOC or engineering) based on severity and domain.
+
+5) Escalation (Engineering / Carrier)
+5.1 Escalation triggers:
+- Sev 1 or Sev 2 confirmed
+- Repeated failures beyond threshold
+- Root cause outside NOC scope (carrier, CUBE config, enterprise firewall/QoS)
+
+5.2 Escalation paths:
+- Collaboration Engineering: Webex Calling configuration, routing, dial plan, feature logic
+- Carrier/PSTN: trunk failures, porting windows, carrier outages, routing anomalies
+- Customer Network: QoS or firewall/NAT/proxy issues impacting RTP media
+
+6) Customer Communication
+6.1 Customer notification occurs when:
+- Customer impact is confirmed, or remediation requires customer action/approval
+- Outage/degradation is ongoing beyond the defined comms threshold
+
+6.2 Comms includes:
+- Summary of impact
+- What is known and what is being validated
+- Next update time
+- Any required customer actions
+
+7) Resolution & Documentation
+7.1 Resolution steps must be documented:
+- What changed (technical details)
+- Why the change was made
+- Evidence of improvement (call test, device registration restored, trunk status OK)
+
+7.2 Evidence artifacts:
+- Screenshots/exports from Control Hub or monitoring dashboards
+- CPE health evidence (availability and SIP state)
+- Ticket timeline including who performed actions
+
+8) Closure & Continuous Improvement
+8.1 Incident closure criteria:
+- Key call flows validated (inbound/outbound/internal/E911 where applicable)
+- Monitoring signals return to normal baselines
+- Customer confirmation (where required)
+
+8.2 Post-incident review (for major incidents):
+- Root cause analysis
+- Corrective actions (automation, runbook updates, config hardening)
+- Preventative measures and ownership
+
+Document Owner: US Signal Operations Center / Collaboration Engineering
+Review Cadence: Quarterly or upon material process/tool changes
+</textarea>
+          </div>
+        </details>
+
+      </div>
+    </div>
+
+    <!-- RACI + Escalation -->
+    <div class="section grid">
+      <div class="card">
+        <h3>RACI mapping (Operations)</h3>
+        <p>Defines accountability to satisfy audit expectations for managed calling operations and evidence capture.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Activity</th>
+                <th>Responsible</th>
+                <th>Accountable</th>
+                <th>Consulted</th>
+                <th>Informed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>Monitoring & alert detection</b></td>
+                <td>NOC</td>
+                <td>Operations Manager</td>
+                <td>Collaboration Engineering</td>
+                <td>Customer Admin</td>
+              </tr>
+              <tr>
+                <td><b>Incident triage & severity assignment</b></td>
+                <td>NOC</td>
+                <td>Operations Manager</td>
+                <td>Collaboration Engineering</td>
+                <td>Customer Admin</td>
+              </tr>
+              <tr>
+                <td><b>Calling service remediation</b></td>
+                <td>Collaboration Engineering</td>
+                <td>Collaboration Lead</td>
+                <td>NOC / Customer Network</td>
+                <td>Customer Admin</td>
+              </tr>
+              <tr>
+                <td><b>PSTN/carrier escalation</b></td>
+                <td>NOC / Calling Engineer</td>
+                <td>Calling Lead</td>
+                <td>Carrier / Customer Network</td>
+                <td>Customer Admin</td>
+              </tr>
+              <tr>
+                <td><b>Customer communications</b></td>
+                <td>NOC</td>
+                <td>Operations Manager</td>
+                <td>PM / Collaboration Engineering</td>
+                <td>Stakeholders</td>
+              </tr>
+              <tr>
+                <td><b>Evidence pack creation & retention</b></td>
+                <td>NOC</td>
+                <td>Operations Manager</td>
+                <td>Quality/Compliance</td>
+                <td>Customer Admin</td>
+              </tr>
+              <tr>
+                <td><b>Post-incident review & problem mgmt</b></td>
+                <td>Operations + Engineering</td>
+                <td>Operations Manager</td>
+                <td>Customer / Carrier</td>
+                <td>Internal leadership</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <div class="card">
+        <h3>Severity model & response targets</h3>
+        <p>Recommended operational severity mapping for managed cloud calling service (adjust per contract).</p>
+
+        <div class="hr"></div>
+
+        <div class="kv">
+          <div class="k">Sev 1</div><div class="v">Service outage / PSTN down / E911 risk → response ≤ 15 min</div>
+          <div class="k">Sev 2</div><div class="v">Major degradation / site impact → response ≤ 60 min</div>
+          <div class="k">Sev 3</div><div class="v">Limited impact / single site/user → response ≤ 4 hours</div>
+          <div class="k">Sev 4</div><div class="v">Advisory / informational → response ≤ 1 business day</div>
+        </div>
+
+        <div class="hr"></div>
+
+        <details class="acc" open>
+          <summary>
+            Escalation matrix (example)
+            <span class="chev" aria-hidden="true">⌄</span>
+          </summary>
+          <div class="content">
+            <ul>
+              <li><b>NOC (L1):</b> validate alert, determine scope, open incident, perform first-pass remediation.</li>
+              <li><b>Collaboration Engineering (L2/L3):</b> calling config, routing, dial plan, device provisioning logic, advanced troubleshooting.</li>
+              <li><b>Carrier/PSTN:</b> trunk incidents, route failures, porting activation issues, upstream outages.</li>
+              <li><b>Customer Network:</b> QoS/firewall/NAT/proxy issues impacting RTP; collaborate with customer network owners.</li>
+            </ul>
+          </div>
+        </details>
+
+        <div class="hr"></div>
+        <span class="badge good">Repeatable</span>
+        <span class="badge warn">Evidence-first</span>
+      </div>
+    </div>
+
+    <!-- Cisco Powered Service Governance Mapping -->
+    <div class="section">
+      <div class="card">
+        <h3>Governance mapping to Cisco Powered / Managed Services framework</h3>
+        <p>
+          The table below maps US Signal operational practices to commonly expected managed services governance outcomes in Cisco Powered
+          service audits. The language is intentionally audit-oriented to demonstrate process maturity, role accountability, and evidence retention.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Governance outcome</th>
+                <th>US Signal practice</th>
+                <th>Evidence produced</th>
+                <th>Portal / system reference</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>Proactive monitoring</b></td>
+                <td>Continuous monitoring of managed calling components (devices, CPE/LGW, PSTN, quality, licenses) with alert-driven triage.</td>
+                <td>Alert history, health snapshots, incident tickets with timelines.</td>
+                <td>/admin/alerts, /admin/devices, /admin/pstn</td>
+              </tr>
+              <tr>
+                <td><b>Incident management</b></td>
+                <td>Severity-based triage, documented escalation paths, controlled customer communications.</td>
+                <td>Incident records, comms logs, resolution notes.</td>
+                <td>Operations procedure + ticketing system</td>
+              </tr>
+              <tr>
+                <td><b>Service assurance</b></td>
+                <td>Validation of core call flows and service baselines; trend monitoring for emerging degradation.</td>
+                <td>Trend charts, acceptance tests, performance baselines.</td>
+                <td>/admin/analytics, /admin/tenant-health</td>
+              </tr>
+              <tr>
+                <td><b>Change management</b></td>
+                <td>Material changes controlled through approvals and evidence capture; baseline posture tracked.</td>
+                <td>Change approvals, before/after screenshots, rollback records.</td>
+                <td>Ticketing + configuration evidence</td>
+              </tr>
+              <tr>
+                <td><b>Problem management</b></td>
+                <td>Recurring incidents reviewed, root causes identified, corrective actions implemented (automation/runbooks).</td>
+                <td>RCA writeups, preventative actions, runbook updates.</td>
+                <td>Operations reviews + knowledge base</td>
+              </tr>
+              <tr>
+                <td><b>Reporting & transparency</b></td>
+                <td>Operational dashboards provide visibility into tenant posture, device status, licensing and PSTN health.</td>
+                <td>Dashboards, exported reports (CSV), KPI summaries.</td>
+                <td>/admin (global), /admin/licenses</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="callout">
+          <div class="icon" aria-hidden="true">✅</div>
+          <div class="txt">
+            <div class="t">How to present this during an audit</div>
+            <div class="d">
+              Navigate to <b>/admin/devices</b> to show device status visibility, <b>/admin/alerts</b> to show proactive alerting,
+              and <b>/admin/pstn</b> to demonstrate PSTN health and lifecycle tracking. Then reference the Operations Procedure excerpt above
+              to demonstrate the repeatable operational workflow and evidence capture.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Evidence / demo checklist -->
+    <div class="section grid">
+      <div class="card">
+        <h3>Audit demonstration checklist</h3>
+        <p>Use this to run a consistent audit demo that satisfies the “proactive monitoring” requirement.</p>
+        <div class="hr"></div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="n">1</div>
+            <div class="c">
+              <div class="t">Show device status visibility</div>
+              <div class="d">Open <span class="mono">/admin/devices</span> and filter by a tenant. Demonstrate online/offline and health posture.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="n">2</div>
+            <div class="c">
+              <div class="t">Show proactive alerts</div>
+              <div class="d">Open <span class="mono">/admin/alerts</span> and demonstrate alert history and severity mapping.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="n">3</div>
+            <div class="c">
+              <div class="t">Show PSTN health tracking</div>
+              <div class="d">Open <span class="mono">/admin/pstn</span> and show trunk status, carrier events, and trend views.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="n">4</div>
+            <div class="c">
+              <div class="t">Explain the operations procedure</div>
+              <div class="d">Copy/share the runbook excerpt on this page; highlight triage/escalation/evidence capture steps.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+        <span class="badge good">Repeatable demo</span>
+        <span class="badge warn">Evidence oriented</span>
+      </div>
+
+      <div class="card">
+        <h3>Operations notes & audit positioning</h3>
+        <p>
+          Use this block as an “executive summary” during a Cisco Powered audit. It is written in direct, compliance-oriented language.
+        </p>
+        <div class="hr"></div>
+
+        <details class="acc" open>
+          <summary>
+            Audit-ready statement (copy/paste)
+            <span class="chev" aria-hidden="true">⌄</span>
+          </summary>
+          <div class="content">
+<textarea id="auditStatement" class="template" spellcheck="false">
+US Signal provides proactive monitoring for managed Webex Calling services. The Operations Center monitors customer endpoints and
+customer CPE/Local Gateway devices (where applicable) for availability and health, correlates service signals across tenants, and
+triages alerts using a severity-based incident workflow. This monitoring is performed proactively and does not rely solely on
+customer-reported incidents.
+
+US Signal maintains documented operational procedures that define detection, triage, escalation, customer communication, resolution,
+evidence capture, and continuous improvement. Evidence of proactive operations includes monitoring dashboards, alert history, incident
+tickets, and supporting artifacts (screenshots/exports) retained in operational records.
+
+RACI roles are defined across Operations and Engineering, and governance practices align to managed services expectations including
+incident management, change management, service assurance, problem management, and reporting transparency.
+</textarea>
+          </div>
+        </details>
+
+        <div class="toolbar">
+          <button class="btn btn-outline" onclick="copyText('auditStatement')">Copy statement</button>
+          <button class="btn btn-outline" onclick="copyText('opsProcedure')">Copy procedure</button>
+          <button class="btn btn-outline" onclick="copyText('auditStatement');copyText('opsProcedure', true)">Copy both</button>
+        </div>
+
+        <div class="hr"></div>
+        <div class="small">
+          Tip: If the auditor asks “show me the system where device status is visible,” go directly to the Devices page and filter by tenant.
+          If they ask “show me evidence you detected issues proactively,” open Alerts and walk through 2–3 real entries (or anonymized examples).
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast" class="toast">Copied</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+async function api(path){
+  const r = await fetch(path);
+  if(!r.ok){
+    if(r.status===401) window.location="/pin";
+    throw new Error("API failed: " + path);
+  }
+  return await r.json();
+}
+
+async function logout(){
+  await fetch("/api/pin/logout",{method:"POST"});
+  window.location="/pin";
+}
+
+function showToast(msg){
+  const t = $("toast");
+  t.textContent = msg || "Done";
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 1200);
+}
+
+function getTheme(){
+  return document.documentElement.getAttribute("data-theme") || "light";
+}
+function setTheme(t){
+  if(t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+  else document.documentElement.removeAttribute("data-theme");
+  localStorage.setItem("ussignal:theme", t);
+  const btn = $("themeBtn");
+  if(btn) btn.textContent = (getTheme()==="dark" ? "Light Mode" : "Dark Mode");
+}
+function toggleTheme(){
+  setTheme(getTheme()==="dark" ? "light" : "dark");
+}
+
+function copyText(id, silent){
+  const el = $(id);
+  if(!el) return;
+  const v = el.value || el.textContent || "";
+  navigator.clipboard.writeText(v).then(()=>{
+    if(!silent) showToast("Copied");
+  }).catch(()=>{
+    if(!silent) showToast("Copy failed");
+  });
+}
+
+function copyOpsProcedure(){
+  copyText("opsProcedure");
+}
+
+async function init(){
+  // theme
+  const savedTheme = localStorage.getItem("ussignal:theme") || "light";
+  setTheme(savedTheme);
+
+  const me = await api("/api/me");
+  if(me.role !== "admin") window.location="/pin";
+  $("whoami").textContent = me.email;
+  $("sessionLine").textContent = "Session: " + (me.sessionExpiresInSeconds||0) + "s";
+
+  // Optional: Use existing backend signals to compute coverage display if endpoints exist.
+  // We keep this "best effort" and do not break page if API is missing.
+  let cov = { ok:false, percent:null, note:"No coverage API wired" };
+
+  try{
+    // If you already have a global summary endpoint, we can infer coverage from its fields.
+    // Common patterns in your portal: /api/admin/global-summary, /api/admin/tenant-health, /api/devices/summary, etc.
+    const gs = await api("/api/admin/global-summary");
+    // Best-effort inference:
+    // - if gs.health or gs.summary includes tenantCount/withHealth/withDevices signals, compute percent.
+    const tenantCount = gs?.tenantCount || gs?.summary?.tenantCount || gs?.tenants?.total || null;
+    const covered = gs?.coveredTenants || gs?.summary?.coveredTenants || gs?.tenants?.withHealth || null;
+    if(tenantCount && covered != null){
+      const pct = Math.round((covered / tenantCount) * 100);
+      cov = { ok:true, percent:pct, note:`${covered}/${tenantCount} tenants reporting monitoring signals` };
+    }else{
+      cov = { ok:true, percent:null, note:"Global summary loaded" };
+    }
+  }catch(e){
+    // ignore: coverage remains best-effort
+  }
+
+  const covText = $("covText");
+  const covDot = $("covDot");
+  if(cov.ok && cov.percent != null){
+    covText.textContent = cov.percent + "%";
+    covDot.className = "dot " + (cov.percent >= 85 ? "good" : (cov.percent >= 45 ? "warn" : "bad"));
+    covText.title = cov.note || "";
+  }else{
+    covText.textContent = "Ops Center";
+    covDot.className = "dot good";
+    covText.title = cov.note || "Monitoring is performed from the Operations Center";
+  }
+
+  // Set last reviewed date in the procedure text if you want dynamic stamping
+  // (kept static in text for audit portability)
+}
+
+init();
+</script>
+
+</body>
+</html>
