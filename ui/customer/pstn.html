@@ -577,7 +577,7 @@ html[data-theme="dark"] pre{background:#050a14}
       <h2>Predictive Capacity Forecast (Local Snapshot Model)</h2>
       <div class="canvasWrap"><canvas id="forecast"></canvas></div>
       <div class="small" id="forecastNote" style="margin-top:10px">
-        Forecast uses locally-stored daily snapshots of capacity score (localStorage). Keep visiting daily to build accuracy.
+        Simulated 30-day trend model based on current capacity score with projected degradation curve.
       </div>
     </div>
 
@@ -981,6 +981,10 @@ function pstnLabel(type){
    TRUNK UTILIZATION (BEST-EFFORT)
 ========================= */
 function computeTrunkUtilization(trunk){
+  // 🔥 Prefer backend analytics if provided
+if(typeof trunk.utilization === "number"){
+  return { ok:true, pct: trunk.utilization };
+}
   const cap = Number(trunk.maxCapacity ?? trunk.capacity ?? trunk.callCapacity ?? trunk.maxCalls ?? NaN);
   const use = Number(trunk.currentUsage ?? trunk.usage ?? trunk.activeCalls ?? trunk.concurrentCalls ?? NaN);
   if(Number.isFinite(cap) && cap > 0 && Number.isFinite(use) && use >= 0){
@@ -1937,15 +1941,47 @@ function drawHeatmap(){
 
     const u = computeTrunkUtilization(t);
 
-    let fill = "rgba(100,116,139,.18)";
-    let stroke = "rgba(100,116,139,.20)";
-    let label = "Unknown";
+let fill = "rgba(100,116,139,.18)";
+let stroke = "rgba(100,116,139,.20)";
+let label = "";
+
+// Determine trunk type
+const typeRaw = String(
+  t.pstnType ||
+  t.connectionType ||
+  t.trunkType ||
+  t.type ||
+  ""
+).toUpperCase();
+
+let trunkTypeLabel = "Trunk";
+
+if(typeRaw.includes("LOCAL") || typeRaw.includes("GATEWAY")){
+  trunkTypeLabel = "Local GW";
+  fill = "rgba(245,158,11,.25)";
+  stroke = "rgba(245,158,11,.35)";
+}
+else if(typeRaw.includes("CLOUD")){
+  trunkTypeLabel = "Cloud";
+  fill = "rgba(22,163,74,.25)";
+  stroke = "rgba(22,163,74,.35)";
+}
+else if(typeRaw.includes("CISCO")){
+  trunkTypeLabel = "Cisco";
+  fill = "rgba(37,99,235,.25)";
+  stroke = "rgba(37,99,235,.35)";
+}
+else{
+  trunkTypeLabel = "Config";
+}
+
+label = trunkTypeLabel;
 
     if(u.ok){
       if(u.pct >= 85){ fill="rgba(220,38,38,.28)"; stroke="rgba(220,38,38,.30)"; }
       else if(u.pct >= 60){ fill="rgba(245,158,11,.30)"; stroke="rgba(245,158,11,.32)"; }
       else { fill="rgba(22,163,74,.25)"; stroke="rgba(22,163,74,.28)"; }
-      label = Math.round(u.pct) + "%";
+      label = trunkTypeLabel + " • " + Math.round(u.pct) + "%";
     }
 
     ctx.fillStyle = fill;
@@ -2252,11 +2288,68 @@ $("btnExport").addEventListener("click", ()=>{
    FORECAST SNAPSHOT INTEGRATION
 ========================= */
 function applyForecast(){
-  const orgId = RAW.orgId || ME?.orgId || SELECTED_ORG_ID || "unknown";
-  const hist = saveSnapshot(orgId, MODEL.scores.pstnCapacityScore);
-  drawForecast(orgId, hist);
-}
 
+  const canvas = $("forecast");
+  const { ctx, w, h } = setupCanvasHiDPI(canvas);
+  ctx.clearRect(0,0,w,h);
+
+  const baseScore = MODEL?.scores?.pstnCapacityScore || 80;
+
+  // Simulate 30-day historical drift
+  const days = 30;
+  const history = [];
+
+  for(let i = 0; i < days; i++){
+    const drift = (Math.sin(i / 5) * 4) - (i * 0.25);
+    const noise = (Math.random() * 2 - 1);
+    const val = Math.max(50, Math.min(100, baseScore + drift + noise));
+    history.push(val);
+  }
+
+  const toX = i => 20 + (i/(days-1)) * (w-40);
+  const toY = v => (h-20) - (v/100) * (h-40);
+
+  // Grid
+  ctx.strokeStyle = "rgba(148,163,184,.25)";
+  ctx.lineWidth = 1;
+  for(const yy of [0.25,0.5,0.75]){
+    ctx.beginPath();
+    ctx.moveTo(12, h*yy);
+    ctx.lineTo(w-12, h*yy);
+    ctx.stroke();
+  }
+
+  // Actual line
+  ctx.strokeStyle = "rgba(37,99,235,.95)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  history.forEach((v,i)=>{
+    const x = toX(i);
+    const y = toY(v);
+    if(i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Future projection 7 days
+  ctx.setLineDash([6,6]);
+  ctx.strokeStyle = "rgba(37,99,235,.55)";
+  ctx.beginPath();
+  for(let i=0;i<7;i++){
+    const idx = days-1 + i;
+    const projected = history[days-1] - (i*1.5);
+    const x = toX(days-1) + (i*(w-40)/days);
+    const y = toY(Math.max(40, projected));
+    if(i===0) ctx.moveTo(toX(days-1), toY(history[days-1]));
+    ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = "rgba(15,23,42,.85)";
+  ctx.font = "12px system-ui";
+  ctx.fillText("30-Day Simulated Trend + 7-Day Projection", 16, 16);
+}
 /* =========================
    EVENT WIRES
 ========================= */
