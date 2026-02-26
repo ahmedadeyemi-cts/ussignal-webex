@@ -6026,28 +6026,81 @@ const locationsRaw = Array.isArray(locRes.data?.items)
       return 50;
     };
 
-    // ================================
-    // 3️⃣ Enrich Locations
-    // ================================
+// ================================
+// 3️⃣ Enrich Locations
+// ================================
 
-    const enrichedLocations = [];
+const enrichedLocations = [];
 
-    for (const loc of locationsRaw) {
+for (const loc of locationsRaw) {
 
-      const locId = loc.id;
+  const locId = loc.id;
 
-  // IMPORTANT: encode the locationId because it contains "/"
+  // Encode locationId (it contains "/")
   const locIdEnc = encodeURIComponent(locId);
 
-  const conn = await safe(`/telephony/pstn/locations/${locIdEnc}/connection`);
-  diag(`telephony/pstn/locations/${locIdEnc}/connection`, conn);
+  // VERY IMPORTANT: append orgId exactly like your working Postman call
+  const orgParam = `orgId=${encodeURIComponent(resolvedOrgId)}`;
 
-  const redskyStatus = await safe(`/telephony/config/locations/${locIdEnc}/redSky/status`);
-  diag(`telephony/config/locations/${locIdEnc}/redSky/status`, redskyStatus);
+  // ================================
+  // PSTN Connection
+  // ================================
 
-  const emergencyNotif = await safe(`/telephony/config/locations/${locIdEnc}/emergencyCallNotification`);
-  diag(`telephony/config/locations/${locIdEnc}/emergencyCallNotification`, emergencyNotif);
+  const conn = await safe(
+    `/telephony/pstn/locations/${locIdEnc}/connection?${orgParam}`
+  );
 
+  diag(
+    `telephony/pstn/locations/${locIdEnc}/connection?${orgParam}`,
+    conn
+  );
+
+  // ================================
+  // RedSky E911 Status
+  // ================================
+
+  const redskyStatus = await safe(
+    `/telephony/config/locations/${locIdEnc}/redSky/status?${orgParam}`
+  );
+
+  diag(
+    `telephony/config/locations/${locIdEnc}/redSky/status?${orgParam}`,
+    redskyStatus
+  );
+
+  // ================================
+  // Emergency Call Notification
+  // ================================
+
+  const emergencyNotif = await safe(
+    `/telephony/config/locations/${locIdEnc}/emergencyCallNotification?${orgParam}`
+  );
+
+  diag(
+    `telephony/config/locations/${locIdEnc}/emergencyCallNotification?${orgParam}`,
+    emergencyNotif
+  );
+
+  // ================================
+  // Graceful Handling (VERY IMPORTANT)
+  // ================================
+
+  const pstnData = conn?.ok ? conn.data : null;
+  const redskyData = redskyStatus?.ok ? redskyStatus.data : null;
+  const emergencyData = emergencyNotif?.ok ? emergencyNotif.data : null;
+
+  enrichedLocations.push({
+    ...loc,
+
+    pstnConnection: pstnData || null,
+    pstnConnectionType: pstnData?.pstnConnectionType || "NONE",
+
+    redskyOrgStatus: redskyData?.orgStatus || "NOT_ENABLED",
+    redskyCompliance: redskyData?.complianceStatus || "NOT_ENABLED",
+
+    emergencyNotificationEnabled: emergencyData?.enabled ?? false
+  });
+}
       const locNumbers = numbersRaw.filter(n =>
         String(getLocId(n)) === String(locId)
       );
