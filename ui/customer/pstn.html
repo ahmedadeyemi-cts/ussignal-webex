@@ -876,8 +876,9 @@ $("btnApplyTenant").addEventListener("click", async () => {
 
 /* =========================
    NORMALIZE RAW PSTN RESPONSE
-   Expected from your worker:
-   { orgId, summary, locations:[{id,name,callingEnabled,pstnConnection}], trunks:[], numbers:[], diagnostics:[] }
+   Handles new worker structure:
+   { pstn:{ orgId, locations:[{ pstn:{ connection } }] } }
+   and preserves backward compatibility.
 ========================= */
 function normalizePstnResponse(raw){
 
@@ -886,14 +887,34 @@ function normalizePstnResponse(raw){
     const p = raw.pstn;
 
     return {
-      orgId: raw.orgId || null,
+      // 🔥 Fix orgId resolution
+      orgId: p.orgId || raw.orgId || null,
 
       summary: {
         totals: p.totals || {},
         scores: p.scores || {}
       },
 
-      locations: Array.isArray(p.locations) ? p.locations : [],
+      // 🔥 CRITICAL FIX:
+      // Map nested pstn.connection → pstnConnection
+      locations: (Array.isArray(p.locations) ? p.locations : []).map(l => ({
+        ...l,
+
+        // Frontend expects l.pstnConnection
+        pstnConnection:
+          l.pstnConnection ||
+          l.pstn?.connection ||
+          l.pstn?.connectionOptions ||
+          null,
+
+        // Optional display name alias (safe)
+        pstnDisplayName:
+          l.pstnDisplayName ||
+          l.pstn?.displayName ||
+          l.pstn?.connection?.displayName ||
+          null
+      })),
+
       trunks: Array.isArray(p.trunks) ? p.trunks : [],
       numbers: Array.isArray(p.numbers) ? p.numbers : [],
       routeGroups: Array.isArray(p.routeGroups) ? p.routeGroups : [],
@@ -908,11 +929,19 @@ function normalizePstnResponse(raw){
     };
   }
 
-  // Legacy format fallback
+  // Legacy format fallback (unchanged structure)
   return {
     orgId: raw?.orgId || null,
     summary: raw?.summary || {},
-    locations: Array.isArray(raw?.locations) ? raw.locations : [],
+
+    locations: (Array.isArray(raw?.locations) ? raw.locations : []).map(l => ({
+      ...l,
+      pstnConnection:
+        l.pstnConnection ||
+        l.pstn?.connection ||
+        null
+    })),
+
     trunks: Array.isArray(raw?.trunks) ? raw.trunks : [],
     numbers: Array.isArray(raw?.numbers) ? raw.numbers : [],
     routeGroups: Array.isArray(raw?.routeGroups) ? raw.routeGroups : [],
@@ -926,7 +955,13 @@ function normalizePstnResponse(raw){
 ========================= */
 function safeLower(v){ return String(v||"").toLowerCase(); }
 function classifyPstnTypeFromConn(conn){
-  const t = String(conn?.connectionType || conn?.type || conn?.pstnType || "").toUpperCase();
+  const t = String(
+  conn?.pstnConnectionType ||   // 🔥 THIS is what your Postman shows
+  conn?.connectionType ||
+  conn?.type ||
+  conn?.pstnType ||
+  ""
+).toUpperCase();
   if(!t) return "UNKNOWN";
   if(t.includes("NO_PSTN") || t.includes("NONE")) return "NO_PSTN";
   if(t.includes("LOCAL") || t.includes("GATEWAY") || t.includes("PREMISE")) return "LOCAL_GATEWAY";
