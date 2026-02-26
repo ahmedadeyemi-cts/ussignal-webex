@@ -32,7 +32,6 @@ const JSON_HEADERS = {
   "content-type": "application/json",
   "cache-control": "no-store",
 };
-const FAKE_CLIENT_SECRET = "ZYDPLLBWSK3MVQJSIYHB1OR2JXCY0X2C5UJ2QAR2MAAIT5Q"
 // =============================================
 // Webex API Base URLs
 // =============================================
