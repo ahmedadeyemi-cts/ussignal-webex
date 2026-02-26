@@ -12,7 +12,7 @@
  * - KV: WEBEX
  * - KV: ORG_MAP_KV
  * - KV: USER_SESSION_KV
- *
+ * Password: WestcliffClass7$tudents
  * Required env vars:
  * - CLIENT_ID
  * - CLIENT_SECRET
