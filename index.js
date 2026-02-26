@@ -5711,14 +5711,17 @@ if (
   // -----------------------------------------------------
   // Cache controls
   // -----------------------------------------------------
-  const ttl = clampInt(url.searchParams.get("ttl"), 180, 60, 900);
-  const cacheKey = `pstn_summary:${resolvedOrgId}`;
+ // Cache controls
+const ttl = clampInt(url.searchParams.get("ttl"), 180, 60, 900);
 
-  const cached = await cacheGetJson(cacheKey);
-  if (cached) {
-    return json({ ...cached, _cache: "HIT" }, 200);
-  }
+// Build a stable cache *Request* (varies by orgId because it's in the URL)
+// Add a suffix so you can version/invalidate later if the payload shape changes.
+const cacheReq = cacheKeyFromRequest(request, `pstn_summary:v1:${resolvedOrgId}`);
 
+const cached = await cacheGetJson(cacheReq);
+if (cached) {
+  return json({ ...cached, _cache: "HIT" }, 200);
+}
   // -----------------------------------------------------
   // Safe Webex wrapper (always scoped)
   // -----------------------------------------------------
@@ -6019,14 +6022,17 @@ const locationsRaw = Array.isArray(locRes.data?.items)
 
       const locId = loc.id;
 
-      const conn = await safe(`/telephony/pstn/locations/${locId}/connection`);
-      diag(`pstn/locations/${locId}/connection`, conn);
+  // IMPORTANT: encode the locationId because it contains "/"
+  const locIdEnc = encodeURIComponent(locId);
 
-      const redskyStatus = await safe(`/telephony/config/locations/${locId}/redSky/status`);
-      diag(`locations/${locId}/redSky/status`, redskyStatus);
+  const conn = await safe(`/telephony/pstn/locations/${locIdEnc}/connection`);
+  diag(`telephony/pstn/locations/${locIdEnc}/connection`, conn);
 
-      const emergencyNotif = await safe(`/telephony/config/locations/${locId}/emergencyCallNotification`);
-      diag(`locations/${locId}/emergencyCallNotification`, emergencyNotif);
+  const redskyStatus = await safe(`/telephony/config/locations/${locIdEnc}/redSky/status`);
+  diag(`telephony/config/locations/${locIdEnc}/redSky/status`, redskyStatus);
+
+  const emergencyNotif = await safe(`/telephony/config/locations/${locIdEnc}/emergencyCallNotification`);
+  diag(`telephony/config/locations/${locIdEnc}/emergencyCallNotification`, emergencyNotif);
 
       const locNumbers = numbersRaw.filter(n =>
         String(getLocId(n)) === String(locId)
