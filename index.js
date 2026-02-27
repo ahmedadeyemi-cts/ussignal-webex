@@ -1108,7 +1108,7 @@ async function renderCustomerPSTNHTML() {
 }
 async function renderCustomerCALLINGINSIGHTHTML() {
   const res = await fetch(
-    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/callingInsight.html"
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/callinginsight.html"
   );
   if (!res.ok) throw new Error("Failed to load Calling Insight UI");
   return await res.text();
