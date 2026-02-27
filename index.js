@@ -314,7 +314,8 @@ function scopeModeForPath(path) {
   const rule = ORG_SCOPE_RULES.find(r => r.test(p));
   return rule ? rule.mode : "header";
 }
-async function webexFetch(env, path, orgId = null) {
+async function webexFetch(env, path, orgId = null, options = {}) {
+
   if (orgId) {
     await ensureDelegation(env, orgId);
   }
@@ -322,7 +323,6 @@ async function webexFetch(env, path, orgId = null) {
   const token = await getAccessToken(env);
   const mode = scopeModeForPath(path);
 
-  // Build finalPath (only mutate for query mode)
   let finalPath = path;
 
   if (orgId && mode === "query") {
@@ -330,8 +330,6 @@ async function webexFetch(env, path, orgId = null) {
     finalPath = `${finalPath}${sep}orgId=${encodeURIComponent(orgId)}`;
   }
 
-  // Decide which base host to call
-  // Expand analytics detection to cover the patterns you’re using / may use
   const isAnalytics =
     finalPath.startsWith("/analytics") ||
     finalPath.startsWith("/calling/analytics") ||
@@ -343,34 +341,38 @@ async function webexFetch(env, path, orgId = null) {
 
   const headers = {
     Authorization: `Bearer ${token}`,
-    Accept: "application/json"
+    Accept: "application/json",
+    ...(options.headers || {})
   };
 
-  /**
-   * 🔥 Key Fix:
-   * For analytics-host calls (cdr_feed / analytics), always include X-Organization-Id
-   * Many tenants will return empty/403/partial without it.
-   */
+  // Auto-set JSON header if body exists
+  if (options.body && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
   if (orgId && isAnalytics) {
     headers["X-Organization-Id"] = orgId;
   }
 
-  // Keep your existing behavior for header-mode endpoints
   if (orgId && mode === "header") {
     headers["X-Organization-Id"] = orgId;
   }
 
   console.log("WEBEX CALL:", {
     url,
-    mode,
-    base,
+    method: options.method || "GET",
     orgId: orgId ? "yes" : "no",
     isAnalytics
   });
 
-  const res = await fetch(url, { headers });
+  const res = await fetch(url, {
+    method: options.method || "GET",
+    headers,
+    body: options.body || null
+  });
+
   const text = await res.text();
-  const preview = text.slice(0, 400);
+  const preview = text.slice(0, 500);
 
   try {
     const data = JSON.parse(text);
@@ -395,25 +397,31 @@ function pickItems(payload) {
 }
 
 // Safe wrapper: never throws, returns ok/status/data/preview/error
-async function webexFetchSafe(env, path, orgId) {
+async function webexFetchSafe(env, path, orgId = null, options = {}) {
   try {
-    const r = await webexFetch(env, path, orgId);
+    const r = await webexFetch(env, path, orgId, options);
+
     if (!r.ok) {
       return {
         ok: false,
         status: r.status,
-        error: "webex_failed",
-        preview: r.preview,
+        error: r.preview || "webex_failed",
         data: null
       };
     }
-    return { ok: true, status: r.status, data: r.data, preview: r.preview };
+
+    return {
+      ok: true,
+      status: r.status,
+      data: r.data,
+      preview: r.preview
+    };
+
   } catch (e) {
     return {
       ok: false,
       status: 0,
-      error: "exception",
-      preview: String(e?.message || e),
+      error: String(e?.message || e),
       data: null
     };
   }
