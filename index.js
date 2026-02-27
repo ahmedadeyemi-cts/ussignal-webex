@@ -232,6 +232,9 @@ const ORG_SCOPE_RULES = [
   { test: (p) => p.startsWith("/analytics/"), mode: "query" },
   { test: (p) => p.startsWith("/cdr") || p.startsWith("/cdr_feed"), mode: "query" },
 
+ // ✅ Reports API uses orgId as query param (matches your Postman example)
+  { test: (p) => p === "/reports" || p.startsWith("/reports?") || p.startsWith("/reports/"), mode: "query" },
+ 
   // These *often* work best with query orgId in partner scenarios
   { test: (p) => p === "/licenses" || p.startsWith("/licenses?"), mode: "query" },
   { test: (p) => p === "/devices" || p.startsWith("/devices?"), mode: "query" },
@@ -2266,7 +2269,13 @@ async function runDailyPartnerReports(env, ctx, { fanout = 6 } = {}) {
     const licenses = await buildLicensesDaily(env, orgId);
     const analytics = await buildAnalyticsDaily(env, orgId);
     const sla = await buildSlaDaily(env, orgId);
-
+    // ✅ Calling Insight: Reports API (7d rolling media + quality)
+    try {
+      await runCallingInsightForOrg(env, orgId, o.orgName);
+    } catch (e) {
+      // Don’t fail the whole daily job if reports are delayed/unsupported
+      console.log("Calling Insight failed:", orgId, String(e?.message || e));
+    }
     // Persist daily reports with retention
     await writeReport(env, {
       type: "pstn_daily",
@@ -4035,6 +4044,107 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
 
   return json({ status: "sent", to: toEmail });
 }
+     /* =========================
+   CALLING INSIGHT API (Reports + KV Rollups)
+   Routes:
+   - GET  /api/calling-insight/rollup?kind=media7d|quality7d&orgId=...
+   - GET  /api/calling-insight/alerts?orgId=...
+   - GET  /api/calling-insight/reports?orgId=...
+   - POST /api/calling-insight/reports  (admin only) { title,startDate,endDate, orgId? }
+   - POST /api/calling-insight/ingest   (admin only) { orgId }
+========================= */
+if (url.pathname === "/api/calling-insight/rollup" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  const session = await getSession(env, user.email);
+  if (!session) return json({ ok:false, error:"unauthorized" }, 401);
+
+  const kind = url.searchParams.get("kind") || "media7d";
+
+  // orgId: customer = session org; admin may pass orgId
+  const orgId =
+    session.role === "admin"
+      ? (url.searchParams.get("orgId") || session.orgId || null)
+      : (session.orgId || null);
+
+  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 200);
+
+  const raw = await env.WEBEX.get(CALLING_INSIGHT.kv.rollup(orgId, kind));
+  const data = raw ? JSON.parse(raw) : null;
+
+  return json({ ok:true, orgId, kind, data }, 200);
+}
+
+if (url.pathname === "/api/calling-insight/alerts" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  const session = await getSession(env, user.email);
+  if (!session) return json({ ok:false, error:"unauthorized" }, 401);
+
+  const orgId =
+    session.role === "admin"
+      ? (url.searchParams.get("orgId") || session.orgId || null)
+      : (session.orgId || null);
+
+  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 200);
+
+  const raw = await env.WEBEX.get(CALLING_INSIGHT.kv.alerts(orgId));
+  const data = raw ? JSON.parse(raw) : { orgId, alerts:[], updatedAt:null };
+
+  return json({ ok:true, orgId, data }, 200);
+}
+
+if (url.pathname === "/api/calling-insight/reports" && request.method === "GET") {
+  const user = getCurrentUser(request);
+  const session = await getSession(env, user.email);
+  if (!session) return json({ ok:false, error:"unauthorized" }, 401);
+
+  const orgId =
+    session.role === "admin"
+      ? (url.searchParams.get("orgId") || session.orgId || null)
+      : (session.orgId || null);
+
+  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 200);
+
+  const r = await webexFetchSafe(env, "/reports", orgId);
+  return json({ ok:r.ok, orgId, data: r.data || null, preview: r.preview || null, error: r.error || null }, 200);
+}
+
+if (url.pathname === "/api/calling-insight/reports" && request.method === "POST") {
+  const user = getCurrentUser(request);
+  const session = await getSession(env, user.email);
+  if (!session) return json({ ok:false, error:"unauthorized" }, 401);
+  if (session.role !== "admin") return json({ ok:false, error:"forbidden_admin_only" }, 403);
+
+  const body = await request.json().catch(()=> ({}));
+
+  const orgId = body.orgId || url.searchParams.get("orgId") || null;
+  const title = body.title || CALLING_INSIGHT.TITLES.MEDIA;
+  const startDate = body.startDate || dateISO(7);
+  const endDate = body.endDate || dateISO(0);
+
+  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 200);
+
+  const r = await webexFetchSafe(env, "/reports", orgId, {
+    method:"POST",
+    body: JSON.stringify({ title, startDate, endDate, scheduleFrom:"api" })
+  });
+
+  return json({ ok:r.ok, orgId, data:r.data || null, preview:r.preview || null, error:r.error || null }, 200);
+}
+
+if (url.pathname === "/api/calling-insight/ingest" && request.method === "POST") {
+  const user = getCurrentUser(request);
+  const session = await getSession(env, user.email);
+  if (!session) return json({ ok:false, error:"unauthorized" }, 401);
+  if (session.role !== "admin") return json({ ok:false, error:"forbidden_admin_only" }, 403);
+
+  const body = await request.json().catch(()=> ({}));
+  const orgId = body.orgId || url.searchParams.get("orgId") || null;
+  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 200);
+
+  // Force a poll/ingest pass (useful for testing)
+  const out = await ciPollAndIngestPending(env, orgId, null);
+  return json({ ok:true, orgId, out }, 200);
+}
 /* =====================================================
    Tenant Resolution
 ===================================================== */
@@ -4810,7 +4920,7 @@ function parseCsvToJson(csvText, { maxRows = 50000 } = {}) {
     rows.push(row);
   }
 
-  const headers = (rows.shift() || []).map(h => String(h || "").trim());
+  const headers = (rows.shift() || []).map(h => String(h || "").replace(/^\ufeff/, "").trim());
   const out = rows
     .filter(r => r.some(x => String(x || "").trim() !== ""))
     .map(r => {
@@ -4822,6 +4932,317 @@ function parseCsvToJson(csvText, { maxRows = 50000 } = {}) {
     });
 
   return { headers, rows: out };
+}
+     /* =========================
+   CALLING INSIGHT (REPORTS API) — 7D ROLLUPS + ALERTS
+   - Creates reports via POST /reports (orgId query-mode)
+   - Polls GET /reports/{id}
+   - Downloads CSV from downloadURL
+   - Parses CSV -> JSON -> rollups (MOS/Jitter/Packet Loss)
+   - Stores in KV for dashboards
+========================= */
+
+const CALLING_INSIGHT = {
+  // Titles must match what Webex returns in /reports list
+  TITLES: {
+    MEDIA: "Calling Media Quality Report",
+    QUALITY: "Calling Quality Report",
+    CQ_STATS: "Call Queue Stats Report",
+    CQ_AGENT: "Call Queue agent stats report",
+    AA_SUMMARY: "Auto-attendant stats summary",
+    AA_BIZ_AH: "Auto-attendant business & after-hours key details"
+  },
+
+  // KV keys
+  kv: {
+    pending: (orgId) => `ci:pending:v1:${orgId}`,                 // JSON array of pending report jobs
+    rollup: (orgId, kind) => `ci:rollup:v1:${orgId}:${kind}`,     // JSON rollup payload
+    alerts: (orgId) => `ci:alerts:v1:${orgId}`,                   // JSON alerts array
+    lastCreate: (orgId, title) => `ci:lastcreate:v1:${orgId}:${title}:${dayKeyUTC()}` // daily idempotency
+  }
+};
+
+function dateISO(daysAgo = 0) {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - daysAgo);
+  return d.toISOString().slice(0, 10);
+}
+
+function normalizeNum(v) {
+  if (v == null) return null;
+  const n = Number(String(v).replace(/[^0-9.\-]/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function pickField(row, candidates) {
+  for (const c of candidates) {
+    if (row[c] != null && row[c] !== "") return row[c];
+  }
+  // case-insensitive fallback
+  const keys = Object.keys(row || {});
+  for (const c of candidates) {
+    const k = keys.find(x => String(x).toLowerCase() === String(c).toLowerCase());
+    if (k && row[k] != null && row[k] !== "") return row[k];
+  }
+  return null;
+}
+
+function percentile(arr, p) {
+  const a = (arr || []).filter(n => Number.isFinite(n)).sort((x,y)=>x-y);
+  if (!a.length) return null;
+  const idx = Math.min(a.length - 1, Math.max(0, Math.floor((p/100) * (a.length - 1))));
+  return a[idx];
+}
+
+function computeQualityRollupFromRows(rows) {
+  const mos = [];
+  const jitter = [];
+  const loss = [];
+  const latency = [];
+
+  // “Heatmap buckets” (by location/user/device if available)
+  const bucketMap = new Map();
+
+  for (const r of (rows || [])) {
+    const mosVal = normalizeNum(pickField(r, ["MOS", "Mos", "mos", "Average MOS", "Avg MOS"]));
+    const jitVal = normalizeNum(pickField(r, ["Jitter", "Jitter (ms)", "Average Jitter (ms)", "Avg Jitter (ms)"]));
+    const lossVal = normalizeNum(pickField(r, ["Packet Loss", "Packet Loss (%)", "Average Packet Loss (%)", "Loss (%)"]));
+    const latVal = normalizeNum(pickField(r, ["Latency", "Latency (ms)", "Round Trip Time (ms)", "RTT (ms)"]));
+
+    if (Number.isFinite(mosVal)) mos.push(mosVal);
+    if (Number.isFinite(jitVal)) jitter.push(jitVal);
+    if (Number.isFinite(lossVal)) loss.push(lossVal);
+    if (Number.isFinite(latVal)) latency.push(latVal);
+
+    const loc =
+      pickField(r, ["Location", "Site", "Calling Location", "Location Name"]) ||
+      "Unknown";
+    const who =
+      pickField(r, ["User", "User Name", "Email", "Calling Line ID"]) ||
+      pickField(r, ["Device", "Device Name", "MAC", "Phone"]) ||
+      "Unknown";
+
+    const bucketKey = `${loc} | ${who}`;
+    const b = bucketMap.get(bucketKey) || { loc, who, count:0, mos:[], jitter:[], loss:[], latency:[] };
+    b.count++;
+    if (Number.isFinite(mosVal)) b.mos.push(mosVal);
+    if (Number.isFinite(jitVal)) b.jitter.push(jitVal);
+    if (Number.isFinite(lossVal)) b.loss.push(lossVal);
+    if (Number.isFinite(latVal)) b.latency.push(latVal);
+    bucketMap.set(bucketKey, b);
+  }
+
+  const buckets = [...bucketMap.values()].map(b => ({
+    loc: b.loc,
+    who: b.who,
+    samples: b.count,
+    mosAvg: b.mos.length ? Number((b.mos.reduce((a,n)=>a+n,0)/b.mos.length).toFixed(2)) : null,
+    jitterP95: percentile(b.jitter, 95),
+    lossP95: percentile(b.loss, 95),
+    latencyP95: percentile(b.latency, 95)
+  }));
+
+  // “Top offenders” sorting: low MOS first, then high jitter/loss
+  buckets.sort((a,b) => {
+    const am = a.mosAvg ?? 999;
+    const bm = b.mosAvg ?? 999;
+    if (am !== bm) return am - bm;
+    const aj = a.jitterP95 ?? -1;
+    const bj = b.jitterP95 ?? -1;
+    if (aj !== bj) return bj - aj;
+    const al = a.lossP95 ?? -1;
+    const bl = b.lossP95 ?? -1;
+    return (bl - al);
+  });
+
+  const mosAvg = mos.length ? Number((mos.reduce((a,n)=>a+n,0)/mos.length).toFixed(2)) : null;
+  const jitterP95 = percentile(jitter, 95);
+  const lossP95 = percentile(loss, 95);
+  const latencyP95 = percentile(latency, 95);
+
+  return {
+    summary: {
+      samples: rows?.length || 0,
+      mosAvg,
+      jitterP95,
+      lossP95,
+      latencyP95
+    },
+    bucketsTop: buckets.slice(0, 50) // keep payload bounded
+  };
+}
+
+function buildAlertsFromRollup(rollup) {
+  const s = rollup?.summary || {};
+  const alerts = [];
+
+  // Basic thresholds (tune later)
+  if (s.mosAvg != null && s.mosAvg < 3.6) alerts.push({ severity:"bad", signal:"MOS_LOW", value:s.mosAvg, threshold:"< 3.6" });
+  if (s.jitterP95 != null && s.jitterP95 > 30) alerts.push({ severity:"warn", signal:"JITTER_HIGH_P95", value:s.jitterP95, threshold:"> 30ms" });
+  if (s.lossP95 != null && s.lossP95 > 2) alerts.push({ severity:"warn", signal:"LOSS_HIGH_P95", value:s.lossP95, threshold:"> 2%" });
+  if (s.latencyP95 != null && s.latencyP95 > 200) alerts.push({ severity:"warn", signal:"LATENCY_HIGH_P95", value:s.latencyP95, threshold:"> 200ms" });
+
+  // Hotspots: any top bucket very bad MOS
+  const worst = (rollup?.bucketsTop || [])[0];
+  if (worst?.mosAvg != null && worst.mosAvg < 3.2) {
+    alerts.push({
+      severity:"bad",
+      signal:"HOTSPOT_WORST_BUCKET",
+      value: { loc: worst.loc, who: worst.who, mosAvg: worst.mosAvg },
+      threshold:"bucket MOS < 3.2"
+    });
+  }
+
+  return alerts;
+}
+
+async function ciQueuePending(env, orgId, job) {
+  const key = CALLING_INSIGHT.kv.pending(orgId);
+  const raw = await env.WEBEX.get(key);
+  const arr = raw ? (JSON.parse(raw) || []) : [];
+  arr.push(job);
+  await env.WEBEX.put(key, JSON.stringify(arr), { expirationTtl: 60 * 60 * 24 * 10 }); // keep 10d
+  return arr;
+}
+
+async function ciLoadPending(env, orgId) {
+  const raw = await env.WEBEX.get(CALLING_INSIGHT.kv.pending(orgId));
+  const arr = raw ? (JSON.parse(raw) || []) : [];
+  return Array.isArray(arr) ? arr : [];
+}
+
+async function ciSavePending(env, orgId, arr) {
+  await env.WEBEX.put(CALLING_INSIGHT.kv.pending(orgId), JSON.stringify(arr || []), { expirationTtl: 60 * 60 * 24 * 10 });
+}
+
+async function ciCreateReportIfNeeded(env, orgId, title, startDate, endDate) {
+  // daily idempotency
+  const lockKey = CALLING_INSIGHT.kv.lastCreate(orgId, title);
+  const already = await env.WEBEX.get(lockKey);
+  if (already) return { ok:true, skipped:true, reason:"already_created_today" };
+
+  // Create report
+  const body = { title, startDate, endDate, scheduleFrom: "api" };
+  const r = await webexFetchSafe(env, "/reports", orgId, { method:"POST", body: JSON.stringify(body) });
+
+  if (!r.ok) return { ok:false, diag: diag("reports/create", r) };
+
+  const reportId = r.data?.Id || r.data?.id || r.data?.reportId;
+  if (!reportId) return { ok:false, error:"missing_report_id", preview: r.preview };
+
+  await env.WEBEX.put(lockKey, "1", { expirationTtl: 60 * 60 * 24 }); // 24h
+
+  // Queue pending job
+  await ciQueuePending(env, orgId, {
+    reportId,
+    title,
+    startDate,
+    endDate,
+    createdAt: new Date().toISOString(),
+    state: "PENDING"
+  });
+
+  return { ok:true, reportId };
+}
+
+async function ciPollAndIngestPending(env, orgId, orgName) {
+  const pending = await ciLoadPending(env, orgId);
+  if (!pending.length) return { ok:true, ingested:0, remaining:0 };
+
+  const keep = [];
+  let ingested = 0;
+
+  for (const job of pending) {
+    const reportId = job.reportId;
+    if (!reportId) continue;
+
+    const d = await webexFetchSafe(env, `/reports/${encodeURIComponent(reportId)}`, orgId);
+    if (!d.ok) { keep.push(job); continue; }
+
+    const status = String(d.data?.status || "").toLowerCase();
+    const downloadURL = d.data?.downloadURL || d.data?.downloadUrl || null;
+
+    if (status !== "done" || !downloadURL) {
+      keep.push({ ...job, state:"WAITING", lastStatus: d.data?.status || null });
+      continue;
+    }
+
+    // Download CSV from downloadURL (not webexapis host)
+    const token = await getAccessToken(env);
+    const csvRes = await fetch(downloadURL, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "text/csv" }
+    });
+    const csvText = await csvRes.text();
+
+    if (!csvRes.ok || !csvText) {
+      keep.push({ ...job, state:"DOWNLOAD_FAILED", httpStatus: csvRes.status });
+      continue;
+    }
+
+    // Parse CSV -> JSON rows (you already have parseCsvToJson)
+    const parsed = parseCsvToJson(csvText);
+    const rollup = computeQualityRollupFromRows(parsed.rows || []);
+    const alerts = buildAlertsFromRollup(rollup);
+
+    // Store rollup + alerts to KV
+    const kind =
+      job.title === CALLING_INSIGHT.TITLES.MEDIA ? "media7d" :
+      job.title === CALLING_INSIGHT.TITLES.QUALITY ? "quality7d" :
+      "other";
+
+    await env.WEBEX.put(
+      CALLING_INSIGHT.kv.rollup(orgId, kind),
+      JSON.stringify({
+        orgId,
+        orgName: orgName || null,
+        kind,
+        title: job.title,
+        startDate: job.startDate,
+        endDate: job.endDate,
+        generatedAt: new Date().toISOString(),
+        rollup
+      }),
+      { expirationTtl: 60 * 60 * 24 * 10 } // keep 10 days
+    );
+
+    await env.WEBEX.put(
+      CALLING_INSIGHT.kv.alerts(orgId),
+      JSON.stringify({
+        orgId,
+        orgName: orgName || null,
+        updatedAt: new Date().toISOString(),
+        alerts
+      }),
+      { expirationTtl: 60 * 60 * 24 * 10 }
+    );
+
+    // Also persist as a daily report artifact (optional, consistent with your pipeline)
+    await writeReport(env, {
+      type: `calling_insight_${kind}`,
+      orgId,
+      day: dayKeyUTC(),
+      payload: { rollup, alerts, startDate: job.startDate, endDate: job.endDate, title: job.title },
+      meta: { orgName: orgName || null, reportId }
+    });
+
+    ingested++;
+  }
+
+  await ciSavePending(env, orgId, keep);
+  return { ok:true, ingested, remaining: keep.length };
+}
+
+// Runs inside your daily scheduled loop for each org
+async function runCallingInsightForOrg(env, orgId, orgName) {
+  const startDate = dateISO(7);
+  const endDate = dateISO(0);
+
+  // Create reports (idempotent daily)
+  await ciCreateReportIfNeeded(env, orgId, CALLING_INSIGHT.TITLES.MEDIA, startDate, endDate);
+  await ciCreateReportIfNeeded(env, orgId, CALLING_INSIGHT.TITLES.QUALITY, startDate, endDate);
+
+  // Poll/ingest any completed pending reports
+  return await ciPollAndIngestPending(env, orgId, orgName);
 }
       /* -----------------------------
          /api/admin/pin/list (POST)
