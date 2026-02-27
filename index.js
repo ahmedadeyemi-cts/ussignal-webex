@@ -38,7 +38,7 @@ const JSON_HEADERS = {
 
 const WEBEX_API_BASE_DEFAULT = "https://webexapis.com/v1";
 
-const ANALYTICS_BASE_DEFAULT = "https://analytics.webexapis.com/v1";
+const ANALYTICS_BASE_DEFAULT = "https://webexapis.com/v1";
 // If you prefer the partner host instead, set:
 // WEBEX_ANALYTICS_BASE = https://analytics-calling.webexapis.com/v1
 
