@@ -3664,7 +3664,15 @@ if (!allowed) return json({ error: "admin_only" }, 403);
     ).length;
   }
 
-  return json({ orgId, deficit, offline });
+ return new Response(
+  JSON.stringify({ orgId, deficit, offline }),
+  {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"
+    }
+  }
+);
 }
       /* -----------------------------
          /api/org
