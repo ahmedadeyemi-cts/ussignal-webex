@@ -1191,6 +1191,7 @@ async function selectReport(id){
   SELECTED_REPORT_CSV = null;
   SELECTED_REPORT_ROWS = null;
   SELECTED_METRICS = null;
+  AI_LAST = null;
 
   $("btnPoll").disabled = false;
   $("btnLoadCsv").disabled = false;
@@ -1890,7 +1891,20 @@ $("btnRefreshModal").addEventListener("click", async ()=>{
 function renderModalContent(){
   const r = SELECTED_REPORT;
   const m = SELECTED_METRICS;
-  const ai = generateAISummary(m, SELECTED_REPORT);
+  let ai = null;
+
+// Prefer worker AI if already generated
+if(AI_LAST && AI_LAST.summaryText){
+  ai = {
+    execSummary: AI_LAST.summaryText,
+    techPlan: (AI_LAST.nextActions || []),
+    reasoning: (AI_LAST.likelyRootCauses || []).map(x => x.cause),
+    confidence: AI_LAST.confidence || 80
+  };
+} else {
+  // fallback to local heuristic engine
+  ai = generateAISummary(m, SELECTED_REPORT);
+}
 
   $("modalTitle").textContent = r ? (r.title || "Report") : "Report";
   $("modalSub").textContent = r ? `Status: ${r.status} • Range: ${r.startDate} → ${r.endDate} • Created: ${r.created}` : "—";
@@ -2385,8 +2399,10 @@ async function buildExecutiveRollup(){
 }
 
 function renderExecutiveDashboard(data){
-
+const existing = document.getElementById("execRollup");
+if(existing) existing.remove();
   const container = document.createElement("div");
+container.id = "execRollup";
   container.className = "card";
   container.innerHTML = `<h2>Executive Multi-Tenant Overview</h2>`;
 
