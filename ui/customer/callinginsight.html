@@ -364,7 +364,7 @@ html[data-theme="dark"] pre{background:#050a14}
 
     <div class="pill" id="tenantPill">Tenant: <strong>—</strong></div>
     <div class="pill" id="sessionPill">Session: <strong>—</strong></div>
-    <div class="pill" id="livePill">Live: <strong>Polling</strong></div>
+    <div class="pill" id="livePill">Live: <strong>Enterprise Auto</strong></div>
 
     <button class="btn primary" id="btnLogout">Logout</button>
   </div>
@@ -610,6 +610,113 @@ html[data-theme="dark"] pre{background:#050a14}
 </div>
 
 <script>
+  /* ============================================================
+   AI TROUBLESHOOTING ENGINE
+   - Root cause inference
+   - Executive + Technical summaries
+   - Confidence scoring
+============================================================ */
+
+function generateAISummary(metrics, report){
+
+  if(!metrics) return null;
+
+  const s = metrics.stats || {};
+  const mos = s.mosAvg;
+  const jit = s.jitterP95;
+  const loss = s.lossP95;
+  const lat = s.latencyP95;
+
+  let root = "unknown";
+  let confidence = 60;
+  let reasoning = [];
+
+  // === ROOT CAUSE INFERENCE ENGINE ===
+
+  if(loss != null && loss > 5){
+    root = "packet_loss";
+    confidence = 90;
+    reasoning.push("High packet loss strongly correlates with MOS degradation.");
+  }
+  else if(jit != null && jit > 35){
+    root = "jitter";
+    confidence = 82;
+    reasoning.push("Elevated jitter likely impacting audio buffering.");
+  }
+  else if(lat != null && lat > 220){
+    root = "latency";
+    confidence = 75;
+    reasoning.push("High RTT suggests routing or geographic media anchoring issue.");
+  }
+  else if(mos != null && mos < 3.8){
+    root = "endpoint_or_wifi";
+    confidence = 65;
+    reasoning.push("MOS degradation without dominant network spike suggests endpoint/Wi-Fi.");
+  }
+  else{
+    root = "stable";
+    confidence = 55;
+    reasoning.push("No dominant impairment detected.");
+  }
+
+  // === EXECUTIVE SUMMARY ===
+  let execSummary = "";
+  if(root === "packet_loss"){
+    execSummary = "Voice quality degradation is primarily driven by packet loss, likely caused by WAN congestion or dropped packets on network interfaces.";
+  }
+  else if(root === "jitter"){
+    execSummary = "Call instability appears driven by jitter variation, typically associated with Wi-Fi contention or bufferbloat.";
+  }
+  else if(root === "latency"){
+    execSummary = "High latency suggests routing inefficiency or cross-region media anchoring.";
+  }
+  else if(root === "endpoint_or_wifi"){
+    execSummary = "Quality impact appears endpoint or Wi-Fi related rather than core network impairment.";
+  }
+  else{
+    execSummary = "Overall quality posture appears stable with no systemic impairment detected.";
+  }
+
+  // === TECHNICAL REMEDIATION PLAN ===
+  let techPlan = [];
+
+  if(root === "packet_loss"){
+    techPlan.push("Validate QoS markings end-to-end (EF for RTP).");
+    techPlan.push("Check WAN interface drops and queue tail drops.");
+    techPlan.push("Verify bandwidth utilization during peak hours.");
+  }
+
+  if(root === "jitter"){
+    techPlan.push("Inspect Wi-Fi airtime utilization and retry rates.");
+    techPlan.push("Implement Smart Queue Management on WAN edge.");
+    techPlan.push("Ensure RTP prioritization in WAN scheduler.");
+  }
+
+  if(root === "latency"){
+    techPlan.push("Review routing path and avoid VPN hairpin scenarios.");
+    techPlan.push("Validate media region alignment in Control Hub.");
+    techPlan.push("Check MPLS/Internet path stability.");
+  }
+
+  if(root === "endpoint_or_wifi"){
+    techPlan.push("Review endpoint CPU utilization.");
+    techPlan.push("Validate local LAN/Wi-Fi signal strength.");
+    techPlan.push("Test wired vs wireless performance comparison.");
+  }
+
+  if(root === "stable"){
+    techPlan.push("Continue monitoring 7-day rolling metrics.");
+    techPlan.push("Review worst-case buckets for localized anomalies.");
+  }
+
+  return {
+    root,
+    confidence,
+    execSummary,
+    techPlan,
+    reasoning
+  };
+}
 /* ============================================================
    Calling Insight — Enterprise UI (worker-backed)
    Expectations (worker endpoints):
@@ -1745,12 +1852,28 @@ $("btnRefreshModal").addEventListener("click", async ()=>{
 function renderModalContent(){
   const r = SELECTED_REPORT;
   const m = SELECTED_METRICS;
+  const ai = generateAISummary(m, SELECTED_REPORT);
 
   $("modalTitle").textContent = r ? (r.title || "Report") : "Report";
   $("modalSub").textContent = r ? `Status: ${r.status} • Range: ${r.startDate} → ${r.endDate} • Created: ${r.created}` : "—";
 
   const insight = buildInsightNarrative(ACTIVE_TAB, r, m);
-  $("modalInsight").innerHTML = insight;
+  let aiBlock = "";
+if(ai){
+  aiBlock = `
+    <div style="margin-top:14px">
+      <h3 style="margin:0 0 6px 0;font-size:13px">AI Troubleshooting Summary</h3>
+      <div>${badge("Confidence " + ai.confidence + "%", ai.confidence>80?"good":ai.confidence>65?"warn":"neutral")}</div>
+      <div class="small" style="margin-top:8px"><b>Executive Summary:</b><br/>${escapeHtml(ai.execSummary)}</div>
+      <div class="small" style="margin-top:8px"><b>Technical Remediation:</b><br/>${ai.techPlan.map(x=>"• "+escapeHtml(x)).join("<br/>")}</div>
+      <div class="small" style="margin-top:8px;color:var(--muted)">
+        Signal reasoning: ${ai.reasoning.map(r=>escapeHtml(r)).join(" ")}
+      </div>
+    </div>
+  `;
+}
+
+$("modalInsight").innerHTML = insight + aiBlock;
 
   if(!m){
     $("modalMetrics").innerHTML = "No metrics computed yet. Load + Parse CSV to enable quality intelligence.";
