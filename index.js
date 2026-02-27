@@ -7127,6 +7127,7 @@ async scheduled(event, env, ctx) {
     console.log("Delegation warm failed for:", org.id);
   }
 });
+     ctx.waitUntil(ciBackgroundPollAll(env));
       const CONCURRENCY = 5;
       await ciAutoRefreshAllTenants(env);
       await mapLimit(orgs, CONCURRENCY, async (org) => {
@@ -7173,5 +7174,28 @@ async scheduled(event, env, ctx) {
     }
   })());
 }
+async function ciBackgroundPollAll(env) {
 
+  const orgRes = await webexFetchSafe(env, "/organizations", null);
+  if (!orgRes.ok) return;
+
+  const orgs = orgRes.data.items || [];
+
+  for (const org of orgs) {
+
+    const orgId = org.id;
+
+    const stateKey = `ci:state:${orgId}:${CALLING_INSIGHT.TITLES.MEDIA}`;
+    const raw = await env.WEBEX.get(stateKey);
+    if (!raw) continue;
+
+    const state = JSON.parse(raw);
+    if (state.status !== "inProgress") continue;
+
+    // Internal worker call (relative path)
+    await fetch(`https://ussignal-webex.onenecklab.com/api/calling-insight/poll?orgId=${orgId}`, {
+      method: "POST"
+    });
+  }
+}
 };
