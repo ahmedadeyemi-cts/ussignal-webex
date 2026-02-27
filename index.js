@@ -3665,13 +3665,21 @@ if (!allowed) return json({ error: "admin_only" }, 403);
     }
   }
 
+  let offline = 0;
+
+try {
   const devResult = await webexFetch(env, "/devices", orgId);
-  if (devResult.ok) {
-   offline = (devResult.data.items || []).filter(d => {
-  const status = String(d.connectionStatus || "").toLowerCase();
-  return status === "disconnected" || status === "offline";
-}).length;
+
+  if (devResult?.ok && Array.isArray(devResult.data?.items)) {
+    offline = devResult.data.items.filter(d => {
+      const status = String(d.connectionStatus || "").toLowerCase();
+      return status === "disconnected";
+    }).length;
   }
+} catch (e) {
+  console.error("Device fetch failed", e);
+  offline = 0;
+}
 console.log(devResult.data.items.map(d => ({
   name: d.displayName,
   status: d.connectionStatus
