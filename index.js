@@ -7174,6 +7174,7 @@ async scheduled(event, env, ctx) {
     }
   })());
 }
+ }; // 🔥 CLOSE EXPORT OBJECT HERE
 async function ciBackgroundPollAll(env) {
 
   const orgRes = await webexFetchSafe(env, "/organizations", null);
@@ -7198,4 +7199,3 @@ async function ciBackgroundPollAll(env) {
     });
   }
 }
-};
