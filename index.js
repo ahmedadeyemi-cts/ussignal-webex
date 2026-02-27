@@ -3639,16 +3639,16 @@ return json({
 });
 }
       
-if (url.pathname === "/api/admin/org-health") {
+if (url.pathname === "/api/admin/org-health" && request.method === "GET") {
+
   const secret = request.headers.get("x-admin-secret");
-const user = getCurrentUser(request);
+  const user = getCurrentUser(request);
 
-const allowed =
-  (secret && secret === env.ADMIN_SECRET) ||
-  (user?.isAdmin === true);
+  const allowed =
+    (secret && secret === env.ADMIN_SECRET) ||
+    (user?.isAdmin === true);
 
-if (!allowed) return json({ error: "admin_only" }, 403);
-
+  if (!allowed) return json({ error: "admin_only" }, 403);
 
   const orgId = url.searchParams.get("orgId");
   if (!orgId) return json({ error: "missing_orgId" }, 400);
@@ -3656,45 +3656,68 @@ if (!allowed) return json({ error: "admin_only" }, 403);
   let deficit = 0;
   let offline = 0;
 
-  const licResult = await webexFetch(env, "/licenses", orgId);
-  if (licResult.ok) {
-    for (const x of licResult.data.items || []) {
-      const total = Number(x.totalUnits ?? 0);
-      const consumed = Number(x.consumedUnits ?? 0);
-      if (Number.isFinite(total) && total >= 0) deficit += Math.max(0, consumed - total);
+  /* --------------------------
+     LICENSE DEFICIT CALCULATION
+  -------------------------- */
+
+  try {
+    const licResult = await webexFetch(env, "/licenses", orgId);
+
+    if (licResult?.ok && Array.isArray(licResult.data?.items)) {
+      for (const x of licResult.data.items) {
+        const total = Number(x.totalUnits ?? 0);
+        const consumed = Number(x.consumedUnits ?? 0);
+
+        if (Number.isFinite(total) && total >= 0) {
+          deficit += Math.max(0, consumed - total);
+        }
+      }
     }
+  } catch (e) {
+    console.error("License fetch failed", e);
   }
 
-  let offline = 0;
+  /* --------------------------
+     DEVICE OFFLINE CALCULATION
+     (MATCHES /api/devices LOGIC)
+  -------------------------- */
 
-try {
-  const devResult = await webexFetch(env, "/devices", orgId);
+  try {
+    const devResult = await webexFetch(env, "/devices", orgId);
 
-  if (devResult?.ok && Array.isArray(devResult.data?.items)) {
-    offline = devResult.data.items.filter(d => {
-      const status = String(d.connectionStatus || "").toLowerCase();
-      return status === "disconnected";
-    }).length;
-  }
-} catch (e) {
-  console.error("Device fetch failed", e);
-  offline = 0;
-}
-}
-console.log(devResult.data.items.map(d => ({
-  name: d.displayName,
-  status: d.connectionStatus
-})));
- 
- return new Response(
-  JSON.stringify({ orgId, deficit, offline }),
-  {
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"
+    if (devResult?.ok && Array.isArray(devResult.data?.items)) {
+
+      for (const d of devResult.data.items) {
+
+        const connection = String(d.connectionStatus || "").toLowerCase();
+
+        const isOnline =
+          connection.includes("connected") ||
+          connection.includes("online") ||
+          connection.includes("registered");
+
+        const isOffline =
+          connection.includes("offline") ||
+          connection.includes("disconnected");
+
+        if (!isOnline && isOffline) {
+          offline++;
+        }
+      }
     }
+  } catch (e) {
+    console.error("Device fetch failed", e);
   }
-);
+
+  return new Response(
+    JSON.stringify({ orgId, deficit, offline }),
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"
+      }
+    }
+  );
 }
       /* -----------------------------
          /api/org
