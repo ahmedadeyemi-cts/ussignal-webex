@@ -106,7 +106,70 @@ async function resolveOrgIdForAdmin(env, key) {
 
   return null;
 }
+async function ciPollAndProcess(env, orgId, reportType) {
 
+  const state = await ciGetReportState(env, orgId, reportType);
+  if (!state?.reportId) return null;
+
+  const r = await webexFetchSafe(env, `/reports/${encodeURIComponent(state.reportId)}`, orgId);
+
+  if (!r.ok) return null;
+
+  if (r.data.status !== "done") {
+    return { status:r.data.status };
+  }
+
+  // Download CSV
+  const csvRes = await fetch(r.data.downloadURL);
+  const csvText = await csvRes.text();
+
+  const parsed = parseCsvToJson(csvText);
+
+  // Process analytics
+  const processed = ciProcessMediaQuality(parsed.rows);
+
+  await env.WEBEX.put(
+    `ci:processed:${orgId}:${reportType}`,
+    JSON.stringify(processed),
+    { expirationTtl: 60 * 60 * 24 * 7 } // 7 days
+  );
+
+  await ciSetReportState(env, orgId, reportType, {
+    reportId: state.reportId,
+    status:"done",
+    processedAt: Date.now()
+  });
+
+  return { status:"done", rows: parsed.rows.length };
+}
+function ciProcessMediaQuality(rows) {
+
+  let total = 0;
+  let mosSum = 0;
+  let jitterSum = 0;
+  let packetLossSum = 0;
+
+  for (const r of rows) {
+
+    const mos = parseFloat(r["MOS"] || r["Average MOS"] || 0);
+    const jitter = parseFloat(r["Jitter (ms)"] || r["Average Jitter"] || 0);
+    const loss = parseFloat(r["Packet Loss (%)"] || 0);
+
+    if (!isNaN(mos)) mosSum += mos;
+    if (!isNaN(jitter)) jitterSum += jitter;
+    if (!isNaN(loss)) packetLossSum += loss;
+
+    total++;
+  }
+
+  return {
+    totalCalls: total,
+    avgMOS: total ? (mosSum / total) : 0,
+    avgJitter: total ? (jitterSum / total) : 0,
+    avgPacketLoss: total ? (packetLossSum / total) : 0,
+    generatedAt: new Date().toISOString()
+  };
+}
 async function apiCDR(env, request) {
   const url = new URL(request.url);
   const orgId = url.searchParams.get("orgId");
@@ -465,6 +528,44 @@ const STATUS_CACHE_SECONDS = 60; // 0 disables cache
 function isHtmlLike(text) {
   const t = String(text || "").trim().toLowerCase();
   return t.startsWith("<!doctype") || t.startsWith("<html") || t.includes("<div id=\"app\"");
+}
+async function ciAutoRefreshAllTenants(env) {
+
+  const orgRes = await webexFetchSafe(env, "/organizations", null);
+  if (!orgRes.ok) return;
+
+  const orgs = orgRes.data.items || [];
+
+  for (const org of orgs) {
+
+    const orgId = org.id;
+
+    const startDate = dateISO(7);
+    const endDate = dateISO(0);
+
+    // Only create if none active
+    const state = await ciGetReportState(env, orgId, CALLING_INSIGHT.TITLES.MEDIA);
+
+    if (!state || state.status === "done") {
+
+      await webexFetchSafe(
+        env,
+        "/reports",
+        orgId,
+        {
+          method:"POST",
+          body: JSON.stringify({
+            title: CALLING_INSIGHT.TITLES.MEDIA,
+            startDate,
+            endDate,
+            scheduleFrom:"api"
+          })
+        }
+      );
+    }
+
+    await ciPollAndProcess(env, orgId, CALLING_INSIGHT.TITLES.MEDIA);
+  }
 }
 
 async function fetchJsonFirstOk(urls, opts = {}) {
@@ -4059,6 +4160,18 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
 
   return json({ status: "sent", to: toEmail });
 }
+     async function ciGetReportState(env, orgId, reportType) {
+  const key = `ci:state:${orgId}:${reportType}`;
+  const raw = await env.WEBEX.get(key);
+  return raw ? JSON.parse(raw) : null;
+}
+
+async function ciSetReportState(env, orgId, reportType, data) {
+  const key = `ci:state:${orgId}:${reportType}`;
+  await env.WEBEX.put(key, JSON.stringify(data), {
+    expirationTtl: 60 * 60 * 24 // 24 hours
+  });
+}
      /* =========================
    CALLING INSIGHT API (Reports + KV Rollups)
    Routes:
@@ -4107,29 +4220,58 @@ if (url.pathname === "/api/calling-insight/alerts" && request.method === "GET") 
   return json({ ok:true, orgId, data }, 200);
 }
 
+// ============================================================
+// CALLING INSIGHT — REPORT LIST + INTELLIGENT CREATION
+// ============================================================
+
+// -------------------------------
+// GET — List reports (Cisco side)
+// -------------------------------
 if (url.pathname === "/api/calling-insight/reports" && request.method === "GET") {
+
   const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
   const session = await getSession(env, user.email);
-  if (!session) return json({ ok:false, error:"unauthorized" }, 401);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
-  const orgId =
-    session.role === "admin"
-      ? (url.searchParams.get("orgId") || session.orgId || null)
-      : (session.orgId || null);
+  let resolvedOrgId;
 
-  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 200);
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ ok:false, error:"missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) {
+      return json({ ok:false, error:"pin_required" }, 401);
+    }
+    resolvedOrgId = session.orgId;
+  }
 
-  const r = await webexFetchSafe(env, "/reports", orgId);
-  return json({ ok:r.ok, orgId, data: r.data || null, preview: r.preview || null, error: r.error || null }, 200);
+  const r = await webexFetchSafe(env, "/reports", resolvedOrgId);
+
+  return json({
+    ok: r.ok,
+    orgId: resolvedOrgId,
+    reports: r.data?.items || [],
+    numberOfReports: r.data?.numberOfReports || 0,
+    preview: r.preview || null,
+    error: r.error || null
+  }, 200);
 }
 
+
+
+// -------------------------------
+// POST — Intelligent Report Create
+// -------------------------------
 if (url.pathname === "/api/calling-insight/reports" && request.method === "POST") {
 
   const user = getCurrentUser(request);
   if (!user) return json({ ok:false, error:"access_required" }, 401);
 
   const session = await getSession(env, user.email);
-
   const body = await request.json().catch(()=> ({}));
 
   const requestedOrgId =
@@ -4139,15 +4281,12 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
 
   let resolvedOrgId;
 
-  // 🔹 Admin can pass orgId
   if (user.isAdmin) {
     if (!requestedOrgId) {
       return json({ ok:false, error:"missing_orgId" }, 400);
     }
     resolvedOrgId = requestedOrgId;
-  }
-  // 🔹 Customer uses PIN session org
-  else {
+  } else {
     if (!session?.orgId) {
       return json({ ok:false, error:"pin_required" }, 401);
     }
@@ -4158,6 +4297,23 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
   const startDate = body.startDate || dateISO(7);
   const endDate = body.endDate || dateISO(0);
 
+  const reportType = title;
+  const stateKey = `ci:state:${resolvedOrgId}:${reportType}`;
+
+  const existingRaw = await env.WEBEX.get(stateKey);
+  const existing = existingRaw ? JSON.parse(existingRaw) : null;
+
+  // ✅ Prevent duplicate creation
+  if (existing?.status === "inProgress") {
+    return json({
+      ok:true,
+      orgId: resolvedOrgId,
+      status:"already_running",
+      reportId: existing.reportId
+    }, 200);
+  }
+
+  // Create new report
   const r = await webexFetchSafe(
     env,
     "/reports",
@@ -4173,12 +4329,32 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
     }
   );
 
+  if (!r.ok) {
+    return json({
+      ok:false,
+      orgId: resolvedOrgId,
+      error:r.error,
+      preview:r.preview
+    }, 200);
+  }
+
+  const reportId = r.data?.Id || r.data?.id;
+
+  await env.WEBEX.put(
+    stateKey,
+    JSON.stringify({
+      reportId,
+      status:"inProgress",
+      createdAt: Date.now()
+    }),
+    { expirationTtl: 60 * 60 * 24 } // 24h
+  );
+
   return json({
-    ok:r.ok,
+    ok:true,
     orgId: resolvedOrgId,
-    data:r.data || null,
-    preview:r.preview || null,
-    error:r.error || null
+    status:"created",
+    reportId
   }, 200);
 }
      if (url.pathname === "/api/calling-insight/ingest" && request.method === "POST") {
@@ -5500,7 +5676,7 @@ if (url.pathname === "/api/admin/reports/csv-to-json" && request.method === "POS
 // =====================================================
 // ADMIN GLOBAL SUMMARY REFRESH
 // =====================================================
-if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "POST") {
+if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "GET") {
 
   const secret = request.headers.get("x-admin-secret");
   let user = null;
@@ -6774,7 +6950,7 @@ async scheduled(event, env, ctx) {
   }
 });
       const CONCURRENCY = 5;
-
+      await ciAutoRefreshAllTenants(env);
       await mapLimit(orgs, CONCURRENCY, async (org) => {
 
         const health = await computeTenantHealth(env, org.id);
