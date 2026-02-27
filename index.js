@@ -4357,6 +4357,184 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
     reportId
   }, 200);
 }
+     // ============================================================
+// CALLING INSIGHT — ENTERPRISE POLLING ENGINE
+// ============================================================
+
+if (url.pathname === "/api/calling-insight/poll" && request.method === "POST") {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
+  const session = await getSession(env, user.email);
+  const body = await request.json().catch(()=> ({}));
+
+  const requestedOrgId =
+    body.orgId ||
+    url.searchParams.get("orgId") ||
+    null;
+
+  let resolvedOrgId;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ ok:false, error:"missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) {
+      return json({ ok:false, error:"pin_required" }, 401);
+    }
+    resolvedOrgId = session.orgId;
+  }
+
+  const reportType = body.title || CALLING_INSIGHT.TITLES.MEDIA;
+  const stateKey = `ci:state:${resolvedOrgId}:${reportType}`;
+
+  const existingRaw = await env.WEBEX.get(stateKey);
+  if (!existingRaw) {
+    return json({ ok:false, error:"no_active_report" }, 200);
+  }
+
+  const state = JSON.parse(existingRaw);
+
+  if (!state.reportId) {
+    return json({ ok:false, error:"invalid_state" }, 200);
+  }
+
+  // ---------------------------------------------------------
+  // 1️⃣ Poll Cisco report status
+  // ---------------------------------------------------------
+
+  const r = await webexFetchSafe(
+    env,
+    `/reports/${encodeURIComponent(state.reportId)}`,
+    resolvedOrgId
+  );
+
+  if (!r.ok) {
+    return json({
+      ok:false,
+      error:r.error,
+      preview:r.preview
+    }, 200);
+  }
+
+  const status = r.data?.status;
+
+  if (status !== "done") {
+    return json({
+      ok:true,
+      orgId: resolvedOrgId,
+      status,
+      reportId: state.reportId
+    }, 200);
+  }
+
+  // ---------------------------------------------------------
+  // 2️⃣ Download CSV
+  // ---------------------------------------------------------
+
+  const downloadURL = r.data?.downloadURL;
+  if (!downloadURL) {
+    return json({ ok:false, error:"missing_download_url" }, 200);
+  }
+
+  const csvRes = await fetch(downloadURL);
+  const csvText = await csvRes.text();
+
+  // ---------------------------------------------------------
+  // 3️⃣ Parse CSV
+  // ---------------------------------------------------------
+
+  const parsed = parseCsvToJson(csvText);
+  const rows = parsed.rows || [];
+
+  // ---------------------------------------------------------
+  // 4️⃣ Process Analytics (Media Quality example)
+  // ---------------------------------------------------------
+
+  const processed = ciProcessMediaQuality(rows);
+
+  // ---------------------------------------------------------
+  // 5️⃣ Store Processed Data (7-day retention)
+  // ---------------------------------------------------------
+
+  const processedKey = `ci:processed:${resolvedOrgId}:${reportType}`;
+
+  await env.WEBEX.put(
+    processedKey,
+    JSON.stringify({
+      ...processed,
+      reportId: state.reportId,
+      rowCount: rows.length,
+      processedAt: new Date().toISOString()
+    }),
+    { expirationTtl: 60 * 60 * 24 * 7 }
+  );
+
+  // ---------------------------------------------------------
+  // 6️⃣ Update State
+  // ---------------------------------------------------------
+
+  await env.WEBEX.put(
+    stateKey,
+    JSON.stringify({
+      reportId: state.reportId,
+      status:"done",
+      processedAt: Date.now()
+    }),
+    { expirationTtl: 60 * 60 * 24 }
+  );
+
+  return json({
+    ok:true,
+    orgId: resolvedOrgId,
+    status:"processed",
+    reportId: state.reportId,
+    rows: rows.length
+  }, 200);
+}
+// ============================================================
+// CALLING INSIGHT — PROCESSED ANALYTICS FETCH
+// ============================================================
+
+if (url.pathname === "/api/calling-insight/processed" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
+  const session = await getSession(env, user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ ok:false, error:"missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) {
+      return json({ ok:false, error:"pin_required" }, 401);
+    }
+    resolvedOrgId = session.orgId;
+  }
+
+  const reportType =
+    url.searchParams.get("title") ||
+    CALLING_INSIGHT.TITLES.MEDIA;
+
+  const processedKey = `ci:processed:${resolvedOrgId}:${reportType}`;
+
+  const raw = await env.WEBEX.get(processedKey);
+
+  return json({
+    ok:true,
+    orgId: resolvedOrgId,
+    data: raw ? JSON.parse(raw) : null
+  }, 200);
+}
      if (url.pathname === "/api/calling-insight/ingest" && request.method === "POST") {
 
   const user = getCurrentUser(request);
