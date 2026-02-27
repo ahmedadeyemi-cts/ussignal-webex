@@ -3667,11 +3667,16 @@ if (!allowed) return json({ error: "admin_only" }, 403);
 
   const devResult = await webexFetch(env, "/devices", orgId);
   if (devResult.ok) {
-    offline = (devResult.data.items || []).filter(d =>
-      String(d.connectionStatus || "").toLowerCase() !== "connected"
-    ).length;
+   offline = (devResult.data.items || []).filter(d => {
+  const status = String(d.connectionStatus || "").toLowerCase();
+  return status === "disconnected" || status === "offline";
+}).length;
   }
-
+console.log(devResult.data.items.map(d => ({
+  name: d.displayName,
+  status: d.connectionStatus
+})));
+ 
  return new Response(
   JSON.stringify({ orgId, deficit, offline }),
   {
