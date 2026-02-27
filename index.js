@@ -1106,6 +1106,13 @@ async function renderCustomerPSTNHTML() {
   if (!res.ok) throw new Error("Failed to load customer PSTN UI");
   return await res.text();
 }
+async function renderCustomerCALLINGINSIGHTHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/callingInsight.html"
+  );
+  if (!res.ok) throw new Error("Failed to load Calling Insight UI");
+  return await res.text();
+}
 async function renderCustomerSUPPORTHTML() {
   const res = await fetch(
     "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/support.html"
@@ -2701,6 +2708,14 @@ if (url.pathname === "/customer/cdr" && request.method === "GET") {
 ----------------------------- */
 if (url.pathname === "/customer/pstn" && request.method === "GET") {
   return text(await renderCustomerPSTNHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
+     /* -----------------------------
+   Customer UI: Calling Insight
+----------------------------- */
+if (url.pathname === "/customer/callinginsight" && request.method === "GET") {
+  return text(await renderCustomerCALLINGINSIGHTHTML(), 200, {
     "content-type": "text/html; charset=utf-8",
   });
 }
