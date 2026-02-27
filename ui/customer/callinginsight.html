@@ -566,7 +566,36 @@ html[data-theme="dark"] pre{background:#050a14}
         </div>
       </div>
     </div>
+<!-- AI SUMMARY -->
+<div class="card">
+  <h2>AI Troubleshooting Summary</h2>
+  <div class="small" id="aiSummaryHint">
+    Generates a carrier-grade, action-oriented analysis from the selected report (MOS, jitter, loss, latency), worst buckets, and alert signals.
+    Customer users only summarize their own tenant. Admins can summarize any selected tenant.
+  </div>
 
+  <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <button class="pillBtn primary" id="btnAiSummary" disabled>Generate AI Summary</button>
+    <button class="pillBtn" id="btnAiCopy" disabled>Copy</button>
+    <button class="pillBtn" id="btnAiExport" disabled>Export JSON</button>
+
+    <span class="badge neutral" id="aiCacheBadge">CACHE: —</span>
+    <span class="badge neutral" id="aiModelBadge">MODEL: —</span>
+  </div>
+
+  <div class="small" style="margin-top:12px">
+    <b>Output</b>
+    <div id="aiSummaryBox" class="mono" style="
+      margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:14px;
+      background:rgba(15,23,42,.03);white-space:pre-wrap;line-height:1.45;
+    ">Select a report, then click “Generate AI Summary”.</div>
+  </div>
+
+  <div class="small" style="margin-top:12px">
+    <b>Suggested next checks</b>
+    <div id="aiChecklist" style="margin-top:8px">—</div>
+  </div>
+</div>
   </div>
 </div>
 
@@ -1167,6 +1196,14 @@ async function selectReport(id){
   $("btnLoadCsv").disabled = false;
   $("btnOpenModal").disabled = false;
 
+
+  setAiUiEnabled(false);
+$("aiSummaryBox").textContent = "Select “Load + Parse CSV” to enable AI summary.";
+$("aiChecklist").textContent = "—";
+$("aiCacheBadge").textContent = "CACHE: —";
+$("aiModelBadge").textContent = "MODEL: —";
+
+  
   // Attempt details refresh
   const details = await loadReportDetails(id);
   if(details) SELECTED_REPORT = details;
@@ -1273,6 +1310,7 @@ $("btnLoadCsv").addEventListener("click", async ()=>{
   SELECTED_REPORT_ROWS = parsed.rows || [];
 
   SELECTED_METRICS = extractQualityMetrics(SELECTED_REPORT_ROWS, SELECTED_REPORT.title);
+  setAiUiEnabled(true);
   renderAlertingPanel();
   renderKPIs();
   renderCanvases();
@@ -2205,7 +2243,108 @@ buildAlerts = function(args){
 
   return alerts;
 };
+/* =========================
+   AI SUMMARY (worker-backed)
+   Requires worker endpoint:
+   POST /api/calling-insight/ai/summary
+========================= */
 
+let AI_LAST = null;
+
+function setAiUiEnabled(on){
+  $("btnAiSummary").disabled = !on;
+  $("btnAiCopy").disabled = !on;
+  $("btnAiExport").disabled = !on;
+}
+
+function renderAiOutput(payload){
+  AI_LAST = payload;
+
+  const cache = payload?.cache || "MISS";
+  const model = payload?.model || "—";
+  $("aiCacheBadge").textContent = `CACHE: ${cache}`;
+  $("aiModelBadge").textContent = `MODEL: ${model}`;
+
+  const txt = payload?.summaryText || "No summary returned.";
+  $("aiSummaryBox").textContent = txt;
+
+  const checks = payload?.checks || [];
+  if(!checks.length){
+    $("aiChecklist").textContent = "—";
+    return;
+  }
+  $("aiChecklist").innerHTML = checks.slice(0,12).map(c=>{
+    return `<div style="margin-bottom:8px">• <b>${escapeHtml(c.title||"Check")}</b><div class="small">${escapeHtml(c.detail||"")}</div></div>`;
+  }).join("");
+}
+
+async function generateAiSummary(){
+  if(!SELECTED_REPORT || !SELECTED_REPORT.id){
+    pushAlert({severity:"warn", title:"Select a report", body:"Choose a report row first.", primaryText:"", primaryHref:""});
+    return;
+  }
+  if(!SELECTED_METRICS){
+    pushAlert({severity:"warn", title:"Parse required", body:"Click “Load + Parse CSV” first so the AI summary has MOS, jitter, loss, latency, and worst buckets.", primaryText:"", primaryHref:""});
+    return;
+  }
+
+  $("btnAiSummary").disabled = true;
+  $("aiSummaryBox").textContent = "Generating AI summary…";
+
+  // Minimize payload: send only derived metrics, not raw CSV rows.
+  const body = {
+    orgId: SELECTED_ORG_ID,
+    report: {
+      id: SELECTED_REPORT.id,
+      title: SELECTED_REPORT.title,
+      status: SELECTED_REPORT.status,
+      startDate: SELECTED_REPORT.startDate,
+      endDate: SELECTED_REPORT.endDate,
+      created: SELECTED_REPORT.created
+    },
+    tab: ACTIVE_TAB,
+    metrics: {
+      score: SELECTED_METRICS.score,
+      stats: SELECTED_METRICS.stats,
+      worst: (SELECTED_METRICS.worst || []).slice(0, 12),
+      alerts: (SELECTED_METRICS.alerts || []).slice(0, 12)
+    }
+  };
+
+  const r = await api(buildPath("/api/calling-insight/ai/summary"), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  $("btnAiSummary").disabled = false;
+
+  if(!r.ok || !r.data?.ok){
+    const msg = r.data?.error || `Worker returned ${r.status}`;
+    $("aiSummaryBox").textContent = `AI summary failed: ${msg}`;
+    pushAlert({severity:"bad", title:"AI summary failed", body:String(msg), primaryText:"", primaryHref:""});
+    return;
+  }
+
+  renderAiOutput(r.data);
+  pushAlert({severity:"good", title:"AI summary ready", body:"Summary generated from report metrics and worst buckets.", primaryText:"", primaryHref:""});
+}
+
+$("btnAiSummary").addEventListener("click", generateAiSummary);
+
+$("btnAiCopy").addEventListener("click", ()=>{
+  const txt = $("aiSummaryBox").textContent || "";
+  navigator.clipboard?.writeText(txt);
+  pushAlert({severity:"good", title:"Copied", body:"AI summary copied to clipboard.", primaryText:"", primaryHref:""});
+});
+
+$("btnAiExport").addEventListener("click", ()=>{
+  if(!AI_LAST){
+    pushAlert({severity:"warn", title:"Nothing to export", body:"Generate a summary first.", primaryText:"", primaryHref:""});
+    return;
+  }
+  download(`calling_insight_ai_${(SELECTED_ORG_ID||"org").slice(0,12)}_${Date.now()}.json`, JSON.stringify(AI_LAST, null, 2));
+});
 /* =========================
    EXECUTIVE MULTI-TENANT VIEW
 ========================= */
