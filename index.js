@@ -4228,6 +4228,160 @@ if (url.pathname === "/api/calling-insight/alerts" && request.method === "GET") 
   return json({ ok:true, orgId, data }, 200);
 }
 
+     // =============================
+// Calling Insight - AI Summary
+// POST /api/calling-insight/ai/summary
+// =============================
+if (url.pathname === "/api/calling-insight/ai/summary" && request.method === "POST") {
+  const user = getCurrentUser(request);
+  const session = user ? await getSession(env, user.email) : null;
+  if (!session) return json({ ok:false, error:"unauthorized" }, 401);
+
+  const body = await request.json().catch(()=> ({}));
+
+  // Resolve orgId safely
+  const requestedOrgId = body.orgId || url.searchParams.get("orgId") || null;
+  const orgId = (session.role === "admin")
+    ? (requestedOrgId || session.orgId || null)
+    : (session.orgId || null);
+
+  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 400);
+
+  // Minimal required inputs
+  const reportId = body?.report?.id || null;
+  const title = body?.report?.title || "Calling Insight";
+  const tab = body?.tab || "overview";
+  const metrics = body?.metrics || null;
+
+  if (!reportId || !metrics) {
+    return json({ ok:false, error:"missing_report_or_metrics" }, 400);
+  }
+
+  // Rate limit key (simple)
+  const rlKey = `ci:ai:rl:${user.email}:${orgId}`;
+  const rlRaw = await env.WEBEX.get(rlKey);
+  const rl = rlRaw ? JSON.parse(rlRaw) : { ts: 0, count: 0 };
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  if (now - rl.ts > windowMs) { rl.ts = now; rl.count = 0; }
+  rl.count++;
+  await env.WEBEX.put(rlKey, JSON.stringify(rl), { expirationTtl: 90 });
+  if (rl.count > 8) {
+    return json({ ok:false, error:"rate_limited", hint:"Too many AI summaries per minute" }, 429);
+  }
+
+  // Cache
+  const cacheKey = `ci:ai:summary:${orgId}:${reportId}:${tab}`;
+  const cached = await env.WEBEX.get(cacheKey);
+  if (cached) {
+    const out = JSON.parse(cached);
+    return json({ ok:true, cache:"HIT", ...out }, 200);
+  }
+
+  // Build prompt (data-minimized)
+  const payload = {
+    tenant: { orgId },
+    report: body.report,
+    tab,
+    metrics: {
+      score: metrics.score,
+      stats: metrics.stats,
+      worst: (metrics.worst || []).slice(0, 12),
+      alerts: (metrics.alerts || []).slice(0, 12)
+    }
+  };
+
+  // Call OpenAI (you must set env.OPENAI_API_KEY)
+  // This uses the Responses API. :contentReference[oaicite:3]{index=3}
+  const ai = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${env.OPENAI_API_KEY}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      model: env.OPENAI_MODEL || "gpt-5.2-mini",
+      input: [
+        {
+          role: "system",
+          content: [
+            {
+              type: "text",
+              text:
+`You are a carrier-grade Webex Calling quality analyst.
+Write a concise but high-signal troubleshooting summary for telecom operations.
+No fluff. No marketing. Be specific.
+Return JSON only with keys: summaryText, checks, likelyRootCauses, confidence, nextActions.
+checks is an array of {title, detail}.
+likelyRootCauses is an array of {cause, why, evidence}.
+nextActions is an array of strings.
+confidence is 0-100.`
+            }
+          ]
+        },
+        {
+          role: "user",
+          content: [{ type: "text", text: JSON.stringify(payload) }]
+        }
+      ],
+      // Keep responses stable for ops workflows
+      temperature: 0.2
+    })
+  }).catch(e => null);
+
+  if (!ai) return json({ ok:false, error:"ai_fetch_failed" }, 502);
+
+  const aiText = await ai.text();
+  let aiJson = null;
+
+  try { aiJson = JSON.parse(aiText); } catch {
+    return json({ ok:false, error:"ai_not_json", preview: aiText.slice(0, 500) }, 502);
+  }
+
+  // Responses API returns output arrays; extract text or json-like content robustly
+  const extracted = extractResponsesJson(aiJson);
+  if (!extracted) {
+    return json({ ok:false, error:"ai_parse_failed", preview: JSON.stringify(aiJson).slice(0, 500) }, 502);
+  }
+
+  const out = {
+    model: env.OPENAI_MODEL || "gpt-5.2-mini",
+    reportTitle: title,
+    summaryText: extracted.summaryText || "",
+    checks: extracted.checks || [],
+    likelyRootCauses: extracted.likelyRootCauses || [],
+    nextActions: extracted.nextActions || [],
+    confidence: extracted.confidence ?? null
+  };
+
+  // Cache for fast reload (10 minutes default)
+  await env.WEBEX.put(cacheKey, JSON.stringify(out), { expirationTtl: 600 });
+
+  return json({ ok:true, cache:"MISS", ...out }, 200);
+}
+
+// Helper to extract JSON from Responses API result
+function extractResponsesJson(r){
+  // The API schema can evolve; be defensive.
+  // Try: r.output_text (if present), else scan output content blocks for text.
+  let text = r.output_text || null;
+
+  if (!text && Array.isArray(r.output)) {
+    for (const item of r.output) {
+      const content = item?.content || [];
+      for (const c of content) {
+        if (c?.type === "output_text" && c?.text) { text = c.text; break; }
+        if (c?.type === "text" && c?.text) { text = c.text; break; }
+      }
+      if (text) break;
+    }
+  }
+
+  if (!text) return null;
+
+  // The model was instructed to output JSON only, so parse it.
+  try { return JSON.parse(text); } catch { return null; }
+}
 // ============================================================
 // CALLING INSIGHT — REPORT LIST + INTELLIGENT CREATION
 // ============================================================
