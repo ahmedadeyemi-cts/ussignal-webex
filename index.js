@@ -5746,7 +5746,7 @@ if (url.pathname === "/api/admin/global-summary/refresh" && request.method === "
 // =====================================================
 // ADMIN GLOBAL SUMMARY CLEAR
 // =====================================================
-if (url.pathname === "/api/admin/global-summary/clear" && request.method === "POST") {
+if (url.pathname === "/api/admin/global-summary/clear" && request.method === "GET") {
 
   const secret = request.headers.get("x-admin-secret");
   const user = getCurrentUser(request);
