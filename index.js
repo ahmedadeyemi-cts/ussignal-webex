@@ -3680,6 +3680,7 @@ try {
   console.error("Device fetch failed", e);
   offline = 0;
 }
+}
 console.log(devResult.data.items.map(d => ({
   name: d.displayName,
   status: d.connectionStatus
