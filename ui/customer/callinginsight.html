@@ -1939,6 +1939,265 @@ async function init(){
   }
 }
 init();
+  /* ============================================================
+   ENTERPRISE UPGRADE ENGINE
+   - Intelligent polling
+   - Rolling 7-day auto-refresh
+   - Executive multi-tenant rollup
+   - Jitter threshold alerting
+   - Auto background report creation
+============================================================ */
+
+let POLL_INTERVAL = null;
+let AUTO_REFRESH_INTERVAL = null;
+let EXEC_MODE = false;
+
+/* =========================
+   INTELLIGENT POLLING
+========================= */
+async function startEnterprisePolling(reportId){
+
+  if(POLL_INTERVAL) clearInterval(POLL_INTERVAL);
+
+  let attempts = 0;
+  const MAX = 15; // 15 x 30s = ~7.5 min max
+
+  POLL_INTERVAL = setInterval(async ()=>{
+
+    attempts++;
+
+    const details = await loadReportDetails(reportId);
+    if(!details) return;
+
+    SELECTED_REPORT = details;
+    renderSelectedSummary();
+    renderReportTable();
+
+    if(safeLower(details.status).includes("done")){
+      clearInterval(POLL_INTERVAL);
+      pushAlert({
+        severity:"good",
+        title:"Report Ready",
+        body:"Report completed and ready for CSV ingestion."
+      });
+
+      await autoLoadAndParse(reportId);
+      return;
+    }
+
+    if(attempts >= MAX){
+      clearInterval(POLL_INTERVAL);
+      pushAlert({
+        severity:"warn",
+        title:"Polling timeout",
+        body:"Report still not complete after extended polling window."
+      });
+    }
+
+  }, 30000);
+}
+
+/* Hook into Create button */
+const _origCreateReport = createReport;
+createReport = async function(){
+  await _origCreateReport();
+  await listReports();
+
+  const latest = REPORTS
+    .slice()
+    .sort((a,b)=> String(b.created||"").localeCompare(String(a.created||"")))
+    [0];
+
+  if(latest?.id){
+    startEnterprisePolling(latest.id);
+  }
+};
+
+/* =========================
+   AUTO LOAD + PARSE
+========================= */
+async function autoLoadAndParse(reportId){
+  const csv = await loadReportCsv(reportId);
+  if(!csv) return;
+
+  SELECTED_REPORT_CSV = csv;
+  const parsed = parseCsvToJson(csv);
+  SELECTED_REPORT_ROWS = parsed.rows || [];
+  SELECTED_METRICS = extractQualityMetrics(SELECTED_REPORT_ROWS, SELECTED_REPORT.title);
+
+  renderAlertingPanel();
+  renderKPIs();
+  renderCanvases();
+}
+
+/* =========================
+   ROLLING 7-DAY AUTO REFRESH
+========================= */
+function startRollingRefresh(){
+
+  if(AUTO_REFRESH_INTERVAL) clearInterval(AUTO_REFRESH_INTERVAL);
+
+  AUTO_REFRESH_INTERVAL = setInterval(async ()=>{
+
+    if(!SELECTED_ORG_ID) return;
+
+    const today = new Date();
+    const start = new Date();
+    start.setDate(today.getDate()-7);
+
+    $("startDate").value = toISODate(start);
+    $("endDate").value = toISODate(today);
+
+    await createReport(); // auto-create fresh 7-day
+
+  }, 1000 * 60 * 60 * 4); // every 4 hours
+}
+
+/* start rolling refresh after init */
+setTimeout(startRollingRefresh, 8000);
+
+/* =========================
+   JITTER / LOSS ALERT ESCALATION
+========================= */
+const _origBuildAlerts = buildAlerts;
+buildAlerts = function(args){
+
+  const alerts = _origBuildAlerts(args);
+
+  if(args.jitP95 && args.jitP95 > 50){
+    alerts.push({
+      sev:"BAD",
+      msg:"Severe jitter detected (>50ms).",
+      detail:"Immediate WAN / Wi-Fi QoS validation required."
+    });
+  }
+
+  if(args.lossP95 && args.lossP95 > 8){
+    alerts.push({
+      sev:"BAD",
+      msg:"Critical packet loss (>8%).",
+      detail:"Possible interface drops or bandwidth saturation."
+    });
+  }
+
+  return alerts;
+};
+
+/* =========================
+   EXECUTIVE MULTI-TENANT VIEW
+========================= */
+async function buildExecutiveRollup(){
+
+  if(ME?.role !== "admin") return;
+
+  EXEC_MODE = true;
+
+  const results = [];
+
+  for(const o of ORGS){
+    SELECTED_ORG_ID = o.id || o.orgId;
+
+    await listReports();
+
+    const latest = REPORTS
+      .slice()
+      .sort((a,b)=> String(b.created||"").localeCompare(String(a.created||"")))
+      [0];
+
+    if(!latest?.id) continue;
+
+    const csv = await loadReportCsv(latest.id);
+    if(!csv) continue;
+
+    const parsed = parseCsvToJson(csv);
+    const metrics = extractQualityMetrics(parsed.rows, latest.title);
+
+    results.push({
+      org: safeOrgLabel(o),
+      score: metrics.score,
+      alerts: metrics.alerts.length
+    });
+  }
+
+  renderExecutiveDashboard(results);
+}
+
+function renderExecutiveDashboard(data){
+
+  const container = document.createElement("div");
+  container.className = "card";
+  container.innerHTML = `<h2>Executive Multi-Tenant Overview</h2>`;
+
+  const table = document.createElement("table");
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Tenant</th>
+        <th>Quality Score</th>
+        <th>Active Alerts</th>
+      </tr>
+    </thead>
+  `;
+
+  const tbody = document.createElement("tbody");
+
+  data.forEach(d=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(d.org)}</td>
+      <td>${badge(d.score, d.score<70?"bad":d.score<85?"warn":"good")}</td>
+      <td>${escapeHtml(d.alerts)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  container.appendChild(table);
+
+  document.querySelector(".content").prepend(container);
+}
+
+/* =========================
+   QUEUE + AA SCORING ADDON
+========================= */
+const _origExtract = extractQualityMetrics;
+extractQualityMetrics = function(rows, title){
+
+  const base = _origExtract(rows, title);
+
+  const t = safeLower(title||"");
+
+  if(t.includes("queue")){
+    const abandonK = rows[0] ? firstKey(rows[0],["Abandon Rate","Abandon %"]) : null;
+    if(abandonK){
+      const rates = rows.map(r=>num(r[abandonK])).filter(x=>x!=null);
+      const avg = rates.length ? rates.reduce((a,b)=>a+b,0)/rates.length : null;
+      if(avg != null && avg > 10){
+        base.alerts.push({
+          sev:"WARN",
+          msg:`High average queue abandon rate (${avg.toFixed(1)}%).`,
+          detail:"Evaluate staffing levels and wait times."
+        });
+        base.score -= 10;
+      }
+    }
+  }
+
+  if(t.includes("auto")){
+    base.alerts.push({
+      sev:"INFO",
+      msg:"Review IVR selection patterns.",
+      detail:"Optimize menu tree to reduce caller drop-off."
+    });
+  }
+
+  base.score = Math.max(0, Math.min(100, base.score));
+  return base;
+};
+
+/* ============================================================
+   END ENTERPRISE ENGINE
+============================================================ */
 </script>
 </body>
 </html>
