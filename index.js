@@ -4124,41 +4124,98 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "GET")
 }
 
 if (url.pathname === "/api/calling-insight/reports" && request.method === "POST") {
+
   const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
   const session = await getSession(env, user.email);
-  if (!session) return json({ ok:false, error:"unauthorized" }, 401);
-  if (session.role !== "admin") return json({ ok:false, error:"forbidden_admin_only" }, 403);
 
   const body = await request.json().catch(()=> ({}));
 
-  const orgId = body.orgId || url.searchParams.get("orgId") || null;
+  const requestedOrgId =
+    body.orgId ||
+    url.searchParams.get("orgId") ||
+    null;
+
+  let resolvedOrgId;
+
+  // 🔹 Admin can pass orgId
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ ok:false, error:"missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  }
+  // 🔹 Customer uses PIN session org
+  else {
+    if (!session?.orgId) {
+      return json({ ok:false, error:"pin_required" }, 401);
+    }
+    resolvedOrgId = session.orgId;
+  }
+
   const title = body.title || CALLING_INSIGHT.TITLES.MEDIA;
   const startDate = body.startDate || dateISO(7);
   const endDate = body.endDate || dateISO(0);
 
-  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 200);
+  const r = await webexFetchSafe(
+    env,
+    "/reports",
+    resolvedOrgId,
+    {
+      method:"POST",
+      body: JSON.stringify({
+        title,
+        startDate,
+        endDate,
+        scheduleFrom:"api"
+      })
+    }
+  );
 
-  const r = await webexFetchSafe(env, "/reports", orgId, {
-    method:"POST",
-    body: JSON.stringify({ title, startDate, endDate, scheduleFrom:"api" })
-  });
-
-  return json({ ok:r.ok, orgId, data:r.data || null, preview:r.preview || null, error:r.error || null }, 200);
+  return json({
+    ok:r.ok,
+    orgId: resolvedOrgId,
+    data:r.data || null,
+    preview:r.preview || null,
+    error:r.error || null
+  }, 200);
 }
+     if (url.pathname === "/api/calling-insight/ingest" && request.method === "POST") {
 
-if (url.pathname === "/api/calling-insight/ingest" && request.method === "POST") {
   const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
   const session = await getSession(env, user.email);
-  if (!session) return json({ ok:false, error:"unauthorized" }, 401);
-  if (session.role !== "admin") return json({ ok:false, error:"forbidden_admin_only" }, 403);
 
   const body = await request.json().catch(()=> ({}));
-  const orgId = body.orgId || url.searchParams.get("orgId") || null;
-  if (!orgId) return json({ ok:false, error:"missing_orgId" }, 200);
 
-  // Force a poll/ingest pass (useful for testing)
-  const out = await ciPollAndIngestPending(env, orgId, null);
-  return json({ ok:true, orgId, out }, 200);
+  const requestedOrgId =
+    body.orgId ||
+    url.searchParams.get("orgId") ||
+    null;
+
+  let resolvedOrgId;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ ok:false, error:"missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) {
+      return json({ ok:false, error:"pin_required" }, 401);
+    }
+    resolvedOrgId = session.orgId;
+  }
+
+  const out = await ciPollAndIngestPending(env, resolvedOrgId, null);
+
+  return json({
+    ok:true,
+    orgId: resolvedOrgId,
+    out
+  }, 200);
 }
 /* =====================================================
    Tenant Resolution
