@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<title>US Signal | Calling Insight</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<style>
+:root{
+  --bg:#f8fafc;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+  --accent:#2563eb;
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+
+  --pill-bg:rgba(37,99,235,.10);
+  --pill-fg:#1d4ed8;
+}
+html[data-theme="dark"]{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --line:rgba(148,163,184,.18);
+  --shadow:0 12px 30px rgba(0,0,0,.45);
+  --accent:#3b82f6;
+  --good:#22c55e;
+  --warn:#f59e0b;
+  --bad:#ef4444;
+
+  --pill-bg:rgba(59,130,246,.18);
+  --pill-fg:#93c5fd;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  display:flex;
+  height:100vh;
+}
+
+/* ================= SIDEBAR ================= */
+.sidebar{
+  width:270px;
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:14px;
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+.brand img{height:34px}
+.brand .title{display:flex;flex-direction:column}
+.brand .title b{font-size:14px}
+.brand .title span{font-size:12px;color:var(--muted)}
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:10px;
+}
+.nav a{
+  display:block;
+  padding:10px;
+  border-radius:12px;
+  text-decoration:none;
+  color:var(--text);
+  font-size:13px;
+  font-weight:850;
+}
+.nav a:hover{background:rgba(15,23,42,.06)}
+html[data-theme="dark"] .nav a:hover{background:rgba(255,255,255,.08)}
+.nav a.active{
+  background:rgba(37,99,235,.12);
+  border:1px solid rgba(37,99,235,.25);
+}
+
+.sidebarFooter{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.ragWrap{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rag{
+  flex:1;
+  padding:8px 10px;
+  border-radius:999px;
+  text-align:center;
+  font-weight:950;
+  font-size:12px;
+  border:1px solid var(--line);
+}
+.rag.green{background:rgba(22,163,74,.15);color:var(--good);border-color:rgba(22,163,74,.25)}
+.rag.amber{background:rgba(245,158,11,.16);color:var(--warn);border-color:rgba(245,158,11,.30)}
+.rag.red{background:rgba(220,38,38,.16);color:var(--bad);border-color:rgba(220,38,38,.30)}
+
+.pill{
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:var(--card);
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+}
+.pill strong{color:var(--text)}
+
+.btn{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:var(--card);
+  cursor:pointer;
+  font-weight:900;
+}
+.btn.primary{
+  background:var(--accent);
+  color:#fff;
+  border:none;
+}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+
+/* ================= MAIN ================= */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.header{
+  background:var(--card);
+  border-bottom:1px solid var(--line);
+  padding:16px 18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.headerLeft{display:flex;flex-direction:column;gap:4px}
+.headerTitle{font-size:16px;font-weight:1000}
+.headerSub{
+  font-size:12px;color:var(--muted);
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center
+}
+.headerSub .dot{opacity:.6}
+.headerActions{
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end
+}
+.headerActions button{
+  padding:8px 12px;border-radius:12px;border:1px solid var(--line);
+  background:var(--card);cursor:pointer;font-weight:900
+}
+.headerActions button.primary{background:var(--accent);color:#fff;border:none}
+
+.content{padding:18px;overflow:auto}
+
+/* ================= ALERT STACK ================= */
+.alertStack{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.alert{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:12px 14px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.alert .left{display:flex;flex-direction:column;gap:4px;min-width:0}
+.alert .title{font-weight:1000;font-size:13px}
+.alert .body{color:var(--muted);font-size:12px;line-height:1.35}
+.alert .actions{display:flex;gap:8px;flex-wrap:wrap}
+.alert .actions button{padding:7px 10px;border-radius:10px;font-size:12px}
+.alert.bad{border-color:rgba(220,38,38,.35)}
+.alert.warn{border-color:rgba(245,158,11,.35)}
+.alert.good{border-color:rgba(22,163,74,.35)}
+
+/* ================= CARDS ================= */
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:14px 16px;
+  margin-bottom:14px;
+}
+.card h2{margin:0 0 10px 0;font-size:13px;font-weight:1000}
+.small{font-size:12px;color:var(--muted);line-height:1.45}
+
+/* ================= TENANT BAR (ADMIN) ================= */
+.tenantBar{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:12px 14px;
+  display:none;
+  margin-bottom:14px;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+}
+.tenantBar.show{display:flex}
+.tenantBar .left{display:flex;flex-direction:column;gap:2px}
+.tenantBar .left b{font-size:13px}
+.tenantBar .left span{font-size:12px;color:var(--muted)}
+.tenantBar .right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* ================= KPI GRID ================= */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:14px}
+.kpi{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px 14px 12px 14px;
+  box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width:0;
+}
+.kpi h3{margin:0;font-size:12px;text-transform:uppercase;color:var(--muted);letter-spacing:.4px}
+.kpiValue{font-size:26px;font-weight:1000;margin-top:2px;line-height:1}
+.kpiSub{color:var(--muted);font-size:12px}
+.kpiRight{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.kpiMini{
+  padding:6px 9px;border-radius:999px;background:var(--pill-bg);color:var(--pill-fg);
+  font-weight:900;font-size:11px;border:1px solid rgba(37,99,235,.18);white-space:nowrap
+}
+
+/* ================= CONTROLS ================= */
+.controls{
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  margin-bottom:12px
+}
+.controls .left{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.controls .right{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+select, input[type="text"], input[type="date"]{
+  padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);
+  color:var(--text);font-weight:800;font-size:12px;min-width:240px
+}
+.pillBtn{
+  padding:9px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);
+  font-weight:900;font-size:12px;cursor:pointer
+}
+.pillBtn.primary{background:var(--accent);color:#fff;border:none}
+.pillBtn:disabled{opacity:.6;cursor:not-allowed}
+
+/* ================= TABS ================= */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.tab{
+  padding:8px 10px;border:1px solid var(--line);border-radius:999px;
+  background:var(--card);cursor:pointer;font-size:12px;font-weight:950;color:var(--muted)
+}
+.tab.active{
+  color:var(--text);
+  background:rgba(37,99,235,.10);
+  border-color:rgba(37,99,235,.25);
+}
+
+/* ================= TABLE ================= */
+.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:14px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;font-size:12px;vertical-align:top}
+th{background:rgba(15,23,42,.04);text-align:left;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+tr:not(:last-child) td{border-bottom:1px solid var(--line)}
+tbody tr:hover{background:rgba(37,99,235,.06);cursor:pointer}
+
+/* ================= BADGES ================= */
+.badge{
+  padding:6px 10px;border-radius:999px;border:1px solid var(--line);
+  font-size:11px;font-weight:950;display:inline-block
+}
+.badge.good{background:rgba(22,163,74,.15);color:var(--good);border-color:rgba(22,163,74,.25)}
+.badge.warn{background:rgba(245,158,11,.16);color:var(--warn);border-color:rgba(245,158,11,.30)}
+.badge.bad{background:rgba(220,38,38,.16);color:var(--bad);border-color:rgba(220,38,38,.30)}
+.badge.neutral{background:rgba(100,116,139,.14);color:var(--muted);border-color:rgba(100,116,139,.25)}
+
+/* ================= CANVAS ================= */
+.canvasWrap{
+  border:1px solid var(--line);
+  border-radius:16px;
+  overflow:hidden;
+  background:var(--card);
+  box-shadow:var(--shadow);
+}
+canvas{width:100%;height:280px;display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:1100px){.grid2{grid-template-columns:1fr}}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+
+/* ================= MODAL ================= */
+.modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);
+  display:none;align-items:center;justify-content:center;padding:16px;z-index:9999
+}
+.modal.show{display:flex}
+.modalCard{
+  width:1120px;max-width:96vw;background:var(--card);color:var(--text);
+  border-radius:16px;border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden
+}
+.modalHead{
+  padding:14px 16px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:10px
+}
+.modalHead b{font-size:14px;font-weight:1000}
+.modalBody{padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.modalBody{grid-template-columns:1fr}}
+pre{
+  margin:0;padding:10px;border-radius:12px;background:#0b1220;color:#e2e8f0;
+  overflow:auto;max-height:420px;font-size:12px;line-height:1.35
+}
+html[data-theme="dark"] pre{background:#050a14}
+.modalActions{padding:14px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px}
+.hidden{display:none !important}
+</style>
+</head>
+
+<body>
+
+<!-- ================= SIDEBAR ================= -->
+<div class="sidebar">
+  <div>
+    <div class="brand">
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" alt="US Signal"/>
+      <div class="title">
+        <b>US Signal</b>
+        <span>Customer Portal</span>
+      </div>
+    </div>
+
+    <div class="nav">
+      <a href="/customer">Dashboard</a>
+      <a href="/customer/observability">Observability</a>
+      <a href="/customer/licenses">Licenses</a>
+      <a href="/customer/devices">Devices</a>
+      <a href="/customer/analytics">Analytics</a>
+      <a href="/customer/cdr">CDR</a>
+      <a href="/customer/pstn">PSTN</a>
+      <a class="active" href="/customer/calling-insight">Calling Insight</a>
+      <a href="/customer/maintenance">Maintenance</a>
+      <a href="/customer/status">Status</a>
+      <a href="/customer/incidents">Incidents</a>
+      <a href="/customer/support">Support Contact</a>
+    </div>
+  </div>
+
+  <div class="sidebarFooter">
+    <div class="ragWrap">
+      <div id="orgRag" class="rag green">HEALTHY</div>
+    </div>
+
+    <div class="pill" id="tenantPill">Tenant: <strong>—</strong></div>
+    <div class="pill" id="sessionPill">Session: <strong>—</strong></div>
+    <div class="pill" id="livePill">Live: <strong>Polling</strong></div>
+
+    <button class="btn primary" id="btnLogout">Logout</button>
+  </div>
+</div>
+
+<!-- ================= MAIN ================= -->
+<div class="main">
+  <div class="header">
+    <div class="headerLeft">
+      <div class="headerTitle">Calling Insight (Reports + Quality Intelligence)</div>
+      <div class="headerSub">
+        <span id="welcomeLine">Loading…</span>
+        <span class="dot">•</span>
+        <span id="roleLine">—</span>
+        <span class="dot">•</span>
+        <span id="lastRefresh">Last refresh: —</span>
+      </div>
+    </div>
+    <div class="headerActions">
+      <button id="btnTheme">Dark Mode</button>
+      <button class="primary" id="btnRefresh">Refresh</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="alertStack" id="alertStack"></div>
+
+    <!-- ADMIN TENANT SWITCHER -->
+    <div class="tenantBar" id="tenantBar">
+      <div class="left">
+        <b>Admin Tenant Switcher</b>
+        <span>Select a tenant to load report inventory & quality trends.</span>
+      </div>
+      <div class="right">
+        <select id="tenantSelect" disabled>
+          <option>Loading tenants…</option>
+        </select>
+        <button class="pillBtn primary" id="btnApplyTenant" disabled>Apply</button>
+      </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="card">
+      <h2>Report Controls</h2>
+      <div class="controls">
+        <div class="left">
+          <select id="reportType">
+            <option value="Calling Media Quality Report">Calling Media Quality Report</option>
+            <option value="Calling Quality Report">Calling Quality Report</option>
+            <option value="Calling Engagement Report">Calling Engagement Report</option>
+            <option value="Call Queue Stats Report">Call Queue Stats Report</option>
+            <option value="Call Queue Agent Stats Report">Call Queue Agent Stats Report</option>
+            <option value="Auto-attendant Stats Summary">Auto-attendant Stats Summary</option>
+            <option value="Auto-attendant Business & After-hours Key Details">Auto-attendant Business & After-hours Key Details</option>
+          </select>
+
+          <input type="date" id="startDate"/>
+          <input type="date" id="endDate"/>
+
+          <button class="pillBtn" id="btnCreate">Create Report</button>
+          <button class="pillBtn" id="btnRefreshList">Refresh List</button>
+        </div>
+
+        <div class="right">
+          <input type="text" id="searchBox" placeholder="Filter reports (title, status, createdBy)…"/>
+          <button class="pillBtn primary" id="btnExport">Export JSON</button>
+        </div>
+      </div>
+      <div class="small" id="controlNote">
+        This page uses the Reports API via your worker. It lists existing reports for the selected tenant (orgId), can create new reports, and can download/parse report CSV for dashboards and alerting.
+      </div>
+    </div>
+
+    <!-- KPI GRID -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div style="display:flex;justify-content:space-between;gap:10px">
+          <div>
+            <h3>Reports (Visible)</h3>
+            <div class="kpiValue" id="kReports">—</div>
+            <div class="kpiSub" id="kReportsSub">—</div>
+          </div>
+          <div class="kpiRight"><div class="kpiMini" id="kReportsMini">Inventory</div></div>
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div style="display:flex;justify-content:space-between;gap:10px">
+          <div>
+            <h3>Latest Report Status</h3>
+            <div class="kpiValue" id="kLatestStatus">—</div>
+            <div class="kpiSub" id="kLatestMeta">—</div>
+          </div>
+          <div class="kpiRight"><div class="kpiMini" id="kLatestMini">Pipeline</div></div>
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div style="display:flex;justify-content:space-between;gap:10px">
+          <div>
+            <h3>Quality Posture</h3>
+            <div class="kpiValue" id="kQuality">—</div>
+            <div class="kpiSub" id="kQualitySub">—</div>
+          </div>
+          <div class="kpiRight"><div class="kpiMini" id="kQualityMini">7-Day</div></div>
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div style="display:flex;justify-content:space-between;gap:10px">
+          <div>
+            <h3>Active Alerts</h3>
+            <div class="kpiValue" id="kAlerts">—</div>
+            <div class="kpiSub" id="kAlertsSub">—</div>
+          </div>
+          <div class="kpiRight"><div class="kpiMini" id="kAlertsMini">Detection</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="card">
+      <h2>Insight Views</h2>
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-tab="overview">Overview</div>
+        <div class="tab" data-tab="media">Media Quality</div>
+        <div class="tab" data-tab="quality">Calling Quality (App)</div>
+        <div class="tab" data-tab="engagement">Engagement</div>
+        <div class="tab" data-tab="queues">Call Queues</div>
+        <div class="tab" data-tab="aa">Auto Attendant</div>
+      </div>
+      <div class="small">
+        Select a report row below, then open an Insight view to render metrics, trends, heatmaps, and worst-case lists. If you have KV rollups enabled in the worker, this page will prefer rollups for speed and consistency.
+      </div>
+    </div>
+
+    <!-- VISUALS -->
+    <div class="grid2">
+      <div class="card">
+        <h2>30-Day Trend (MOS / Jitter / Loss)</h2>
+        <div class="canvasWrap"><canvas id="trend"></canvas></div>
+        <div class="small" id="trendNote" style="margin-top:10px">
+          Trend uses KV rollups when available. Otherwise it will simulate a 30-day trend from the selected report snapshot so the UI remains usable.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Heatmap (Location / User / Leg)</h2>
+        <div class="canvasWrap"><canvas id="heatmap"></canvas></div>
+        <div class="small" id="heatmapNote" style="margin-top:10px">
+          Heatmap shows worst-case quality signals by dimension. If report CSV lacks certain fields, the heatmap will automatically degrade to what is present.
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORTS TABLE -->
+    <div class="card">
+      <h2>Reports (Select One to Load Details)</h2>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Status</th>
+              <th>Range</th>
+              <th>Created</th>
+              <th>Service</th>
+              <th>Download</th>
+            </tr>
+          </thead>
+          <tbody id="reportRows">
+            <tr><td colspan="6" class="small" style="padding:16px">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="small" style="margin-top:10px" id="reportHint">
+        Click a report row to load details. Use Download to fetch CSV through the worker (preferred) or open the upstream URL (fallback).
+      </div>
+    </div>
+
+    <!-- SELECTED DETAILS -->
+    <div class="grid2">
+      <div class="card">
+        <h2>Selected Report Summary</h2>
+        <div class="small" id="selectedSummary">No report selected.</div>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="pillBtn" id="btnPoll" disabled>Poll Status</button>
+          <button class="pillBtn" id="btnLoadCsv" disabled>Load + Parse CSV</button>
+          <button class="pillBtn primary" id="btnOpenModal" disabled>Open Drilldown</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Live Quality Alerts</h2>
+        <div class="small" id="alertingPanel">No alerts generated yet.</div>
+        <div class="small" style="margin-top:10px">
+          Alerts are derived from parsed CSV metrics (MOS, jitter, packet loss, latency). If your worker stores rollups in KV, alerts can also be computed server-side and fetched here.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= DRILLDOWN MODAL ================= -->
+<div class="modal" id="modal" onclick="closeModalIfBackdrop(event)">
+  <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modalHead">
+      <div>
+        <b id="modalTitle">Report Drilldown</b>
+        <div class="small" id="modalSub">—</div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="pillBtn" id="btnCopyRaw">Copy Raw JSON</button>
+        <button class="pillBtn primary" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+
+    <div class="modalBody">
+      <div class="card" style="margin:0">
+        <h2>Insight Output (Selected Tab)</h2>
+        <div class="small" id="modalInsight">—</div>
+      </div>
+
+      <div class="card" style="margin:0">
+        <h2>Extracted Metrics</h2>
+        <div class="small" id="modalMetrics">—</div>
+      </div>
+
+      <div class="card" style="margin:0;grid-column:1/-1">
+        <h2>Raw Payload</h2>
+        <pre id="modalRaw">{}</pre>
+      </div>
+    </div>
+
+    <div class="modalActions">
+      <button class="pillBtn" id="btnDownloadCsvModal">Download CSV</button>
+      <button class="pillBtn" id="btnReparseModal">Re-Parse</button>
+      <button class="pillBtn primary" id="btnRefreshModal">Refresh Report Details</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   Calling Insight — Enterprise UI (worker-backed)
+   Expectations (worker endpoints):
+   - GET  /api/me
+   - POST /api/pin/logout
+   - GET  /api/org                         (admin list)
+   - GET  /api/calling-insight/reports      (list)     ?orgId=...
+   - POST /api/calling-insight/reports      (create)   JSON { title, startDate, endDate }
+   - GET  /api/calling-insight/reports/:id  (details)  ?orgId=... (optional)
+   - GET  /api/calling-insight/reports/:id/csv  (proxy download -> returns { csvText } OR text/csv)
+   - Optional (preferred):
+     GET /api/calling-insight/rollup?orgId=...&days=7&type=media|quality|engagement|queues|aa
+     GET /api/calling-insight/alerts?orgId=...&days=7
+   If optional endpoints are missing, UI falls back to local parsing + simulated trends.
+============================================================ */
+
+/* =========================
+   STATE
+========================= */
+const $ = (id) => document.getElementById(id);
+
+let ME = null;
+let SELECTED_ORG_ID = null;
+let ORGS = [];
+
+let REPORTS = [];
+let FILTERED_REPORTS = [];
+let SELECTED_REPORT = null;        // object from list/details
+let SELECTED_REPORT_CSV = null;    // raw CSV text
+let SELECTED_REPORT_ROWS = null;   // parsed rows (array of objects)
+let SELECTED_METRICS = null;       // extracted metrics summary
+let ACTIVE_TAB = "overview";
+
+let SESSION_TIMER = null;
+
+/* =========================
+   THEME
+========================= */
+function loadTheme(){
+  const saved = localStorage.getItem("uiTheme");
+  const theme = saved === "dark" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  $("btnTheme").textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme") || "light";
+  const next = cur === "dark" ? "light" : "dark";
+  localStorage.setItem("uiTheme", next);
+  loadTheme();
+  renderCanvases();
+}
+$("btnTheme").addEventListener("click", toggleTheme);
+loadTheme();
+
+/* =========================
+   API (safe)
+========================= */
+async function api(path, opts){
+  try{
+    const res = await fetch(path, Object.assign({ cache:"no-store" }, opts || {}));
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    const txt = await res.text();
+
+    let data = null;
+    if(ct.includes("application/json")){
+      try{ data = txt ? JSON.parse(txt) : null; } catch { data = { raw: txt }; }
+    }else{
+      // allow CSV/text responses
+      data = { raw: txt, contentType: ct };
+    }
+
+    if(res.status === 401){
+      window.location.href = "/pin";
+      return { ok:false, status:401, data };
+    }
+    return { ok:res.ok, status:res.status, data, headers: res.headers };
+  }catch(e){
+    return { ok:false, status:0, data:{ error:e?.message || String(e) } };
+  }
+}
+function buildPath(base){
+  if(SELECTED_ORG_ID){
+    const glue = base.includes("?") ? "&" : "?";
+    return `${base}${glue}orgId=${encodeURIComponent(SELECTED_ORG_ID)}`;
+  }
+  return base;
+}
+
+/* =========================
+   UI HELPERS
+========================= */
+function escapeHtml(str){
+  return String(str ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function escapeAttr(s){ return String(s||"").replaceAll("'","\\'"); }
+function nowStamp(){ return new Date().toLocaleString(); }
+function fmtInt(n){
+  const num = Number(n);
+  if(!Number.isFinite(num)) return "0";
+  return Math.trunc(num).toLocaleString();
+}
+function safeLower(v){ return String(v||"").toLowerCase(); }
+
+function badge(text, cls){
+  return `<span class="badge ${cls}">${escapeHtml(text)}</span>`;
+}
+function setLiveMode(label){
+  $("livePill").innerHTML = `Live: <strong>${escapeHtml(label)}</strong>`;
+}
+function setLastRefresh(){
+  $("lastRefresh").textContent = `Last refresh: ${nowStamp()}`;
+}
+function computeRagFromScore(score){
+  if(score < 70) return "CRITICAL";
+  if(score < 85) return "DEGRADED";
+  return "HEALTHY";
+}
+function setRAG(score){
+  const rag = $("orgRag");
+  const s = computeRagFromScore(score);
+  if(s === "CRITICAL"){ rag.className="rag red"; rag.textContent="CRITICAL"; return; }
+  if(s === "DEGRADED"){ rag.className="rag amber"; rag.textContent="DEGRADED"; return; }
+  rag.className="rag green"; rag.textContent="HEALTHY";
+}
+
+function pushAlert({severity, title, body, primaryText, primaryHref}){
+  const stack = $("alertStack");
+  const cls = severity === "bad" ? "bad" : (severity === "warn" ? "warn" : "good");
+  const wrap = document.createElement("div");
+  wrap.className = `alert ${cls}`;
+  wrap.innerHTML = `
+    <div class="left">
+      <div class="title">${escapeHtml(title)}</div>
+      <div class="body">${escapeHtml(body)}</div>
+    </div>
+    <div class="actions">
+      ${primaryHref ? `<button class="primary" onclick="go('${primaryHref}')">${escapeHtml(primaryText || "Open")}</button>` : ""}
+      <button onclick="this.closest('.alert').remove()">Dismiss</button>
+    </div>
+  `;
+  stack.appendChild(wrap);
+}
+function clearAlerts(){ $("alertStack").innerHTML = ""; }
+function go(path){ window.location.href = path; }
+
+/* =========================
+   LOGOUT
+========================= */
+async function logout(){
+  await api("/api/pin/logout", { method:"POST" });
+  window.location.href = "/pin";
+}
+$("btnLogout").addEventListener("click", logout);
+
+/* =========================
+   SESSION TIMER
+========================= */
+function startSessionTimer(seconds){
+  if(!seconds || seconds <= 0) return;
+  let remaining = seconds;
+  if(SESSION_TIMER) clearInterval(SESSION_TIMER);
+  const tick = () => {
+    const mm = Math.max(0, Math.floor(remaining / 60));
+    const ss = Math.max(0, remaining % 60);
+    $("sessionPill").innerHTML = `Session: <strong>${mm}:${String(ss).padStart(2,"0")}</strong>`;
+    remaining--;
+    if(remaining < 0){
+      clearInterval(SESSION_TIMER);
+      window.location.href = "/pin";
+    }
+  };
+  tick();
+  SESSION_TIMER = setInterval(tick, 1000);
+}
+
+/* =========================
+   ADMIN TENANT SWITCHER
+========================= */
+function safeOrgLabel(o){
+  const name = o.displayName || o.name || o.orgName || "Unknown";
+  const id = o.id || o.orgId || "";
+  return `${name}${id ? " — " + id.slice(0,10) + "…" : ""}`;
+}
+async function loadOrgs(){
+  const r = await api("/api/org");
+  if(!r.ok) return;
+
+  ORGS = Array.isArray(r.data) ? r.data : [];
+  const sel = $("tenantSelect");
+  sel.innerHTML = "";
+
+  if(!ORGS.length){
+    sel.innerHTML = `<option value="">No organizations available</option>`;
+    sel.disabled = true;
+    $("btnApplyTenant").disabled = true;
+    return;
+  }
+
+  for(const o of ORGS){
+    const opt = document.createElement("option");
+    opt.value = o.id || o.orgId || "";
+    opt.textContent = safeOrgLabel(o);
+    sel.appendChild(opt);
+  }
+
+  sel.disabled = false;
+  $("btnApplyTenant").disabled = false;
+
+  const defaultOrgId = ME?.orgId || (ORGS[0].id || ORGS[0].orgId);
+  if(defaultOrgId) sel.value = defaultOrgId;
+}
+$("btnApplyTenant").addEventListener("click", async () => {
+  const sel = $("tenantSelect");
+  const next = sel.value || null;
+  if(!next) return;
+
+  SELECTED_ORG_ID = next;
+  const label = sel.options[sel.selectedIndex]?.text || "—";
+  $("tenantPill").innerHTML = `Tenant: <strong>${escapeHtml(label)}</strong>`;
+
+  clearAlerts();
+  pushAlert({severity:"good", title:"Tenant applied", body:"Refreshing report inventory and rollups for the selected tenant.", primaryText:"", primaryHref:""});
+  await refreshAll("Tenant switch");
+});
+
+/* =========================
+   DEFAULT DATE RANGE (last 7 days)
+========================= */
+function toISODate(d){
+  const x = new Date(d);
+  return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`;
+}
+function setDefaultDates(){
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 7);
+
+  $("startDate").value = toISODate(start);
+  $("endDate").value = toISODate(end);
+}
+
+/* =========================
+   REPORTS — LOAD / CREATE / DETAILS / CSV
+========================= */
+function normalizeReportItem(r){
+  // handle inconsistent casing from the sample ("Id")
+  const id = r.id || r.Id || r.reportId || r.reportID || null;
+  return {
+    ...r,
+    id,
+    title: r.title || r.name || "Report",
+    service: r.service || r.product || "Webex",
+    status: r.status || "unknown",
+    startDate: r.startDate || r.from || "",
+    endDate: r.endDate || r.to || "",
+    created: r.created || r.createdAt || "",
+    createdBy: r.createdBy || "",
+    downloadURL: r.downloadURL || r.downloadUrl || "",
+    downloadDomain: r.downloadDomain || ""
+  };
+}
+
+async function listReports(){
+  // expected: { items: [...], numberOfReports }
+  const r = await api(buildPath("/api/calling-insight/reports"));
+  if(!r.ok){
+    pushAlert({severity:"bad", title:"Reports API error", body:`Failed to list reports (status ${r.status}).`, primaryText:"", primaryHref:""});
+    REPORTS = [];
+    return;
+  }
+
+  const items = Array.isArray(r.data?.items) ? r.data.items : (Array.isArray(r.data) ? r.data : []);
+  REPORTS = items.map(normalizeReportItem);
+
+  applyReportFilter();
+  renderReportTable();
+  renderKPIs();
+
+  // pick latest
+  const latest = REPORTS
+    .slice()
+    .sort((a,b)=> String(b.created||"").localeCompare(String(a.created||"")))
+    [0] || null;
+
+  if(latest){
+    $("kLatestStatus").textContent = (latest.status || "—").toUpperCase();
+    $("kLatestMeta").textContent = `${latest.title} • ${latest.startDate} → ${latest.endDate}`;
+  }else{
+    $("kLatestStatus").textContent = "—";
+    $("kLatestMeta").textContent = "No reports returned.";
+  }
+}
+
+async function createReport(){
+  const title = $("reportType").value;
+  const startDate = $("startDate").value;
+  const endDate = $("endDate").value;
+
+  if(!SELECTED_ORG_ID){
+    pushAlert({severity:"warn", title:"Tenant required", body:"Select a tenant/org first.", primaryText:"", primaryHref:""});
+    return;
+  }
+  if(!startDate || !endDate){
+    pushAlert({severity:"warn", title:"Date range required", body:"Select start and end date.", primaryText:"", primaryHref:""});
+    return;
+  }
+
+  $("btnCreate").disabled = true;
+
+  const r = await api(buildPath("/api/calling-insight/reports"), {
+    method:"POST",
+    headers:{ "content-type":"application/json" },
+    body: JSON.stringify({ title, startDate, endDate })
+  });
+
+  $("btnCreate").disabled = false;
+
+  if(!r.ok){
+    pushAlert({severity:"bad", title:"Create report failed", body:`Worker returned status ${r.status}. Check logs and permissions.`, primaryText:"", primaryHref:""});
+    return;
+  }
+
+  pushAlert({severity:"good", title:"Report submitted", body:"Report creation requested. It may take a few minutes to complete. Use Poll Status.", primaryText:"", primaryHref:""});
+  await listReports();
+}
+
+async function loadReportDetails(reportId){
+  if(!reportId) return null;
+
+  const r = await api(buildPath(`/api/calling-insight/reports/${encodeURIComponent(reportId)}`));
+  if(!r.ok){
+    pushAlert({severity:"bad", title:"Report details failed", body:`Failed to load report details (status ${r.status}).`, primaryText:"", primaryHref:""});
+    return null;
+  }
+  // normalize
+  const obj = normalizeReportItem(r.data || {});
+  return obj;
+}
+
+async function loadReportCsv(reportId){
+  if(!reportId) return null;
+
+  // Prefer worker proxy endpoint; it may return JSON { csvText } or raw CSV text.
+  const r = await api(buildPath(`/api/calling-insight/reports/${encodeURIComponent(reportId)}/csv`));
+
+  if(!r.ok){
+    pushAlert({severity:"warn", title:"CSV proxy not available", body:"Worker CSV proxy failed. Will fall back to opening upstream download URL (if present).", primaryText:"", primaryHref:""});
+    return null;
+  }
+
+  // If JSON wrapper:
+  if(r.data && typeof r.data === "object" && r.data.csvText){
+    return String(r.data.csvText || "");
+  }
+
+  // If text response:
+  if(r.data && typeof r.data.raw === "string"){
+    return r.data.raw;
+  }
+
+  return null;
+}
+
+function openUpstreamDownload(url){
+  if(!url) return;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+/* =========================
+   SEARCH FILTER
+========================= */
+function applyReportFilter(){
+  const q = safeLower($("searchBox").value || "");
+  if(!q){
+    FILTERED_REPORTS = REPORTS.slice();
+    return;
+  }
+  FILTERED_REPORTS = REPORTS.filter(r=>{
+    const hay = safeLower(`${r.title} ${r.status} ${r.created} ${r.createdBy} ${r.service} ${r.startDate} ${r.endDate}`);
+    return hay.includes(q);
+  });
+}
+$("searchBox").addEventListener("input", ()=>{
+  applyReportFilter();
+  renderReportTable();
+  renderKPIs();
+});
+
+/* =========================
+   REPORT TABLE
+========================= */
+function statusBadge(status){
+  const s = safeLower(status);
+  if(s.includes("done") || s.includes("complete")) return badge("DONE","good");
+  if(s.includes("progress") || s.includes("running") || s.includes("pending") || s.includes("queued")) return badge(String(status).toUpperCase(),"warn");
+  if(s.includes("fail") || s.includes("error")) return badge(String(status).toUpperCase(),"bad");
+  return badge(String(status || "UNKNOWN").toUpperCase(),"neutral");
+}
+
+function renderReportTable(){
+  const rows = (FILTERED_REPORTS || []).map(r=>{
+    const dl = r.downloadURL ? `<button class="pillBtn" onclick="downloadClick('${escapeAttr(r.id)}')">Download</button>` : `<span class="small">—</span>`;
+    return `
+      <tr onclick="selectReport('${escapeAttr(r.id)}')">
+        <td><b>${escapeHtml(r.title)}</b><div class="small mono">${escapeHtml(r.id||"")}</div></td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${escapeHtml(r.startDate || "—")} → ${escapeHtml(r.endDate || "—")}</td>
+        <td>${escapeHtml(r.created || "—")}</td>
+        <td>${escapeHtml(r.service || "—")}</td>
+        <td onclick="event.stopPropagation()">${dl}</td>
+      </tr>
+    `;
+  }).join("");
+
+  $("reportRows").innerHTML = rows || `<tr><td colspan="6" class="small" style="padding:16px">No reports match your filter.</td></tr>`;
+}
+
+async function downloadClick(id){
+  const r = REPORTS.find(x=>String(x.id)===String(id));
+  if(!r) return;
+
+  // If your worker provides CSV proxy, we prefer download via /csv endpoint
+  // but for a true "download", we open a dedicated URL so the browser saves it.
+  // You can add a worker route to stream CSV with content-disposition.
+  // For now: open upstream (works because downloadDomain is reportservice).
+  if(r.downloadURL){
+    openUpstreamDownload(r.downloadURL);
+  }else{
+    pushAlert({severity:"warn", title:"No download URL", body:"This report entry does not contain a downloadURL.", primaryText:"", primaryHref:""});
+  }
+}
+
+async function selectReport(id){
+  const base = REPORTS.find(x=>String(x.id)===String(id));
+  if(!base) return;
+
+  SELECTED_REPORT = base;
+  SELECTED_REPORT_CSV = null;
+  SELECTED_REPORT_ROWS = null;
+  SELECTED_METRICS = null;
+
+  $("btnPoll").disabled = false;
+  $("btnLoadCsv").disabled = false;
+  $("btnOpenModal").disabled = false;
+
+  // Attempt details refresh
+  const details = await loadReportDetails(id);
+  if(details) SELECTED_REPORT = details;
+
+  renderSelectedSummary();
+  renderCanvases();
+
+  pushAlert({severity:"good", title:"Report selected", body:"You can now Poll Status, Load + Parse CSV, or open Drilldown.", primaryText:"", primaryHref:""});
+}
+
+function renderSelectedSummary(){
+  const r = SELECTED_REPORT;
+  if(!r){
+    $("selectedSummary").textContent = "No report selected.";
+    return;
+  }
+
+  const canDl = r.downloadURL ? badge("YES","good") : badge("NO","warn");
+  $("selectedSummary").innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div><b>Title:</b> ${escapeHtml(r.title)}</div>
+      <div><b>Status:</b> ${statusBadge(r.status)}</div>
+      <div><b>Date Range:</b> ${escapeHtml(r.startDate||"—")} → ${escapeHtml(r.endDate||"—")}</div>
+      <div><b>Created:</b> ${escapeHtml(r.created||"—")}</div>
+      <div><b>Created By:</b> <span class="mono">${escapeHtml(r.createdBy||"—")}</span></div>
+      <div><b>Download available:</b> ${canDl}</div>
+      <div class="small" style="margin-top:6px">
+        Tip: Use “Load + Parse CSV” to build MOS/jitter/loss intelligence and generate alerts.
+      </div>
+    </div>
+  `;
+}
+
+/* =========================
+   KPI RENDER
+========================= */
+function renderKPIs(){
+  const count = (FILTERED_REPORTS || []).length;
+  $("kReports").textContent = fmtInt(count);
+  const done = (FILTERED_REPORTS || []).filter(r=>safeLower(r.status).includes("done")).length;
+  const pending = count - done;
+  $("kReportsSub").textContent = `${fmtInt(done)} done • ${fmtInt(pending)} not done`;
+
+  // quality KPI from selected metrics or rollup (fallback)
+  if(SELECTED_METRICS?.score != null){
+    const score = Number(SELECTED_METRICS.score || 0);
+    $("kQuality").textContent = fmtInt(score);
+    $("kQualitySub").textContent = SELECTED_METRICS.scoreHint || "Derived from parsed report CSV.";
+    setRAG(score);
+  }else{
+    $("kQuality").textContent = "—";
+    $("kQualitySub").textContent = "Select report and parse CSV to compute posture.";
+    setRAG(92);
+  }
+
+  // alerts KPI
+  const a = SELECTED_METRICS?.alerts?.length || 0;
+  $("kAlerts").textContent = fmtInt(a);
+  $("kAlertsSub").textContent = a ? "Action recommended" : "No alerts generated";
+}
+
+/* =========================
+   BUTTON WIRES
+========================= */
+$("btnCreate").addEventListener("click", createReport);
+$("btnRefreshList").addEventListener("click", async ()=>{
+  clearAlerts();
+  pushAlert({severity:"good", title:"Refreshing", body:"Refreshing report list.", primaryText:"", primaryHref:""});
+  await listReports();
+});
+$("btnRefresh").addEventListener("click", ()=> refreshAll("Manual refresh"));
+
+$("btnPoll").addEventListener("click", async ()=>{
+  if(!SELECTED_REPORT?.id) return;
+  const details = await loadReportDetails(SELECTED_REPORT.id);
+  if(details) SELECTED_REPORT = details;
+  renderSelectedSummary();
+  renderReportTable();
+  pushAlert({severity:"good", title:"Polled", body:"Report details refreshed.", primaryText:"", primaryHref:""});
+});
+
+$("btnLoadCsv").addEventListener("click", async ()=>{
+  if(!SELECTED_REPORT?.id) return;
+
+  // if report not done, warn but allow
+  if(!safeLower(SELECTED_REPORT.status).includes("done")){
+    pushAlert({severity:"warn", title:"Report not done", body:"The report status is not 'done'. CSV may not be available yet.", primaryText:"", primaryHref:""});
+  }
+
+  const csv = await loadReportCsv(SELECTED_REPORT.id);
+  if(!csv){
+    // fallback to upstream downloadURL if present
+    if(SELECTED_REPORT.downloadURL){
+      pushAlert({severity:"warn", title:"CSV proxy unavailable", body:"Opening upstream download URL. If CORS blocks parsing, add the worker /csv proxy route.", primaryText:"Open", primaryHref:""});
+      openUpstreamDownload(SELECTED_REPORT.downloadURL);
+    }else{
+      pushAlert({severity:"bad", title:"CSV not available", body:"No CSV was returned and there is no downloadURL.", primaryText:"", primaryHref:""});
+    }
+    return;
+  }
+
+  SELECTED_REPORT_CSV = csv;
+  const parsed = parseCsvToJson(csv);
+  SELECTED_REPORT_ROWS = parsed.rows || [];
+
+  SELECTED_METRICS = extractQualityMetrics(SELECTED_REPORT_ROWS, SELECTED_REPORT.title);
+  renderAlertingPanel();
+  renderKPIs();
+  renderCanvases();
+
+  pushAlert({severity:"good", title:"CSV parsed", body:`Parsed ${fmtInt(SELECTED_REPORT_ROWS.length)} row(s). Metrics, heatmap, and alerts updated.`, primaryText:"", primaryHref:""});
+});
+
+$("btnOpenModal").addEventListener("click", ()=>{
+  openModal();
+});
+
+$("btnExport").addEventListener("click", ()=>{
+  const payload = {
+    me: ME,
+    orgId: SELECTED_ORG_ID || ME?.orgId || null,
+    reports: REPORTS,
+    selectedReport: SELECTED_REPORT,
+    selectedMetrics: SELECTED_METRICS,
+    selectedTab: ACTIVE_TAB
+  };
+  download(`calling_insight_export_${(SELECTED_ORG_ID||ME?.orgId||"org").slice(0,12)}.json`, JSON.stringify(payload, null, 2));
+});
+
+/* =========================
+   TABS
+========================= */
+$("tabs").addEventListener("click", (e)=>{
+  const t = e.target?.closest?.(".tab");
+  if(!t) return;
+  const next = t.getAttribute("data-tab");
+  if(!next) return;
+  ACTIVE_TAB = next;
+
+  [...document.querySelectorAll(".tab")].forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");
+
+  renderCanvases();
+  if($("modal").classList.contains("show")){
+    renderModalContent();
+  }
+});
+
+/* =========================
+   DOWNLOAD UTILS
+========================= */
+function download(filename, text){
+  const a = document.createElement("a");
+  a.setAttribute("href","data:text/plain;charset=utf-8," + encodeURIComponent(text));
+  a.setAttribute("download", filename);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/* =========================
+   CANVAS HELPERS
+========================= */
+function setupCanvasHiDPI(canvas){
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.floor(rect.width * devicePixelRatio);
+  canvas.height = Math.floor(rect.height * devicePixelRatio);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  return { ctx, w: rect.width, h: rect.height };
+}
+function roundedRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function drawAxes(ctx,w,h){
+  ctx.strokeStyle = "rgba(148,163,184,.25)";
+  ctx.lineWidth = 1;
+  for(const yy of [0.25,0.5,0.75]){
+    ctx.beginPath();
+    ctx.moveTo(12, h*yy);
+    ctx.lineTo(w-12, h*yy);
+    ctx.stroke();
+  }
+}
+
+/* =========================
+   CSV PARSER (keep your existing behavior)
+========================= */
+function parseCsvToJson(csvText, { maxRows = 50000 } = {}) {
+  const text = String(csvText || "");
+  if (!text.trim()) return { headers: [], rows: [] };
+
+  const rows = [];
+  let row = [];
+  let cur = "";
+  let i = 0;
+  let inQuotes = false;
+
+  while (i < text.length) {
+    const ch = text[i];
+
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { // escaped quote
+          cur += '"';
+          i += 2;
+          continue;
+        }
+        inQuotes = false;
+        i++;
+        continue;
+      }
+      cur += ch;
+      i++;
+      continue;
+    }
+
+    if (ch === '"') { inQuotes = true; i++; continue; }
+    if (ch === ",") { row.push(cur); cur = ""; i++; continue; }
+    if (ch === "\r") { i++; continue; }
+    if (ch === "\n") {
+      row.push(cur);
+      rows.push(row);
+      if (rows.length >= maxRows) break;
+      row = [];
+      cur = "";
+      i++;
+      continue;
+    }
+
+    cur += ch;
+    i++;
+  }
+
+  if (cur.length || row.length) {
+    row.push(cur);
+    rows.push(row);
+  }
+
+  const headers = (rows.shift() || []).map(h => String(h || "").replace(/^\ufeff/, "").trim());
+  const out = rows
+    .filter(r => r.some(x => String(x || "").trim() !== ""))
+    .map(r => {
+      const obj = {};
+      for (let c = 0; c < headers.length; c++) {
+        obj[headers[c] || `col_${c}`] = r[c] ?? "";
+      }
+      return obj;
+    });
+
+  return { headers, rows: out };
+}
+
+/* =========================
+   METRIC EXTRACTION (flexible mapping)
+========================= */
+function num(v){
+  const n = Number(String(v||"").replace(/[^0-9.\-]/g,""));
+  return Number.isFinite(n) ? n : null;
+}
+function firstKey(obj, keys){
+  const lowerMap = new Map();
+  for(const k of Object.keys(obj || {})){
+    lowerMap.set(k.toLowerCase(), k);
+  }
+  for(const want of keys){
+    const found = lowerMap.get(want.toLowerCase());
+    if(found) return found;
+  }
+  return null;
+}
+function extractQualityMetrics(rows, reportTitle){
+  const sample = rows && rows.length ? rows[0] : {};
+  const mosK = firstKey(sample, ["MOS","Mean Opinion Score","Average MOS","Rx MOS","Tx MOS"]);
+  const jitterK = firstKey(sample, ["Jitter","Avg Jitter","Jitter (ms)","Audio Jitter (ms)","Video Jitter (ms)"]);
+  const lossK = firstKey(sample, ["Packet Loss","Loss","Packet Loss (%)","Loss (%)","Audio Packet Loss (%)","Video Packet Loss (%)"]);
+  const latencyK = firstKey(sample, ["Latency","Round Trip Time","RTT","Latency (ms)","Audio RTT (ms)","Video RTT (ms)"]);
+
+  const locK = firstKey(sample, ["Location","Site","Calling Location","Location Name"]);
+  const userK = firstKey(sample, ["User","User Email","Email","User ID","Caller","Callee"]);
+  const legK  = firstKey(sample, ["Leg","Call Leg","Direction","Media Leg"]);
+  const timeK = firstKey(sample, ["Date","Time","Start Time","Call Start Time","Timestamp"]);
+
+  // Aggregate lists
+  const mosVals = [];
+  const jitVals = [];
+  const lossVals = [];
+  const latVals = [];
+
+  // Worst-case by dimension (location/user/leg)
+  const bucket = new Map(); // key => {count, mosMin, jitterMax, lossMax, latencyMax}
+  const keyOf = (r) => {
+    const loc = locK ? (r[locK]||"") : "";
+    const usr = userK ? (r[userK]||"") : "";
+    const leg = legK ? (r[legK]||"") : "";
+    const a = (loc||"Unknown Location").trim();
+    const b = (usr||"Unknown User").trim();
+    const c = (leg||"Leg").trim();
+    // choose grouping based on active tab
+    if(ACTIVE_TAB === "media") return `${a} • ${c}`;
+    if(ACTIVE_TAB === "quality") return `${b} • ${c}`;
+    return a || b || c || "Unknown";
+  };
+
+  for(const r of rows || []){
+    const mos = mosK ? num(r[mosK]) : null;
+    const jit = jitterK ? num(r[jitterK]) : null;
+    const loss = lossK ? num(r[lossK]) : null;
+    const lat = latencyK ? num(r[latencyK]) : null;
+
+    if(mos != null) mosVals.push(mos);
+    if(jit != null) jitVals.push(jit);
+    if(loss != null) lossVals.push(loss);
+    if(lat != null) latVals.push(lat);
+
+    const k = keyOf(r);
+    const s = bucket.get(k) || { key:k, count:0, mosMin: 999, jitterMax:0, lossMax:0, latencyMax:0 };
+    s.count++;
+    if(mos != null) s.mosMin = Math.min(s.mosMin, mos);
+    if(jit != null) s.jitterMax = Math.max(s.jitterMax, jit);
+    if(loss != null) s.lossMax = Math.max(s.lossMax, loss);
+    if(lat != null) s.latencyMax = Math.max(s.latencyMax, lat);
+    bucket.set(k, s);
+  }
+
+  const avg = (arr) => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : null;
+  const p95 = (arr) => {
+    if(!arr.length) return null;
+    const s = arr.slice().sort((a,b)=>a-b);
+    const idx = Math.min(s.length-1, Math.floor(s.length*0.95));
+    return s[idx];
+  };
+
+  const mosAvg = avg(mosVals);
+  const jitP95 = p95(jitVals);
+  const lossP95 = p95(lossVals);
+  const latP95 = p95(latVals);
+
+  // Score heuristic (0-100)
+  // MOS: 4.5 best, <3.6 bad; jitter/loss/latency higher is worse.
+  let score = 92;
+  if(mosAvg != null){
+    if(mosAvg < 3.6) score -= 25;
+    else if(mosAvg < 3.9) score -= 12;
+    else if(mosAvg < 4.1) score -= 6;
+  }
+  if(jitP95 != null){
+    if(jitP95 > 40) score -= 18;
+    else if(jitP95 > 25) score -= 10;
+    else if(jitP95 > 15) score -= 5;
+  }
+  if(lossP95 != null){
+    if(lossP95 > 5) score -= 20;
+    else if(lossP95 > 2) score -= 12;
+    else if(lossP95 > 1) score -= 6;
+  }
+  if(latP95 != null){
+    if(latP95 > 250) score -= 12;
+    else if(latP95 > 180) score -= 7;
+    else if(latP95 > 120) score -= 3;
+  }
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  const worst = [...bucket.values()].sort((a,b)=>{
+    // Sort by most severe: low MOS first, then highest loss, jitter, latency
+    const aMos = (a.mosMin === 999 ? 9 : a.mosMin);
+    const bMos = (b.mosMin === 999 ? 9 : b.mosMin);
+    if(aMos !== bMos) return aMos - bMos;
+    if(a.lossMax !== b.lossMax) return b.lossMax - a.lossMax;
+    if(a.jitterMax !== b.jitterMax) return b.jitterMax - a.jitterMax;
+    return b.latencyMax - a.latencyMax;
+  }).slice(0, 12);
+
+  const alerts = buildAlerts({ mosAvg, jitP95, lossP95, latP95, worst, reportTitle, rowsCount: (rows||[]).length });
+
+  return {
+    keys:{ mosK, jitterK, lossK, latencyK, locK, userK, legK, timeK },
+    stats:{
+      rows: (rows||[]).length,
+      mosAvg,
+      jitterP95: jitP95,
+      lossP95,
+      latencyP95: latP95
+    },
+    worst,
+    alerts,
+    score,
+    scoreHint: "Heuristic from MOS avg + p95 jitter/loss/latency."
+  };
+}
+
+function buildAlerts({ mosAvg, jitP95, lossP95, latP95, worst, reportTitle, rowsCount }){
+  const alerts = [];
+
+  const push = (sev, msg, detail) => alerts.push({ sev, msg, detail });
+
+  if(rowsCount === 0){
+    push("WARN", "No CSV rows available to compute quality metrics.", "Check permissions, report status, and CSV proxy route.");
+    return alerts;
+  }
+
+  if(mosAvg != null && mosAvg < 3.9){
+    push(mosAvg < 3.6 ? "BAD" : "WARN", `Low MOS average detected (${mosAvg.toFixed(2)}).`, "Investigate locations/users with lowest MOS and check jitter/loss correlation.");
+  }
+  if(jitP95 != null && jitP95 > 25){
+    push(jitP95 > 40 ? "BAD" : "WARN", `High jitter p95 detected (${Math.round(jitP95)} ms).`, "Common causes: WAN congestion, Wi-Fi interference, bufferbloat, codec mismatch, CPU load on endpoints.");
+  }
+  if(lossP95 != null && lossP95 > 2){
+    push(lossP95 > 5 ? "BAD" : "WARN", `High packet loss p95 detected (${lossP95.toFixed(2)}%).`, "Common causes: packet drops on WAN edge, QoS misclassification, oversubscription, RF issues.");
+  }
+  if(latP95 != null && latP95 > 180){
+    push(latP95 > 250 ? "BAD" : "WARN", `High latency/RTT p95 detected (${Math.round(latP95)} ms).`, "Common causes: suboptimal routing, VPN hairpin, MPLS/Internet path issues, cross-region media anchoring.");
+  }
+
+  if((worst||[]).length){
+    const top = worst[0];
+    const mos = (top.mosMin===999) ? "—" : top.mosMin.toFixed(2);
+    push("WARN", `Worst bucket: ${top.key} (min MOS ${mos}).`, "Open drilldown and focus on this location/user/leg to review max jitter/loss/latency.");
+  }
+
+  // report-type hints
+  const t = safeLower(reportTitle||"");
+  if(t.includes("engagement")){
+    push("INFO", "Engagement reports are adoption/usage focused.", "Use this to detect adoption gaps, calling volume patterns, and change management impacts.");
+  }else if(t.includes("queue")){
+    push("INFO", "Queue reports are operational efficiency focused.", "Look for high abandon rate, high wait time, and imbalanced agent load.");
+  }else if(t.includes("auto")){
+    push("INFO", "Auto-attendant reports are IVR behavior focused.", "Look for caller drop-off at specific menu paths, after-hours patterns, and misroutes.");
+  }
+
+  return alerts;
+}
+
+/* =========================
+   ALERT PANEL RENDER
+========================= */
+function renderAlertingPanel(){
+  const a = SELECTED_METRICS?.alerts || [];
+  if(!a.length){
+    $("alertingPanel").innerHTML = "No alerts generated yet.";
+    return;
+  }
+
+  const row = (x)=>{
+    const b =
+      x.sev === "BAD" ? badge("CRITICAL","bad") :
+      x.sev === "WARN" ? badge("WARN","warn") :
+      badge("INFO","neutral");
+    return `<div style="margin-bottom:10px">
+      ${b} <b>${escapeHtml(x.msg)}</b>
+      <div class="small">${escapeHtml(x.detail||"")}</div>
+    </div>`;
+  };
+
+  $("alertingPanel").innerHTML = a.slice(0,12).map(row).join("");
+}
+
+/* =========================
+   TREND + HEATMAP RENDER
+========================= */
+function drawTrend(){
+  const canvas = $("trend");
+  const { ctx, w, h } = setupCanvasHiDPI(canvas);
+  ctx.clearRect(0,0,w,h);
+  drawAxes(ctx,w,h);
+
+  // Prefer rollup (if you add it later); for now use selected metrics snapshot to simulate a 30-day line.
+  const baseMos = SELECTED_METRICS?.stats?.mosAvg ?? 4.2;
+  const baseJit = SELECTED_METRICS?.stats?.jitterP95 ?? 18;
+  const baseLoss = SELECTED_METRICS?.stats?.lossP95 ?? 1.1;
+
+  // Build 30 points
+  const days = 30;
+  const mos = [];
+  const jit = [];
+  const loss = [];
+
+  for(let i=0;i<days;i++){
+    const wave = Math.sin(i/4) * 0.10;
+    const drift = (i/days) * -0.08;
+    const noise = (Math.random()*0.06 - 0.03);
+    mos.push(Math.max(1, Math.min(4.7, baseMos + wave + drift + noise)));
+
+    const waveJ = Math.sin(i/5) * 3;
+    jit.push(Math.max(1, baseJit + waveJ + (Math.random()*2-1)));
+
+    const waveL = Math.sin(i/6) * 0.45;
+    loss.push(Math.max(0, baseLoss + waveL + (Math.random()*0.25-0.12)));
+  }
+
+  // map: MOS to 0-100 scale (1..4.7)
+  const mosToPct = (m)=> ((m-1)/(4.7-1))*100;
+  // jitter: clamp 0..60
+  const jitToPct = (j)=> (Math.max(0, Math.min(60,j))/60)*100;
+  // loss: clamp 0..6
+  const lossToPct = (l)=> (Math.max(0, Math.min(6,l))/6)*100;
+
+  const toX = i => 16 + (i/(days-1))*(w-32);
+  const toY = pct => (h-20) - (pct/100)*(h-40);
+
+  // MOS line
+  ctx.strokeStyle = "rgba(37,99,235,.95)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  mos.forEach((v,i)=>{
+    const x=toX(i), y=toY(mosToPct(v));
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Jitter dashed
+  ctx.strokeStyle = "rgba(245,158,11,.85)";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6,6]);
+  ctx.beginPath();
+  jit.forEach((v,i)=>{
+    const x=toX(i), y=toY(jitToPct(v));
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // Loss dotted
+  ctx.strokeStyle = "rgba(220,38,38,.75)";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([2,6]);
+  ctx.beginPath();
+  loss.forEach((v,i)=>{
+    const x=toX(i), y=toY(lossToPct(v));
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // legend text
+  ctx.fillStyle = "rgba(100,116,139,.95)";
+  ctx.font = "12px system-ui";
+  ctx.fillText("MOS (solid)  •  Jitter p95 (dashed)  •  Loss p95 (dotted) — simulated when rollups are not present", 14, h-10);
+
+  ctx.fillStyle = "rgba(15,23,42,.85)";
+  ctx.font = "12px system-ui";
+  const title = SELECTED_REPORT ? `Trend for: ${SELECTED_REPORT.title}` : "Trend (select a report)";
+  ctx.fillText(title, 16, 16);
+}
+
+function drawHeatmap(){
+  const canvas = $("heatmap");
+  const { ctx, w, h } = setupCanvasHiDPI(canvas);
+  ctx.clearRect(0,0,w,h);
+
+  const worst = SELECTED_METRICS?.worst || [];
+  if(!worst.length){
+    ctx.fillStyle = "rgba(100,116,139,.95)";
+    ctx.font = "13px system-ui";
+    ctx.fillText("No heatmap data yet. Select a report and Load + Parse CSV.", 16, 40);
+    return;
+  }
+
+  const cols = Math.max(3, Math.min(6, Math.floor(w/210)));
+  const rows = Math.ceil(worst.length/cols);
+  const tileW = Math.floor((w-20)/cols);
+  const tileH = Math.floor((h-20)/Math.max(1,rows));
+  const pad = 8;
+
+  for(let i=0;i<worst.length;i++){
+    const t = worst[i];
+    const rr = Math.floor(i/cols);
+    const cc = i%cols;
+    const x = 10 + cc*tileW;
+    const y = 10 + rr*tileH;
+
+    // severity color from mosMin / lossMax / jitterMax
+    const mos = (t.mosMin===999) ? null : t.mosMin;
+    const loss = t.lossMax || 0;
+    const jit = t.jitterMax || 0;
+
+    let cls = "neutral";
+    if(mos != null && mos < 3.6) cls="bad";
+    else if(mos != null && mos < 3.9) cls="warn";
+    else if(loss > 5 || jit > 40) cls="bad";
+    else if(loss > 2 || jit > 25) cls="warn";
+    else cls="good";
+
+    const fill =
+      cls==="bad" ? "rgba(220,38,38,.18)" :
+      cls==="warn" ? "rgba(245,158,11,.18)" :
+      cls==="good" ? "rgba(22,163,74,.16)" :
+      "rgba(100,116,139,.14)";
+    const stroke =
+      cls==="bad" ? "rgba(220,38,38,.28)" :
+      cls==="warn" ? "rgba(245,158,11,.30)" :
+      cls==="good" ? "rgba(22,163,74,.24)" :
+      "rgba(100,116,139,.22)";
+
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1.2;
+    roundedRect(ctx, x+pad, y+pad, tileW-pad*2, tileH-pad*2, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(15,23,42,.92)";
+    ctx.font = "12px system-ui";
+    ctx.fillText(String(t.key).slice(0,28) + (String(t.key).length>28 ? "…" : ""), x+pad+10, y+pad+18);
+
+    ctx.fillStyle = "rgba(100,116,139,.95)";
+    ctx.font = "11px system-ui";
+    const mosTxt = (mos==null) ? "MOS: —" : `MOS(min): ${mos.toFixed(2)}`;
+    const lossTxt = `Loss(max): ${loss.toFixed ? loss.toFixed(2) : loss}`;
+    const jitTxt  = `Jitter(max): ${Math.round(jit)}ms`;
+    ctx.fillText(mosTxt, x+pad+10, y+pad+36);
+    ctx.fillText(`${lossTxt} • ${jitTxt}`, x+pad+10, y+pad+52);
+  }
+
+  ctx.fillStyle = "rgba(100,116,139,.95)";
+  ctx.font = "12px system-ui";
+  ctx.fillText("Heatmap tiles show worst-case buckets for the selected insight view.", 12, h-10);
+
+  ctx.fillStyle = "rgba(15,23,42,.85)";
+  ctx.font = "12px system-ui";
+  ctx.fillText(`View: ${ACTIVE_TAB}`, 16, 16);
+}
+
+function renderCanvases(){
+  drawTrend();
+  drawHeatmap();
+}
+
+/* =========================
+   MODAL
+========================= */
+function openModal(){
+  if(!SELECTED_REPORT){
+    pushAlert({severity:"warn", title:"Select a report", body:"Choose a report row first.", primaryText:"", primaryHref:""});
+    return;
+  }
+  $("modal").classList.add("show");
+  renderModalContent();
+}
+function closeModal(){ $("modal").classList.remove("show"); }
+function closeModalIfBackdrop(e){ if(e.target && e.target.id === "modal") closeModal(); }
+
+$("btnCopyRaw").addEventListener("click", ()=>{
+  const txt = $("modalRaw").textContent || "";
+  navigator.clipboard?.writeText(txt);
+  pushAlert({severity:"good", title:"Copied", body:"Raw JSON copied to clipboard.", primaryText:"", primaryHref:""});
+});
+
+$("btnDownloadCsvModal").addEventListener("click", ()=>{
+  if(!SELECTED_REPORT?.downloadURL){
+    pushAlert({severity:"warn", title:"No download URL", body:"This report does not provide downloadURL.", primaryText:"", primaryHref:""});
+    return;
+  }
+  openUpstreamDownload(SELECTED_REPORT.downloadURL);
+});
+$("btnReparseModal").addEventListener("click", ()=>{
+  if(!SELECTED_REPORT_CSV){
+    pushAlert({severity:"warn", title:"No CSV loaded", body:"Use Load + Parse CSV first.", primaryText:"", primaryHref:""});
+    return;
+  }
+  const parsed = parseCsvToJson(SELECTED_REPORT_CSV);
+  SELECTED_REPORT_ROWS = parsed.rows || [];
+  SELECTED_METRICS = extractQualityMetrics(SELECTED_REPORT_ROWS, SELECTED_REPORT.title);
+  renderAlertingPanel();
+  renderKPIs();
+  renderCanvases();
+  renderModalContent();
+});
+$("btnRefreshModal").addEventListener("click", async ()=>{
+  if(!SELECTED_REPORT?.id) return;
+  const details = await loadReportDetails(SELECTED_REPORT.id);
+  if(details) SELECTED_REPORT = details;
+  renderSelectedSummary();
+  renderReportTable();
+  renderModalContent();
+});
+
+function renderModalContent(){
+  const r = SELECTED_REPORT;
+  const m = SELECTED_METRICS;
+
+  $("modalTitle").textContent = r ? (r.title || "Report") : "Report";
+  $("modalSub").textContent = r ? `Status: ${r.status} • Range: ${r.startDate} → ${r.endDate} • Created: ${r.created}` : "—";
+
+  const insight = buildInsightNarrative(ACTIVE_TAB, r, m);
+  $("modalInsight").innerHTML = insight;
+
+  if(!m){
+    $("modalMetrics").innerHTML = "No metrics computed yet. Load + Parse CSV to enable quality intelligence.";
+  }else{
+    const s = m.stats || {};
+    $("modalMetrics").innerHTML = `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        ${badge(`Score ${m.score}`, m.score<70?"bad":m.score<85?"warn":"good")}
+        ${badge(`Rows ${fmtInt(s.rows||0)}`, "neutral")}
+        ${badge(`MOS avg ${s.mosAvg!=null ? s.mosAvg.toFixed(2) : "—"}`, "neutral")}
+        ${badge(`Jitter p95 ${s.jitterP95!=null ? Math.round(s.jitterP95)+"ms" : "—"}`, "neutral")}
+        ${badge(`Loss p95 ${s.lossP95!=null ? s.lossP95.toFixed(2)+"%" : "—"}`, "neutral")}
+        ${badge(`Latency p95 ${s.latencyP95!=null ? Math.round(s.latencyP95)+"ms" : "—"}`, "neutral")}
+      </div>
+      <div class="small" style="margin-bottom:10px">${escapeHtml(m.scoreHint||"")}</div>
+      <div>
+        <b>Worst Buckets:</b>
+        <div class="small" style="margin-top:6px">
+          ${(m.worst||[]).slice(0,10).map(w=>{
+            const mos = (w.mosMin===999) ? "—" : w.mosMin.toFixed(2);
+            return `<div>• <b>${escapeHtml(w.key)}</b> — min MOS ${escapeHtml(mos)} • max loss ${escapeHtml(String(w.lossMax||0))}% • max jitter ${escapeHtml(String(Math.round(w.jitterMax||0)))}ms</div>`;
+          }).join("") || "—"}
+        </div>
+      </div>
+    `;
+  }
+
+  const rawOut = {
+    me: ME,
+    orgId: SELECTED_ORG_ID || ME?.orgId || null,
+    selectedReport: r,
+    selectedTab: ACTIVE_TAB,
+    csvLoaded: !!SELECTED_REPORT_CSV,
+    parsedRows: SELECTED_REPORT_ROWS ? SELECTED_REPORT_ROWS.length : 0,
+    metrics: m
+  };
+  $("modalRaw").textContent = JSON.stringify(rawOut, null, 2);
+}
+
+function buildInsightNarrative(tab, report, metrics){
+  const title = report?.title || "";
+  const rows = metrics?.stats?.rows || 0;
+  const score = metrics?.score;
+
+  const base = [];
+  base.push(`<div class="small">This insight view is designed to be action-oriented: identify where quality is degrading, quantify severity, and provide a troubleshooting starting point (location/user/leg).</div>`);
+
+  if(!metrics){
+    base.push(`<div style="margin-top:10px">${badge("Next Step","warn")} Load + Parse CSV to enable MOS/jitter/loss/latency analysis and alerting.</div>`);
+    return base.join("");
+  }
+
+  const s = metrics.stats || {};
+  base.push(`<div style="margin-top:10px">${badge(`Quality Score ${score}`, score<70?"bad":score<85?"warn":"good")} ${badge(`Rows ${fmtInt(rows)}`,"neutral")}</div>`);
+  base.push(`<div class="small" style="margin-top:8px">MOS avg: <b>${s.mosAvg!=null ? s.mosAvg.toFixed(2) : "—"}</b> • Jitter p95: <b>${s.jitterP95!=null ? Math.round(s.jitterP95)+"ms" : "—"}</b> • Loss p95: <b>${s.lossP95!=null ? s.lossP95.toFixed(2)+"%" : "—"}</b> • Latency p95: <b>${s.latencyP95!=null ? Math.round(s.latencyP95)+"ms" : "—"}</b></div>`);
+
+  const explain = (tab)=>{
+    if(tab==="media") return "Media Quality focuses on per-leg media performance. Use it to isolate whether the issue is upstream/downstream, endpoint vs network, and whether the impairment is jitter/loss/latency dominated.";
+    if(tab==="quality") return "Calling Quality (App) emphasizes client experience inside the Webex Calling app. Use it to detect endpoint-side issues such as Wi-Fi contention, CPU pressure, and app-related behaviors.";
+    if(tab==="engagement") return "Engagement highlights adoption and usage patterns. Use it to identify departments with low usage, spikes in call volume, and behavior changes after upgrades or policy changes.";
+    if(tab==="queues") return "Call Queue views emphasize operational performance: wait times, abandons, and agent effectiveness. Use it to optimize staffing and hunt misroutes.";
+    if(tab==="aa") return "Auto Attendant views emphasize caller journeys: menu option selections, drop-offs, after-hours behavior, and misrouting patterns.";
+    return "Overview provides a cross-cut summary, alerting posture, and worst-case buckets.";
+  };
+  base.push(`<div style="margin-top:10px">${badge("Context","neutral")} ${escapeHtml(explain(tab))}</div>`);
+
+  // recommended actions based on signals
+  const actions = [];
+  if(s.lossP95!=null && s.lossP95>2) actions.push("Validate QoS markings end-to-end and check interface drops/queue tail drops on WAN edges.");
+  if(s.jitterP95!=null && s.jitterP95>25) actions.push("Check Wi-Fi airtime utilization and WAN bufferbloat; consider SQM/queuing on edge.");
+  if(s.latencyP95!=null && s.latencyP95>180) actions.push("Validate routing path and avoid VPN hairpin; confirm media anchoring region alignment.");
+  if(s.mosAvg!=null && s.mosAvg<3.9) actions.push("Focus on worst buckets and correlate MOS dips with jitter/loss spikes by location/user/leg.");
+
+  if(!actions.length) actions.push("No dominant impairment detected from current CSV. Review worst buckets for localized issues.");
+
+  base.push(`<div style="margin-top:10px"><b>Recommended actions:</b><div class="small" style="margin-top:6px">${actions.map(a=>`• ${escapeHtml(a)}`).join("<br/>")}</div></div>`);
+
+  return base.join("");
+}
+
+/* =========================
+   LOAD ME
+========================= */
+async function loadMe(){
+  const r = await api("/api/me");
+  if(!r.ok) throw new Error("Failed to load /api/me");
+
+  ME = r.data;
+
+  if(ME.role !== "admin" && !ME.orgId){
+    window.location.href = "/pin";
+    return false;
+  }
+
+  SELECTED_ORG_ID = ME.orgId || null;
+
+  $("welcomeLine").textContent = ME.email || "—";
+  $("roleLine").textContent = ME.role ? `Role: ${ME.role}` : "Role: —";
+
+  const label = ME?.orgName || (ME?.role === "admin" ? "Admin (select tenant)" : "—");
+  $("tenantPill").innerHTML = `Tenant: <strong>${escapeHtml(label)}</strong>`;
+
+  if(ME.sessionExpiresInSeconds) startSessionTimer(ME.sessionExpiresInSeconds);
+  else $("sessionPill").innerHTML = `Session: <strong>—</strong>`;
+
+  if(ME.role === "admin"){
+    $("tenantBar").classList.add("show");
+    await loadOrgs();
+  } else {
+    $("tenantBar").classList.remove("show");
+  }
+
+  return true;
+}
+
+/* =========================
+   REFRESH ALL
+========================= */
+async function refreshAll(reason){
+  clearAlerts();
+  pushAlert({
+    severity:"good",
+    title:"Calling Insight",
+    body:`Refreshing reports and dashboards. (${reason})`,
+    primaryText:"Open PSTN",
+    primaryHref:"/customer/pstn"
+  });
+
+  await listReports();
+  renderSelectedSummary();
+  renderAlertingPanel();
+  renderCanvases();
+
+  setLastRefresh();
+  setLiveMode("Polling");
+}
+
+/* =========================
+   RESIZE REDRAW (debounced)
+========================= */
+let RESIZE_T = null;
+window.addEventListener("resize", ()=>{
+  clearTimeout(RESIZE_T);
+  RESIZE_T = setTimeout(()=>{
+    renderCanvases();
+  }, 180);
+});
+
+/* =========================
+   INIT
+========================= */
+async function init(){
+  try{
+    setDefaultDates();
+
+    const ok = await loadMe();
+    if(!ok) return;
+
+    // if admin, set org to selected dropdown initially
+    if(ME.role === "admin"){
+      const sel = $("tenantSelect");
+      if(sel && sel.value) SELECTED_ORG_ID = sel.value;
+      const label = sel?.options?.[sel.selectedIndex]?.text || "Admin (select tenant)";
+      $("tenantPill").innerHTML = `Tenant: <strong>${escapeHtml(label)}</strong>`;
+    }
+
+    pushAlert({
+      severity:"good",
+      title:"Welcome",
+      body:"Create and track Webex Calling reports. Select a report to render quality intelligence (MOS/jitter/loss/latency), heatmaps, and operational insights.",
+      primaryText:"Refresh",
+      primaryHref:"#"
+    });
+
+    await refreshAll("Initial load");
+
+  }catch(e){
+    clearAlerts();
+    pushAlert({
+      severity:"bad",
+      title:"Calling Insight Page Error",
+      body: e?.message || String(e),
+      primaryText:"Re-authenticate",
+      primaryHref:"/pin"
+    });
+  }
+}
+init();
+</script>
+</body>
+</html>
