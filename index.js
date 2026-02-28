@@ -2499,6 +2499,9 @@ const accessEmail =
   request.headers.get("cf-access-authenticated-user-email") ||
   request.headers.get("cf-access-user-email");
 
+// 🔥 Allow ci-api subdomain to bypass Access completely
+const isCiApiHost = url.hostname === "ci-api.onenecklab.com";
+
 const publicPaths = [
   "/health",
   "/favicon.ico",
@@ -2507,18 +2510,17 @@ const publicPaths = [
 ];
 
 const publicPrefixes = [
-/*  "/customer" */
+  /* "/customer" */
 ];
 
 const isPublic =
+  isCiApiHost ||
   publicPaths.includes(url.pathname) ||
   publicPrefixes.some(p => url.pathname.startsWith(p));
 
 if (!accessEmail && !isPublic) {
   return json({ error: "access_required" }, 401);
 }
-
-
       /* -----------------------------
    /api/admin/seed-pins (GET)
    Admin-only: fetch JSON and seed ORG_MAP_KV
