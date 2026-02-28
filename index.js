@@ -4473,6 +4473,9 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "GET")
 // -------------------------------
 // POST — Intelligent Report Create
 // -------------------------------
+// -------------------------------
+// POST — Intelligent Report Create
+// -------------------------------
 if (url.pathname === "/api/calling-insight/reports" && request.method === "POST") {
 
   const user = getCurrentUser(request);
@@ -4504,13 +4507,12 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
   const startDate = body.startDate || dateISO(7);
   const endDate = body.endDate || dateISO(0);
 
-  const reportType = title;
-  const stateKey = `ci:state:${resolvedOrgId}:${reportType}`;
+  const stateKey = `ci:state:${resolvedOrgId}:${title}`;
 
   const existingRaw = await env.WEBEX.get(stateKey);
   const existing = existingRaw ? JSON.parse(existingRaw) : null;
 
-  // ✅ Prevent duplicate creation
+  // Prevent duplicate creation
   if (existing?.status === "inProgress") {
     return json({
       ok:true,
@@ -4520,7 +4522,6 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
     }, 200);
   }
 
-  // Create new report
   const r = await webexFetchSafe(
     env,
     "/reports",
@@ -4545,17 +4546,35 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
     }, 200);
   }
 
-  const reportId = r.data?.Id || r.data?.id;
+  const reportId =
+    r.data?.Id ||
+    r.data?.id ||
+    null;
 
+  if (!reportId) {
+    return json({
+      ok:false,
+      orgId: resolvedOrgId,
+      error:"missing_reportId_from_webex"
+    }, 200);
+  }
+
+  // Store report state
   await env.WEBEX.put(
     stateKey,
     JSON.stringify({
       reportId,
+      title,
+      startDate,
+      endDate,
       status:"inProgress",
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      lastChecked: null
     }),
-    { expirationTtl: 60 * 60 * 24 } // 24h
+    { expirationTtl: 60 * 60 * 24 }
   );
+
+  console.log("Calling Insight report created:", reportId);
 
   return json({
     ok:true,
@@ -5779,65 +5798,102 @@ async function ciCreateReportIfNeeded(env, orgId, title, startDate, endDate) {
 }
 
 async function ciPollAndIngestPending(env, orgId, orgName) {
-  const pending = await ciLoadPending(env, orgId);
-  if (!pending.length) return { ok:true, ingested:0, remaining:0 };
 
-  const keep = [];
+  const kinds = [
+    CALLING_INSIGHT.TITLES.MEDIA,
+    CALLING_INSIGHT.TITLES.QUALITY,
+    CALLING_INSIGHT.TITLES.ENGAGEMENT
+  ];
+
   let ingested = 0;
 
-  for (const job of pending) {
-    const reportId = job.reportId;
+  for (const title of kinds) {
+
+    const stateKey = `ci:state:${orgId}:${title}`;
+    const raw = await env.WEBEX.get(stateKey);
+    if (!raw) continue;
+
+    const state = JSON.parse(raw);
+
+    if (state.status !== "inProgress") continue;
+
+    const reportId = state.reportId;
     if (!reportId) continue;
 
-    const d = await webexFetchSafe(env, `/reports/${encodeURIComponent(reportId)}`, orgId);
-    if (!d.ok) { keep.push(job); continue; }
+    console.log("Polling report:", reportId);
+
+    const d = await webexFetchSafe(
+      env,
+      `/reports/${encodeURIComponent(reportId)}`,
+      orgId
+    );
+
+    if (!d.ok) continue;
 
     const status = String(d.data?.status || "").toLowerCase();
-    const downloadURL = d.data?.downloadURL || d.data?.downloadUrl || null;
+    const downloadURL =
+      d.data?.downloadURL ||
+      d.data?.downloadUrl ||
+      null;
 
     if (status !== "done" || !downloadURL) {
-      keep.push({ ...job, state:"WAITING", lastStatus: d.data?.status || null });
+      await env.WEBEX.put(
+        stateKey,
+        JSON.stringify({
+          ...state,
+          lastChecked: Date.now(),
+          lastStatus: d.data?.status || null
+        }),
+        { expirationTtl: 60 * 60 * 24 }
+      );
       continue;
     }
 
-    // Download CSV from downloadURL (not webexapis host)
+    // Download CSV
     const token = await getAccessToken(env);
+
     const csvRes = await fetch(downloadURL, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "text/csv" }
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "text/csv"
+      }
     });
+
     const csvText = await csvRes.text();
 
     if (!csvRes.ok || !csvText) {
-      keep.push({ ...job, state:"DOWNLOAD_FAILED", httpStatus: csvRes.status });
+      console.log("CSV download failed:", csvRes.status);
       continue;
     }
 
-    // Parse CSV -> JSON rows (you already have parseCsvToJson)
+    // Parse CSV
     const parsed = parseCsvToJson(csvText);
+
     const rollup = computeQualityRollupFromRows(parsed.rows || []);
     const alerts = buildAlertsFromRollup(rollup);
 
-    // Store rollup + alerts to KV
     const kind =
-      job.title === CALLING_INSIGHT.TITLES.MEDIA ? "media7d" :
-      job.title === CALLING_INSIGHT.TITLES.QUALITY ? "quality7d" :
-      "other";
+      title === CALLING_INSIGHT.TITLES.MEDIA ? "media7d" :
+      title === CALLING_INSIGHT.TITLES.QUALITY ? "quality7d" :
+      "engagement7d";
 
+    // Store rollup
     await env.WEBEX.put(
       CALLING_INSIGHT.kv.rollup(orgId, kind),
       JSON.stringify({
         orgId,
         orgName: orgName || null,
         kind,
-        title: job.title,
-        startDate: job.startDate,
-        endDate: job.endDate,
+        title,
+        startDate: state.startDate,
+        endDate: state.endDate,
         generatedAt: new Date().toISOString(),
         rollup
       }),
-      { expirationTtl: 60 * 60 * 24 * 10 } // keep 10 days
+      { expirationTtl: 60 * 60 * 24 * 10 }
     );
 
+    // Store alerts
     await env.WEBEX.put(
       CALLING_INSIGHT.kv.alerts(orgId),
       JSON.stringify({
@@ -5849,20 +5905,42 @@ async function ciPollAndIngestPending(env, orgId, orgName) {
       { expirationTtl: 60 * 60 * 24 * 10 }
     );
 
-    // Also persist as a daily report artifact (optional, consistent with your pipeline)
+    // Persist artifact
     await writeReport(env, {
       type: `calling_insight_${kind}`,
       orgId,
       day: dayKeyUTC(),
-      payload: { rollup, alerts, startDate: job.startDate, endDate: job.endDate, title: job.title },
-      meta: { orgName: orgName || null, reportId }
+      payload: {
+        rollup,
+        alerts,
+        startDate: state.startDate,
+        endDate: state.endDate,
+        title
+      },
+      meta: {
+        orgName: orgName || null,
+        reportId
+      }
     });
+
+    // Mark state completed
+    await env.WEBEX.put(
+      stateKey,
+      JSON.stringify({
+        ...state,
+        status: "completed",
+        completedAt: Date.now()
+      }),
+      { expirationTtl: 60 * 60 * 24 }
+    );
 
     ingested++;
   }
 
-  await ciSavePending(env, orgId, keep);
-  return { ok:true, ingested, remaining: keep.length };
+  return {
+    ok: true,
+    ingested
+  };
 }
 
 // Runs inside your daily scheduled loop for each org
