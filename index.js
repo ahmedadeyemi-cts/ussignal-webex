@@ -333,8 +333,8 @@ async function webexFetch(env, path, orgId = null, options = {}) {
   const isAnalytics =
     finalPath.startsWith("/analytics") ||
     finalPath.startsWith("/calling/analytics") ||
-    finalPath.startsWith("/cdr_feed") ||
-    finalPath.startsWith("/reports");
+    finalPath.startsWith("/cdr_feed");
+
 
   const base = isAnalytics ? analyticsBase(env) : webexBase(env);
   const url = `${base}${finalPath}`;
