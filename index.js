@@ -3028,7 +3028,7 @@ if (
 
   const result = await webexFetch(
     env,
-    `/v1/reports/${encodeURIComponent(reportId)}`,
+    `/reports/${encodeURIComponent(reportId)}`,
     orgId
   );
 
