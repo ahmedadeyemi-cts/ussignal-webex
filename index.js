@@ -3033,8 +3033,11 @@ if (
   );
 
   if (!result.ok) {
-    return json({ error: "report_details_failed" }, 500);
-  }
+  return json({
+    error: "report_details_failed",
+    upstream: result
+  }, 500);
+}
 
   return json(result.data);
 }
