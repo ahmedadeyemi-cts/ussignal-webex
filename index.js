@@ -4352,7 +4352,37 @@ if (url.pathname === "/api/calling-insight/alerts" && request.method === "GET") 
 
   return json({ ok:true, orgId, data }, 200);
 }
+if (url.pathname.startsWith("/api/calling-insight/reports/") && request.method === "GET") {
 
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
+  const session = await getSession(env, user.email);
+  const reportId = url.pathname.split("/").pop();
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) return json({ ok:false, error:"missing_orgId" }, 400);
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) return json({ ok:false, error:"pin_required" }, 401);
+    resolvedOrgId = session.orgId;
+  }
+
+  const r = await webexFetchSafe(
+    env,
+    `/reports/${encodeURIComponent(reportId)}`,
+    resolvedOrgId
+  );
+
+  if (!r.ok) {
+    return json({ ok:false, error:r.error, preview:r.preview }, 200);
+  }
+
+  return json(r.data, 200);
+}
      // =============================
 // Calling Insight - AI Summary
 // POST /api/calling-insight/ai/summary
