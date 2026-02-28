@@ -1022,7 +1022,11 @@ async function listReports(){
     return;
   }
 
-  const items = Array.isArray(r.data?.items) ? r.data.items : (Array.isArray(r.data) ? r.data : []);
+ const items =
+  Array.isArray(r.data?.reports) ? r.data.reports :
+  Array.isArray(r.data?.items)   ? r.data.items   :
+  Array.isArray(r.data)          ? r.data         :
+  [];
   REPORTS = items.map(normalizeReportItem);
 
   applyReportFilter();
