@@ -3013,7 +3013,82 @@ if (url.pathname === "/api/debug/org-context") {
     body: text.slice(0, 500)
   });
 }
+/* =====================================================
+   API: Calling Insight - Report Details
+   GET /api/calling-insight/reports/:id
+===================================================== */
+if (
+  request.method === "GET" &&
+  /^\/api\/calling-insight\/reports\/[^\/]+$/.test(url.pathname)
+) {
+  const reportId = url.pathname.split("/")[4];
+  const orgId = url.searchParams.get("orgId");
 
+  if (!orgId) return json({ error: "missing_orgId" }, 400);
+
+  const result = await webexFetch(
+    env,
+    `/v1/reports/${encodeURIComponent(reportId)}`,
+    orgId
+  );
+
+  if (!result.ok) {
+    return json({ error: "report_details_failed" }, 500);
+  }
+
+  return json(result.data);
+}
+     /* =====================================================
+   API: Calling Insight - CSV Download Proxy
+   GET /api/calling-insight/reports/:id/csv
+===================================================== */
+if (
+  request.method === "GET" &&
+  /^\/api\/calling-insight\/reports\/[^\/]+\/csv$/.test(url.pathname)
+) {
+  const parts = url.pathname.split("/");
+  const reportId = parts[4];
+  const orgId = url.searchParams.get("orgId");
+
+  if (!orgId) return json({ error: "missing_orgId" }, 400);
+
+  // Get report metadata first
+  const reportRes = await webexFetch(
+    env,
+    `/v1/reports/${encodeURIComponent(reportId)}`,
+    orgId
+  );
+
+  if (!reportRes.ok || !reportRes.data?.downloadURL) {
+    return json({ error: "report_not_ready" }, 400);
+  }
+
+  const token = await getAccessToken(env);
+
+  // Fetch CSV from Webex report service WITH Authorization
+  const csvRes = await fetch(reportRes.data.downloadURL, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (!csvRes.ok) {
+    const txt = await csvRes.text();
+    return json(
+      { error: "csv_fetch_failed", status: csvRes.status, body: txt.slice(0, 500) },
+      500
+    );
+  }
+
+  const csvText = await csvRes.text();
+
+  return new Response(csvText, {
+    headers: {
+      "Content-Type": "text/csv",
+      "Content-Disposition": `attachment; filename="report-${reportId}.csv"`
+    }
+  });
+}
 //API/STATUS
 // /api/status (GET) — maintenance-style with upstream fallback
 // /api/status (GET)
