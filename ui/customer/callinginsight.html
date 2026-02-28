@@ -996,23 +996,22 @@ function setDefaultDates(){
    REPORTS — LOAD / CREATE / DETAILS / CSV
 ========================= */
 function normalizeReportItem(r){
-  // handle inconsistent casing from the sample ("Id")
-  const id = r.id || r.Id || r.reportId || r.reportID || null;
+  const id = r?.id || r?.Id || r?.reportId || r?.reportID || null;
+
   return {
-    ...r,
+    ...r,   // ← THIS was the problem
     id,
-    title: r.title || r.name || "Report",
-    service: r.service || r.product || "Webex",
-    status: r.status || "unknown",
-    startDate: r.startDate || r.from || "",
-    endDate: r.endDate || r.to || "",
-    created: r.created || r.createdAt || "",
-    createdBy: r.createdBy || "",
-    downloadURL: r.downloadURL || r.downloadUrl || "",
-    downloadDomain: r.downloadDomain || ""
+    title: r?.title || r?.name || "Report",
+    service: r?.service || r?.product || "Webex",
+    status: r?.status || "unknown",
+    startDate: r?.startDate || r?.from || "",
+    endDate: r?.endDate || r?.to || "",
+    created: r?.created || r?.createdAt || "",
+    createdBy: r?.createdBy || "",
+    downloadURL: r?.downloadURL || r?.downloadUrl || "",
+    downloadDomain: r?.downloadDomain || ""
   };
 }
-
 async function listReports(){
   // expected: { items: [...], numberOfReports }
   const r = await api(buildPath("/api/calling-insight/reports"));
