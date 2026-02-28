@@ -3058,7 +3058,7 @@ if (
   // Get report metadata first
   const reportRes = await webexFetch(
     env,
-    `/v1/reports/${encodeURIComponent(reportId)}`,
+    `/reports/${encodeURIComponent(reportId)}`,
     orgId
   );
 
