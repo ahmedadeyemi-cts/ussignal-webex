@@ -4573,7 +4573,10 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
     }),
     { expirationTtl: 60 * 60 * 24 }
   );
-
+// 🔥 Immediate first poll (non-blocking)
+ctx.waitUntil(
+  ciPollAndIngestPending(env, resolvedOrgId, null)
+);
   console.log("Calling Insight report created:", reportId);
 
   return json({
@@ -7469,18 +7472,11 @@ async function ciBackgroundPollAll(env) {
 
   for (const org of orgs) {
 
-    const orgId = org.id;
+    try {
+      await ciPollAndIngestPending(env, org.id, org.displayName || null);
+    } catch (e) {
+      console.error("CI poll failed for:", org.id, e);
+    }
 
-    const stateKey = `ci:state:${orgId}:${CALLING_INSIGHT.TITLES.MEDIA}`;
-    const raw = await env.WEBEX.get(stateKey);
-    if (!raw) continue;
-
-    const state = JSON.parse(raw);
-    if (state.status !== "inProgress") continue;
-
-    // Internal worker call (relative path)
-    await fetch(`https://ussignal-webex.onenecklab.com/api/calling-insight/poll?orgId=${orgId}`, {
-      method: "POST"
-    });
   }
 }
