@@ -4383,6 +4383,32 @@ if (url.pathname.startsWith("/api/calling-insight/reports/") && request.method =
 
   return json(r.data, 200);
 }
+     if (url.pathname.startsWith("/api/calling-insight/download/")) {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ error:"access_required" }, 401);
+
+  const reportId = url.pathname.split("/").pop();
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  const token = await getAccessToken(env);
+
+  const res = await fetch(
+    `https://webexapis.com/v1/reports/${reportId}/download?orgId=${orgId}`,
+    {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  );
+
+  const buffer = await res.arrayBuffer();
+
+  return new Response(buffer, {
+    headers: {
+      "content-type": "text/csv",
+      "content-disposition": `attachment; filename="report-${reportId}.csv"`
+    }
+  });
+}
      // =============================
 // Calling Insight - AI Summary
 // POST /api/calling-insight/ai/summary
