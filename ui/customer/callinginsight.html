@@ -423,7 +423,7 @@ html[data-theme="dark"] pre{background:#050a14}
   <button class="pillBtn primary" id="btnCreate">
     Run + Auto Download
   </button>
-  <button class="pillBtn" id="btnList">Refresh List</button>
+  <button class="pillBtn" id="btnRefreshList">Refresh List</button>
 </div>
         </div>
 
@@ -1369,13 +1369,32 @@ function renderKPIs(){
 /* =========================
    BUTTON WIRES
 ========================= */
-$("btnCreate").addEventListener("click", createReport);
-$("btnRefreshList").addEventListener("click", async ()=>{
-  clearAlerts();
-  pushAlert({severity:"good", title:"Refreshing", body:"Refreshing report list.", primaryText:"", primaryHref:""});
-  await listReports();
-});
-$("btnRefresh").addEventListener("click", ()=> refreshAll("Manual refresh"));
+
+// Create
+const btnCreate = $("btnCreate");
+if(btnCreate){
+  btnCreate.addEventListener("click", createReport);
+}
+
+// Refresh List (SAFE)
+const btnRefreshList = $("btnRefreshList"); // or "btnList" if you keep that id
+if(btnRefreshList){
+  btnRefreshList.addEventListener("click", async ()=>{
+    clearAlerts();
+    pushAlert({
+      severity:"good",
+      title:"Refreshing",
+      body:"Refreshing report list."
+    });
+    await listReports();
+  });
+}
+
+// Global Refresh
+const btnRefresh = $("btnRefresh");
+if(btnRefresh){
+  btnRefresh.addEventListener("click", ()=> refreshAll("Manual refresh"));
+}
 
 $("btnPoll").addEventListener("click", async ()=>{
   if(!SELECTED_REPORT?.id) return;
