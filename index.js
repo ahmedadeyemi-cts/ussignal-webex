@@ -5953,7 +5953,10 @@ async function ciCreateReportIfNeeded(env, orgId, title, startDate, endDate) {
 
   // Create report
   const body = { title, startDate, endDate, scheduleFrom: "api" };
-  const r = await webexFetchSafe(env, "/reports", orgId, { method:"POST", body: JSON.stringify(body) });
+  await webexFetchSafe(env, "/callingInsights/reports", orgId, {
+  method: "POST",
+  body: JSON.stringify(payload)
+});
 
   if (!r.ok) return { ok:false, diag: diag("reports/create", r) };
 
