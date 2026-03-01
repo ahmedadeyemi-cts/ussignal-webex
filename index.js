@@ -4647,11 +4647,12 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "GET")
     error: r.error || null
   }, 200);
 }
+
 // -------------------------------
 // POST — Intelligent Report Create
 // -------------------------------
 // -------------------------------
-// POST — Intelligent Report Create
+// POST — Create Calling Insights report
 // -------------------------------
 if (url.pathname === "/api/calling-insight/reports" && request.method === "POST") {
 
@@ -4659,12 +4660,7 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
   if (!user) return json({ ok:false, error:"access_required" }, 401);
 
   const session = await getSession(env, user.email);
-  const body = await request.json().catch(()=> ({}));
-
-  const requestedOrgId =
-    body.orgId ||
-    url.searchParams.get("orgId") ||
-    null;
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
   let resolvedOrgId;
 
@@ -4680,36 +4676,23 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
     resolvedOrgId = session.orgId;
   }
 
-  const title = body.title || CALLING_INSIGHT.TITLES.MEDIA;
-  const startDate = body.startDate || dateISO(7);
-  const endDate = body.endDate || dateISO(0);
+  const body = await request.json();
+  const { title, startDate, endDate } = body;
 
-  const stateKey = `ci:state:${resolvedOrgId}:${title}`;
-
-  const existingRaw = await env.WEBEX.get(stateKey);
-  const existing = existingRaw ? JSON.parse(existingRaw) : null;
-
-  // Prevent duplicate creation
-  if (existing?.status === "inProgress") {
-    return json({
-      ok:true,
-      orgId: resolvedOrgId,
-      status:"already_running",
-      reportId: existing.reportId
-    }, 200);
+  if (!title || !startDate || !endDate) {
+    return json({ ok:false, error:"missing_parameters" }, 400);
   }
 
   const r = await webexFetchSafe(
     env,
-    "/reports",
+    "/callingInsights/reports",   // 🔥 CRITICAL FIX
     resolvedOrgId,
     {
-      method:"POST",
+      method: "POST",
       body: JSON.stringify({
         title,
         startDate,
-        endDate,
-        scheduleFrom:"api"
+        endDate
       })
     }
   );
@@ -4718,49 +4701,14 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
     return json({
       ok:false,
       orgId: resolvedOrgId,
-      error:r.error,
-      preview:r.preview
-    }, 200);
+      error: r.error || "report_creation_failed"
+    }, 500);
   }
-
-  const reportId =
-    r.data?.Id ||
-    r.data?.id ||
-    null;
-
-  if (!reportId) {
-    return json({
-      ok:false,
-      orgId: resolvedOrgId,
-      error:"missing_reportId_from_webex"
-    }, 200);
-  }
-
-  // Store report state
-  await env.WEBEX.put(
-    stateKey,
-    JSON.stringify({
-      reportId,
-      title,
-      startDate,
-      endDate,
-      status:"inProgress",
-      createdAt: Date.now(),
-      lastChecked: null
-    }),
-    { expirationTtl: 60 * 60 * 24 }
-  );
-// 🔥 Immediate first poll (non-blocking)
-ctx.waitUntil(
-  ciPollAndIngestPending(env, resolvedOrgId, null)
-);
-  console.log("Calling Insight report created:", reportId);
 
   return json({
     ok:true,
     orgId: resolvedOrgId,
-    status:"created",
-    reportId
+    report: r.data
   }, 200);
 }
      // ============================================================
