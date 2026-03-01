@@ -412,21 +412,19 @@ html[data-theme="dark"] pre{background:#050a14}
       <h2>Report Controls</h2>
       <div class="controls">
         <div class="left">
-          <select id="reportType">
-            <option value="Calling Media Quality Report">Calling Media Quality Report</option>
-            <option value="Calling Quality Report">Calling Quality Report</option>
-            <option value="Calling Engagement Report">Calling Engagement Report</option>
-            <option value="Call Queue Stats Report">Call Queue Stats Report</option>
-            <option value="Call Queue Agent Stats Report">Call Queue Agent Stats Report</option>
-            <option value="Auto-attendant Stats Summary">Auto-attendant Stats Summary</option>
-            <option value="Auto-attendant Business & After-hours Key Details">Auto-attendant Business & After-hours Key Details</option>
-          </select>
+        <select id="reportType" disabled>
+            <option>Loading report templates…</option>
+        </select>
 
           <input type="date" id="startDate"/>
           <input type="date" id="endDate"/>
 
-          <button class="pillBtn" id="btnCreate">Create Report</button>
-          <button class="pillBtn" id="btnRefreshList">Refresh List</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+  <button class="pillBtn primary" id="btnCreate">
+    Run + Auto Download
+  </button>
+  <button class="pillBtn" id="btnList">Refresh List</button>
+</div>
         </div>
 
         <div class="right">
@@ -974,6 +972,7 @@ $("btnApplyTenant").addEventListener("click", async () => {
   clearAlerts();
   pushAlert({severity:"good", title:"Tenant applied", body:"Refreshing report inventory and rollups for the selected tenant.", primaryText:"", primaryHref:""});
   await refreshAll("Tenant switch");
+  await autoRunLast7Days();
 });
 
 /* =========================
@@ -1046,40 +1045,138 @@ async function listReports(){
     $("kLatestMeta").textContent = "No reports returned.";
   }
 }
+  async function loadTemplates(){
+  if(!SELECTED_ORG_ID) return;
 
-async function createReport(){
+  const r = await api(buildPath("/api/calling-insight/templates"));
+  if(!r.ok){
+    pushAlert({
+      severity:"bad",
+      title:"Template load failed",
+      body:"Could not load report templates for this tenant."
+    });
+    return;
+  }
+
+  const items = Array.isArray(r.data?.items) ? r.data.items : [];
+  const sel = $("reportType");
+
+  sel.innerHTML = "";
+
+  if(!items.length){
+    sel.innerHTML = `<option>No templates available</option>`;
+    sel.disabled = true;
+    return;
+  }
+
+  // Group by service
+  const grouped = {};
+  for(const t of items){
+    const svc = t.service || "Other";
+    if(!grouped[svc]) grouped[svc] = [];
+    grouped[svc].push(t);
+  }
+
+  Object.keys(grouped).sort().forEach(service=>{
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = service;
+
+    grouped[service]
+      .sort((a,b)=>a.title.localeCompare(b.title))
+      .forEach(t=>{
+        const opt = document.createElement("option");
+        opt.value = t.title; // IMPORTANT: match by title
+        opt.textContent = t.title;
+        optgroup.appendChild(opt);
+      });
+
+    sel.appendChild(optgroup);
+  });
+
+  sel.disabled = false;
+}
+
+async function createReport(autoDownload = true){
+
   const title = $("reportType").value;
   const startDate = $("startDate").value;
   const endDate = $("endDate").value;
 
   if(!SELECTED_ORG_ID){
-    pushAlert({severity:"warn", title:"Tenant required", body:"Select a tenant/org first.", primaryText:"", primaryHref:""});
-    return;
-  }
-  if(!startDate || !endDate){
-    pushAlert({severity:"warn", title:"Date range required", body:"Select start and end date.", primaryText:"", primaryHref:""});
+    pushAlert({severity:"warn", title:"Tenant required", body:"Select a tenant first."});
     return;
   }
 
   $("btnCreate").disabled = true;
 
-  const r = await api(buildPath("/api/calling-insight/reports"), {
+  const r = await api(buildPath("/api/calling-insight/run"), {
     method:"POST",
     headers:{ "content-type":"application/json" },
-    body: JSON.stringify({ title, startDate, endDate })
+    body: JSON.stringify({ orgId: SELECTED_ORG_ID, title, startDate, endDate })
   });
 
   $("btnCreate").disabled = false;
 
-  if(!r.ok){
-    pushAlert({severity:"bad", title:"Create report failed", body:`Worker returned status ${r.status}. Check logs and permissions.`, primaryText:"", primaryHref:""});
+  if(!r.ok || !r.data?.id){
+    pushAlert({severity:"bad", title:"Report creation failed", body:"Worker could not create report."});
     return;
   }
 
-  pushAlert({severity:"good", title:"Report submitted", body:"Report creation requested. It may take a few minutes to complete. Use Poll Status.", primaryText:"", primaryHref:""});
-  await listReports();
-}
+  const reportId = r.data.id;
 
+  pushAlert({
+    severity:"good",
+    title:"Report submitted",
+    body:"Polling until completion…"
+  });
+
+  await pollUntilDone(reportId, autoDownload);
+}
+  async function pollUntilDone(reportId, autoDownload){
+
+  let attempts = 0;
+  const MAX = 20;
+
+  const interval = setInterval(async ()=>{
+
+    attempts++;
+
+    const r = await api(buildPath(`/api/calling-insight/reports/${reportId}`));
+    if(!r.ok) return;
+
+    const status = safeLower(r.data?.status);
+
+    if(status.includes("done")){
+      clearInterval(interval);
+
+      pushAlert({
+        severity:"good",
+        title:"Report ready",
+        body:"Downloading automatically…"
+      });
+
+      if(autoDownload){
+        window.open(
+          `/api/calling-insight/reports/${reportId}/csv?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`,
+          "_blank"
+        );
+      }
+
+      await listReports();
+      return;
+    }
+
+    if(attempts >= MAX){
+      clearInterval(interval);
+      pushAlert({
+        severity:"warn",
+        title:"Polling stopped",
+        body:"Report still not complete."
+      });
+    }
+
+  }, 15000); // every 15 sec
+}
 async function loadReportDetails(reportId){
   if(!reportId) return null;
 
@@ -2057,6 +2154,7 @@ async function refreshAll(reason){
     primaryHref:"/customer/pstn"
   });
 
+  await loadTemplates();
   await listReports();
   renderSelectedSummary();
   renderAlertingPanel();
@@ -2207,7 +2305,32 @@ async function autoLoadAndParse(reportId){
   renderKPIs();
   renderCanvases();
 }
+async function autoRunLast7Days(){
 
+  if(!SELECTED_ORG_ID) return;
+
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 7);
+
+  const startDate = start.toISOString().slice(0,10);
+  const endDate = end.toISOString().slice(0,10);
+
+  const r = await api(buildPath("/api/calling-insight/run"), {
+    method:"POST",
+    headers:{ "content-type":"application/json" },
+    body: JSON.stringify({
+      orgId: SELECTED_ORG_ID,
+      title: "Calling Media Quality Report",
+      startDate,
+      endDate
+    })
+  });
+
+  if(!r.ok || !r.data?.id) return;
+
+  await pollUntilDone(r.data.id, false);
+}
 /* =========================
    ROLLING 7-DAY AUTO REFRESH
 ========================= */
