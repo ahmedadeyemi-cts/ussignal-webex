@@ -3022,24 +3022,22 @@ if (
   /^\/api\/calling-insight\/reports\/[^\/]+$/.test(url.pathname)
 ) {
   const reportId = url.pathname.split("/")[4];
-  const orgId = url.searchParams.get("orgId");
-
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
   if (!orgId) return json({ error: "missing_orgId" }, 400);
 
-  const result = await webexFetch(
+  await ensureDelegation(env, orgId);
+
+  const r = await webexFetchSafe(
     env,
     `/reports/${encodeURIComponent(reportId)}`,
     orgId
   );
 
-  if (!result.ok) {
-  return json({
-    error: "report_details_failed",
-    upstream: result
-  }, 500);
-}
+  if (!r.ok) return json({ error: r.error }, 500);
 
-  return json(result.data);
+  const payload = r.data?.items?.[0] || r.data;
+
+  return json(payload);
 }
      /* =====================================================
    API: Calling Insight - CSV Download Proxy
@@ -3051,46 +3049,94 @@ if (
 ) {
   const parts = url.pathname.split("/");
   const reportId = parts[4];
-  const orgId = url.searchParams.get("orgId");
-
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
   if (!orgId) return json({ error: "missing_orgId" }, 400);
 
-  // Get report metadata first
-  const reportRes = await webexFetch(
+  await ensureDelegation(env, orgId);
+
+  const r = await webexFetchSafe(
     env,
     `/reports/${encodeURIComponent(reportId)}`,
     orgId
   );
 
-  if (!reportRes.ok || !reportRes.data?.downloadURL) {
-    return json({ error: "report_not_ready" }, 400);
-  }
+  if (!r.ok) return json({ error: "report_fetch_failed" }, 500);
+
+  const payload = r.data?.items?.[0] || r.data;
+  if (!payload.downloadURL) return json({ error: "not_ready" }, 400);
 
   const token = await getAccessToken(env);
 
-  // Fetch CSV from Webex report service WITH Authorization
-  const csvRes = await fetch(reportRes.data.downloadURL, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
+  const csvRes = await fetch(payload.downloadURL, {
+    headers: { Authorization: `Bearer ${token}` }
   });
 
-  if (!csvRes.ok) {
-    const txt = await csvRes.text();
-    return json(
-      { error: "csv_fetch_failed", status: csvRes.status, body: txt.slice(0, 500) },
-      500
-    );
-  }
+  if (!csvRes.ok) return json({ error: "csv_fetch_failed" }, 500);
 
-  const csvText = await csvRes.text();
-
-  return new Response(csvText, {
+  return new Response(await csvRes.text(), {
     headers: {
       "Content-Type": "text/csv",
       "Content-Disposition": `attachment; filename="report-${reportId}.csv"`
     }
   });
+}
+     if (
+  request.method === "GET" &&
+  url.pathname === "/api/calling-insight/templates"
+) {
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  if (!orgId) return json({ error: "missing_orgId" }, 400);
+
+  await ensureDelegation(env, orgId);
+
+  const r = await webexFetchSafe(env, "/report/templates", orgId);
+  if (!r.ok) return json({ error: r.error }, 500);
+
+  return json(r.data);
+}
+     if (
+  request.method === "POST" &&
+  url.pathname === "/api/calling-insight/run"
+) {
+  const { orgId, title, startDate, endDate } = await request.json();
+  if (!orgId || !title) return json({ error: "missing_parameters" }, 400);
+
+  await ensureDelegation(env, orgId);
+
+  // 1️⃣ Fetch templates dynamically
+  const tplRes = await webexFetchSafe(env, "/report/templates", orgId);
+  if (!tplRes.ok) return json({ error: "template_fetch_failed" }, 500);
+
+  const template = (tplRes.data.items || []).find(t => t.title === title);
+  if (!template) return json({ error: "template_not_found" }, 400);
+
+  // 2️⃣ Create report job
+  const token = await getAccessToken(env);
+
+  const createRes = await fetch(
+    "https://webexapis.com/v1/reports",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        templateId: template.Id,
+        startDate,
+        endDate
+      })
+    }
+  );
+
+  if (!createRes.ok) {
+    const text = await createRes.text();
+    return json({ error: text }, 500);
+  }
+
+  const created = await createRes.json();
+
+  return json(created);
 }
 //API/STATUS
 // /api/status (GET) — maintenance-style with upstream fallback
@@ -4352,99 +4398,7 @@ if (url.pathname === "/api/calling-insight/alerts" && request.method === "GET") 
 
   return json({ ok:true, orgId, data }, 200);
 }
-     if (
-  url.pathname.startsWith("/api/calling-insight/reports/") &&
-  url.pathname.endsWith("/csv")
-) {
-  const user = getCurrentUser(request);
-  if (!user) return json({ error: "access_required" }, 401);
-
-  const parts = url.pathname.split("/");
-  const reportId = parts[parts.length - 2];
-
-  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
-  if (!orgId) return json({ error: "missing_orgId" }, 400);
-
-  await ensureDelegation(env, orgId);
-  const token = await getAccessToken(env);
-
-  const res = await fetch(
-    `https://webexapis.com/v1/reports/${reportId}/download?orgId=${orgId}`,
-    {
-      headers: { Authorization: `Bearer ${token}` }
-    }
-  );
-
-  if (!res.ok) {
-    const text = await res.text();
-    return json({ error: text }, res.status);
-  }
-
-  const csvText = await res.text();
-
-  return new Response(csvText, {
-    headers: {
-      "content-type": "text/csv"
-    }
-  });
-}
-if (url.pathname.startsWith("/api/calling-insight/reports/") && request.method === "GET") {
-
-  const user = getCurrentUser(request);
-  if (!user) return json({ ok:false, error:"access_required" }, 401);
-
-  const session = await getSession(env, user.email);
-  const reportId = url.pathname.split("/").pop();
-  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
-
-  let resolvedOrgId;
-
-  if (user.isAdmin) {
-    if (!requestedOrgId) return json({ ok:false, error:"missing_orgId" }, 400);
-    resolvedOrgId = requestedOrgId;
-  } else {
-    if (!session?.orgId) return json({ ok:false, error:"pin_required" }, 401);
-    resolvedOrgId = session.orgId;
-  }
-
-  const r = await webexFetchSafe(
-    env,
-    `/reports/${encodeURIComponent(reportId)}`,
-    resolvedOrgId
-  );
-
-  if (!r.ok) {
-    return json({ ok:false, error:r.error, preview:r.preview }, 200);
-  }
-
-  return json(r.data, 200);
-}
-     if (url.pathname.startsWith("/api/calling-insight/download/")) {
-
-  const user = getCurrentUser(request);
-  if (!user) return json({ error:"access_required" }, 401);
-
-  const reportId = url.pathname.split("/").pop();
-  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
-
-  const token = await getAccessToken(env);
-
-  const res = await fetch(
-    `https://webexapis.com/v1/reports/${reportId}/download?orgId=${orgId}`,
-    {
-      headers: { Authorization: `Bearer ${token}` }
-    }
-  );
-
-  const buffer = await res.arrayBuffer();
-
-  return new Response(buffer, {
-    headers: {
-      "content-type": "text/csv",
-      "content-disposition": `attachment; filename="report-${reportId}.csv"`
-    }
-  });
-}
+    
      // =============================
 // Calling Insight - AI Summary
 // POST /api/calling-insight/ai/summary
