@@ -1175,17 +1175,15 @@ async function downloadClick(id){
   const r = REPORTS.find(x=>String(x.id)===String(id));
   if(!r) return;
 
-  // If your worker provides CSV proxy, we prefer download via /csv endpoint
-  // but for a true "download", we open a dedicated URL so the browser saves it.
-  // You can add a worker route to stream CSV with content-disposition.
-  // For now: open upstream (works because downloadDomain is reportservice).
-  if(r.downloadURL){
-    window.open(
-  `/api/calling-insight/reports/${encodeURIComponent(r.id)}/csv?orgId=${encodeURIComponent(currentOrgId)}`
-);
-  }else{
-    pushAlert({severity:"warn", title:"No download URL", body:"This report entry does not contain a downloadURL.", primaryText:"", primaryHref:""});
+  if(!SELECTED_ORG_ID){
+    pushAlert({severity:"warn", title:"Missing orgId", body:"No tenant selected.", primaryText:"", primaryHref:""});
+    return;
   }
+
+  window.open(
+    `/api/calling-insight/reports/${encodeURIComponent(r.id)}/csv?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`,
+    "_blank"
+  );
 }
 
 async function selectReport(id){
