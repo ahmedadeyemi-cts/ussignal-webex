@@ -4352,6 +4352,42 @@ if (url.pathname === "/api/calling-insight/alerts" && request.method === "GET") 
 
   return json({ ok:true, orgId, data }, 200);
 }
+     if (
+  url.pathname.startsWith("/api/calling-insight/reports/") &&
+  url.pathname.endsWith("/csv")
+) {
+  const user = getCurrentUser(request);
+  if (!user) return json({ error: "access_required" }, 401);
+
+  const parts = url.pathname.split("/");
+  const reportId = parts[parts.length - 2];
+
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  if (!orgId) return json({ error: "missing_orgId" }, 400);
+
+  await ensureDelegation(env, orgId);
+  const token = await getAccessToken(env);
+
+  const res = await fetch(
+    `https://webexapis.com/v1/reports/${reportId}/download?orgId=${orgId}`,
+    {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    return json({ error: text }, res.status);
+  }
+
+  const csvText = await res.text();
+
+  return new Response(csvText, {
+    headers: {
+      "content-type": "text/csv"
+    }
+  });
+}
 if (url.pathname.startsWith("/api/calling-insight/reports/") && request.method === "GET") {
 
   const user = getCurrentUser(request);
