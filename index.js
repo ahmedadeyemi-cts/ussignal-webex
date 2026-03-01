@@ -532,6 +532,41 @@ const STATUS_CACHE_SECONDS = 60; // 0 disables cache
 }
 
 //End of Maintenance API
+function buildSimpleMediaSummary(csv){
+  const lines = csv.split("\n");
+
+  let poor = 0;
+  let total = 0;
+
+  for(const l of lines){
+    if(!l.trim()) continue;
+
+    total++;
+
+    if(l.toLowerCase().includes("poor")) {
+      poor++;
+    }
+  }
+
+  return {
+    total,
+    poor,
+    poorRate: total ? (poor / total) : 0
+  };
+}
+function generateAiSummary(values){
+  const avgPoor =
+    values.reduce((a,b)=>a + (b.poorRate || 0),0) /
+    (values.length || 1);
+
+  if(avgPoor > 0.2)
+    return { severity:"critical", message:"Consistent poor call quality detected." };
+
+  if(avgPoor > 0.1)
+    return { severity:"warning", message:"Quality degradation trending upward." };
+
+  return { severity:"healthy", message:"Call quality within acceptable thresholds." };
+}
 
 function isHtmlLike(text) {
   const t = String(text || "").trim().toLowerCase();
@@ -3073,12 +3108,26 @@ if (
 
   if (!csvRes.ok) return json({ error: "csv_fetch_failed" }, 500);
 
-  return new Response(await csvRes.text(), {
-    headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="report-${reportId}.csv"`
-    }
-  });
+  const csvText = await csvRes.text();
+
+// 🔵 Store daily rollup for media quality trend
+try {
+  const summary = buildSimpleMediaSummary(csvText);
+
+  await env.WEBEX.put(
+    `media:rollup:${orgId}:${new Date().toISOString().slice(0,10)}`,
+    JSON.stringify(summary)
+  );
+} catch (e) {
+  console.log("Rollup store failed for:", orgId);
+}
+
+return new Response(csvText, {
+  headers: {
+    "Content-Type": "text/csv",
+    "Content-Disposition": `attachment; filename="report-${reportId}.csv"`
+  }
+});
 }
      if (
   request.method === "GET" &&
@@ -7544,6 +7593,53 @@ async scheduled(event, env, ctx) {
      ctx.waitUntil(ciBackgroundPollAll(env));
       const CONCURRENCY = 5;
       await ciAutoRefreshAllTenants(env);
+     // 🔵 MEDIA QUALITY AUTO-RUN (4 hour throttle)
+const FOUR_HOURS = 60 * 60 * 4;
+
+await mapLimit(orgs, 3, async (org) => {
+  try {
+
+    const last = await env.WEBEX.get(`media:lastRun:${org.id}`);
+    const now = Date.now();
+
+    if (last && now - Number(last) < FOUR_HOURS * 1000) {
+      return; // skip if not due
+    }
+
+    const tplRes = await webexFetchSafe(env, "/report/templates", org.id);
+    if (!tplRes.ok) return;
+
+    const template = tplRes.data.items.find(t =>
+      t.title === "Calling Media Quality Report"
+    );
+    if (!template) return;
+
+    const token = await getAccessToken(env);
+
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 7);
+
+    await fetch("https://webexapis.com/v1/reports", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        templateId: template.Id,
+        startDate: start.toISOString().slice(0,10),
+        endDate: end.toISOString().slice(0,10)
+      })
+    });
+
+    await env.WEBEX.put(`media:lastRun:${org.id}`, String(now));
+
+  } catch(e){
+    console.log("Media auto-run failed:", org.id);
+  }
+});
+     
       await mapLimit(orgs, CONCURRENCY, async (org) => {
 
         const health = await computeTenantHealth(env, org.id);
@@ -7581,6 +7677,32 @@ async scheduled(event, env, ctx) {
       }
 
       console.log("Health + Quality + PSTN snapshots updated");
+     // 🔵 Nightly AI summary (2AM UTC)
+if (event.cron === "0 2 * * *") {
+
+  for (const org of orgs) {
+
+    const rollups = await env.WEBEX.list({
+      prefix: `media:rollup:${org.id}`
+    });
+
+    const values = [];
+
+    for (const key of rollups.keys) {
+      const data = await env.WEBEX.get(key.name, "json");
+      if (data) values.push(data);
+    }
+
+    const aiSummary = generateAiSummary(values);
+
+    await env.WEBEX.put(
+      `media:ai:${org.id}`,
+      JSON.stringify(aiSummary)
+    );
+  }
+
+  console.log("Nightly AI summaries computed");
+}
 
     } catch (err) {
       console.error("Scheduled task failed:", err);
