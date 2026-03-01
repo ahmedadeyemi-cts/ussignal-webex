@@ -120,7 +120,10 @@ async function ciPollAndProcess(env, orgId, reportType) {
   }
 
   // Download CSV
-  const csvRes = await fetch(r.data.downloadURL);
+  const token = await getAccessToken(env);
+const csvRes = await fetch(r.data.downloadURL, {
+  headers: { Authorization: `Bearer ${token}` }
+});
   const csvText = await csvRes.text();
 
   const parsed = parseCsvToJson(csvText);
@@ -4683,34 +4686,75 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
     return json({ ok:false, error:"missing_parameters" }, 400);
   }
 
-  const r = await webexFetchSafe(
+  await ensureDelegation(env, resolvedOrgId);
+
+  // 1️⃣ Get templates
+  const tplRes = await webexFetchSafe(env, "/report/templates", resolvedOrgId);
+  if (!tplRes.ok) {
+    return json({ ok:false, error:"template_fetch_failed" }, 502);
+  }
+
+  const templates = tplRes.data?.items || [];
+  const template = templates.find(t => t.title === title);
+
+  if (!template) {
+    return json({ ok:false, error:"template_not_found" }, 404);
+  }
+
+  const templateId = template.Id || template.id;
+
+  // 2️⃣ Create report
+  const createRes = await webexFetchSafe(
     env,
-    "/callingInsights/reports",   // 🔥 CRITICAL FIX
+    "/reports",
     resolvedOrgId,
     {
       method: "POST",
       body: JSON.stringify({
-        title,
+        templateId,
         startDate,
         endDate
       })
     }
   );
 
-  if (!r.ok) {
+  if (!createRes.ok) {
     return json({
       ok:false,
-      orgId: resolvedOrgId,
-      error: r.error || "report_creation_failed"
-    }, 500);
+      error:"report_create_failed",
+      preview:createRes.preview || null
+    }, 502);
   }
 
+  const raw = createRes.data;
+  const report =
+    raw?.items?.[0] ||
+    raw?.items ||
+    raw;
+
+  const id =
+    report?.Id ||
+    report?.id ||
+    report?.reportId ||
+    null;
+
+  if (!id) {
+    return json({
+      ok:false,
+      error:"report_id_missing",
+      preview:JSON.stringify(raw).slice(0,300)
+    }, 502);
+  }
+
+  // 🔥 THIS LINE FIXES YOUR UI
   return json({
     ok:true,
-    orgId: resolvedOrgId,
-    report: r.data
+    id,            // <-- UI needs this
+    report,
+    orgId: resolvedOrgId
   }, 200);
 }
+     
      // ============================================================
 // CALLING INSIGHT — ENTERPRISE POLLING ENGINE
 // ============================================================
