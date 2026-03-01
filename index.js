@@ -4607,7 +4607,7 @@ function extractResponsesJson(r){
 // ============================================================
 
 // -------------------------------
-// GET — List reports (Cisco side)
+// GET — List reports (Calling Insights)
 // -------------------------------
 if (url.pathname === "/api/calling-insight/reports" && request.method === "GET") {
 
@@ -4631,7 +4631,12 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "GET")
     resolvedOrgId = session.orgId;
   }
 
-  const r = await webexFetchSafe(env, "/reports", resolvedOrgId);
+  // 🔥 FIX IS HERE — callingInsights instead of reports
+  const r = await webexFetchSafe(
+    env,
+    "/callingInsights/reports",
+    resolvedOrgId
+  );
 
   return json({
     ok: r.ok,
@@ -4642,9 +4647,6 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "GET")
     error: r.error || null
   }, 200);
 }
-
-
-
 // -------------------------------
 // POST — Intelligent Report Create
 // -------------------------------
