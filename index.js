@@ -122,50 +122,52 @@ async function ciPollAndProcess(env, orgId, reportType) {
   if (!state?.reportId) return null;
 
   const r = await webexFetchSafe(env, `/reports/${encodeURIComponent(state.reportId)}`, orgId);
-
   if (!r.ok) return null;
 
   if (r.data.status !== "done") {
     return { status:r.data.status };
   }
 
- // Download CSV (handle ZIP)
-const token = await getAccessToken(env);
-const csvRes = await fetch(r.data.downloadURL, {
-  headers: { Authorization: `Bearer ${token}` }
-});
+  // Download CSV (handle ZIP)
+  const token = await getAccessToken(env);
+  const csvRes = await fetch(r.data.downloadURL, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
 
-if (!csvRes.ok) return null;
+  if (!csvRes.ok) return null;
 
-const contentType = csvRes.headers.get("content-type") || "";
-let csvText;
+  const contentType = csvRes.headers.get("content-type") || "";
+  let csvText;
 
-if (contentType.includes("zip")) {
+  if (contentType.includes("zip")) {
 
-  const buffer = await csvRes.arrayBuffer();
+    const buffer = await csvRes.arrayBuffer();
+    const JSZip = await getJSZip();
+    const zip = await JSZip.loadAsync(buffer);
 
-  const JSZip = await getJSZip();   // 🔥 dynamic loader you added earlier
-  const zip = await JSZip.loadAsync(buffer);
+    const fileNames = Object.keys(zip.files);
+    const csvFileName = fileNames.find(name =>
+      name.toLowerCase().endsWith(".csv")
+    );
 
-  const fileNames = Object.keys(zip.files);
-  const csvFileName = fileNames.find(name =>
-    name.toLowerCase().endsWith(".csv")
-  );
+    if (!csvFileName) return null;
 
-  if (!csvFileName) return null;
+    csvText = await zip.files[csvFileName].async("string");
 
-  csvText = await zip.files[csvFileName].async("string");
+  } else {
+    csvText = await csvRes.text();
+  }
 
-} else {
-  csvText = await csvRes.text();
-}
+  // ✅ YOU WERE MISSING THIS
+  const parsed = parseCsvToJson(csvText);
+
   // Process analytics
   const processed = ciProcessMediaQuality(parsed.rows);
 
   await env.WEBEX.put(
     `ci:processed:${orgId}:${reportType}`,
     JSON.stringify(processed),
-    { expirationTtl: 60 * 60 * 24 * 7 } // 7 days
+    { expirationTtl: 60 * 60 * 24 * 7 }
   );
 
   await ciSetReportState(env, orgId, reportType, {
