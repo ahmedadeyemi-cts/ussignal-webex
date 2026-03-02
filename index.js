@@ -4754,7 +4754,124 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "POST"
     orgId: resolvedOrgId
   }, 200);
 }
-     
+
+     // -----------------------------------
+// POST — Run report (Create on Cisco)
+// UI calls: POST /api/calling-insight/run
+// Body: { orgId?, title, startDate, endDate }
+// Returns: { ok:true, id, report }
+// -----------------------------------
+if (url.pathname === "/api/calling-insight/run" && request.method === "POST") {
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
+  const session = await getSession(env, user.email);
+
+  let body = {};
+  try { body = await request.json(); } catch {}
+  const requestedOrgId =
+    normalizeOrgIdParam(body.orgId) ||
+    normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  // Resolve orgId based on role
+  let resolvedOrgId = null;
+  if (user.isAdmin) {
+    if (!requestedOrgId) return json({ ok:false, error:"missing_orgId" }, 400);
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) return json({ ok:false, error:"pin_required" }, 401);
+    resolvedOrgId = session.orgId;
+  }
+
+  const title = String(body.title || "").trim();
+  const startDate = String(body.startDate || "").trim();
+  const endDate = String(body.endDate || "").trim();
+  if (!title || !startDate || !endDate) {
+    return json({ ok:false, error:"missing_title_or_dates" }, 400);
+  }
+
+  // Make sure delegation is set for this tenant (safe no-op if already OK)
+  await ensureDelegation(env, resolvedOrgId);
+
+  // 1) Find the report template by title
+  const tplRes = await webexFetchSafe(env, "/report/templates", resolvedOrgId);
+  if (!tplRes.ok) {
+    return json({
+      ok:false,
+      error:"template_fetch_failed",
+      preview: tplRes.preview || null
+    }, 502);
+  }
+
+  const templates = tplRes.data?.items || [];
+  const template = templates.find(t => String(t.title || "").trim() === title);
+  if (!template) {
+    return json({
+      ok:false,
+      error:"template_not_found",
+      titleRequested: title,
+      templateTitles: templates.slice(0, 50).map(t => t.title).filter(Boolean)
+    }, 404);
+  }
+
+  const templateId = template.id || template.Id || template.templateId || template.templateID;
+  if (!templateId) {
+    return json({ ok:false, error:"template_id_missing" }, 500);
+  }
+
+  // 2) Create the report
+  const createRes = await webexFetchSafe(
+    env,
+    "/reports",
+    resolvedOrgId,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        templateId,     // <-- THIS is what Reports API expects
+        startDate,      // YYYY-MM-DD
+        endDate         // YYYY-MM-DD
+      })
+    }
+  );
+
+  if (!createRes.ok) {
+    return json({
+      ok:false,
+      error:"report_create_failed",
+      status: createRes.status || 502,
+      preview: createRes.preview || null
+    }, 502);
+  }
+
+  // Webex responses vary: sometimes object, sometimes {items:[...]}, sometimes {items:{...}}
+  const raw = createRes.data;
+  const report =
+    raw?.items?.[0] ||
+    raw?.items ||
+    raw;
+
+  const id =
+    report?.id ||
+    report?.Id ||
+    report?.reportId ||
+    report?.reportID ||
+    null;
+
+  if (!id) {
+    return json({
+      ok:false,
+      error:"report_id_missing_in_response",
+      responsePreview: JSON.stringify(raw || {}).slice(0, 500)
+    }, 502);
+  }
+
+  return json({
+    ok: true,
+    orgId: resolvedOrgId,
+    id,
+    report
+  }, 200);
+}
      // ============================================================
 // CALLING INSIGHT — ENTERPRISE POLLING ENGINE
 // ============================================================
