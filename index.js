@@ -4784,8 +4784,17 @@ if (url.pathname === "/api/calling-insight/run" && request.method === "POST") {
   }
 
   const title = String(body.title || "").trim();
-  const startDate = String(body.startDate || "").trim();
-  const endDate = String(body.endDate || "").trim();
+const today = new Date();
+today.setDate(today.getDate() - 1); // yesterday
+
+const maxEndDate = today.toISOString().slice(0,10);
+
+let startDate = String(body.startDate || "").trim();
+let endDate = String(body.endDate || "").trim();
+
+if (endDate > maxEndDate) {
+  endDate = maxEndDate;
+}
   if (!title || !startDate || !endDate) {
     return json({ ok:false, error:"missing_title_or_dates" }, 400);
   }
