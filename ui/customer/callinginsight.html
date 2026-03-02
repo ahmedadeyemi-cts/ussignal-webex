@@ -5,7 +5,7 @@
 <title>US Signal | Calling Insight</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
 :root{
   --bg:#f8fafc;
@@ -1206,29 +1206,61 @@ async function loadReportDetails(reportId){
 }
 
 async function loadReportCsv(reportId){
+
   if(!reportId) return null;
 
-  // Prefer worker proxy endpoint; it may return JSON { csvText } or raw CSV text.
-  const r = await api(buildPath(`/api/calling-insight/reports/${encodeURIComponent(reportId)}/csv`));
+  const url = buildPath(
+    `/api/calling-insight/reports/${encodeURIComponent(reportId)}/csv`
+  );
 
-  if(!r.ok){
-    pushAlert({severity:"warn", title:"CSV proxy not available", body:"Worker CSV proxy failed. Will fall back to opening upstream download URL (if present).", primaryText:"", primaryHref:""});
+  const res = await fetch(url, { cache: "no-store" });
+
+  if(!res.ok){
+    pushAlert({
+      severity:"bad",
+      title:"CSV download failed",
+      body:`Worker returned status ${res.status}.`
+    });
     return null;
   }
 
-  // If JSON wrapper:
-  if(r.data && typeof r.data === "object" && r.data.csvText){
-    return String(r.data.csvText || "");
+  const contentType = (res.headers.get("content-type") || "").toLowerCase();
+
+  // 🔵 If ZIP (Webex default)
+  if(contentType.includes("zip") || contentType.includes("octet-stream")){
+
+    const buffer = await res.arrayBuffer();
+
+    if(typeof JSZip === "undefined"){
+      pushAlert({
+        severity:"bad",
+        title:"JSZip not loaded",
+        body:"JSZip library is missing from page."
+      });
+      return null;
+    }
+
+    const zip = await JSZip.loadAsync(buffer);
+
+    const fileName = Object.keys(zip.files)
+      .find(name => name.toLowerCase().endsWith(".csv"));
+
+    if(!fileName){
+      pushAlert({
+        severity:"bad",
+        title:"CSV not found in ZIP",
+        body:"Zip file did not contain a CSV."
+      });
+      return null;
+    }
+
+    const csvText = await zip.files[fileName].async("string");
+    return csvText;
   }
 
-  // If text response:
-  if(r.data && typeof r.data.raw === "string"){
-    return r.data.raw;
-  }
-
-  return null;
+  // 🟢 Already CSV
+  return await res.text();
 }
-
 function openUpstreamDownload(url){
   if(!url) return;
   window.open(url, "_blank", "noopener,noreferrer");
