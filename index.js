@@ -28,6 +28,7 @@
  /* =====================================================
        Helpers
     ===================================================== */
+import JSZip from "jszip";
 const JSON_HEADERS = {
   "content-type": "application/json",
   "cache-control": "no-store",
@@ -3109,30 +3110,55 @@ if (
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  if (!csvRes.ok) return json({ error: "csv_fetch_failed" }, 500);
+  if (!csvRes.ok) {
+    return json({ error: "csv_fetch_failed" }, 500);
+  }
 
-  const csvText = await csvRes.text();
+  const contentType = csvRes.headers.get("content-type") || "";
+  let csvText;
 
-// 🔵 Store daily rollup for media quality trend
-try {
-  const summary = buildSimpleMediaSummary(csvText);
+  // 🟣 Handle ZIP (Webex default)
+  if (contentType.includes("zip")) {
 
-  await env.WEBEX.put(
-    `media:rollup:${orgId}:${new Date().toISOString().slice(0,10)}`,
-    JSON.stringify(summary)
-  );
-} catch (e) {
-  console.log("Rollup store failed for:", orgId);
-}
+    const buffer = await csvRes.arrayBuffer();
+    const zip = await JSZip.loadAsync(buffer);
 
-const parsed = parseCsvToJson(csvText);
+    const fileNames = Object.keys(zip.files);
+    const csvFileName = fileNames.find(name =>
+      name.toLowerCase().endsWith(".csv")
+    );
 
-return json({
-  ok: true,
-  reportId,
-  rows: parsed.rows,
-  columns: parsed.headers
-});
+    if (!csvFileName) {
+      return json({ error: "csv_not_found_in_zip" }, 500);
+    }
+
+    csvText = await zip.files[csvFileName].async("string");
+
+  } else {
+    // 🟢 Already CSV
+    csvText = await csvRes.text();
+  }
+
+  // 🔵 Store daily rollup
+  try {
+    const summary = buildSimpleMediaSummary(csvText);
+    await env.WEBEX.put(
+      `media:rollup:${orgId}:${new Date().toISOString().slice(0,10)}`,
+      JSON.stringify(summary)
+    );
+  } catch (e) {
+    console.log("Rollup store failed for:", orgId);
+  }
+
+  // 🔵 Parse CSV
+  const parsed = parseCsvToJson(csvText);
+
+  return json({
+    ok: true,
+    reportId,
+    rows: parsed.rows,
+    columns: parsed.headers
+  });
 }
      if (
   request.method === "GET" &&
