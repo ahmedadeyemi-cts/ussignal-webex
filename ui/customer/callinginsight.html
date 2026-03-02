@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <title>US Signal | Calling Insight</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 :root{
@@ -784,6 +785,14 @@ let SELECTED_METRICS = null;       // extracted metrics summary
 let ACTIVE_TAB = "overview";
 
 let SESSION_TIMER = null;
+  
+  /* ===== Parsed Table State ===== */
+let TABLE_SORT = { key: null, dir: 1 };
+let TABLE_PAGE = 1;
+let TABLE_PAGE_SIZE = 50;
+let TABLE_FILTER = "";
+let TABLE_VISIBLE_COLUMNS = null;
+let TABLE_VIRTUAL_SCROLL_TOP = 0;
 
 /* =========================
    THEME
@@ -1275,30 +1284,156 @@ function renderReportList(){
 }
 function renderReportDataTable(){
 
+  const container = $("reportDataContainer");
+
   if(!SELECTED_REPORT_ROWS || !SELECTED_REPORT_ROWS.length){
-    $("reportDataContainer").innerHTML = "<p class='small'>No report data available.</p>";
+    container.innerHTML = "<div class='small'>No report data available.</div>";
     return;
   }
 
-  const cols = Object.keys(SELECTED_REPORT_ROWS[0]);
+  // 1️⃣ FILTER
+  let rows = SELECTED_REPORT_ROWS;
 
-  const headerRow = cols.map(c => `<th>${escapeHtml(c)}</th>`).join("");
+  if(TABLE_FILTER){
+    const q = TABLE_FILTER.toLowerCase();
+    rows = rows.filter(r =>
+      Object.values(r).some(v => String(v||"").toLowerCase().includes(q))
+    );
+  }
 
-  const bodyRows = SELECTED_REPORT_ROWS.slice(0, 300).map(r=>{
+  // 2️⃣ SORT
+  if(TABLE_SORT.key){
+    rows = rows.slice().sort((a,b)=>{
+      const av = a[TABLE_SORT.key];
+      const bv = b[TABLE_SORT.key];
+
+      const na = Number(av);
+      const nb = Number(bv);
+
+      if(!isNaN(na) && !isNaN(nb)){
+        return (na-nb) * TABLE_SORT.dir;
+      }
+      return String(av).localeCompare(String(bv)) * TABLE_SORT.dir;
+    });
+  }
+
+  const total = rows.length;
+  if(total > 20000){
+  renderVirtualTable(rows);
+  return;
+}
+  const totalPages = Math.max(1, Math.ceil(total / TABLE_PAGE_SIZE));
+  TABLE_PAGE = Math.min(TABLE_PAGE, totalPages);
+
+  const start = (TABLE_PAGE-1) * TABLE_PAGE_SIZE;
+  const end = start + TABLE_PAGE_SIZE;
+  const pageRows = rows.slice(start, end);
+
+  const allCols = Object.keys(SELECTED_REPORT_ROWS[0]);
+  if(!TABLE_VISIBLE_COLUMNS){
+    TABLE_VISIBLE_COLUMNS = new Set(allCols);
+  }
+
+  const visibleCols = allCols.filter(c => TABLE_VISIBLE_COLUMNS.has(c));
+
+  const headerRow = visibleCols.map(c => `
+    <th onclick="sortColumn('${escapeAttr(c)}')" style="cursor:pointer">
+      ${escapeHtml(c)}
+      ${TABLE_SORT.key===c ? (TABLE_SORT.dir===1?" ▲":" ▼") : ""}
+    </th>
+  `).join("");
+
+  const bodyRows = pageRows.map(r=>{
     return `<tr>` +
-      cols.map(c=>`<td>${escapeHtml(r[c] ?? "")}</td>`).join("") +
+      visibleCols.map(c=>`<td>${escapeHtml(r[c] ?? "")}</td>`).join("") +
     `</tr>`;
   }).join("");
 
-  $("reportDataContainer").innerHTML = `
-    <table class="reportTable">
-      <thead><tr>${headerRow}</tr></thead>
-      <tbody>${bodyRows}</tbody>
-    </table>
-    <div class="small" style="margin-top:8px">
-      Showing first 300 rows of ${SELECTED_REPORT_ROWS.length}
+  container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div>
+        <input type="text" placeholder="Search CSV..."
+          value="${escapeHtml(TABLE_FILTER)}"
+          oninput="tableSearch(this.value)"
+          style="padding:6px 8px;border-radius:8px;border:1px solid var(--line);font-size:12px;">
+      </div>
+      <div>
+        <button class="pillBtn" onclick="exportExcel()">Export Excel</button>
+        <button class="pillBtn" onclick="toggleColumnMenu()">Columns</button>
+      </div>
+    </div>
+
+    <div style="overflow:auto;max-height:520px;border:1px solid var(--line);border-radius:12px">
+      <table>
+        <thead><tr>${headerRow}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+      <div class="small">Showing ${start+1}-${Math.min(end,total)} of ${total}</div>
+      <div style="display:flex;gap:6px">
+        <button class="pillBtn" onclick="prevPage()">Prev</button>
+        <span class="small">Page ${TABLE_PAGE}/${totalPages}</span>
+        <button class="pillBtn" onclick="nextPage()">Next</button>
+      </div>
     </div>
   `;
+}
+  function sortColumn(key){
+  if(TABLE_SORT.key === key){
+    TABLE_SORT.dir *= -1;
+  } else {
+    TABLE_SORT.key = key;
+    TABLE_SORT.dir = 1;
+  }
+  renderReportDataTable();
+}
+
+function tableSearch(val){
+  TABLE_FILTER = val || "";
+  TABLE_PAGE = 1;
+  renderReportDataTable();
+}
+
+function nextPage(){
+  TABLE_PAGE++;
+  renderReportDataTable();
+}
+
+function prevPage(){
+  TABLE_PAGE = Math.max(1, TABLE_PAGE-1);
+  renderReportDataTable();
+}
+  function toggleColumnMenu(){
+  const allCols = Object.keys(SELECTED_REPORT_ROWS[0]);
+  const list = allCols.map(c=>{
+    const checked = TABLE_VISIBLE_COLUMNS.has(c) ? "checked" : "";
+    return `
+      <label style="display:block;font-size:12px">
+        <input type="checkbox" ${checked}
+          onchange="toggleColumn('${escapeAttr(c)}', this.checked)">
+        ${escapeHtml(c)}
+      </label>
+    `;
+  }).join("");
+
+  const html = `
+    <div class="card" style="position:fixed;top:120px;right:40px;z-index:9999;width:260px">
+      <h3 style="margin:0 0 8px 0;font-size:13px">Toggle Columns</h3>
+      <div style="max-height:300px;overflow:auto">${list}</div>
+      <div style="margin-top:8px;text-align:right">
+        <button class="pillBtn" onclick="this.closest('.card').remove()">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML("beforeend", html);
+}
+
+function toggleColumn(col, visible){
+  if(visible) TABLE_VISIBLE_COLUMNS.add(col);
+  else TABLE_VISIBLE_COLUMNS.delete(col);
+  renderReportDataTable();
 }
 async function downloadClick(id){
   const r = REPORTS.find(x=>String(x.id)===String(id));
@@ -1314,7 +1449,73 @@ async function downloadClick(id){
     "_blank"
   );
 }
+function renderVirtualTable(rows){
 
+  const container = $("reportDataContainer");
+  const cols = Object.keys(rows[0]);
+
+  container.innerHTML = `
+    <div class="small">Virtualized view (${rows.length} rows)</div>
+    <div id="virtualScroll"
+      style="height:520px;overflow:auto;border:1px solid var(--line);border-radius:12px">
+      <div id="virtualInner" style="position:relative;height:${rows.length*28}px"></div>
+    </div>
+  `;
+
+  const scroll = $("virtualScroll");
+  const inner = $("virtualInner");
+
+  scroll.addEventListener("scroll", ()=>{
+    const scrollTop = scroll.scrollTop;
+    const start = Math.floor(scrollTop / 28);
+    const visible = rows.slice(start, start + 40);
+
+    inner.innerHTML = visible.map((r,i)=>{
+      return `
+        <div style="
+          position:absolute;
+          top:${(start+i)*28}px;
+          left:0;
+          right:0;
+          height:28px;
+          display:flex;
+          border-bottom:1px solid var(--line);
+          font-size:12px;
+        ">
+          ${cols.map(c=>`
+            <div style="flex:1;padding:4px 6px;overflow:hidden;text-overflow:ellipsis">
+              ${escapeHtml(r[c] ?? "")}
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }).join("");
+  });
+
+  scroll.dispatchEvent(new Event("scroll"));
+}
+function toggleColumn(col, visible){
+  if(visible) TABLE_VISIBLE_COLUMNS.add(col);
+  else TABLE_VISIBLE_COLUMNS.delete(col);
+  renderReportDataTable();
+}
+  function exportExcel(){
+  if(!SELECTED_REPORT_ROWS || !SELECTED_REPORT_ROWS.length) return;
+
+  const rows = SELECTED_REPORT_ROWS.map(r=>{
+    const obj = {};
+    TABLE_VISIBLE_COLUMNS.forEach(c=>{
+      obj[c] = r[c];
+    });
+    return obj;
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Report");
+
+  XLSX.writeFile(wb, "calling_insight_report.xlsx");
+}
 async function selectReport(id){
   const base = REPORTS.find(x=>String(x.id)===String(id));
   if(!base) return;
