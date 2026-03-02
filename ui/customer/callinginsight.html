@@ -518,7 +518,13 @@ html[data-theme="dark"] pre{background:#050a14}
         </div>
       </div>
     </div>
-
+<!-- PARSED REPORT DATA TABLE -->
+<div class="card">
+  <h2>Parsed Report Data</h2>
+  <div id="reportDataContainer" class="tableWrap">
+    <div class="small">Load + Parse CSV to display report data.</div>
+  </div>
+</div>
     <!-- REPORTS TABLE -->
     <div class="card">
       <h2>Reports (Select One to Load Details)</h2>
@@ -1028,7 +1034,7 @@ async function listReports(){
   REPORTS = items.map(normalizeReportItem);
 
   applyReportFilter();
-  renderReportTable();
+  renderReportList();
   renderKPIs();
 
   // pick latest
@@ -1235,7 +1241,7 @@ function applyReportFilter(){
 }
 $("searchBox").addEventListener("input", ()=>{
   applyReportFilter();
-  renderReportTable();
+  renderReportList();
   renderKPIs();
 });
 
@@ -1250,7 +1256,7 @@ function statusBadge(status){
   return badge(String(status || "UNKNOWN").toUpperCase(),"neutral");
 }
 
-function renderReportTable(){
+function renderReportList(){
   const rows = (FILTERED_REPORTS || []).map(r=>{
     const dl = r.downloadURL ? `<button class="pillBtn" onclick="downloadClick('${escapeAttr(r.id)}')">Download</button>` : `<span class="small">—</span>`;
     return `
@@ -1267,7 +1273,33 @@ function renderReportTable(){
 
   $("reportRows").innerHTML = rows || `<tr><td colspan="6" class="small" style="padding:16px">No reports match your filter.</td></tr>`;
 }
+function renderReportDataTable(){
 
+  if(!SELECTED_REPORT_ROWS || !SELECTED_REPORT_ROWS.length){
+    $("reportDataContainer").innerHTML = "<p class='small'>No report data available.</p>";
+    return;
+  }
+
+  const cols = Object.keys(SELECTED_REPORT_ROWS[0]);
+
+  const headerRow = cols.map(c => `<th>${escapeHtml(c)}</th>`).join("");
+
+  const bodyRows = SELECTED_REPORT_ROWS.slice(0, 300).map(r=>{
+    return `<tr>` +
+      cols.map(c=>`<td>${escapeHtml(r[c] ?? "")}</td>`).join("") +
+    `</tr>`;
+  }).join("");
+
+  $("reportDataContainer").innerHTML = `
+    <table class="reportTable">
+      <thead><tr>${headerRow}</tr></thead>
+      <tbody>${bodyRows}</tbody>
+    </table>
+    <div class="small" style="margin-top:8px">
+      Showing first 300 rows of ${SELECTED_REPORT_ROWS.length}
+    </div>
+  `;
+}
 async function downloadClick(id){
   const r = REPORTS.find(x=>String(x.id)===String(id));
   if(!r) return;
@@ -1290,6 +1322,8 @@ async function selectReport(id){
   SELECTED_REPORT = base;
   SELECTED_REPORT_CSV = null;
   SELECTED_REPORT_ROWS = null;
+  $("reportDataContainer").innerHTML =
+  "<div class='small'>Load + Parse CSV to display report data.</div>";
   SELECTED_METRICS = null;
   AI_LAST = null;
 
@@ -1401,7 +1435,7 @@ $("btnPoll").addEventListener("click", async ()=>{
   const details = await loadReportDetails(SELECTED_REPORT.id);
   if(details) SELECTED_REPORT = details;
   renderSelectedSummary();
-  renderReportTable();
+  renderReportList();
   pushAlert({severity:"good", title:"Polled", body:"Report details refreshed.", primaryText:"", primaryHref:""});
 });
 
@@ -1434,6 +1468,7 @@ $("btnLoadCsv").addEventListener("click", async ()=>{
   renderAlertingPanel();
   renderKPIs();
   renderCanvases();
+  renderReportDataTable();
 
   pushAlert({severity:"good", title:"CSV parsed", body:`Parsed ${fmtInt(SELECTED_REPORT_ROWS.length)} row(s). Metrics, heatmap, and alerts updated.`, primaryText:"", primaryHref:""});
 });
@@ -2003,7 +2038,7 @@ $("btnRefreshModal").addEventListener("click", async ()=>{
   const details = await loadReportDetails(SELECTED_REPORT.id);
   if(details) SELECTED_REPORT = details;
   renderSelectedSummary();
-  renderReportTable();
+  renderReportList();
   renderModalContent();
 });
 
@@ -2266,7 +2301,7 @@ async function startEnterprisePolling(reportId){
 
     SELECTED_REPORT = details;
     renderSelectedSummary();
-    renderReportTable();
+    renderReportList();
 
     if(safeLower(details.status).includes("done")){
       clearInterval(POLL_INTERVAL);
