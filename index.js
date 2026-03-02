@@ -28,7 +28,6 @@
  /* =====================================================
        Helpers
     ===================================================== */
-import JSZip from "jszip";
 const JSON_HEADERS = {
   "content-type": "application/json",
   "cache-control": "no-store",
