@@ -32,6 +32,16 @@ const JSON_HEADERS = {
   "content-type": "application/json",
   "cache-control": "no-store",
 };
+
+let _JSZip = null;
+
+async function getJSZip() {
+  if (_JSZip) return _JSZip;
+
+  const mod = await import("https://esm.sh/jszip@3.10.1");
+  _JSZip = mod.default;
+  return _JSZip;
+}
 // =============================================
 // Webex API Base URLs
 // =============================================
@@ -119,15 +129,36 @@ async function ciPollAndProcess(env, orgId, reportType) {
     return { status:r.data.status };
   }
 
-  // Download CSV
-  const token = await getAccessToken(env);
+ // Download CSV (handle ZIP)
+const token = await getAccessToken(env);
 const csvRes = await fetch(r.data.downloadURL, {
   headers: { Authorization: `Bearer ${token}` }
 });
-  const csvText = await csvRes.text();
 
-  const parsed = parseCsvToJson(csvText);
+if (!csvRes.ok) return null;
 
+const contentType = csvRes.headers.get("content-type") || "";
+let csvText;
+
+if (contentType.includes("zip")) {
+
+  const buffer = await csvRes.arrayBuffer();
+
+  const JSZip = await getJSZip();   // 🔥 dynamic loader you added earlier
+  const zip = await JSZip.loadAsync(buffer);
+
+  const fileNames = Object.keys(zip.files);
+  const csvFileName = fileNames.find(name =>
+    name.toLowerCase().endsWith(".csv")
+  );
+
+  if (!csvFileName) return null;
+
+  csvText = await zip.files[csvFileName].async("string");
+
+} else {
+  csvText = await csvRes.text();
+}
   // Process analytics
   const processed = ciProcessMediaQuality(parsed.rows);
 
@@ -3120,7 +3151,8 @@ if (
   if (contentType.includes("zip")) {
 
     const buffer = await csvRes.arrayBuffer();
-    const zip = await JSZip.loadAsync(buffer);
+   const JSZip = await getJSZip();
+   const zip = await JSZip.loadAsync(buffer);
 
     const fileNames = Object.keys(zip.files);
     const csvFileName = fileNames.find(name =>
