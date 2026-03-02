@@ -3146,50 +3146,7 @@ return new Response(csvText, {
 
   return json(r.data);
 }
-     if (
-  request.method === "POST" &&
-  url.pathname === "/api/calling-insight/run"
-) {
-  const { orgId, title, startDate, endDate } = await request.json();
-  if (!orgId || !title) return json({ error: "missing_parameters" }, 400);
-
-  await ensureDelegation(env, orgId);
-
-  // 1️⃣ Fetch templates dynamically
-  const tplRes = await webexFetchSafe(env, "/report/templates", orgId);
-  if (!tplRes.ok) return json({ error: "template_fetch_failed" }, 500);
-
-  const template = (tplRes.data.items || []).find(t => t.title === title);
-  if (!template) return json({ error: "template_not_found" }, 400);
-
-  // 2️⃣ Create report job
-  const token = await getAccessToken(env);
-
-  const createRes = await fetch(
-    "https://webexapis.com/v1/reports",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        templateId: template.Id,
-        startDate,
-        endDate
-      })
-    }
-  );
-
-  if (!createRes.ok) {
-    const text = await createRes.text();
-    return json({ error: text }, 500);
-  }
-
-  const created = await createRes.json();
-
-  return json(created);
-}
+   
 //API/STATUS
 // /api/status (GET) — maintenance-style with upstream fallback
 // /api/status (GET)
