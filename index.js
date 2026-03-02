@@ -3125,11 +3125,13 @@ try {
   console.log("Rollup store failed for:", orgId);
 }
 
-return new Response(csvText, {
-  headers: {
-    "Content-Type": "text/csv",
-    "Content-Disposition": `attachment; filename="report-${reportId}.csv"`
-  }
+const parsed = parseCsvToJson(csvText);
+
+return json({
+  ok: true,
+  reportId,
+  rows: parsed.rows,
+  columns: parsed.headers
 });
 }
      if (
