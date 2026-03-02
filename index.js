@@ -33,15 +33,8 @@ const JSON_HEADERS = {
   "cache-control": "no-store",
 };
 
-let _JSZip = null;
+// let _JSZip = null;
 
-async function getJSZip() {
-  if (_JSZip) return _JSZip;
-
-  const mod = await import("https://esm.sh/jszip@3.10.1");
-  _JSZip = mod.default;
-  return _JSZip;
-}
 // =============================================
 // Webex API Base URLs
 // =============================================
