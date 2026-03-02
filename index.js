@@ -139,7 +139,10 @@ async function ciPollAndProcess(env, orgId, reportType) {
   const contentType = csvRes.headers.get("content-type") || "";
   let csvText;
 
-  if (contentType.includes("zip")) {
+  if (
+  contentType.includes("zip") ||
+  contentType.includes("octet-stream")
+) {
 
     const buffer = await csvRes.arrayBuffer();
     const JSZip = await getJSZip();
@@ -3150,7 +3153,10 @@ if (
   let csvText;
 
   // 🟣 Handle ZIP (Webex default)
-  if (contentType.includes("zip")) {
+  if (
+  contentType.includes("zip") ||
+  contentType.includes("octet-stream")
+) {
 
     const buffer = await csvRes.arrayBuffer();
    const JSZip = await getJSZip();
