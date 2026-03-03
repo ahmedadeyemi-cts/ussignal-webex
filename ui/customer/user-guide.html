@@ -157,16 +157,16 @@ let routes=[];
 async function loadRoutes(){
   try {
 
-    const res = await fetch("./portal-routes.json");
+    const res = await fetch("/api/routes");
 
     if(!res.ok){
-      throw new Error("Routes JSON not found");
+      throw new Error("Route API failed");
     }
 
     const data = await res.json();
 
     if(!data.routes || !Array.isArray(data.routes)){
-      throw new Error("Invalid JSON structure");
+      throw new Error("Invalid route structure");
     }
 
     routes = data.routes;
@@ -175,38 +175,11 @@ async function loadRoutes(){
 
     console.error("Route load failed:", err);
 
-    // 🔥 Fallback inline config so page never crashes
-    routes = [
-      {
-        name:"Dashboard",
-        path:"index.html",
-        keywords:["overview","health"],
-        category:"Core",
-        description:"High-level overview of tenant health and status."
-      },
-      {
-        name:"Licenses",
-        path:"licenses.html",
-        keywords:["licenses","usage"],
-        category:"Core",
-        description:"License allocation and consumption visibility."
-      }
-    ];
-
+    routes = [];
   }
 
   buildSidebar();
   buildGuide();
-}
-
-function buildSidebar(){
-  const nav = document.getElementById("navLinks");
-  routes.forEach(r=>{
-    const a = document.createElement("a");
-    a.href = r.path;
-    a.textContent = r.name;
-    nav.appendChild(a);
-  });
 }
 
 function buildGuide(){
