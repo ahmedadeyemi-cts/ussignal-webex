@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>US Signal | Customer Portal</title>
+
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.08);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
+  --accent:#0f62fe;
+  --sidebar:#0f172a;
+  --sidebarText:#cbd5e1;
+}
+
+/* Layout */
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  display:flex;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.sidebar{
+  width:240px;
+  background:var(--sidebar);
+  color:var(--sidebarText);
+  padding:20px;
+  height:100vh;
+  position:fixed;
+  overflow:auto;
+}
+
+.sidebar h2{
+  font-size:16px;
+  margin-bottom:20px;
+  color:#fff;
+}
+
+.sidebar a{
+  display:block;
+  padding:10px;
+  border-radius:8px;
+  text-decoration:none;
+  color:var(--sidebarText);
+  margin-bottom:4px;
+  font-size:14px;
+}
+
+.sidebar a:hover{
+  background:rgba(255,255,255,.05);
+}
+
+.main{
+  margin-left:240px;
+  width:100%;
+}
+
+.topnav{
+  height:60px;
+  background:var(--card);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+  border-bottom:1px solid var(--line);
+}
+
+.helpBtn{
+  cursor:pointer;
+  font-size:20px;
+}
+
+.content{
+  padding:30px;
+}
+
+.card{
+  background:var(--card);
+  padding:20px;
+  border-radius:12px;
+  box-shadow:var(--shadow);
+  margin-bottom:20px;
+}
+
+/* Modal */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+}
+
+.modalContent{
+  background:#fff;
+  width:900px;
+  max-height:85vh;
+  overflow:auto;
+  padding:30px;
+  border-radius:14px;
+}
+
+.searchBox{
+  width:100%;
+  padding:12px;
+  margin-bottom:20px;
+  border-radius:8px;
+  border:1px solid var(--line);
+}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h2>US Signal Portal</h2>
+  <div id="navLinks"></div>
+</div>
+
+<div class="main">
+  <div class="topnav">
+    <div><strong>Customer Portal</strong></div>
+    <div>
+      <span class="helpBtn" onclick="openGuide()">❓</span>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="card">
+      <h2>Welcome</h2>
+      <p>This portal provides operational visibility into your Webex and PSTN environment.</p>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="guideModal">
+  <div class="modalContent">
+    <h2>Customer Portal Guide</h2>
+    <input class="searchBox" id="guideSearch" placeholder="Search portal features..."/>
+    <div id="guideContainer"></div>
+  </div>
+</div>
+
+<script>
+let routes=[];
+
+async function loadRoutes(){
+  const res = await fetch("portal-routes.json");
+  const data = await res.json();
+  routes = data.routes;
+  buildSidebar();
+  buildGuide();
+}
+
+function buildSidebar(){
+  const nav = document.getElementById("navLinks");
+  routes.forEach(r=>{
+    const a = document.createElement("a");
+    a.href = r.path;
+    a.textContent = r.name;
+    nav.appendChild(a);
+  });
+}
+
+function buildGuide(){
+  const container = document.getElementById("guideContainer");
+  container.innerHTML="";
+  routes.forEach(r=>{
+    const div = document.createElement("div");
+    div.className="card guideCard";
+    div.dataset.keywords=r.keywords.join(" ");
+    div.innerHTML=`
+      <h3>${r.name}</h3>
+      <p>${r.description}</p>
+      <small><strong>Category:</strong> ${r.category}</small>
+    `;
+    container.appendChild(div);
+  });
+}
+
+document.getElementById("guideSearch").addEventListener("input",function(){
+  const val=this.value.toLowerCase();
+  document.querySelectorAll(".guideCard").forEach(card=>{
+    if(card.dataset.keywords.includes(val) || card.innerText.toLowerCase().includes(val)){
+      card.style.display="block";
+    } else{
+      card.style.display="none";
+    }
+  });
+});
+
+function openGuide(){
+  document.getElementById("guideModal").style.display="flex";
+}
+
+window.onclick=function(e){
+  if(e.target.id==="guideModal"){
+    document.getElementById("guideModal").style.display="none";
+  }
+}
+
+loadRoutes();
+</script>
+
+</body>
+</html>
