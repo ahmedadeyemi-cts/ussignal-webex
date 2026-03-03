@@ -626,6 +626,96 @@
       .acc{page-break-inside: avoid;}
       a{text-decoration:none !important;}
     }
+    .portalNav{
+  margin-bottom:12px;
+}
+
+.portalLinks{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.portalLinks a{
+  padding:10px 12px;
+  border-radius:10px;
+  font-weight:700;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
+  transition:.2s;
+}
+
+.portalLinks a:hover{
+  background:rgba(15,98,254,.10);
+}
+
+.portalLinks a.active{
+  background:rgba(15,98,254,.15);
+  border:1px solid rgba(15,98,254,.25);
+}
+
+.docNav{
+  margin-top:12px;
+}
+
+.navTitle{
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+
+.divider{
+  height:1px;
+  background:var(--line);
+  margin:16px 0;
+}
+    .navSection {
+  margin-top:14px;
+}
+
+.navLabel {
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.6px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+
+.portalNav {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.portalNav a {
+  padding:10px 12px;
+  border-radius:10px;
+  font-weight:700;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
+  transition:.2s;
+}
+
+.portalNav a:hover {
+  background:rgba(15,98,254,.10);
+}
+
+.portalNav a.active {
+  background:rgba(15,98,254,.15);
+  border:1px solid rgba(15,98,254,.25);
+}
+
+.sidebarDivider {
+  height:1px;
+  background:var(--line);
+  margin:18px 0;
+}
   </style>
 </head>
 
@@ -633,20 +723,47 @@
 <div class="app">
 
   <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="logo" aria-hidden="true">
-        <!-- abstract “US Signal” style burst icon (not Cisco/Webex trademark) -->
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M12 2.6l1.7 4.9 4.9-1.7-2.8 4.3 4.8 1.1-4.8 1.1 2.8 4.3-4.9-1.7L12 21.4l-1.7-4.9-4.9 1.7 2.8-4.3-4.8-1.1 4.8-1.1-2.8-4.3 4.9 1.7L12 2.6z" stroke="rgba(15,98,254,.85)" stroke-width="1.2"/>
-        </svg>
-      </div>
-      <div>
-        <h1>US Signal</h1>
-        <p>Portal User Guide</p>
-      </div>
-    </div>
+<aside class="sidebar">
 
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M12 2.6l1.7 4.9 4.9-1.7-2.8 4.3 4.8 1.1-4.8 1.1 2.8 4.3-4.9-1.7L12 21.4l-1.7-4.9-4.9 1.7 2.8-4.3-4.8-1.1 4.8-1.1-2.8-4.3 4.9 1.7L12 2.6z"
+              stroke="rgba(15,98,254,.85)" stroke-width="1.2"/>
+      </svg>
+    </div>
+    <div>
+      <h1>US Signal</h1>
+      <p>Portal User Guide</p>
+    </div>
+  </div>
+
+  <!-- PRIMARY PORTAL NAVIGATION -->
+  <div class="navSection">
+    <div class="navLabel">Portal Navigation</div>
+    <nav class="portalNav">
+      <a href="/customer">Dashboard</a>
+      <a href="/customer/observability">Observability</a>
+      <a href="/customer/licenses">Licenses</a>
+      <a href="/customer/devices">Devices</a>
+      <a href="/customer/analytics">Analytics</a>
+      <a href="/customer/pstn">PSTN</a>
+      <a href="/customer/callinginsight">Calling Insight</a>
+      <a href="/customer/cdr">CDR</a>
+      <a href="/customer/maintenance">Maintenance</a>
+      <a href="/customer/status">Status</a>
+      <a href="/customer/incidents">Incidents</a>
+      <a href="/customer/support">Support Contact</a>
+      <a href="/customer/user-guide" class="active">User Guide</a>
+    </nav>
+  </div>
+
+  <!-- Divider -->
+  <div class="sidebarDivider"></div>
+
+  <!-- DOCUMENTATION ANCHOR NAVIGATION -->
+  <div class="navSection">
+    <div class="navLabel">Documentation Sections</div>
     <nav class="nav" id="sideNav">
       <a href="#overview" data-anchor="overview"><span class="dot"></span>Overview</a>
       <a href="#dashboard" data-anchor="dashboard"><span class="dot"></span>Dashboard</a>
@@ -664,7 +781,9 @@
       <a href="#glossary" data-anchor="glossary"><span class="dot"></span>Glossary</a>
       <a href="#release" data-anchor="release"><span class="dot"></span>Versioning</a>
     </nav>
+  </div>
 
+</aside>
     <div class="sidebarFooter">
       <div class="pill" title="This guide documents the customer-facing portal experience.">
         <div>
