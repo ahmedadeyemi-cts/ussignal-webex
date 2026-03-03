@@ -92,6 +92,73 @@ async function storePstnSnapshot(env, orgId, payload) {
     { expirationTtl: 60 * 30 } // 30 minutes
   );
 }
+function computeWorkerQualityMetrics(rows = []) {
+
+  let mosVals = [];
+  let jitterVals = [];
+  let lossVals = [];
+  let latencyVals = [];
+
+  for (const r of rows) {
+    const mos = Number(r["MOS"] || r["Average MOS"]);
+    const jitter = Number(r["Jitter (ms)"] || r["Jitter"]);
+    const loss = Number(r["Packet Loss (%)"] || r["Loss (%)"]);
+    const latency = Number(r["Latency (ms)"] || r["RTT"]);
+
+    if (!isNaN(mos)) mosVals.push(mos);
+    if (!isNaN(jitter)) jitterVals.push(jitter);
+    if (!isNaN(loss)) lossVals.push(loss);
+    if (!isNaN(latency)) latencyVals.push(latency);
+  }
+
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+  const p95 = arr => {
+    if (!arr.length) return null;
+    const s = arr.slice().sort((a,b)=>a-b);
+    return s[Math.floor(s.length * 0.95)];
+  };
+
+  const mosAvg = avg(mosVals);
+  const jitP95 = p95(jitterVals);
+  const lossP95 = p95(lossVals);
+  const latP95 = p95(latencyVals);
+
+  let score = 92;
+
+  if (mosAvg != null && mosAvg < 3.9) score -= 15;
+  if (jitP95 != null && jitP95 > 25) score -= 10;
+  if (lossP95 != null && lossP95 > 2) score -= 15;
+  if (latP95 != null && latP95 > 180) score -= 8;
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  const alerts = [];
+
+  if (mosAvg && mosAvg < 3.9)
+    alerts.push({ sev: "WARN", msg: "Low MOS average detected" });
+
+  if (jitP95 && jitP95 > 25)
+    alerts.push({ sev: "WARN", msg: "High jitter p95 detected" });
+
+  if (lossP95 && lossP95 > 2)
+    alerts.push({ sev: "WARN", msg: "High packet loss p95 detected" });
+
+  if (latP95 && latP95 > 180)
+    alerts.push({ sev: "WARN", msg: "High latency p95 detected" });
+
+  return {
+    score,
+    stats: {
+      rows: rows.length,
+      mosAvg,
+      jitterP95: jitP95,
+      lossP95,
+      latencyP95: latP95
+    },
+    worst: [],
+    alerts
+  };
+}
 async function resolveOrgIdForAdmin(env, key) {
   // If they passed orgId directly, accept it
   if (looksLikeWebexOrgId(key)) return key;
@@ -3103,8 +3170,8 @@ if (
 
   return json(payload);
 }
-     /* =====================================================
-   API: Calling Insight - CSV Download Proxy
+/* =====================================================
+   API: Calling Insight - CSV Download Proxy + KV Store
    GET /api/calling-insight/reports/:id/csv
 ===================================================== */
 if (
@@ -3129,7 +3196,7 @@ if (
   const payload = r.data?.items?.[0] || r.data;
   if (!payload.downloadURL) return json({ error: "not_ready" }, 400);
 
-  const token = await getAccessToken(env);
+  const token = await getAccessTokenForOrg(env, orgId); // IMPORTANT FIX
 
   const csvRes = await fetch(payload.downloadURL, {
     headers: { Authorization: `Bearer ${token}` }
@@ -3142,19 +3209,12 @@ if (
   const contentType = csvRes.headers.get("content-type") || "";
   let csvText;
 
-  // 🟣 Handle ZIP (Webex default)
-  if (
-  contentType.includes("zip") ||
-  contentType.includes("octet-stream")
-) {
-
+  if (contentType.includes("zip") || contentType.includes("octet-stream")) {
     const buffer = await csvRes.arrayBuffer();
     const zip = await JSZip.loadAsync(buffer);
 
-    const fileNames = Object.keys(zip.files);
-    const csvFileName = fileNames.find(name =>
-      name.toLowerCase().endsWith(".csv")
-    );
+    const csvFileName = Object.keys(zip.files)
+      .find(name => name.toLowerCase().endsWith(".csv"));
 
     if (!csvFileName) {
       return json({ error: "csv_not_found_in_zip" }, 500);
@@ -3163,29 +3223,59 @@ if (
     csvText = await zip.files[csvFileName].async("string");
 
   } else {
-    // 🟢 Already CSV
     csvText = await csvRes.text();
-  }
-
-  // 🔵 Store daily rollup
-  try {
-    const summary = buildSimpleMediaSummary(csvText);
-    await env.WEBEX.put(
-      `media:rollup:${orgId}:${new Date().toISOString().slice(0,10)}`,
-      JSON.stringify(summary)
-    );
-  } catch (e) {
-    console.log("Rollup store failed for:", orgId);
   }
 
   // 🔵 Parse CSV
   const parsed = parseCsvToJson(csvText);
+  const rows = parsed.rows || [];
+
+  // 🔵 Compute Quality Metrics
+  const metrics = computeWorkerQualityMetrics(rows);
+
+  // 🔵 Persist full summary in KV
+  try {
+    const summaryPayload = {
+      lastReportId: reportId,
+      generatedAt: new Date().toISOString(),
+      score: metrics.score,
+      metrics: metrics,
+      alerts: metrics.alerts,
+      worst: metrics.worst
+    };
+
+    await env.CI_SUMMARY_KV.put(
+      `ci:summary:${orgId}`,
+      JSON.stringify(summaryPayload),
+      { expirationTtl: 60 * 60 * 24 * 30 } // 30 days
+    );
+
+  } catch (e) {
+    console.log("CI summary KV store failed:", e);
+  }
 
   return json({
     ok: true,
     reportId,
     rows: parsed.rows,
     columns: parsed.headers
+  });
+}
+     if (url.pathname === "/api/calling-insight/summary" && request.method === "GET") {
+  const orgId = url.searchParams.get("orgId");
+  if (!orgId) {
+    return new Response(JSON.stringify({ error: "Missing orgId" }), { status: 400 });
+  }
+
+  const data = await env.CI_SUMMARY_KV.get(`ci:summary:${orgId}`);
+  if (!data) {
+    return new Response(JSON.stringify({ ok: true, empty: true }), {
+      headers: { "content-type": "application/json" }
+    });
+  }
+
+  return new Response(data, {
+    headers: { "content-type": "application/json" }
   });
 }
      if (
