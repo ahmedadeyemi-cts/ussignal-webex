@@ -1,358 +1,2461 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8"/>
-<title>US Signal | Executive Portal Guide</title>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>US Signal | Portal Guide (Single Pane of Glass)</title>
+  <meta name="description" content="Executive-grade portal documentation for the US Signal Webex Customer Portal (Control Hub single pane of glass)." />
 
-<style>
-:root{
-  --bg:#f6f8fb;
-  --card:#ffffff;
-  --text:#0f172a;
-  --muted:#64748b;
-  --line:rgba(15,23,42,.10);
-  --shadow:0 8px 24px rgba(15,23,42,.08);
-  --accent:#0f62fe;
-}
-html[data-theme="dark"]{
-  --bg:#0b1220;
-  --card:#0f172a;
-  --text:#e5e7eb;
-  --muted:#94a3b8;
-  --line:rgba(148,163,184,.18);
-}
-*{box-sizing:border-box}
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  display:flex;
-  min-height:100vh;
-}
+  <style>
+    :root{
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --line:rgba(15,23,42,.10);
+      --shadow:0 8px 24px rgba(15,23,42,.08);
+      --accent:#0f62fe;
+      --accent2:#0b4bd4;
 
-/* Sidebar */
-.sidebar{
-  width:270px;
-  background:var(--card);
-  border-right:1px solid var(--line);
-  padding:18px 14px;
-  display:flex;
-  flex-direction:column;
-}
-.brand{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding-bottom:14px;
-  border-bottom:1px solid var(--line);
-}
-.brand img{height:34px}
-.nav{
-  margin-top:18px;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.nav a{
-  padding:10px;
-  border-radius:12px;
-  font-weight:800;
-  font-size:13px;
-  text-decoration:none;
-  color:var(--text);
-  transition:.2s;
-}
-.nav a:hover{
-  background:rgba(15,98,254,.12);
-}
-.nav a.active{
-  background:rgba(15,98,254,.12);
-  border:1px solid rgba(15,98,254,.20);
-}
+      --good:#16a34a;
+      --warn:#f59e0b;
+      --bad:#dc2626;
+      --info:#2563eb;
 
-/* Main */
-.main{
-  flex:1;
-  padding:26px;
-  display:flex;
-  flex-direction:column;
-  gap:20px;
-}
+      --radius:16px;
+      --radius2:22px;
 
-/* Header */
-.header-card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  padding:22px;
-}
+      --sidebarW: 260px;
+      --maxW: 1180px;
 
-.header-card h1{
-  margin:0;
-  font-size:22px;
-  font-weight:1000;
-}
+      --focus: 0 0 0 4px rgba(15,98,254,.18);
+    }
 
-.muted{
-  color:var(--muted);
-  font-size:14px;
-  line-height:1.6;
-}
+    [data-theme="dark"]{
+      --bg:#0b1220;
+      --card:#0f172a;
+      --text:#e5e7eb;
+      --muted:#9aa4b2;
+      --line:rgba(229,231,235,.12);
+      --shadow:0 10px 26px rgba(0,0,0,.30);
+      --accent:#60a5fa;
+      --accent2:#3b82f6;
+      --focus: 0 0 0 4px rgba(96,165,250,.20);
+    }
 
-/* Search */
-.search-box{
-  width:100%;
-  padding:14px;
-  border-radius:12px;
-  border:1px solid var(--line);
-  margin-top:16px;
-  font-size:14px;
-}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    a{color:inherit}
+    .app{
+      display:grid;
+      grid-template-columns: var(--sidebarW) 1fr;
+      min-height:100vh;
+    }
 
-/* Accordion */
-.section{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  overflow:hidden;
-  transition:.3s;
-}
-.section-header{
-  padding:18px;
-  cursor:pointer;
-  font-weight:1000;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-.section-header:hover{
-  background:rgba(15,98,254,.05);
-}
-.section-content{
-  max-height:0;
-  overflow:hidden;
-  transition:max-height .4s ease;
-  padding:0 18px;
-}
-.section.active .section-content{
-  max-height:2000px;
-  padding-bottom:18px;
-}
+    /* Sidebar */
+    .sidebar{
+      position:sticky;
+      top:0;
+      height:100vh;
+      padding:18px 14px;
+      border-right:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.15));
+    }
+    [data-theme="dark"] .sidebar{
+      background: linear-gradient(180deg, rgba(15,23,42,.85), rgba(15,23,42,.55));
+    }
 
-/* Screenshot placeholder */
-.screenshot{
-  margin-top:14px;
-  background:linear-gradient(135deg,#dbeafe,#f1f5f9);
-  border-radius:12px;
-  height:180px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:800;
-  color:#1e293b;
-  font-size:13px;
-}
-</style>
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 10px 16px;
+    }
+    .logo{
+      width:32px;height:32px;
+      border-radius:10px;
+      display:grid;
+      place-items:center;
+      background: radial-gradient(circle at 30% 30%, rgba(15,98,254,.18), transparent 55%),
+                  linear-gradient(135deg, rgba(15,98,254,.25), rgba(11,75,212,.08));
+      border:1px solid var(--line);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .logo svg{width:22px;height:22px}
+    .brand h1{
+      margin:0;
+      font-size:14px;
+      line-height:1.2;
+      letter-spacing:.2px;
+    }
+    .brand p{
+      margin:2px 0 0;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .nav{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      padding:6px;
+    }
+    .nav a{
+      text-decoration:none;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 10px;
+      border-radius:14px;
+      border:1px solid transparent;
+      color:var(--text);
+      font-size:13px;
+      font-weight:600;
+      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+      will-change: transform;
+    }
+    .nav a .dot{
+      width:8px;height:8px;border-radius:999px;
+      background: rgba(100,116,139,.35);
+      border:1px solid var(--line);
+    }
+    .nav a:hover{
+      background: rgba(15,98,254,.08);
+      border-color: rgba(15,98,254,.18);
+      transform: translateX(2px);
+    }
+    .nav a.active{
+      background: rgba(15,98,254,.12);
+      border-color: rgba(15,98,254,.28);
+    }
+    .nav a.active .dot{
+      background: var(--accent);
+      border-color: rgba(0,0,0,0);
+      box-shadow: 0 0 0 6px rgba(15,98,254,.10);
+    }
+
+    .sidebarFooter{
+      margin-top:auto;
+      padding:12px 10px 0;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .pill{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      border:1px solid var(--line);
+      background: var(--card);
+      padding:10px 12px;
+      border-radius:16px;
+      box-shadow: var(--shadow);
+    }
+    .pill .k{font-size:12px;color:var(--muted);font-weight:700}
+    .pill .v{font-size:12px;font-weight:800}
+    .pill .badge{
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:12px;
+      border:1px solid var(--line);
+      background: rgba(22,163,74,.10);
+      color: var(--good);
+    }
+
+    .sidebarActions{
+      display:flex;
+      gap:10px;
+    }
+    .btn{
+      appearance:none;
+      border:none;
+      background: var(--accent);
+      color:white;
+      padding:10px 12px;
+      border-radius:14px;
+      font-weight:800;
+      font-size:13px;
+      cursor:pointer;
+      box-shadow: 0 10px 18px rgba(15,98,254,.18);
+      transition: transform .15s ease, filter .15s ease, opacity .15s ease;
+    }
+    .btn:hover{transform: translateY(-1px); filter: brightness(1.02);}
+    .btn:active{transform: translateY(0px); opacity:.92;}
+    .btn.secondary{
+      background: transparent;
+      color: var(--text);
+      border:1px solid var(--line);
+      box-shadow:none;
+    }
+    .btn.secondary:hover{
+      background: rgba(100,116,139,.10);
+      transform: translateY(-1px);
+    }
+    .btn:focus{outline:none; box-shadow: var(--focus);}
+
+    /* Main */
+    .main{
+      padding:22px 18px 80px;
+    }
+    .wrap{
+      max-width: var(--maxW);
+      margin: 0 auto;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:16px;
+    }
+    .topbarLeft h2{
+      margin:0;
+      font-size:20px;
+      letter-spacing:.2px;
+    }
+    .topbarLeft .sub{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      max-width: 860px;
+    }
+
+    .topbarRight{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .card{
+      background: var(--card);
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      box-shadow: var(--shadow);
+    }
+    .cardPad{padding:16px;}
+    .grid2{
+      display:grid;
+      grid-template-columns: 1.35fr .65fr;
+      gap:14px;
+    }
+    @media (max-width: 1060px){
+      .app{grid-template-columns: 1fr;}
+      .sidebar{position:relative;height:auto}
+      .grid2{grid-template-columns:1fr}
+    }
+
+    /* Search / toolbar */
+    .toolbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin: 14px 0 18px;
+    }
+    .search{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex: 1;
+      min-width: 260px;
+      padding: 10px 12px;
+      border:1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,.60);
+    }
+    [data-theme="dark"] .search{background: rgba(15,23,42,.60);}
+    .search input{
+      border:none;
+      outline:none;
+      background:transparent;
+      color:var(--text);
+      width:100%;
+      font-size:13px;
+      font-weight:700;
+    }
+    .search small{color:var(--muted); font-weight:800}
+    .toolbar .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    /* Anchors / mini TOC */
+    .toc{
+      padding:14px;
+    }
+    .toc h3{
+      margin:0 0 10px;
+      font-size:13px;
+      letter-spacing:.25px;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .toc a{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      text-decoration:none;
+      padding:10px 10px;
+      border-radius:14px;
+      border:1px solid transparent;
+      transition: background .18s ease, border-color .18s ease, transform .18s ease;
+      font-size:13px;
+      font-weight:800;
+    }
+    .toc a:hover{
+      background: rgba(15,98,254,.08);
+      border-color: rgba(15,98,254,.18);
+      transform: translateX(2px);
+    }
+    .toc a.active{
+      background: rgba(15,98,254,.12);
+      border-color: rgba(15,98,254,.28);
+    }
+    .toc a span.k{
+      color:var(--muted);
+      font-weight:900;
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(100,116,139,.10);
+    }
+
+    /* Accordions */
+    .accordion{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .acc{
+      border:1px solid var(--line);
+      border-radius: 18px;
+      overflow:hidden;
+      background: rgba(255,255,255,.55);
+    }
+    [data-theme="dark"] .acc{background: rgba(15,23,42,.55);}
+    .accHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 14px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .accHeader .left{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+    .accHeader .icon{
+      width:34px;height:34px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      display:grid;
+      place-items:center;
+      background: radial-gradient(circle at 30% 30%, rgba(15,98,254,.18), transparent 60%),
+                  rgba(15,98,254,.06);
+      flex:0 0 auto;
+    }
+    .accHeader .title{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:0;
+    }
+    .accHeader .title b{
+      font-size:14px;
+      letter-spacing:.2px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .accHeader .title span{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .accHeader .right{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex:0 0 auto;
+    }
+    .tag{
+      font-size:11px;
+      font-weight:900;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(100,116,139,.10);
+      color: var(--muted);
+      letter-spacing:.2px;
+    }
+    .tag.good{background: rgba(22,163,74,.12); color: var(--good); border-color: rgba(22,163,74,.22);}
+    .tag.warn{background: rgba(245,158,11,.14); color: var(--warn); border-color: rgba(245,158,11,.22);}
+    .tag.bad{background: rgba(220,38,38,.14); color: var(--bad); border-color: rgba(220,38,38,.22);}
+    .chev{
+      width:30px;height:30px;border-radius:12px;
+      border:1px solid var(--line);
+      display:grid;
+      place-items:center;
+      background: var(--card);
+      transition: transform .18s ease;
+    }
+
+    .acc[aria-expanded="true"] .chev{transform: rotate(180deg);}
+    .accBodyWrap{
+      height:0;
+      overflow:hidden;
+      transition: height .22s ease;
+      will-change: height;
+      border-top:1px solid var(--line);
+      background: var(--card);
+    }
+    .accBody{
+      padding:16px;
+    }
+
+    /* Content blocks */
+    .sectionTitle{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin: 0 0 10px;
+    }
+    .sectionTitle h4{
+      margin:0;
+      font-size:15px;
+      letter-spacing:.2px;
+    }
+    .sectionTitle p{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    .split{
+      display:grid;
+      grid-template-columns: 1fr 360px;
+      gap:14px;
+      align-items:start;
+    }
+    @media (max-width: 1060px){
+      .split{grid-template-columns:1fr;}
+    }
+
+    .bullets{
+      margin:10px 0 0;
+      padding:0 0 0 16px;
+      color:var(--text);
+      font-size:13px;
+      line-height:1.55;
+    }
+    .bullets li{margin:6px 0}
+    .callout{
+      border:1px solid var(--line);
+      border-radius: 18px;
+      padding:12px 12px;
+      background: radial-gradient(circle at 20% 20%, rgba(15,98,254,.10), transparent 55%),
+                  rgba(100,116,139,.06);
+    }
+    .callout h5{
+      margin:0 0 8px;
+      font-size:12px;
+      letter-spacing:.25px;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .callout p{
+      margin:0;
+      font-size:13px;
+      line-height:1.45;
+      color:var(--text);
+    }
+
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size:12px;
+      padding:2px 6px;
+      border-radius:8px;
+      border:1px solid var(--line);
+      background: rgba(100,116,139,.10);
+      color: var(--text);
+      font-weight:800;
+    }
+
+    /* Screenshot gallery */
+    .shots{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+    }
+    .shot{
+      border:1px solid var(--line);
+      border-radius: 18px;
+      overflow:hidden;
+      background: rgba(100,116,139,.06);
+    }
+    .shot img{
+      width:100%;
+      height:auto;
+      display:block;
+      background: rgba(15,23,42,.06);
+      cursor:pointer;
+    }
+    .shot .cap{
+      padding:10px 12px;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:800;
+      line-height:1.35;
+    }
+    .shot .cap b{color:var(--text)}
+
+    /* Glossary */
+    .glossaryGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    @media (max-width: 900px){
+      .glossaryGrid{grid-template-columns:1fr;}
+    }
+    .term{
+      border:1px solid var(--line);
+      border-radius: 18px;
+      padding:12px 12px;
+      background: rgba(100,116,139,.06);
+    }
+    .term b{display:block;font-size:13px;margin-bottom:6px}
+    .term p{margin:0;color:var(--muted);font-size:12.8px;line-height:1.45}
+
+    /* Highlighting */
+    mark.hl{
+      background: rgba(245,158,11,.22);
+      color: inherit;
+      padding:0 2px;
+      border-radius:6px;
+    }
+
+    /* Modal */
+    .modal{
+      position:fixed; inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      background: rgba(0,0,0,.62);
+      z-index: 50;
+    }
+    .modal[aria-hidden="false"]{display:flex;}
+    .modal .frame{
+      width:min(1100px, 100%);
+      border-radius: 18px;
+      overflow:hidden;
+      background: var(--card);
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 22px 60px rgba(0,0,0,.40);
+    }
+    .modal .bar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+    }
+    .modal .bar b{font-size:13px}
+    .modal .bar .x{
+      border:1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      border-radius: 12px;
+      padding:8px 10px;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .modal .content{
+      background: rgba(100,116,139,.06);
+    }
+    .modal .content img{
+      width:100%;
+      height:auto;
+      display:block;
+    }
+
+    /* SLA diagrams */
+    .diagram{
+      border:1px solid var(--line);
+      border-radius: 18px;
+      padding:12px;
+      background: rgba(100,116,139,.06);
+    }
+    .diagram svg{width:100%;height:auto;display:block}
+
+    /* Print / PDF */
+    @media print{
+      .sidebar, .topbarRight, .toolbar, .modal {display:none !important;}
+      .app{grid-template-columns: 1fr !important;}
+      .main{padding: 0 !important;}
+      .card, .acc, .shot, .term, .callout{box-shadow:none !important;}
+      .accBodyWrap{height:auto !important;}
+      .acc{page-break-inside: avoid;}
+      a{text-decoration:none !important;}
+    }
+  </style>
 </head>
 
 <body>
+<div class="app">
 
-<div class="sidebar">
-  <div class="brand">
-    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg">
-    <div>
-      <div style="font-weight:900;">US Signal</div>
-      <div class="muted">Customer Portal</div>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <!-- abstract “US Signal” style burst icon (not Cisco/Webex trademark) -->
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 2.6l1.7 4.9 4.9-1.7-2.8 4.3 4.8 1.1-4.8 1.1 2.8 4.3-4.9-1.7L12 21.4l-1.7-4.9-4.9 1.7 2.8-4.3-4.8-1.1 4.8-1.1-2.8-4.3 4.9 1.7L12 2.6z" stroke="rgba(15,98,254,.85)" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <div>
+        <h1>US Signal</h1>
+        <p>Portal User Guide</p>
+      </div>
+    </div>
+
+    <nav class="nav" id="sideNav">
+      <a href="#overview" data-anchor="overview"><span class="dot"></span>Overview</a>
+      <a href="#dashboard" data-anchor="dashboard"><span class="dot"></span>Dashboard</a>
+      <a href="#observability" data-anchor="observability"><span class="dot"></span>Observability</a>
+      <a href="#licenses" data-anchor="licenses"><span class="dot"></span>Licenses</a>
+      <a href="#devices" data-anchor="devices"><span class="dot"></span>Devices</a>
+      <a href="#analytics" data-anchor="analytics"><span class="dot"></span>Analytics</a>
+      <a href="#cdr" data-anchor="cdr"><span class="dot"></span>CDR</a>
+      <a href="#pstn" data-anchor="pstn"><span class="dot"></span>PSTN</a>
+      <a href="#callinginsight" data-anchor="callinginsight"><span class="dot"></span>Calling Insight</a>
+      <a href="#maintenance" data-anchor="maintenance"><span class="dot"></span>Maintenance</a>
+      <a href="#status" data-anchor="status"><span class="dot"></span>Status</a>
+      <a href="#incidents" data-anchor="incidents"><span class="dot"></span>Incidents</a>
+      <a href="#support" data-anchor="support"><span class="dot"></span>Support Contact</a>
+      <a href="#glossary" data-anchor="glossary"><span class="dot"></span>Glossary</a>
+      <a href="#release" data-anchor="release"><span class="dot"></span>Versioning</a>
+    </nav>
+
+    <div class="sidebarFooter">
+      <div class="pill" title="This guide documents the customer-facing portal experience.">
+        <div>
+          <div class="k">Mode</div>
+          <div class="v" id="modeLabel">Documentation</div>
+        </div>
+        <div class="badge" id="liveBadge">Enterprise</div>
+      </div>
+
+      <div class="pill" title="Shows when this guide was generated.">
+        <div>
+          <div class="k">Last updated</div>
+          <div class="v" id="lastUpdated">—</div>
+        </div>
+        <span class="tag" id="docVersionTag">v—</span>
+      </div>
+
+      <div class="sidebarActions">
+        <button class="btn secondary" id="themeBtn" type="button">Dark Mode</button>
+        <button class="btn" id="pdfBtn" type="button">Export PDF</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="wrap">
+
+      <div class="topbar">
+        <div class="topbarLeft">
+          <h2>US Signal Webex Customer Portal — Executive Guide</h2>
+          <div class="sub">
+            This portal is a <b>single pane of glass</b> that consolidates operational data from <b>Cisco Webex Control Hub</b> and related Webex platform sources into customer-ready dashboards.
+            It is designed so customers can quickly understand posture, prioritize actions, and engage <b>US Signal</b> with shared context to accelerate troubleshooting, audits, and change execution.
+            Built-in automation and intelligence convert raw platform data into <b>risk signals, SLA indicators, and guided next steps</b>.
+          </div>
+        </div>
+
+        <div class="topbarRight">
+          <button class="btn secondary" id="expandAllBtn" type="button">Expand All</button>
+          <button class="btn secondary" id="collapseAllBtn" type="button">Collapse All</button>
+          <button class="btn secondary" id="clearSearchBtn" type="button">Clear Search</button>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <!-- Main hero card -->
+        <section class="card cardPad" id="overview" data-section>
+          <div class="sectionTitle">
+            <div>
+              <h4>How to use this guide</h4>
+              <p>
+                Use the search bar to find any page, metric, or control. Each portal page below expands into an enterprise-level breakdown of:
+                purpose, what you see on-screen, what each KPI means, how to operate the controls, and how to work with US Signal when action is required.
+              </p>
+            </div>
+          </div>
+
+          <ul class="bullets">
+            <li><b>Search across everything:</b> type a term like <span class="kbd">SLA</span>, <span class="kbd">E911</span>, <span class="kbd">deficit</span>, <span class="kbd">MOS</span>, or a page name to reveal matching sections.</li>
+            <li><b>Accordion design:</b> every portal page is documented as a collapsible section. Use <span class="kbd">Expand All</span> before exporting to PDF.</li>
+            <li><b>Contextual screenshots:</b> each section includes thumbnails you can click to open full-size images. If your deployment hosts screenshots elsewhere, update the image URLs in the <span class="kbd">SCREENSHOTS</span> table in the script.</li>
+            <li><b>Control Hub sourcing:</b> metrics shown in the portal are derived from Control Hub and Webex platform APIs. The guide explains how “raw platform data” becomes operational signals.</li>
+          </ul>
+
+          <div style="margin-top:14px" class="callout">
+            <h5>Important note on data freshness</h5>
+            <p>
+              Most pages show a <b>Last refresh</b> timestamp and some run continuous polling. If values appear “Unknown” or empty, it typically indicates a permissions scope issue, an upstream API limitation, or a tenant context mismatch.
+              US Signal can validate data paths and restore visibility using the same telemetry this portal surfaces.
+            </p>
+          </div>
+        </section>
+
+        <!-- Mini TOC -->
+        <aside class="card toc" aria-label="Quick navigation">
+          <h3>Jump to</h3>
+          <a href="#dashboard" data-toc="dashboard"><span>Dashboard</span><span class="k">Command Center</span></a>
+          <a href="#observability" data-toc="observability"><span>Observability</span><span class="k">Risk + Correlation</span></a>
+          <a href="#licenses" data-toc="licenses"><span>Licenses</span><span class="k">Deficit + Forecast</span></a>
+          <a href="#devices" data-toc="devices"><span>Devices</span><span class="k">Fleet + SLA</span></a>
+          <a href="#cdr" data-toc="cdr"><span>CDR</span><span class="k">Diagnostics</span></a>
+          <a href="#pstn" data-toc="pstn"><span>PSTN</span><span class="k">E911 + Routing</span></a>
+          <a href="#callinginsight" data-toc="callinginsight"><span>Calling Insight</span><span class="k">Reports API</span></a>
+          <a href="#maintenance" data-toc="maintenance"><span>Maintenance</span><span class="k">Change Risk</span></a>
+          <a href="#status" data-toc="status"><span>Status</span><span class="k">Platform Health</span></a>
+          <a href="#incidents" data-toc="incidents"><span>Incidents</span><span class="k">SLA Timelines</span></a>
+        </aside>
+      </div>
+
+      <!-- Search / actions -->
+      <div class="toolbar">
+        <div class="search" role="search" aria-label="Search portal documentation">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" stroke-width="1.8" opacity=".9"/>
+            <path d="M16.2 16.2 21 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".9"/>
+          </svg>
+          <input id="q" type="text" placeholder="Search: page name, KPI, control, or term (SLA, E911, deficit, MOS, jitter, trunk…)" />
+          <small id="matchCount">0</small>
+        </div>
+
+        <div class="actions">
+          <button class="btn secondary" id="printReadyBtn" type="button" title="Expands all sections and scrolls to the top.">Print-ready</button>
+          <button class="btn secondary" id="copyLinkBtn" type="button" title="Copies a sharable link to this guide.">Copy Link</button>
+        </div>
+      </div>
+
+      <!-- Accordion documentation -->
+      <section class="accordion" id="doc">
+        <!-- DASHBOARD -->
+        <article class="acc" id="dashboard" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-dashboard">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 13h7V4H4v9Zm9 7h7V4h-7v16ZM4 20h7v-5H4v5Z" stroke="currentColor" stroke-width="1.6" opacity=".95"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>Dashboard — Customer Command Center</b>
+                <span>Executive posture + action routing across licenses, devices, incidents, PSTN, and adoption</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag good">Operational view</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-dashboard">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Purpose</h4>
+                      <p>
+                        The Dashboard is the customer’s “front door” into the portal. It condenses multiple Control Hub domains into a single operational narrative:
+                        what is healthy, what is drifting, what is broken, and what should be done next.
+                        Instead of forcing admins to pivot across Control Hub pages, export CSVs, or interpret raw platform tables,
+                        the Dashboard turns telemetry into <b>actionable posture</b> and direct links into the detailed pages.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>What you see on this page</h4>
+                      <p>These elements are designed to be “executive readable” while still operationally precise.</p>
+                    </div>
+                  </div>
+
+                  <ul class="bullets">
+                    <li><b>Operational View banner:</b> confirms the portal loaded Control Hub-backed data and computed the latest KPIs for the selected tenant context.</li>
+                    <li><b>Action Required banner:</b> appears when risk thresholds are exceeded (for example: license deficit detected, device offline rate elevated, or active incidents present).</li>
+                    <li><b>SLA Breach Detected banner:</b> escalates when the portal determines an incident has exceeded a defined SLA window (example: “MINOR incident has exceeded SLA threshold by X minutes”).</li>
+                    <li><b>Executive Summary paragraph:</b> auto-generated, plain-language narrative that connects signals across pages (licenses + devices + incidents + PSTN + usage) into a single story.</li>
+                    <li><b>KPI tiles (30d):</b> rapid posture snapshot (license deficit, offline devices, call volume, PSTN trunk visibility, open incidents). Each tile is a “door” to deep-dive workflows.</li>
+                    <li><b>Quick Access cards:</b> curated entry points aligned to typical operational motions: License Intelligence, Device Operations, PSTN Engineering, Call Analytics, CDR, and Incident response.</li>
+                    <li><b>Tenant context chips:</b> tenant name and role; establishes which Control Hub org is being queried and what access policy is applied.</li>
+                  </ul>
+
+                  <div class="callout" style="margin-top:14px;">
+                    <h5>Operational meaning</h5>
+                    <p>
+                      The Dashboard is where leadership can align on “what matters right now,” and where operators can immediately jump into the correct remediation workflow.
+                      In practice: if a user reports “calls failing,” the Dashboard tells you whether the most likely driver is an upstream incident, a device registration problem, a capacity/licensing constraint, or a PSTN/E911 configuration gap.
+                    </p>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:16px;">
+                    <div>
+                      <h4>How US Signal uses this view during escalation</h4>
+                      <p>The portal is designed to create shared truth between customer and provider.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Fast triage:</b> US Signal can validate whether the issue is tenant-local or platform-wide by correlating Dashboard signals with Status + Incidents.</li>
+                    <li><b>Evidence-ready reporting:</b> if audit questions arise, Dashboard posture provides supporting context (deficits, exposure, timeline) that can be exported from underlying pages.</li>
+                    <li><b>Action routing:</b> the “Open …” buttons move directly into the remediation domain (Open Devices, Open Licenses, View Incidents, Open PSTN).</li>
+                  </ul>
+                </div>
+
+                <div class="shots" data-shot-group="dashboard">
+                  <div class="shot">
+                    <img data-shot="dashboard_1" alt="Dashboard — Customer Command Center screenshot" loading="lazy">
+                    <div class="cap"><b>Dashboard:</b> executive posture + action routing across domains.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- OBSERVABILITY -->
+        <article class="acc" id="observability" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-observability">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 18V6m5 12V9m5 9V4m5 14v-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>Observability — Webex Observability Suite</b>
+                <span>Cross-domain risk scoring, predictive modeling, correlation, and “blast radius” posture</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag warn">Correlation engine</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-observability">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Purpose</h4>
+                      <p>
+                        Observability is the portal’s <b>risk and correlation layer</b>. It combines signals from incidents, status, maintenance, device reachability, licensing posture, and PSTN visibility into a single stability narrative.
+                        Instead of treating each domain as independent, this page answers: <b>“Is this tenant trending toward instability, and what will be impacted if we do nothing?”</b>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>What you see on this page</h4>
+                      <p>Everything here is focused on correlating domains and guiding incident readiness.</p>
+                    </div>
+                  </div>
+
+                  <ul class="bullets">
+                    <li><b>SLA breach detection integration:</b> highlights when an active incident has exceeded SLA thresholds. This is critical for escalation timing and customer communication.</li>
+                    <li><b>Correlation level:</b> indicates how strongly cross-domain indicators suggest that an incident is influencing tenant experience (for example: an incident + rising offline devices + license deficits).</li>
+                    <li><b>Live updates:</b> indicates whether WebSocket-style updates are available; otherwise the portal uses hardened polling intervals.</li>
+                    <li><b>Webex Observability Suite narrative:</b> a plain-language summary that reports stability index, incident posture, license deficits, disconnected devices, predictive risk, and blast radius score.</li>
+                    <li><b>Tenant Context panel:</b> tenant selector, resolution mode, and notification controls (email target + cooldown) to reduce alert noise and prevent spam.</li>
+                    <li><b>Enterprise Stability Index (0–100):</b> aggregated stability score across incidents, status, maintenance, devices, licenses, and PSTN. Lower numbers indicate elevated risk and higher operational fragility.</li>
+                    <li><b>Active Incidents tile:</b> count + age, with SLA indicators (helps differentiate “fresh noise” vs “aging exposure”).</li>
+                    <li><b>License Deficit Risk tile:</b> correlates procurement/assignment constraints to operational risk. The portal can prioritize calling SKUs when relevant.</li>
+                    <li><b>Operational Intelligence section:</b> predictive incident modeling, blast radius scoring, AI grouping, and trends.</li>
+                    <li><b>30-Day Observability Trend:</b> builds a rolling posture view (often using snapshot patterns or stored rollups, depending on worker capabilities).</li>
+                    <li><b>Product Heatmap:</b> shows where risk and instability concentrate by product area.</li>
+                    <li><b>Incident Radar table:</b> searchable, filterable inventory (products, severity, status, headline). Designed for rapid “what’s active and what mattered recently?” reviews.</li>
+                  </ul>
+
+                  <div class="callout" style="margin-top:14px;">
+                    <h5>How to interpret “blast radius”</h5>
+                    <p>
+                      Blast radius estimates how widely an issue can affect users and services (region, product domain, and tenant exposure). It helps decide whether to mobilize a narrow fix (single location) or a broader incident posture (multi-region communications, war room, proactive messaging).
+                    </p>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:16px;">
+                    <div>
+                      <h4>Recommended usage patterns</h4>
+                      <p>Common enterprise workflows this page supports.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Daily posture review:</b> check Stability Index + Active Incidents + License/Device risk tiles before business hours.</li>
+                    <li><b>Incident readiness:</b> if SLA breach risk is elevated, open Incidents to review timeline, then open Status to confirm platform scope.</li>
+                    <li><b>Customer communications:</b> use correlation strength to justify proactive stakeholder updates (especially when multiple indicators align).</li>
+                  </ul>
+                </div>
+
+                <div class="shots" data-shot-group="observability">
+                  <div class="shot">
+                    <img data-shot="observability_1" alt="Observability suite overview screenshot" loading="lazy">
+                    <div class="cap"><b>Observability overview:</b> stability index, correlation, and predictive risk posture.</div>
+                  </div>
+                  <div class="shot">
+                    <img data-shot="observability_2" alt="Incident Radar table screenshot" loading="lazy">
+                    <div class="cap"><b>Incident Radar:</b> searchable incident inventory with product + severity context.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- LICENSES -->
+        <article class="acc" id="licenses" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-licenses">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 7h10v10H7V7Z" stroke="currentColor" stroke-width="1.7" opacity=".95"/>
+                  <path d="M9 4h6M9 20h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity=".85"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>Licenses — License Intelligence 2.0</b>
+                <span>SKU inventory, utilization, deficits, “at risk” forecasting, history exports, and audit controls</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag bad">Capacity risk</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-licenses">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Purpose</h4>
+                      <p>
+                        The Licenses page is built for enterprise governance: it makes license posture <b>obvious</b> and makes procurement/assignment work <b>measurable</b>.
+                        Control Hub can show inventory, but it often does not present it in an executive-operational way.
+                        This page transforms SKU data into deficit counts, risk categories, and time-based trends so customers can prevent onboarding blocks and feature compliance issues.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>Key KPIs and what they mean</h4>
+                      <p>These KPIs are computed from SKU totals vs consumption and mapped into risk categories.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>License Health Score (0–100):</b> an aggregate score where lower values indicate deficits, high utilization, or risk conditions that can impair user enablement.</li>
+                    <li><b>Deficits & Risk:</b> a concise count of SKUs that are <b>deficient</b> (consumed &gt; total) and SKUs that are <b>at risk</b> (approaching saturation).</li>
+                    <li><b>Capacity Velocity:</b> trend readiness indicator. When enough snapshots exist, the portal estimates “days to impact” for at-risk SKUs. If insufficient history exists, it guides users to build history via periodic refresh.</li>
+                  </ul>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>What you see on this page</h4>
+                      <p>Designed for “exportable truth” — audit, procurement, and operational remediation workflows.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Tenant Context selector + Load Licenses:</b> selects the Control Hub org context and loads license data in one controlled action.</li>
+                    <li><b>Actions row:</b> <span class="kbd">Export CSV</span> for current view, <span class="kbd">Export 30-Day History CSV</span> when history exists, and <span class="kbd">Clear Local History</span> to reset client-side snapshot accumulation.</li>
+                    <li><b>Auto-email controls:</b> optional notification logic for deficits and “at risk” thresholds (with cooldown to reduce noise). <span class="kbd">Send Report Now</span> generates an immediate summary email to the specified recipient.</li>
+                    <li><b>Historical 30-Day License Health Trend:</b> shows score trend (line), deficit count (bars), and at-risk count (dashed). This is key for leadership reporting and procurement justification.</li>
+                    <li><b>Deficient SKUs table:</b> highlights the highest severity issues with needed counts, utilization %, and severity classification.</li>
+                    <li><b>License Inventory & Utilization table:</b> full SKU inventory with filtering, sorting, utilization %, deficit value, status (OK/At Risk/Deficit), and forecast (if history exists).</li>
+                    <li><b>SKU drill-down:</b> clicking a SKU opens detail view to support “why is this happening?” analysis and remediation planning.</li>
+                    <li><b>Operational Guidance section:</b> embedded recommendations that translate findings into procurement/cleanup actions.</li>
+                  </ul>
+
+                  <div class="callout" style="margin-top:14px;">
+                    <h5>Enterprise value</h5>
+                    <p>
+                      License deficits are not just a “billing problem.” In enterprise environments they create onboarding delays, compliance gaps, and feature enablement failures.
+                      This page provides a defensible way to answer: “What will break next if we do nothing?” and “What procurement or cleanup action removes risk fastest?”
+                    </p>
+                  </div>
+                </div>
+
+                <div class="shots" data-shot-group="licenses">
+                  <div class="shot">
+                    <img data-shot="licenses_1" alt="License Intelligence overview screenshot" loading="lazy">
+                    <div class="cap"><b>Overview:</b> health score, deficit/risk counts, export and notification controls.</div>
+                  </div>
+                  <div class="shot">
+                    <img data-shot="licenses_2" alt="License inventory and utilization screenshot" loading="lazy">
+                    <div class="cap"><b>Inventory:</b> SKU utilization, deficits, at-risk status, and drill-down.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- DEVICES -->
+        <article class="acc" id="devices" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-devices">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 7h10v10H7V7Z" stroke="currentColor" stroke-width="1.7"/>
+                  <path d="M9 19h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>Devices — Webex Calling Devices</b>
+                <span>Fleet health, offline/stale detection, SLA breach rules, trends, and exportable device inventory</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag warn">Availability</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-devices">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Purpose</h4>
+                      <p>
+                        The Devices page converts Control Hub device registration data into operational fleet health.
+                        It is designed to answer: <b>“Are endpoints checking in, and is device reachability contributing to user-impact?”</b>
+                        This matters because “call problems” often originate from endpoints: stale registrations, offline phones, or site-level power/network events.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>Fleet summary and SLA detection</h4>
+                      <p>These top panels provide “instant posture” and explain the rule set being applied.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Fleet Summary:</b> totals for online/offline/with issues, plus last refresh. This is the fastest way to spot a site event (spike in offline endpoints).</li>
+                    <li><b>SLA / Breach Detection box:</b> displays the rule set (example thresholds like offline ≥ 10%, stale last-seen ≥ 30 minutes, breach window) and current measurements (offline %, stale %, sustained flags).</li>
+                    <li><b>30-Day Health Trend:</b> builds historical visibility via snapshots saved in the browser. It helps detect chronic vs transient reachability problems.</li>
+                  </ul>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>Device inventory table</h4>
+                      <p>This is the core operational view used during triage and remediation.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Filters:</b> status filters, grouping, and search by name/model/status to isolate problem devices quickly.</li>
+                    <li><b>Columns you’ll use most:</b>
+                      <ul class="bullets">
+                        <li><b>Status:</b> Online/Offline and “Stale” detection (stale means last check-in exceeded the expected window).</li>
+                        <li><b>Last Seen:</b> time since the device last checked in (critical for differentiating momentary flaps vs prolonged outage).</li>
+                        <li><b>Health:</b> percent health indicator (computed) to simplify prioritization.</li>
+                        <li><b>SLA:</b> whether the device posture breaches the current SLA rule set.</li>
+                        <li><b>Uptime (spark):</b> compact sparkline trend to visualize stability without leaving the page.</li>
+                        <li><b>Notes:</b> portal-inferred guidance such as “Power/site outage likely” or “No recent check-in.”</li>
+                      </ul>
+                    </li>
+                    <li><b>Operational controls:</b> auto-refresh, pause, export CSV, and copy JSON to share evidence with US Signal support or internal teams.</li>
+                  </ul>
+
+                  <div class="callout" style="margin-top:14px;">
+                    <h5>Best practice</h5>
+                    <p>
+                      If a high number of devices are offline, validate whether the issue is site-local (power/network) vs platform-wide (Status / Incidents).
+                      The portal supports this by linking posture across pages and providing consistent timestamps.
+                    </p>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:16px;">
+                    <div>
+                      <h4>SLA explanation (device-level)</h4>
+                      <p>How the portal’s breach logic is intended to be read by enterprise operators.</p>
+                    </div>
+                  </div>
+
+                  <div class="diagram" aria-label="Device SLA breach diagram">
+                    <svg viewBox="0 0 900 240" role="img" aria-label="SLA threshold and breach window diagram">
+                      <defs>
+                        <linearGradient id="g1" x1="0" x2="1">
+                          <stop offset="0" stop-color="rgba(15,98,254,.35)"/>
+                          <stop offset="1" stop-color="rgba(245,158,11,.25)"/>
+                        </linearGradient>
+                      </defs>
+                      <rect x="18" y="18" width="864" height="204" rx="18" fill="rgba(100,116,139,.06)" stroke="rgba(100,116,139,.25)"/>
+                      <text x="38" y="56" font-size="16" font-weight="900" fill="currentColor">Device SLA Breach Model (conceptual)</text>
+                      <text x="38" y="82" font-size="13" font-weight="700" fill="rgba(100,116,139,.95)">Offline% and Stale% are evaluated against thresholds. Breach is declared when conditions persist across the breach window.</text>
+
+                      <line x1="70" y1="168" x2="840" y2="168" stroke="rgba(100,116,139,.45)" stroke-width="2"/>
+                      <text x="70" y="192" font-size="12" font-weight="800" fill="rgba(100,116,139,.95)">t0</text>
+                      <text x="820" y="192" font-size="12" font-weight="800" fill="rgba(100,116,139,.95)">tN</text>
+
+                      <rect x="160" y="118" width="520" height="70" rx="14" fill="url(#g1)" stroke="rgba(15,98,254,.28)"/>
+                      <text x="180" y="150" font-size="14" font-weight="900" fill="currentColor">Breach window</text>
+                      <text x="180" y="172" font-size="12" font-weight="800" fill="rgba(15,23,42,.70)">Sustained condition required (reduces false positives)</text>
+
+                      <circle cx="160" cy="168" r="7" fill="rgba(245,158,11,.85)"/>
+                      <circle cx="680" cy="168" r="7" fill="rgba(245,158,11,.85)"/>
+
+                      <text x="38" y="120" font-size="12" font-weight="900" fill="rgba(220,38,38,.85)">Threshold examples:</text>
+                      <text x="38" y="140" font-size="12" font-weight="800" fill="rgba(100,116,139,.95)">• Offline ≥ X%  • Stale last-seen ≥ Y minutes  • Window = Z minutes</text>
+                    </svg>
+                  </div>
+                </div>
+
+                <div class="shots" data-shot-group="devices">
+                  <div class="shot">
+                    <img data-shot="devices_1" alt="Devices fleet and SLA detection screenshot" loading="lazy">
+                    <div class="cap"><b>Fleet:</b> online/offline totals + SLA rule set and current measurements.</div>
+                  </div>
+                  <div class="shot">
+                    <img data-shot="devices_2" alt="Devices inventory table screenshot" loading="lazy">
+                    <div class="cap"><b>Inventory:</b> searchable table with status, last seen, SLA posture, and notes.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- ANALYTICS -->
+        <article class="acc" id="analytics" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-analytics">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 19V5m4 14V9m4 10v-6m4 6V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>Analytics — Operational Calling Analytics</b>
+                <span>Adoption and reliability analytics (volume, success rate, duration, SLA status, trends, daily breakdown)</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag good">Adoption</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-analytics">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Purpose</h4>
+                      <p>
+                        Analytics provides a customer-friendly operational view of calling usage and reliability outcomes.
+                        It answers: <b>“Are we actually using the service, and how healthy are outcomes over time?”</b>
+                        In enterprise environments, adoption metrics and failure patterns are also used to validate training effectiveness, identify underutilized sites, and spot regression after change windows.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>What you see on this page</h4>
+                      <p>High signal, low friction: the page is built to provide clarity at a glance.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Top KPI tiles:</b>
+                      <ul class="bullets">
+                        <li><b>Total Calls (7d):</b> counts recent activity to gauge adoption and operational baseline.</li>
+                        <li><b>Success Rate:</b> percentage of successful calls across the time window (health indicator).</li>
+                        <li><b>Average Duration:</b> helps distinguish quick failures (very short) vs stable calls (expected duration patterns).</li>
+                        <li><b>SLA Status:</b> a simplified status marker that indicates whether outcomes meet expected reliability thresholds.</li>
+                      </ul>
+                    </li>
+                    <li><b>30-Day Call Volume Trend:</b> sparkline-style trend to visualize growth, decline, or irregularity.</li>
+                    <li><b>7-Day Breakdown table:</b> daily calls + failures + trend line per day, used for pinpointing which day regressions began.</li>
+                    <li><b>Export CSV:</b> produces an analyst-ready dataset for leadership reporting or deeper investigation.</li>
+                  </ul>
+
+                  <div class="callout" style="margin-top:14px;">
+                    <h5>Operational interpretation</h5>
+                    <p>
+                      If “Success Rate” is healthy but users report call quality issues, pivot to Calling Insight (quality telemetry) rather than assuming failures.
+                      If failures spike on a specific date, correlate with Maintenance windows and Incidents to distinguish platform events from configuration changes.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="shots" data-shot-group="analytics">
+                  <div class="shot">
+                    <img data-shot="analytics_1" alt="Operational calling analytics screenshot" loading="lazy">
+                    <div class="cap"><b>Analytics:</b> volume, success rate, duration, SLA status, and trend breakdown.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- CDR -->
+        <article class="acc" id="cdr" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-cdr">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 3h10v18H7V3Z" stroke="currentColor" stroke-width="1.7"/>
+                  <path d="M9 7h6M9 11h6M9 15h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity=".9"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>CDR — Call Detail Records (Enterprise)</b>
+                <span>Deep call logs, filters, troubleshooting pivots, anomalies, and export for investigation</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag warn">Diagnostics</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-cdr">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Purpose</h4>
+                      <p>
+                        CDR is the “investigation-grade” record view used to confirm what happened during calls: direction, endpoints, duration, results, and patterns.
+                        This page is crucial when leadership asks for proof, when engineers need to isolate failure categories, or when teams must reconcile user reports with platform truth.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>What you see on this page</h4>
+                      <p>Designed for forensic pivots without requiring external tools.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Tenant Context + Load CDR:</b> explicitly loads call records for the selected tenant and window. It surfaces record count and anomaly counts.</li>
+                    <li><b>KPI tiles:</b>
+                      <ul class="bullets">
+                        <li><b>Total Calls:</b> number of records loaded.</li>
+                        <li><b>Failure Rate:</b> computed from callResult categorization.</li>
+                        <li><b>P95 Duration:</b> 95th percentile duration to detect “long tail” patterns (useful for call setup delays or abnormal hold behavior).</li>
+                        <li><b>SLA Status:</b> simplified operational signal indicating whether failure/unknown rates exceed thresholds.</li>
+                      </ul>
+                    </li>
+                    <li><b>Filters & Troubleshooting Controls:</b> time window, result category, direction, and a search box that supports caller/callee/result/ID-type pivots. <span class="kbd">Clear</span> resets filters.</li>
+                    <li><b>Call Result Breakdown:</b> quick success vs failed vs unknown counts to validate whether the issue is systemic or isolated.</li>
+                    <li><b>30-Day Volume Trend:</b> call volume trend to support “is this new?” analysis.</li>
+                    <li><b>Top Callers / Top Called Numbers:</b> helps identify whether the issue is concentrated to a user, a queue/AA, or a specific DID/destination.</li>
+                    <li><b>CDR Records table:</b> primary list view with pagination and row-based drilldown. Designed to support sharing: export CSV for further analysis.</li>
+                  </ul>
+
+                  <div class="callout" style="margin-top:14px;">
+                    <h5>When to use CDR vs Analytics</h5>
+                    <p>
+                      Use <b>Analytics</b> for posture and trends (what is happening at a high level). Use <b>CDR</b> for evidence and investigation (what happened on specific calls, which parties, which results).
+                      If quality is the concern (MOS, jitter, packet loss), pivot to <b>Calling Insight</b> where report-driven quality telemetry is interpreted.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="shots" data-shot-group="cdr">
+                  <div class="shot">
+                    <img data-shot="cdr_1" alt="CDR overview screenshot" loading="lazy">
+                    <div class="cap"><b>CDR:</b> filters, KPI tiles, breakdown charts, and record table.</div>
+                  </div>
+                  <div class="shot">
+                    <img data-shot="cdr_2" alt="CDR records screenshot" loading="lazy">
+                    <div class="cap"><b>Records:</b> pagination + drilldown view for investigation workflows.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- PSTN -->
+        <article class="acc" id="pstn" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-pstn">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 7c2-2 8-2 10 0M9 9c1-1 5-1 6 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                  <path d="M6 11v7c0 2 2 4 6 4s6-2 6-4v-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>PSTN — PSTN Engineering & Architecture</b>
+                <span>Topology, routing validation, misconfiguration detection, E911 compliance scoring, and exportable diagnostics</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag bad">E911 + Routing</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-pstn">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Purpose</h4>
+                      <p>
+                        PSTN is the portal’s architecture and compliance cockpit. It is built to make routing and E911 posture visible without requiring customers to manually chase relationships across Control Hub.
+                        The page is especially valuable for multi-location environments where DID inventory, route groups, trunks, and emergency calling configuration must be correct to avoid business and safety risk.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>What you see on this page</h4>
+                      <p>Each panel is designed for engineering clarity and executive explainability.</p>
+                    </div>
+                  </div>
+
+                  <ul class="bullets">
+                    <li><b>Executive Summary:</b> rolls up key counts (locations, trunks, DIDs), calling-enabled location posture, routing failures/warnings, and E911 compliance score.</li>
+                    <li><b>Top KPI tiles:</b>
+                      <ul class="bullets">
+                        <li><b>Total Locations:</b> calling-enabled footprint (often used to scope remediation).</li>
+                        <li><b>Total Trunks:</b> visibility into redundancy and trunk inventory (important for resiliency).</li>
+                        <li><b>Total DIDs:</b> inventory plus unassigned counts (helps detect configuration gaps and governance issues).</li>
+                        <li><b>Capacity Score:</b> predictive risk indicator (used to forecast whether PSTN architecture is approaching constraints).</li>
+                      </ul>
+                    </li>
+                    <li><b>Control toggles:</b>
+                      <ul class="bullets">
+                        <li><span class="kbd">Validate Routing</span> evaluates inferred routing paths and flags warnings/failures.</li>
+                        <li><span class="kbd">Detect Misconfig</span> runs a rule engine to find common configuration mistakes.</li>
+                        <li><span class="kbd">Failover Simulation</span> overlays “what if trunk fails?” assumptions onto the topology visualization.</li>
+                        <li><span class="kbd">Outage Simulation</span> models service interruption impact to clarify exposure.</li>
+                        <li><span class="kbd">Export JSON</span> produces an engineering-grade evidence package for US Signal or internal review.</li>
+                      </ul>
+                    </li>
+                    <li><b>E911 Compliance Scoring:</b> reports configured vs missing E911 across calling-enabled locations, including high-risk locations.</li>
+                    <li><b>Routing Path Validation:</b> distinguishes validated vs warning vs hard failure and highlights top issues (example: E911 missing or not detectable).</li>
+                    <li><b>PSTN Architecture Topology:</b> clickable, animated paths showing how the portal infers routing relationships (customer org → PSTN type → trunk/route group/call routing → E911).</li>
+                    <li><b>Trunk Utilization Heatmap:</b> best-effort representation of trunk usage/visibility when trunk fields are present; otherwise “unknown.”</li>
+                    <li><b>Predictive Capacity Forecast:</b> local snapshot model used to project risk trajectory when server-side rollups are not available.</li>
+                    <li><b>Location PSTN Architecture table:</b> row-based drilldown showing per-location PSTN type, calling enabled, trunks, DIDs, redundancy, capacity, E911, and blast radius assumptions.</li>
+                    <li><b>Misconfiguration Detection Engine:</b> a prioritized findings list (WARN/FAIL) describing likely issues per location (example: “No trunks linked” or “E911 appears missing”).</li>
+                    <li><b>Diagnostics panel:</b> shows checks performed and endpoint paths used, allowing fast troubleshooting when fields are unavailable or permissions block visibility.</li>
+                  </ul>
+
+                  <div class="callout" style="margin-top:14px;">
+                    <h5>Why PSTN is “high stakes”</h5>
+                    <p>
+                      PSTN misconfiguration can cause silent failures (calls don’t route as expected) and can create emergency calling liability.
+                      This page is built to surface risk early, translate it into clear remediation steps, and provide exportable evidence for governance.
+                    </p>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:16px;">
+                    <div>
+                      <h4>E911 and routing governance diagram</h4>
+                      <p>A simplified model of what the portal validates and why warnings matter.</p>
+                    </div>
+                  </div>
+
+                  <div class="diagram" aria-label="E911 routing relationship diagram">
+                    <svg viewBox="0 0 900 260" role="img" aria-label="E911 routing chain diagram">
+                      <rect x="18" y="18" width="864" height="224" rx="18" fill="rgba(100,116,139,.06)" stroke="rgba(100,116,139,.25)"/>
+                      <text x="38" y="56" font-size="16" font-weight="900" fill="currentColor">Routing chain validated (conceptual)</text>
+                      <text x="38" y="82" font-size="13" font-weight="700" fill="rgba(100,116,139,.95)">The portal checks whether each link in the chain exists and is detectable from available Control Hub fields.</text>
+
+                      <g transform="translate(56,110)">
+                        <rect x="0" y="0" width="170" height="56" rx="16" fill="rgba(15,98,254,.12)" stroke="rgba(15,98,254,.35)"/>
+                        <text x="18" y="35" font-size="13" font-weight="900" fill="currentColor">Location</text>
+                      </g>
+                      <g transform="translate(250,110)">
+                        <rect x="0" y="0" width="190" height="56" rx="16" fill="rgba(22,163,74,.12)" stroke="rgba(22,163,74,.30)"/>
+                        <text x="18" y="35" font-size="13" font-weight="900" fill="currentColor">PSTN Type</text>
+                      </g>
+                      <g transform="translate(470,110)">
+                        <rect x="0" y="0" width="230" height="56" rx="16" fill="rgba(245,158,11,.14)" stroke="rgba(245,158,11,.35)"/>
+                        <text x="18" y="28" font-size="13" font-weight="900" fill="currentColor">Trunk / Route Group</text>
+                        <text x="18" y="46" font-size="12" font-weight="800" fill="rgba(100,116,139,.95)">or Call Routing object</text>
+                      </g>
+                      <g transform="translate(730,110)">
+                        <rect x="0" y="0" width="130" height="56" rx="16" fill="rgba(220,38,38,.14)" stroke="rgba(220,38,38,.35)"/>
+                        <text x="18" y="35" font-size="13" font-weight="900" fill="currentColor">E911</text>
+                      </g>
+
+                      <path d="M226 138h24" stroke="rgba(100,116,139,.55)" stroke-width="3" stroke-linecap="round"/>
+                      <path d="M440 138h30" stroke="rgba(100,116,139,.55)" stroke-width="3" stroke-linecap="round"/>
+                      <path d="M700 138h30" stroke="rgba(100,116,139,.55)" stroke-width="3" stroke-linecap="round"/>
+
+                      <text x="56" y="204" font-size="12" font-weight="800" fill="rgba(100,116,139,.95)">If a link is missing/undetectable, the portal raises a warning or failure.</text>
+                      <text x="56" y="224" font-size="12" font-weight="800" fill="rgba(100,116,139,.95)">Result: faster remediation and safer emergency calling posture.</text>
+                    </svg>
+                  </div>
+                </div>
+
+                <div class="shots" data-shot-group="pstn">
+                  <div class="shot">
+                    <img data-shot="pstn_1" alt="PSTN page overview screenshot" loading="lazy">
+                    <div class="cap"><b>PSTN overview:</b> executive summary + controls + topology.</div>
+                  </div>
+                  <div class="shot">
+                    <img data-shot="pstn_2" alt="PSTN architecture table screenshot" loading="lazy">
+                    <div class="cap"><b>Location architecture:</b> per-location posture with capacity and E911 indicators.</div>
+                  </div>
+                  <div class="shot">
+                    <img data-shot="pstn_3" alt="Misconfiguration engine and diagnostics screenshot" loading="lazy">
+                    <div class="cap"><b>Misconfig + diagnostics:</b> actionable findings and endpoint-level checks.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- CALLING INSIGHT -->
+        <article class="acc" id="callinginsight" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-callinginsight">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 3v10l7 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M4.5 19.5 7 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>Calling Insight — Reports + Quality Intelligence</b>
+                <span>Reports API orchestration, quality parsing (MOS/jitter/loss), heatmaps, alerts, and AI troubleshooting summary</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag warn">Quality</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-callinginsight">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Purpose</h4>
+                      <p>
+                        Calling Insight is where the portal bridges the gap between “calls succeeded” and “calls were good.”
+                        It uses the Webex <b>Reports API</b> flow to list existing reports, run new reports for a date range, automatically download report outputs, and parse quality fields into actionable intelligence.
+                        This is the page used when the user experience problem is <b>quality (audio/video/media)</b> rather than outright failure.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>Report Controls (top of page)</h4>
+                      <p>These controls are the “pipeline” that produces quality metrics.</p>
+                    </div>
+                  </div>
+
+                  <ul class="bullets">
+                    <li><b>Report selector:</b> choose a report type (example: Calling Media Quality Report).</li>
+                    <li><b>Date range pickers:</b> defines the report window for the selected tenant.</li>
+                    <li><b>Run + Auto Download:</b> creates the report and downloads the output for parsing. This is designed to minimize manual steps for operators.</li>
+                    <li><b>Refresh List:</b> reloads report inventory and updates status, especially useful when report generation is asynchronous.</li>
+                    <li><b>Filter reports (title/status/created):</b> narrows inventory to locate the exact report you want to analyze.</li>
+                    <li><b>Export JSON:</b> produces an evidence package including parsed metrics and metadata useful for escalation or long-term baselining.</li>
+                  </ul>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>Insight Views (tabs)</h4>
+                      <p>These tabs convert raw report rows into operator-ready visualizations.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Overview:</b> primary posture view, typically with 30-day trend (MOS/jitter/loss) and heatmap by dimension.</li>
+                    <li><b>Media Quality:</b> focuses on media path quality signals (jitter, packet loss) and their distribution.</li>
+                    <li><b>Calling Quality (App):</b> isolates app-side factors and identifies likely root cause buckets.</li>
+                    <li><b>Engagement:</b> highlights how usage patterns relate to perceived experience.</li>
+                    <li><b>Call Queues / Auto Attendant:</b> provides targeted insight for enterprise call flows when report fields support it.</li>
+                  </ul>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>Inventory, parsing, and alerting</h4>
+                      <p>Where operators “select one report and turn it into intelligence.”</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Reports table:</b> shows title, status, range, created timestamp, service, and download action. Selecting a row loads details.</li>
+                    <li><b>Selected Report Summary:</b> shows the current report context and enables Load + Parse flows.</li>
+                    <li><b>Parsed Report Data:</b> a structured output area that confirms parsing success and allows downstream visualization.</li>
+                    <li><b>Live Quality Alerts:</b> alerts derived from parsed CSV metrics (MOS, jitter, packet loss, latency). If server-side rollups exist, the portal can also fetch precomputed alerts for speed and consistency.</li>
+                    <li><b>AI Troubleshooting Summary:</b> generates a concise, action-oriented interpretation of worst buckets and likely next checks. It is designed to speed triage and improve the quality of escalation tickets.</li>
+                  </ul>
+
+                  <div class="callout" style="margin-top:14px;">
+                    <h5>Practical example</h5>
+                    <p>
+                      If users say “calls connect but audio breaks up,” run a media quality report for the date range, parse MOS/jitter/loss,
+                      then use the heatmap to identify whether the problem clusters by location, user, or leg. Share the parsed output with US Signal so engineering can pinpoint whether the issue is WAN, ISP, endpoint, or platform-exposure related.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="shots" data-shot-group="callinginsight">
+                  <div class="shot">
+                    <img data-shot="callinginsight_1" alt="Calling Insight overview screenshot" loading="lazy">
+                    <div class="cap"><b>Calling Insight:</b> reports pipeline + quality posture cards + insight tabs.</div>
+                  </div>
+                  <div class="shot">
+                    <img data-shot="callinginsight_2" alt="Calling Insight inventory and AI summary screenshot" loading="lazy">
+                    <div class="cap"><b>Inventory + AI:</b> select a report, parse output, and generate an operator-ready summary.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- MAINTENANCE -->
+        <article class="acc" id="maintenance" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-maintenance">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 8v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="1.6" opacity=".9"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>Maintenance — Webex Maintenance Intelligence</b>
+                <span>Scheduled maintenance visibility, change clustering, conflict detection, risk scoring, and alerting</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag warn">Change risk</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-maintenance">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Purpose</h4>
+                      <p>
+                        Maintenance Intelligence is your change-awareness and risk cockpit.
+                        It provides a consolidated view of scheduled Webex maintenance and prioritizes what matters to the tenant by combining:
+                        (1) maintenance attributes (product, region, timing), (2) risk scoring (SLA sensitivity, failure probability), and (3) tenant posture (license deficits, incidents, device risk).
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>Executive brief (top narrative)</h4>
+                      <p>Designed for stakeholders who need “what’s happening and what’s the risk” in one glance.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Maintenance windows in progress:</b> highlights active windows that may influence current behavior.</li>
+                    <li><b>Upcoming windows detected:</b> supports planning and change communication.</li>
+                    <li><b>Next window start:</b> shown in tenant timezone for accuracy.</li>
+                    <li><b>Computed blast radius:</b> expresses scope/region/status/tenant relevance.</li>
+                    <li><b>Failure probability index:</b> indicates likelihood of impact based on historical and contextual signals.</li>
+                    <li><b>SLA risk score:</b> quantifies sensitivity during change windows (especially when tenant already has deficits or incidents).</li>
+                  </ul>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>What you see on this page</h4>
+                      <p>Change operations features aligned to enterprise workflows.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Next Window card:</b> highlights the most immediate relevant maintenance event with timing and product context.</li>
+                    <li><b>Live Countdown:</b> shows time-to-start or indicates if the window passed.</li>
+                    <li><b>Overlap Conflicts:</b> counts overlapping windows and enables drilldown to identify high-risk periods.</li>
+                    <li><b>Blast Radius card:</b> condenses scope + region + relevance for quick decision-making.</li>
+                    <li><b>Impact vs Region Heatmap:</b> visual concentration of upcoming/active maintenance by region and computed impact.</li>
+                    <li><b>Predictive Window Clusters:</b> groups similar changes by time bucket + keywords + description “fingerprint” to reduce noise and reveal patterns.</li>
+                    <li><b>Notification Center:</b> schedule alerts for upcoming windows via email and optional Slack webhook (best-effort). Includes a test capability.</li>
+                    <li><b>Maintenance table:</b> searchable inventory with status, window timing, region, products, and risk indicators. Includes ICS export for calendar integration and email action paths.</li>
+                    <li><b>Exports:</b> CSV export enables reporting and change governance evidence.</li>
+                  </ul>
+
+                  <div class="callout" style="margin-top:14px;">
+                    <h5>Operational best practice</h5>
+                    <p>
+                      Before escalating “new failures,” check Maintenance. If a failure aligns with an active maintenance window, shift posture toward platform event management:
+                      validate Status/Incidents, communicate impact expectations, and prioritize mitigations that reduce exposure until maintenance completes.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="shots" data-shot-group="maintenance">
+                  <div class="shot">
+                    <img data-shot="maintenance_1" alt="Maintenance executive brief screenshot" loading="lazy">
+                    <div class="cap"><b>Executive brief:</b> risk posture, next window, conflicts, and blast radius.</div>
+                  </div>
+                  <div class="shot">
+                    <img data-shot="maintenance_2" alt="Maintenance inventory table screenshot" loading="lazy">
+                    <div class="cap"><b>Inventory:</b> searchable maintenance list with risk scoring and ICS/email actions.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- STATUS -->
+        <article class="acc" id="status" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-status">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Z" stroke="currentColor" stroke-width="1.6"/>
+                  <path d="M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>Status — Webex Platform Status</b>
+                <span>Global platform health, impacted components, rapid filtering, and accordion-style component drilldown</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag bad">Platform scope</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-status">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Purpose</h4>
+                      <p>
+                        Status provides global Webex platform health context (sourced from the official status feed) so customers can immediately distinguish:
+                        <b>tenant-local issues</b> (configuration, devices, licenses, PSTN) from <b>platform-wide incidents</b> (service degradation/outage).
+                        This reduces time wasted troubleshooting local configurations when the platform is experiencing known impact.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>What you see on this page</h4>
+                      <p>Enterprise-friendly “find and focus” design for rapid incident posture.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Overall Health summary:</b> top-level status (Operational / Degraded / Major Outage), plus counts for service groups, total components, affected groups/components.</li>
+                    <li><b>Webex Status Page button:</b> direct jump to the upstream official status page for reference.</li>
+                    <li><b>Find & Focus tools:</b> filter input plus quick buttons:
+                      <ul class="bullets">
+                        <li><b>Show All:</b> resets to full view.</li>
+                        <li><b>Show Impacted Only:</b> isolates only impacted components (best during live incidents).</li>
+                        <li><b>Show Operational Only:</b> useful for verifying what is not impacted.</li>
+                      </ul>
+                    </li>
+                    <li><b>Accordion component groups:</b> groups/components can be collapsed or expanded. This reduces scrolling during incident response.</li>
+                    <li><b>Collapse All / Expand All:</b> especially useful for scanning at speed or for executive snapshots.</li>
+                    <li><b>Email US Signal:</b> action path to engage support with shared status context.</li>
+                  </ul>
+
+                  <div class="callout" style="margin-top:14px;">
+                    <h5>How to use during a customer-reported outage</h5>
+                    <p>
+                      Step 1: open Status and filter for “Calling” or “Control Hub.”
+                      Step 2: if impact exists, open Incidents to validate timelines and SLA posture.
+                      Step 3: if Status is clean, pivot back to tenant-local pages (Devices, PSTN, Licenses, CDR, Calling Insight) for root cause.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="shots" data-shot-group="status">
+                  <div class="shot">
+                    <img data-shot="status_1" alt="Webex Platform Status screenshot" loading="lazy">
+                    <div class="cap"><b>Status:</b> global platform health + find-and-focus + component groups.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- INCIDENTS -->
+        <article class="acc" id="incidents" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-incidents">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 9v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 17h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                  <path d="M10.2 4.8 2.8 19.2c-.6 1.1.2 2.4 1.5 2.4h15.4c1.3 0 2.1-1.3 1.5-2.4L13.8 4.8c-.6-1.1-2.2-1.1-2.8 0Z" stroke="currentColor" stroke-width="1.5" opacity=".95"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>Incidents — Incident Intelligence</b>
+                <span>Incident inventory, SLA timelines, tenant impact/exposure, 30-day trends, notifications, and exportable evidence</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag warn">SLA timelines</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-incidents">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Purpose</h4>
+                      <p>
+                        Incidents is where platform events become operationally usable.
+                        Instead of reading long incident feeds, this page provides a structured inventory with:
+                        status (active/resolved), severity, duration, SLA posture, product area, and tenant exposure.
+                        It is designed for enterprise reporting, escalation coordination, and “what changed when?” clarity.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>What you see on this page</h4>
+                      <p>Everything supports faster incident response and better communication.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Tenant Context:</b> establishes which org context is applied for correlation signals and exposure summaries.</li>
+                    <li><b>30-Day Incident Trend:</b> builds a rolling view (counts, impact, SLA breach) when snapshots are available.</li>
+                    <li><b>Product Heatmap:</b> shows where instability clusters (Calling, Control Hub, Meetings, Contact Center, etc.).</li>
+                    <li><b>Notifications module:</b> optional in-session notifications; supports check frequency, email target, and test. Designed to integrate with future email subscription endpoints if implemented.</li>
+                    <li><b>Incident Inventory table:</b> searchable/filterable list with:
+                      <ul class="bullets">
+                        <li><b>REF:</b> incident reference identifier.</li>
+                        <li><b>Status:</b> Active/Resolved.</li>
+                        <li><b>Severity:</b> Minor/Major.</li>
+                        <li><b>Started + Duration:</b> supports timeline clarity for stakeholder updates.</li>
+                        <li><b>SLA:</b> Within/Breaching/Breached indicator used for escalation timing.</li>
+                        <li><b>Products:</b> impacted product area(s).</li>
+                        <li><b>Tenant Impact:</b> Low/Moderate/High relevance estimate to the tenant experience.</li>
+                        <li><b>Summary:</b> human-readable incident description.</li>
+                      </ul>
+                    </li>
+                    <li><b>Exports:</b> export CSV/PDF to produce executive-ready evidence and support compliance reporting.</li>
+                    <li><b>Correlation signals and timeline:</b> connects incidents to other domain signals so customers can understand second-order effects.</li>
+                  </ul>
+
+                  <div class="sectionTitle" style="margin-top:16px;">
+                    <div>
+                      <h4>SLA breach meaning (incident-level)</h4>
+                      <p>How to explain “within SLA” vs “breaching” vs “breached” in a way stakeholders understand.</p>
+                    </div>
+                  </div>
+
+                  <div class="diagram" aria-label="Incident SLA diagram">
+                    <svg viewBox="0 0 900 240" role="img" aria-label="Incident SLA timeline diagram">
+                      <rect x="18" y="18" width="864" height="204" rx="18" fill="rgba(100,116,139,.06)" stroke="rgba(100,116,139,.25)"/>
+                      <text x="38" y="56" font-size="16" font-weight="900" fill="currentColor">Incident SLA timeline (conceptual)</text>
+                      <text x="38" y="82" font-size="13" font-weight="700" fill="rgba(100,116,139,.95)">SLA thresholds are used to determine escalation urgency and customer communication cadence.</text>
+
+                      <line x1="70" y1="150" x2="840" y2="150" stroke="rgba(100,116,139,.45)" stroke-width="3" stroke-linecap="round"/>
+                      <circle cx="120" cy="150" r="7" fill="rgba(22,163,74,.85)"/>
+                      <text x="104" y="176" font-size="12" font-weight="900" fill="rgba(22,163,74,.85)">Within SLA</text>
+
+                      <circle cx="470" cy="150" r="7" fill="rgba(245,158,11,.90)"/>
+                      <text x="448" y="176" font-size="12" font-weight="900" fill="rgba(245,158,11,.95)">Breaching</text>
+
+                      <circle cx="760" cy="150" r="7" fill="rgba(220,38,38,.90)"/>
+                      <text x="740" y="176" font-size="12" font-weight="900" fill="rgba(220,38,38,.95)">Breached</text>
+
+                      <path d="M120 120 C 250 70, 360 70, 470 120" fill="none" stroke="rgba(22,163,74,.55)" stroke-width="4" stroke-linecap="round"/>
+                      <path d="M470 120 C 560 70, 670 70, 760 120" fill="none" stroke="rgba(245,158,11,.55)" stroke-width="4" stroke-linecap="round"/>
+
+                      <text x="38" y="118" font-size="12" font-weight="900" fill="rgba(100,116,139,.95)">Interpretation:</text>
+                      <text x="38" y="138" font-size="12" font-weight="800" fill="rgba(100,116,139,.95)">• Within SLA: monitor + validate scope</text>
+                      <text x="38" y="158" font-size="12" font-weight="800" fill="rgba(100,116,139,.95)">• Breaching: escalate + communicate proactively</text>
+                      <text x="38" y="178" font-size="12" font-weight="800" fill="rgba(100,116,139,.95)">• Breached: executive awareness + sustained mitigation posture</text>
+                    </svg>
+                  </div>
+                </div>
+
+                <div class="shots" data-shot-group="incidents">
+                  <div class="shot">
+                    <img data-shot="incidents_1" alt="Incidents inventory screenshot" loading="lazy">
+                    <div class="cap"><b>Incidents:</b> inventory with severity, SLA posture, products, and tenant impact.</div>
+                  </div>
+                  <div class="shot">
+                    <img data-shot="incidents_2" alt="Incidents heatmap screenshot" loading="lazy">
+                    <div class="cap"><b>Heatmap:</b> where instability clusters by product area and exposure.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- SUPPORT -->
+        <article class="acc" id="support" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-support">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 12a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.6" opacity=".9"/>
+                  <path d="M4 12v4a2 2 0 0 0 2 2h1v-6H6a2 2 0 0 0-2 2Z" stroke="currentColor" stroke-width="1.6"/>
+                  <path d="M20 12v4a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2Z" stroke="currentColor" stroke-width="1.6"/>
+                  <path d="M9 20h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".9"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>Support Contact — Support & Escalation</b>
+                <span>Submit support tickets with portal context, SLA visibility, tenant health snapshot, and combined signals</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag good">Escalation path</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-support">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Purpose</h4>
+                      <p>
+                        Support Contact is the portal’s escalation bridge.
+                        It is designed to prevent the most common support failure: tickets without context.
+                        This page packages tenant posture (licenses/devices/incidents/PSTN) into a single support request so US Signal can act quickly and accurately.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>What you see on this page</h4>
+                      <p>Everything is aligned to producing a “high quality ticket” with shared operational truth.</p>
+                    </div>
+                  </div>
+                  <ul class="bullets">
+                    <li><b>Support Paths:</b> documents how to engage US Signal (standard vs urgent paths) and sets expectations.</li>
+                    <li><b>Ticket SLA Visibility:</b> clarifies response timing expectations and helps align customer urgency with triage severity.</li>
+                    <li><b>Tenant Health Snapshot:</b> summarizes key posture indicators to include in the ticket automatically (deficits, offline devices, incidents, PSTN posture where available).</li>
+                    <li><b>Signals panel:</b> combines multiple operational signals so the ticket includes not only symptoms but measurable evidence.</li>
+                    <li><b>Submit Ticket modal:</b> structured input for issue description, impact, and contact method, plus the ability to attach relevant details.</li>
+                    <li><b>Refresh and theme controls:</b> ensures the user can update context before submitting a ticket.</li>
+                  </ul>
+
+                  <div class="callout" style="margin-top:14px;">
+                    <h5>What makes tickets resolve faster</h5>
+                    <p>
+                      Include: affected locations/users, time window, whether the issue is failure vs quality, and the relevant exports (CDR CSV, License deficits, Devices JSON, PSTN export).
+                      Because the portal uses Control Hub-backed data, US Signal can verify the same telemetry and shorten time-to-triage.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="shots" data-shot-group="support">
+                  <div class="shot">
+                    <img data-shot="support_1" alt="Support & Escalation screenshot" loading="lazy">
+                    <div class="cap"><b>Support:</b> guided escalation with tenant posture context and ticket submission workflow.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- GLOSSARY -->
+        <article class="acc" id="glossary" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-glossary">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 4h10a2 2 0 0 1 2 2v14H8a2 2 0 0 0-2 2V4Z" stroke="currentColor" stroke-width="1.6"/>
+                  <path d="M8 8h8M8 12h8M8 16h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".9"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>Glossary — Definitions used throughout the portal</b>
+                <span>Contextual definitions to align executives and operators on consistent meaning</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag">Reference</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-glossary">
+            <div class="accBody">
+              <div class="sectionTitle">
+                <div>
+                  <h4>Key terms</h4>
+                  <p>
+                    These definitions are written to help both technical and non-technical stakeholders interpret the portal consistently.
+                    If your organization uses different SLA thresholds or naming conventions, US Signal can align the portal definitions to your internal governance.
+                  </p>
+                </div>
+              </div>
+
+              <div class="glossaryGrid" id="glossaryGrid">
+                <div class="term"><b>SLA</b><p>A service-level expectation (time or threshold) used to classify urgency and escalation posture. In this portal, SLA is applied to incidents and to derived operational signals (device reachability, failure rates).</p></div>
+                <div class="term"><b>SLA Breaching vs Breached</b><p>“Breaching” indicates the incident is approaching or exceeding the SLA threshold; “Breached” indicates the threshold has been exceeded and escalation urgency should increase (communications + mitigations).</p></div>
+                <div class="term"><b>Stability Index</b><p>A 0–100 score that aggregates posture across incidents, status, maintenance, devices, licenses, and PSTN. Lower values indicate increased instability and higher probability of user impact.</p></div>
+                <div class="term"><b>Blast Radius</b><p>An estimate of how wide an issue can spread (region, product domain, tenant exposure). Used to decide whether to run narrow remediation or broader incident posture.</p></div>
+                <div class="term"><b>Deficit</b><p>Consumed units exceed purchased/allocated units (for example, license usage higher than total seats). Deficits can block onboarding and feature enablement.</p></div>
+                <div class="term"><b>At Risk (Licensing)</b><p>A SKU nearing saturation (example: ≥ 90–95% utilization). “At risk” is a pre-deficit warning to enable procurement or cleanup before impact occurs.</p></div>
+                <div class="term"><b>Offline vs Stale (Devices)</b><p>Offline typically indicates no registration/reachability; stale indicates the device has not checked in within the expected time window. Both can contribute to perceived calling issues.</p></div>
+                <div class="term"><b>MOS</b><p>Mean Opinion Score: a quality indicator used to estimate perceived media quality. Lower MOS indicates poorer experience; used alongside jitter/loss/latency.</p></div>
+                <div class="term"><b>Jitter</b><p>Variation in packet arrival timing. High jitter can produce choppy audio even when calls “connect successfully.”</p></div>
+                <div class="term"><b>Packet Loss</b><p>Percentage of lost packets in media flow. Loss directly degrades audio quality and can cause gaps or robotic sound.</p></div>
+                <div class="term"><b>P95</b><p>95th percentile: the value below which 95% of observations fall. Used to expose “long tail” behaviors (for example, unusually long durations or delays).</p></div>
+                <div class="term"><b>E911</b><p>Emergency calling configuration required to ensure emergency services receive accurate callback and location information. Missing E911 is a high-risk compliance and safety issue.</p></div>
+                <div class="term"><b>DID</b><p>Direct Inward Dial number inventory. Used for routing, assignment, and governance. Unassigned DIDs often indicate configuration gaps.</p></div>
+                <div class="term"><b>Reports API</b><p>Webex reporting mechanism used to generate and retrieve report outputs (often CSV). Calling Insight uses this workflow to compute quality posture from report fields.</p></div>
+                <div class="term"><b>Snapshots / Local history</b><p>Some pages build 30-day trends by storing daily snapshots in the browser. This enables trend visibility without requiring server-side changes.</p></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- RELEASE NOTES -->
+        <article class="acc" id="release" aria-expanded="false" data-section>
+          <div class="accHeader" role="button" tabindex="0" aria-controls="body-release">
+            <div class="left">
+              <div class="icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 7h10v10H7V7Z" stroke="currentColor" stroke-width="1.6"/>
+                  <path d="M9 12h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="title">
+                <b>Versioning & Release Notes</b>
+                <span>Documentation version, change log, and rollout communication guidance</span>
+              </div>
+            </div>
+            <div class="right">
+              <span class="tag">Governance</span>
+              <span class="chev" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="accBodyWrap" id="body-release">
+            <div class="accBody">
+              <div class="split">
+                <div>
+                  <div class="sectionTitle">
+                    <div>
+                      <h4>Documentation version</h4>
+                      <p>
+                        This section supports enterprise governance. When portal behavior changes, the guide can be updated and versioned so customers and support teams reference the same specification.
+                      </p>
+                    </div>
+                  </div>
+
+                  <ul class="bullets">
+                    <li><b>Version:</b> <span class="kbd" id="docVerInline">v—</span></li>
+                    <li><b>Release policy:</b> semantic versioning recommended (MAJOR = breaking UX/meaning changes, MINOR = new sections/features, PATCH = text fixes/screenshots).</li>
+                    <li><b>Customer communication:</b> include “What changed” + “What it means operationally” + “What to do now” for each release.</li>
+                  </ul>
+
+                  <div class="sectionTitle" style="margin-top:14px;">
+                    <div>
+                      <h4>Release notes</h4>
+                      <p>Update this list whenever the portal adds capabilities or modifies thresholds/interpretations.</p>
+                    </div>
+                  </div>
+
+                  <div class="callout">
+                    <h5>Template</h5>
+                    <p>
+                      <b>Added:</b> new page/metric/control<br/>
+                      <b>Changed:</b> threshold meaning / calculation / workflow<br/>
+                      <b>Fixed:</b> bug or UI inconsistency<br/>
+                      <b>Notes:</b> operational impact + recommended actions
+                    </p>
+                  </div>
+
+                  <ul class="bullets" style="margin-top:10px;">
+                    <li><b>v1.0.0</b> — Initial executive-grade guide with search, accordion navigation, screenshot modal, print/PDF export, SLA diagrams, glossary, and release notes.</li>
+                    <li><b>v1.0.1</b> — Placeholder entry for future updates (add your changes here).</li>
+                  </ul>
+                </div>
+
+                <div class="callout">
+                  <h5>Executive PDF guidance</h5>
+                  <p>
+                    Use <span class="kbd">Print-ready</span> then <span class="kbd">Export PDF</span> to produce an executive package.
+                    For best results, expand all sections, confirm screenshots load, then export.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- Screenshot modal -->
+<div class="modal" id="modal" aria-hidden="true" role="dialog" aria-label="Screenshot preview">
+  <div class="frame">
+    <div class="bar">
+      <b id="modalTitle">Screenshot</b>
+      <button class="x" id="modalClose" type="button">Close</button>
+    </div>
+    <div class="content">
+      <img id="modalImg" alt="Expanded screenshot">
     </div>
   </div>
-
-  <div class="nav">
-    <a href="#overview" class="active">Overview</a>
-    <a href="#dashboard">Dashboard</a>
-    <a href="#licenses">Licenses</a>
-    <a href="#devices">Devices</a>
-    <a href="#analytics">Analytics</a>
-    <a href="#cdr">CDR</a>
-    <a href="#calling">Calling Insight</a>
-    <a href="#pstn">PSTN</a>
-    <a href="#incidents">Incidents</a>
-    <a href="#observability">Observability</a>
-    <a href="#support">Support</a>
-  </div>
-</div>
-
-<div class="main">
-
-<div class="header-card" id="overview">
-  <h1>Executive Portal Documentation</h1>
-  <div class="muted">
-    All data within this portal is securely sourced from Cisco Webex Control Hub APIs and Cisco Reports services.
-    This platform acts as a single pane of glass designed to provide operational clarity, automation-driven intelligence,
-    SLA visibility, and proactive monitoring for your Webex Calling environment.
-    US Signal engineers leverage the same telemetry displayed here to accelerate troubleshooting and strategic optimization.
-  </div>
-
-  <input class="search-box" id="searchBox" placeholder="Search functionality, metrics, SLA logic, reporting, or page explanations..."/>
-</div>
-
-<!-- DASHBOARD -->
-<div class="section" id="dashboard">
-  <div class="section-header">Dashboard Overview <span>+</span></div>
-  <div class="section-content">
-    <p class="muted">
-      The Dashboard consolidates tenant health metrics including licensing posture, device health indicators,
-      PSTN availability, active incidents, and SLA status into a unified executive summary.
-      This enables leadership to quickly evaluate operational stability and risk exposure.
-    </p>
-    <div class="screenshot">Dashboard Interface Preview</div>
-  </div>
-</div>
-
-<!-- LICENSES -->
-<div class="section" id="licenses">
-  <div class="section-header">License Intelligence & Capacity Management <span>+</span></div>
-  <div class="section-content">
-    <p class="muted">
-      Displays allocation, consumption, SKU distribution, overage detection, and risk scoring.
-      Automated deficit modeling identifies potential expansion requirements before service disruption occurs.
-      All license metrics are pulled directly from Cisco Control Hub and normalized for enterprise clarity.
-    </p>
-    <div class="screenshot">License Analytics Screenshot</div>
-  </div>
-</div>
-
-<!-- DEVICES -->
-<div class="section" id="devices">
-  <div class="section-header">Device Health & Endpoint Intelligence <span>+</span></div>
-  <div class="section-content">
-    <p class="muted">
-      Provides online/offline detection, stale device analysis, uptime history,
-      and SLA breach identification. Enables proactive remediation before end users report failures.
-    </p>
-    <div class="screenshot">Device Health Screenshot</div>
-  </div>
-</div>
-
-<!-- ANALYTICS -->
-<div class="section" id="analytics">
-  <div class="section-header">Operational Calling Analytics <span>+</span></div>
-  <div class="section-content">
-    <p class="muted">
-      Includes total calls, success rate, duration modeling, SLA compliance indicators,
-      and 30-day trend graphs. Identifies abnormal volume shifts or degradation patterns.
-    </p>
-    <div class="screenshot">Analytics Screenshot</div>
-  </div>
-</div>
-
-<!-- CDR -->
-<div class="section" id="cdr">
-  <div class="section-header">Call Detail Records (CDR) Deep Dive <span>+</span></div>
-  <div class="section-content">
-    <p class="muted">
-      Provides granular call-level visibility including timestamps, call result,
-      inbound/outbound classification, and troubleshooting indicators.
-    </p>
-    <div class="screenshot">CDR Table Screenshot</div>
-  </div>
-</div>
-
-<!-- CALLING INSIGHT -->
-<div class="section" id="calling">
-  <div class="section-header">Calling Insight & Media Quality Intelligence <span>+</span></div>
-  <div class="section-content">
-    <p class="muted">
-      Evaluates MOS, jitter, packet loss, and systemic quality trends.
-      Uses Cisco Reports API aggregation combined with SLA modeling logic.
-    </p>
-    <div class="screenshot">Quality Insight Screenshot</div>
-  </div>
-</div>
-
-<!-- PSTN -->
-<div class="section" id="pstn">
-  <div class="section-header">PSTN Architecture & Routing Intelligence <span>+</span></div>
-  <div class="section-content">
-    <p class="muted">
-      Displays trunk health, route groups, E911 configuration,
-      and failover posture to ensure redundancy validation.
-    </p>
-    <div class="screenshot">PSTN Architecture Screenshot</div>
-  </div>
-</div>
-
-<!-- INCIDENTS -->
-<div class="section" id="incidents">
-  <div class="section-header">Incident Correlation & Service Events <span>+</span></div>
-  <div class="section-content">
-    <p class="muted">
-      Aggregates Cisco service advisories and correlates them to your tenant exposure.
-      Includes SLA breach detection and operational impact scoring.
-    </p>
-    <div class="screenshot">Incident Intelligence Screenshot</div>
-  </div>
-</div>
-
-<!-- OBSERVABILITY -->
-<div class="section" id="observability">
-  <div class="section-header">Unified Observability & SLA Posture <span>+</span></div>
-  <div class="section-content">
-    <p class="muted">
-      Consolidates signals from all portal modules into a unified SLA and health posture.
-      Acts as the operational nerve center for executive reporting.
-    </p>
-    <div class="screenshot">Observability Screenshot</div>
-  </div>
-</div>
-
-<!-- SUPPORT -->
-<div class="section" id="support">
-  <div class="section-header">Support & US Signal Operational Partnership <span>+</span></div>
-  <div class="section-content">
-    <p class="muted">
-      Direct integration with US Signal support allows immediate reference to
-      the same live telemetry. Reduces MTTR and accelerates issue resolution.
-    </p>
-    <div class="screenshot">Support Workflow Screenshot</div>
-  </div>
-</div>
-
 </div>
 
 <script>
-/* Accordion */
-document.querySelectorAll(".section-header").forEach(header=>{
-  header.addEventListener("click",()=>{
-    header.parentElement.classList.toggle("active");
-  });
-});
+/**
+ * US Signal | user-guide.html (DROP-IN)
+ *
+ * Features:
+ * - Enterprise guide content for each portal page
+ * - Global search across guide (filters sections + highlights matches)
+ * - Accordion UX with smooth animation + Expand/Collapse All
+ * - Animated navigation anchors (active section tracking)
+ * - Contextual screenshots per section + click-to-zoom modal
+ * - Export to PDF (print) + Print-ready helper
+ * - Glossary + Versioning block
+ *
+ * NOTE: Replace SCREENSHOTS URLs with your hosted screenshot paths in production.
+ */
 
-/* Search */
-document.getElementById("searchBox").addEventListener("input",function(){
-  const val=this.value.toLowerCase();
-  document.querySelectorAll(".section").forEach(section=>{
-    if(section.innerText.toLowerCase().includes(val)){
-      section.style.display="block";
+(function(){
+  const DOC_VERSION = "1.0.0";
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  // --- Screenshot mapping (replace these URLs with your hosted image paths) ---
+  // Using the user-provided sandbox image paths by default.
+  // In your deployment, change values like "docs/screens/dashboard.png" or an S3/CF Images URL.
+  const SCREENSHOTS = {
+    // Dashboard
+    dashboard_1: { src: "/mnt/data/f445d889-d7cf-4c4a-a495-6aab3148f15f.png", title: "Dashboard — Customer Command Center" },
+
+    // Observability
+    observability_1: { src: "/mnt/data/98856394-db6e-46b1-9728-33ea315c34bc.png", title: "Observability — Overview" },
+    observability_2: { src: "/mnt/data/b809959c-edf4-4a00-8f86-f5b076422936.png", title: "Observability — Incident Radar" },
+
+    // Licenses
+    licenses_1: { src: "/mnt/data/bb9d387a-8435-4682-b29e-32ef0c3dbe39.png", title: "Licenses — Overview" },
+    licenses_2: { src: "/mnt/data/ef787bca-5119-4467-9ff4-58e6c6661e8c.png", title: "Licenses — Inventory & Utilization" },
+
+    // Devices
+    devices_1: { src: "/mnt/data/834c49f9-2b4b-4aff-b10f-88f4786e37f1.png", title: "Devices — Fleet Summary" },
+    devices_2: { src: "/mnt/data/146078b7-e74c-48e9-ba1c-d2443ab2b1b8.png", title: "Devices — Inventory Table" },
+
+    // Analytics
+    analytics_1: { src: "/mnt/data/315e6ac7-928c-45e9-b77b-6e26b0c7a1a3.png", title: "Analytics — Operational Calling Analytics" },
+
+    // CDR
+    cdr_1: { src: "/mnt/data/1592738d-43d3-400d-ba2d-dd25b589f70f.png", title: "CDR — Overview" },
+    cdr_2: { src: "/mnt/data/8085028c-0bf0-45e4-a8cf-d4df1cef200b.png", title: "CDR — Records" },
+
+    // PSTN
+    pstn_1: { src: "/mnt/data/d72a30ea-0429-4e98-b92a-0dc31c32a1fa.png", title: "PSTN — Overview" },
+    pstn_2: { src: "/mnt/data/9bc08a47-3f5f-4d19-989e-6161f27978be.png", title: "PSTN — Location Architecture" },
+    pstn_3: { src: "/mnt/data/f6b088f4-8916-48d8-b263-b4747062f9c2.png", title: "PSTN — Misconfig & Diagnostics" },
+
+    // Calling Insight
+    callinginsight_1: { src: "/mnt/data/0d53b5b9-ffc3-4f9d-89fb-8b2dfc4557dd.png", title: "Calling Insight — Overview" },
+    callinginsight_2: { src: "/mnt/data/9aade975-2527-45c5-91c8-6c2334d9afe1.png", title: "Calling Insight — Inventory & AI Summary" },
+
+    // Maintenance
+    maintenance_1: { src: "/mnt/data/8abd95ad-84b6-46ed-a4b3-2fd9345d87cb.png", title: "Maintenance — Executive Brief" },
+    maintenance_2: { src: "/mnt/data/f80fac52-8431-4d12-aee1-930f492523e9.png", title: "Maintenance — Inventory Table" },
+
+    // Status
+    status_1: { src: "/mnt/data/0d53b5b9-ffc3-4f9d-89fb-8b2dfc4557dd.png", title: "Status — Webex Platform Status" },
+
+    // Incidents
+    incidents_1: { src: "/mnt/data/43e2f257-1927-4f2f-bc8b-40fbc463354c.png", title: "Incidents — Inventory" },
+    incidents_2: { src: "/mnt/data/0d53b5b9-ffc3-4f9d-89fb-8b2dfc4557dd.png", title: "Incidents — Heatmap/Trend" },
+
+    // Support
+    support_1: { src: "/mnt/data/43e2f257-1927-4f2f-bc8b-40fbc463354c.png", title: "Support — Escalation" }
+  };
+
+  // --- Apply doc metadata ---
+  const now = new Date();
+  $("#lastUpdated").textContent = now.toLocaleString();
+  $("#docVersionTag").textContent = "v" + DOC_VERSION;
+  $("#docVerInline").textContent = "v" + DOC_VERSION;
+  $("#docVersionTag").title = "Documentation version " + DOC_VERSION;
+  $("#lastUpdated").title = "Generated " + now.toISOString();
+
+  // --- Theme toggle ---
+  const themeBtn = $("#themeBtn");
+  function setTheme(next){
+    document.documentElement.setAttribute("data-theme", next);
+    themeBtn.textContent = next === "dark" ? "Light Mode" : "Dark Mode";
+    try{ localStorage.setItem("docTheme", next); }catch(e){}
+  }
+  const savedTheme = (function(){ try{return localStorage.getItem("docTheme");}catch(e){return null;} })();
+  setTheme(savedTheme === "dark" ? "dark" : "light");
+  themeBtn.addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme") || "light";
+    setTheme(cur === "dark" ? "light" : "dark");
+  });
+
+  // --- Accordion behavior (smooth height animation) ---
+  const accs = $$(".acc");
+  function measureAndSetHeight(acc, expanded){
+    const wrap = acc.querySelector(".accBodyWrap");
+    const body = acc.querySelector(".accBody");
+    if(!wrap || !body) return;
+    if(expanded){
+      wrap.style.height = body.scrollHeight + "px";
+      // allow internal images to load and increase height
+      setTimeout(() => { wrap.style.height = body.scrollHeight + "px"; }, 60);
+      setTimeout(() => { wrap.style.height = body.scrollHeight + "px"; }, 260);
     }else{
-      section.style.display="none";
+      wrap.style.height = "0px";
     }
-  });
-});
+  }
+  function setExpanded(acc, expanded){
+    acc.setAttribute("aria-expanded", expanded ? "true" : "false");
+    measureAndSetHeight(acc, expanded);
+  }
 
-/* Smooth Anchor Scroll */
-document.querySelectorAll(".nav a").forEach(anchor=>{
-  anchor.addEventListener("click",function(e){
-    e.preventDefault();
-    document.querySelector(this.getAttribute("href")).scrollIntoView({
-      behavior:"smooth"
+  accs.forEach(acc => {
+    const header = acc.querySelector(".accHeader");
+    header.addEventListener("click", () => {
+      const expanded = acc.getAttribute("aria-expanded") === "true";
+      setExpanded(acc, !expanded);
+    });
+    header.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" || e.key === " "){
+        e.preventDefault();
+        header.click();
+      }
     });
   });
-});
-</script>
 
+  $("#expandAllBtn").addEventListener("click", () => accs.forEach(a => setExpanded(a, true)));
+  $("#collapseAllBtn").addEventListener("click", () => accs.forEach(a => setExpanded(a, false)));
+
+  // Ensure correct heights after resize
+  window.addEventListener("resize", () => {
+    accs.forEach(acc => {
+      if(acc.getAttribute("aria-expanded") === "true"){
+        measureAndSetHeight(acc, true);
+      }
+    });
+  });
+
+  // --- Screenshot thumbnails + modal ---
+  const modal = $("#modal");
+  const modalImg = $("#modalImg");
+  const modalTitle = $("#modalTitle");
+  const modalClose = $("#modalClose");
+
+  function openModal(title, src){
+    modalTitle.textContent = title || "Screenshot";
+    modalImg.src = src || "";
+    modal.setAttribute("aria-hidden", "false");
+  }
+  function closeModal(){
+    modal.setAttribute("aria-hidden", "true");
+    modalImg.src = "";
+  }
+  modalClose.addEventListener("click", closeModal);
+  modal.addEventListener("click", (e) => {
+    if(e.target === modal) closeModal();
+  });
+  window.addEventListener("keydown", (e) => {
+    if(e.key === "Escape" && modal.getAttribute("aria-hidden") === "false") closeModal();
+  });
+
+  $$("img[data-shot]").forEach(img => {
+    const key = img.getAttribute("data-shot");
+    const meta = SCREENSHOTS[key];
+    if(meta && meta.src){
+      img.src = meta.src;
+      img.dataset.full = meta.src;
+      img.dataset.title = meta.title || key;
+    }else{
+      // graceful placeholder
+      img.alt = img.alt || "Screenshot placeholder";
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="900" height="520">
+          <rect width="100%" height="100%" fill="rgba(100,116,139,.12)"/>
+          <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="rgba(100,116,139,.95)" font-family="system-ui,Segoe UI,Roboto" font-size="20" font-weight="800">
+            Screenshot not configured: ${key}
+          </text>
+        </svg>
+      `);
+    }
+    img.addEventListener("click", () => openModal(img.dataset.title, img.dataset.full || img.src));
+    img.addEventListener("error", () => {
+      img.style.cursor = "default";
+      img.title = "Screenshot unavailable in this environment. Update SCREENSHOTS URLs in the guide script.";
+    });
+  });
+
+  // --- Export to PDF ---
+  function exportPdf(){
+    // expand all for best print
+    accs.forEach(a => setExpanded(a, true));
+    window.scrollTo({top:0, behavior:"smooth"});
+    setTimeout(() => {
+      window.print();
+    }, 250);
+  }
+  $("#pdfBtn").addEventListener("click", exportPdf);
+  $("#printReadyBtn").addEventListener("click", exportPdf);
+
+  // --- Copy link ---
+  $("#copyLinkBtn").addEventListener("click", async () => {
+    const url = location.href.split("#")[0] + "#overview";
+    try{
+      await navigator.clipboard.writeText(url);
+      $("#copyLinkBtn").textContent = "Copied";
+      setTimeout(()=> $("#copyLinkBtn").textContent = "Copy Link", 900);
+    }catch(e){
+      alert("Copy failed. You can manually copy the URL from your browser address bar.");
+    }
+  });
+
+  // --- Search across content (filter + highlight) ---
+  const q = $("#q");
+  const matchCount = $("#matchCount");
+  const clearSearchBtn = $("#clearSearchBtn");
+
+  function clearHighlights(root){
+    // Remove <mark class="hl"> while preserving text
+    const marks = $$("mark.hl", root);
+    marks.forEach(m => {
+      const t = document.createTextNode(m.textContent);
+      m.replaceWith(t);
+    });
+  }
+
+  function highlightText(node, term){
+    if(!term) return 0;
+    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => {
+        if(!n.nodeValue) return NodeFilter.FILTER_REJECT;
+        const v = n.nodeValue.trim();
+        if(!v) return NodeFilter.FILTER_REJECT;
+        if(n.parentElement && (n.parentElement.tagName === "SCRIPT" || n.parentElement.tagName === "STYLE")) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+
+    const termLower = term.toLowerCase();
+    let hits = 0;
+    const textNodes = [];
+    while(walker.nextNode()) textNodes.push(walker.currentNode);
+
+    textNodes.forEach(tn => {
+      const text = tn.nodeValue;
+      const idx = text.toLowerCase().indexOf(termLower);
+      if(idx === -1) return;
+      // Split into before / match / after (first match only to keep it light)
+      const before = document.createTextNode(text.slice(0, idx));
+      const mid = document.createElement("mark");
+      mid.className = "hl";
+      mid.textContent = text.slice(idx, idx + term.length);
+      const after = document.createTextNode(text.slice(idx + term.length));
+      const frag = document.createDocumentFragment();
+      frag.appendChild(before);
+      frag.appendChild(mid);
+      frag.appendChild(after);
+      tn.parentNode.replaceChild(frag, tn);
+      hits += 1;
+    });
+
+    return hits;
+  }
+
+  function applySearch(){
+    const term = (q.value || "").trim();
+    // reset
+    accs.forEach(a => a.style.display = "");
+    $$(".accBody").forEach(b => clearHighlights(b));
+    clearHighlights($("#overview"));
+
+    if(!term){
+      matchCount.textContent = "0";
+      return;
+    }
+
+    let totalHits = 0;
+
+    // For each accordion, search its text content (including collapsed content)
+    accs.forEach(acc => {
+      const body = acc.querySelector(".accBody");
+      const text = (body ? body.textContent : acc.textContent) || "";
+      const found = text.toLowerCase().includes(term.toLowerCase());
+      if(!found){
+        acc.style.display = "none";
+      }else{
+        // Expand matching sections and highlight
+        setExpanded(acc, true);
+        totalHits += highlightText(body, term);
+      }
+    });
+
+    // Also search overview card
+    totalHits += highlightText($("#overview"), term);
+
+    matchCount.textContent = String(totalHits);
+  }
+
+  q.addEventListener("input", () => {
+    // debounce lightly
+    if(q._t) clearTimeout(q._t);
+    q._t = setTimeout(applySearch, 110);
+  });
+
+  clearSearchBtn.addEventListener("click", () => {
+    q.value = "";
+    applySearch();
+    accs.forEach(a => a.style.display = "");
+    $$(".accBody").forEach(b => clearHighlights(b));
+    clearHighlights($("#overview"));
+    matchCount.textContent = "0";
+  });
+
+  // --- Animated nav anchors (active section tracking) ---
+  const sideLinks = $$("#sideNav a");
+  const tocLinks = $$("[data-toc]");
+  function setActiveAnchor(id){
+    sideLinks.forEach(a => a.classList.toggle("active", a.getAttribute("data-anchor") === id));
+    tocLinks.forEach(a => a.classList.toggle("active", a.getAttribute("data-toc") === id));
+  }
+
+  const observedSections = $$("[data-section]");
+  const obs = new IntersectionObserver((entries) => {
+    // Choose the section with the highest intersection ratio
+    const visible = entries
+      .filter(e => e.isIntersecting)
+      .sort((a,b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if(visible && visible.target && visible.target.id){
+      setActiveAnchor(visible.target.id);
+    }
+  }, { root:null, threshold:[0.15,0.22,0.35,0.5,0.66] });
+
+  observedSections.forEach(sec => obs.observe(sec));
+
+  // Smooth scrolling for nav links
+  function smoothTo(hash){
+    const id = (hash || "").replace("#","");
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.scrollIntoView({behavior:"smooth", block:"start"});
+    history.replaceState(null, "", "#"+id);
+    setActiveAnchor(id);
+  }
+  sideLinks.forEach(a => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    smoothTo(a.getAttribute("href"));
+  }));
+  tocLinks.forEach(a => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    smoothTo(a.getAttribute("href"));
+  }));
+
+  // Open to hash if present
+  if(location.hash){
+    setTimeout(() => smoothTo(location.hash), 60);
+  }else{
+    setActiveAnchor("overview");
+  }
+
+  // --- Make PDF export more predictable when images load late ---
+  window.addEventListener("load", () => {
+    accs.forEach(acc => {
+      if(acc.getAttribute("aria-expanded") === "true"){
+        measureAndSetHeight(acc, true);
+      }
+    });
+  });
+
+})();
+</script>
 </body>
 </html>
