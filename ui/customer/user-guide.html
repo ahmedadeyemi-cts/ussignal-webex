@@ -152,7 +152,7 @@ body{
 </div>
 
 <script>
-let routes=[];
+let routes = [];
 
 async function loadRoutes(){
   try {
@@ -182,24 +182,35 @@ async function loadRoutes(){
   buildGuide();
 }
 
+function buildSidebar(){
+  const nav = document.getElementById("navLinks");
+  nav.innerHTML = "";
+  routes.forEach(r=>{
+    const a = document.createElement("a");
+    a.href = r.path;
+    a.textContent = r.name;
+    nav.appendChild(a);
+  });
+}
+
 function buildGuide(){
   const container = document.getElementById("guideContainer");
   container.innerHTML="";
   routes.forEach(r=>{
     const div = document.createElement("div");
     div.className="card guideCard";
-    div.dataset.keywords=r.keywords.join(" ");
-    div.innerHTML=`
+    div.dataset.keywords = (r.keywords || []).join(" ");
+    div.innerHTML = `
       <h3>${r.name}</h3>
-      <p>${r.description}</p>
-      <small><strong>Category:</strong> ${r.category}</small>
+      <p>${r.description || ""}</p>
+      <small><strong>Category:</strong> ${r.category || ""}</small>
     `;
     container.appendChild(div);
   });
 }
 
 document.getElementById("guideSearch").addEventListener("input",function(){
-  const val=this.value.toLowerCase();
+  const val = this.value.toLowerCase();
   document.querySelectorAll(".guideCard").forEach(card=>{
     if(card.dataset.keywords.includes(val) || card.innerText.toLowerCase().includes(val)){
       card.style.display="block";
