@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>US Signal | Customer Portal</title>
+<title>US Signal | Executive Portal Guide</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 
 <style>
 :root{
@@ -11,110 +11,150 @@
   --card:#ffffff;
   --text:#0f172a;
   --muted:#64748b;
-  --line:rgba(15,23,42,.08);
+  --line:rgba(15,23,42,.10);
   --shadow:0 8px 24px rgba(15,23,42,.08);
   --accent:#0f62fe;
-  --sidebar:#0f172a;
-  --sidebarText:#cbd5e1;
 }
-
-/* Layout */
+html[data-theme="dark"]{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --line:rgba(148,163,184,.18);
+}
+*{box-sizing:border-box}
 body{
   margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  display:flex;
   background:var(--bg);
   color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  display:flex;
+  min-height:100vh;
 }
 
+/* Sidebar */
 .sidebar{
-  width:240px;
-  background:var(--sidebar);
-  color:var(--sidebarText);
-  padding:20px;
-  height:100vh;
-  position:fixed;
-  overflow:auto;
+  width:270px;
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
 }
-
-.sidebar h2{
-  font-size:16px;
-  margin-bottom:20px;
-  color:#fff;
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
 }
-
-.sidebar a{
-  display:block;
+.brand img{height:34px}
+.nav{
+  margin-top:18px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.nav a{
   padding:10px;
-  border-radius:8px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
   text-decoration:none;
-  color:var(--sidebarText);
-  margin-bottom:4px;
+  color:var(--text);
+  transition:.2s;
+}
+.nav a:hover{
+  background:rgba(15,98,254,.12);
+}
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+/* Main */
+.main{
+  flex:1;
+  padding:26px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+/* Header */
+.header-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:22px;
+}
+
+.header-card h1{
+  margin:0;
+  font-size:22px;
+  font-weight:1000;
+}
+
+.muted{
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.6;
+}
+
+/* Search */
+.search-box{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  margin-top:16px;
   font-size:14px;
 }
 
-.sidebar a:hover{
-  background:rgba(255,255,255,.05);
-}
-
-.main{
-  margin-left:240px;
-  width:100%;
-}
-
-.topnav{
-  height:60px;
+/* Accordion */
+.section{
   background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+  transition:.3s;
+}
+.section-header{
+  padding:18px;
+  cursor:pointer;
+  font-weight:1000;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.section-header:hover{
+  background:rgba(15,98,254,.05);
+}
+.section-content{
+  max-height:0;
+  overflow:hidden;
+  transition:max-height .4s ease;
+  padding:0 18px;
+}
+.section.active .section-content{
+  max-height:2000px;
+  padding-bottom:18px;
+}
+
+/* Screenshot placeholder */
+.screenshot{
+  margin-top:14px;
+  background:linear-gradient(135deg,#dbeafe,#f1f5f9);
+  border-radius:12px;
+  height:180px;
   display:flex;
   align-items:center;
-  justify-content:space-between;
-  padding:0 20px;
-  border-bottom:1px solid var(--line);
-}
-
-.helpBtn{
-  cursor:pointer;
-  font-size:20px;
-}
-
-.content{
-  padding:30px;
-}
-
-.card{
-  background:var(--card);
-  padding:20px;
-  border-radius:12px;
-  box-shadow:var(--shadow);
-  margin-bottom:20px;
-}
-
-/* Modal */
-.modal{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.5);
-  display:none;
-  align-items:center;
   justify-content:center;
-  z-index:999;
-}
-
-.modalContent{
-  background:#fff;
-  width:900px;
-  max-height:85vh;
-  overflow:auto;
-  padding:30px;
-  border-radius:14px;
-}
-
-.searchBox{
-  width:100%;
-  padding:12px;
-  margin-bottom:20px;
-  border-radius:8px;
-  border:1px solid var(--line);
+  font-weight:800;
+  color:#1e293b;
+  font-size:13px;
 }
 </style>
 </head>
@@ -122,115 +162,196 @@ body{
 <body>
 
 <div class="sidebar">
-  <h2>US Signal Portal</h2>
-  <div id="navLinks"></div>
+  <div class="brand">
+    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg">
+    <div>
+      <div style="font-weight:900;">US Signal</div>
+      <div class="muted">Customer Portal</div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <a href="#overview" class="active">Overview</a>
+    <a href="#dashboard">Dashboard</a>
+    <a href="#licenses">Licenses</a>
+    <a href="#devices">Devices</a>
+    <a href="#analytics">Analytics</a>
+    <a href="#cdr">CDR</a>
+    <a href="#calling">Calling Insight</a>
+    <a href="#pstn">PSTN</a>
+    <a href="#incidents">Incidents</a>
+    <a href="#observability">Observability</a>
+    <a href="#support">Support</a>
+  </div>
 </div>
 
 <div class="main">
-  <div class="topnav">
-    <div><strong>Customer Portal</strong></div>
-    <div>
-      <span class="helpBtn" onclick="openGuide()">❓</span>
-    </div>
+
+<div class="header-card" id="overview">
+  <h1>Executive Portal Documentation</h1>
+  <div class="muted">
+    All data within this portal is securely sourced from Cisco Webex Control Hub APIs and Cisco Reports services.
+    This platform acts as a single pane of glass designed to provide operational clarity, automation-driven intelligence,
+    SLA visibility, and proactive monitoring for your Webex Calling environment.
+    US Signal engineers leverage the same telemetry displayed here to accelerate troubleshooting and strategic optimization.
   </div>
 
-  <div class="content">
-    <div class="card">
-      <h2>Welcome</h2>
-      <p>This portal provides operational visibility into your Webex and PSTN environment.</p>
-    </div>
+  <input class="search-box" id="searchBox" placeholder="Search functionality, metrics, SLA logic, reporting, or page explanations..."/>
+</div>
+
+<!-- DASHBOARD -->
+<div class="section" id="dashboard">
+  <div class="section-header">Dashboard Overview <span>+</span></div>
+  <div class="section-content">
+    <p class="muted">
+      The Dashboard consolidates tenant health metrics including licensing posture, device health indicators,
+      PSTN availability, active incidents, and SLA status into a unified executive summary.
+      This enables leadership to quickly evaluate operational stability and risk exposure.
+    </p>
+    <div class="screenshot">Dashboard Interface Preview</div>
   </div>
 </div>
 
-<!-- MODAL -->
-<div class="modal" id="guideModal">
-  <div class="modalContent">
-    <h2>Customer Portal Guide</h2>
-    <input class="searchBox" id="guideSearch" placeholder="Search portal features..."/>
-    <div id="guideContainer"></div>
+<!-- LICENSES -->
+<div class="section" id="licenses">
+  <div class="section-header">License Intelligence & Capacity Management <span>+</span></div>
+  <div class="section-content">
+    <p class="muted">
+      Displays allocation, consumption, SKU distribution, overage detection, and risk scoring.
+      Automated deficit modeling identifies potential expansion requirements before service disruption occurs.
+      All license metrics are pulled directly from Cisco Control Hub and normalized for enterprise clarity.
+    </p>
+    <div class="screenshot">License Analytics Screenshot</div>
   </div>
+</div>
+
+<!-- DEVICES -->
+<div class="section" id="devices">
+  <div class="section-header">Device Health & Endpoint Intelligence <span>+</span></div>
+  <div class="section-content">
+    <p class="muted">
+      Provides online/offline detection, stale device analysis, uptime history,
+      and SLA breach identification. Enables proactive remediation before end users report failures.
+    </p>
+    <div class="screenshot">Device Health Screenshot</div>
+  </div>
+</div>
+
+<!-- ANALYTICS -->
+<div class="section" id="analytics">
+  <div class="section-header">Operational Calling Analytics <span>+</span></div>
+  <div class="section-content">
+    <p class="muted">
+      Includes total calls, success rate, duration modeling, SLA compliance indicators,
+      and 30-day trend graphs. Identifies abnormal volume shifts or degradation patterns.
+    </p>
+    <div class="screenshot">Analytics Screenshot</div>
+  </div>
+</div>
+
+<!-- CDR -->
+<div class="section" id="cdr">
+  <div class="section-header">Call Detail Records (CDR) Deep Dive <span>+</span></div>
+  <div class="section-content">
+    <p class="muted">
+      Provides granular call-level visibility including timestamps, call result,
+      inbound/outbound classification, and troubleshooting indicators.
+    </p>
+    <div class="screenshot">CDR Table Screenshot</div>
+  </div>
+</div>
+
+<!-- CALLING INSIGHT -->
+<div class="section" id="calling">
+  <div class="section-header">Calling Insight & Media Quality Intelligence <span>+</span></div>
+  <div class="section-content">
+    <p class="muted">
+      Evaluates MOS, jitter, packet loss, and systemic quality trends.
+      Uses Cisco Reports API aggregation combined with SLA modeling logic.
+    </p>
+    <div class="screenshot">Quality Insight Screenshot</div>
+  </div>
+</div>
+
+<!-- PSTN -->
+<div class="section" id="pstn">
+  <div class="section-header">PSTN Architecture & Routing Intelligence <span>+</span></div>
+  <div class="section-content">
+    <p class="muted">
+      Displays trunk health, route groups, E911 configuration,
+      and failover posture to ensure redundancy validation.
+    </p>
+    <div class="screenshot">PSTN Architecture Screenshot</div>
+  </div>
+</div>
+
+<!-- INCIDENTS -->
+<div class="section" id="incidents">
+  <div class="section-header">Incident Correlation & Service Events <span>+</span></div>
+  <div class="section-content">
+    <p class="muted">
+      Aggregates Cisco service advisories and correlates them to your tenant exposure.
+      Includes SLA breach detection and operational impact scoring.
+    </p>
+    <div class="screenshot">Incident Intelligence Screenshot</div>
+  </div>
+</div>
+
+<!-- OBSERVABILITY -->
+<div class="section" id="observability">
+  <div class="section-header">Unified Observability & SLA Posture <span>+</span></div>
+  <div class="section-content">
+    <p class="muted">
+      Consolidates signals from all portal modules into a unified SLA and health posture.
+      Acts as the operational nerve center for executive reporting.
+    </p>
+    <div class="screenshot">Observability Screenshot</div>
+  </div>
+</div>
+
+<!-- SUPPORT -->
+<div class="section" id="support">
+  <div class="section-header">Support & US Signal Operational Partnership <span>+</span></div>
+  <div class="section-content">
+    <p class="muted">
+      Direct integration with US Signal support allows immediate reference to
+      the same live telemetry. Reduces MTTR and accelerates issue resolution.
+    </p>
+    <div class="screenshot">Support Workflow Screenshot</div>
+  </div>
+</div>
+
 </div>
 
 <script>
-let routes = [];
-
-async function loadRoutes(){
-  try {
-
-    const res = await fetch("/api/routes");
-
-    if(!res.ok){
-      throw new Error("Route API failed");
-    }
-
-    const data = await res.json();
-
-    if(!data.routes || !Array.isArray(data.routes)){
-      throw new Error("Invalid route structure");
-    }
-
-    routes = data.routes;
-
-  } catch(err){
-
-    console.error("Route load failed:", err);
-
-    routes = [];
-  }
-
-  buildSidebar();
-  buildGuide();
-}
-
-function buildSidebar(){
-  const nav = document.getElementById("navLinks");
-  nav.innerHTML = "";
-  routes.forEach(r=>{
-    const a = document.createElement("a");
-    a.href = r.path;
-    a.textContent = r.name;
-    nav.appendChild(a);
+/* Accordion */
+document.querySelectorAll(".section-header").forEach(header=>{
+  header.addEventListener("click",()=>{
+    header.parentElement.classList.toggle("active");
   });
-}
+});
 
-function buildGuide(){
-  const container = document.getElementById("guideContainer");
-  container.innerHTML="";
-  routes.forEach(r=>{
-    const div = document.createElement("div");
-    div.className="card guideCard";
-    div.dataset.keywords = (r.keywords || []).join(" ");
-    div.innerHTML = `
-      <h3>${r.name}</h3>
-      <p>${r.description || ""}</p>
-      <small><strong>Category:</strong> ${r.category || ""}</small>
-    `;
-    container.appendChild(div);
-  });
-}
-
-document.getElementById("guideSearch").addEventListener("input",function(){
-  const val = this.value.toLowerCase();
-  document.querySelectorAll(".guideCard").forEach(card=>{
-    if(card.dataset.keywords.includes(val) || card.innerText.toLowerCase().includes(val)){
-      card.style.display="block";
-    } else{
-      card.style.display="none";
+/* Search */
+document.getElementById("searchBox").addEventListener("input",function(){
+  const val=this.value.toLowerCase();
+  document.querySelectorAll(".section").forEach(section=>{
+    if(section.innerText.toLowerCase().includes(val)){
+      section.style.display="block";
+    }else{
+      section.style.display="none";
     }
   });
 });
 
-function openGuide(){
-  document.getElementById("guideModal").style.display="flex";
-}
-
-window.onclick=function(e){
-  if(e.target.id==="guideModal"){
-    document.getElementById("guideModal").style.display="none";
-  }
-}
-
-loadRoutes();
+/* Smooth Anchor Scroll */
+document.querySelectorAll(".nav a").forEach(anchor=>{
+  anchor.addEventListener("click",function(e){
+    e.preventDefault();
+    document.querySelector(this.getAttribute("href")).scrollIntoView({
+      behavior:"smooth"
+    });
+  });
+});
 </script>
 
 </body>
