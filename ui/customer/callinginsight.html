@@ -846,7 +846,32 @@ function buildPath(base){
   }
   return base;
 }
+async function loadPersistedSummary(){
+  if(!SELECTED_ORG_ID) return;
 
+  const r = await api(buildPath("/api/calling-insight/summary"));
+
+  if(!r.ok || !r.data?.score) return;
+
+  const data = r.data;
+
+  SELECTED_METRICS = {
+    score: data.score,
+    stats: data.metrics?.stats || {},
+    worst: data.worst || [],
+    alerts: data.alerts || []
+  };
+
+  renderKPIs();
+  renderAlertingPanel();
+  renderCanvases();
+
+  pushAlert({
+    severity:"good",
+    title:"Persisted summary loaded",
+    body:"Quality posture restored from worker KV.",
+  });
+}
 /* =========================
    UI HELPERS
 ========================= */
@@ -1026,6 +1051,10 @@ function normalizeReportItem(r){
     downloadDomain: r?.downloadDomain || ""
   };
 }
+  function isCdrReport(r){
+  const t = safeLower(r?.title || "");
+  return t.includes("calling detailed call history");
+}
 async function listReports(){
   // expected: { items: [...], numberOfReports }
   const r = await api(buildPath("/api/calling-insight/reports"));
@@ -1041,7 +1070,18 @@ async function listReports(){
   Array.isArray(r.data)          ? r.data         :
   [];
   REPORTS = items.map(normalizeReportItem);
+  // 🔵 Auto-detect latest CDR report
+const latestCdr = REPORTS
+  .filter(isCdrReport)
+  .sort((a,b)=> String(b.created||"").localeCompare(String(a.created||"")))
+  [0];
 
+if(latestCdr){
+  SELECTED_REPORT = latestCdr;
+  await autoLoadAndParse(latestCdr.id);
+  renderReportDataTable();
+  renderSelectedSummary();
+}
   applyReportFilter();
   renderReportList();
   renderKPIs();
@@ -2443,9 +2483,11 @@ async function refreshAll(reason){
 
   await loadTemplates();
   await listReports();
+  await loadPersistedSummary();
   renderSelectedSummary();
   renderAlertingPanel();
   renderCanvases();
+  
 
   setLastRefresh();
   setLiveMode("Polling");
