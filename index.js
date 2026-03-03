@@ -3004,8 +3004,11 @@ if (url.pathname === "/api/routes" && request.method === "GET") {
   ];
 
    return new Response(JSON.stringify({ routes }), {
-    headers: { "Content-Type": "application/json" }
-  });
+  headers: {
+    "Content-Type": "application/json",
+    "Cache-Control": "no-store"
+  }
+});
 }
 /* -----------------------------
    Customer UI: Hub (Default)
