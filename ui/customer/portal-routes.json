@@ -1,0 +1,81 @@
+{
+  "routes": [
+    {
+      "name": "Dashboard",
+      "path": "index.html",
+      "keywords": ["overview","health","status","tenant"],
+      "category": "Core",
+      "description": "High-level summary of tenant health, service indicators, and overall Webex environment posture."
+    },
+    {
+      "name": "Licenses",
+      "path": "licenses.html",
+      "keywords": ["licenses","usage","consumption","subscription","deficit"],
+      "category": "Core",
+      "description": "Displays license allocation, overages, unused subscriptions, and compliance posture."
+    },
+    {
+      "name": "Call Detail Records (CDR)",
+      "path": "cdr.html",
+      "keywords": ["cdr","call history","detailed call history","reporting"],
+      "category": "Calling",
+      "description": "Detailed call history including timestamps, duration, endpoints, and reporting insights."
+    },
+    {
+      "name": "Analytics",
+      "path": "analytics.html",
+      "keywords": ["analytics","call quality","media quality","mos","jitter"],
+      "category": "Calling",
+      "description": "Call quality, packet loss, MOS scoring, and media performance analytics."
+    },
+    {
+      "name": "Calling Insight",
+      "path": "callinginsight.html",
+      "keywords": ["insight","quality score","sla","performance"],
+      "category": "Calling",
+      "description": "Aggregated calling performance scoring and SLA trend visualization."
+    },
+    {
+      "name": "Devices",
+      "path": "devices.html",
+      "keywords": ["devices","phones","offline","endpoints"],
+      "category": "Infrastructure",
+      "description": "Webex registered devices, offline detection, and endpoint inventory."
+    },
+    {
+      "name": "PSTN",
+      "path": "pstn.html",
+      "keywords": ["pstn","trunks","route groups","e911","routing"],
+      "category": "Infrastructure",
+      "description": "PSTN architecture including trunks, routing, emergency callback numbers."
+    },
+    {
+      "name": "Incidents",
+      "path": "incidents.html",
+      "keywords": ["incidents","outage","events","alerts"],
+      "category": "Operations",
+      "description": "Active and historical incidents affecting services."
+    },
+    {
+      "name": "Maintenance",
+      "path": "maintenance.html",
+      "keywords": ["maintenance","scheduled","change window"],
+      "category": "Operations",
+      "description": "Scheduled maintenance windows and planned service updates."
+    },
+    {
+      "name": "Observability",
+      "path": "observability.html",
+      "keywords": ["observability","monitoring","sla","uptime"],
+      "category": "Operations",
+      "description": "Unified monitoring dashboard combining health, PSTN scoring, and SLA indicators."
+    },
+    {
+      "name": "Support",
+      "path": "support.html",
+      "keywords": ["support","ticket","case","help"],
+      "category": "Support",
+      "description": "Submit and track support cases directly through the portal."
+    }
+  ]
+}
