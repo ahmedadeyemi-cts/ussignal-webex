@@ -2914,7 +2914,99 @@ if (url.pathname === "/admin/pins" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
+// =====================================================
+// /api/routes — Dynamic Customer Portal Route Config
+// =====================================================
+if (url.pathname === "/api/routes" && request.method === "GET") {
 
+  const user = getCurrentUser(request);
+  if (!user) return json({ error: "unauthorized" }, 401);
+
+  // You can later add role-based filtering here
+  const routes = [
+    {
+      name: "Dashboard",
+      path: "/customer/index",
+      keywords: ["overview","health","status","tenant"],
+      category: "Core",
+      description: "High-level tenant health and service posture."
+    },
+    {
+      name: "Licenses",
+      path: "/customer/licenses",
+      keywords: ["licenses","usage","subscription"],
+      category: "Core",
+      description: "License allocation and consumption visibility."
+    },
+    {
+      name: "Call Detail Records (CDR)",
+      path: "/customer/cdr",
+      keywords: ["cdr","call history","detailed call history"],
+      category: "Calling",
+      description: "Detailed call history and reporting."
+    },
+    {
+      name: "Analytics",
+      path: "/customer/analytics",
+      keywords: ["analytics","mos","jitter","packet loss"],
+      category: "Calling",
+      description: "Media and call quality analytics."
+    },
+    {
+      name: "Calling Insight",
+      path: "/customer/callinginsight",
+      keywords: ["insight","sla","quality score"],
+      category: "Calling",
+      description: "Aggregated calling performance metrics."
+    },
+    {
+      name: "Devices",
+      path: "/customer/devices",
+      keywords: ["devices","phones","offline"],
+      category: "Infrastructure",
+      description: "Webex endpoint inventory."
+    },
+    {
+      name: "PSTN",
+      path: "/customer/pstn",
+      keywords: ["pstn","trunks","route groups","e911"],
+      category: "Infrastructure",
+      description: "PSTN architecture and routing."
+    },
+    {
+      name: "Incidents",
+      path: "/customer/incidents",
+      keywords: ["incidents","outage","alerts"],
+      category: "Operations",
+      description: "Active and historical service incidents."
+    },
+    {
+      name: "Maintenance",
+      path: "/customer/maintenance",
+      keywords: ["maintenance","scheduled","change"],
+      category: "Operations",
+      description: "Scheduled maintenance windows."
+    },
+    {
+      name: "Observability",
+      path: "/customer/observability",
+      keywords: ["observability","monitoring","uptime"],
+      category: "Operations",
+      description: "Unified SLA monitoring dashboard."
+    },
+    {
+      name: "Support",
+      path: "/customer/support",
+      keywords: ["support","ticket","case"],
+      category: "Support",
+      description: "Submit and track support tickets."
+    }
+  ];
+
+   return new Response(JSON.stringify({ routes }), {
+    headers: { "Content-Type": "application/json" }
+  });
+}
 /* -----------------------------
    Customer UI: Hub (Default)
 ----------------------------- */
