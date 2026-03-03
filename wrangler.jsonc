@@ -19,6 +19,10 @@
       "binding": "ORG_MAP_KV",
       "id": "0d31d4b7594345a8b881f675130aa312"
     },
+ {
+      "binding": "CI_SUMMARY_KV",
+      "id": "124cb523f8704047ae358117c9ee441b"
+    },
     {
       "binding": "USER_SESSION_KV",
       "id": "bf8036e6723141c7b78b61741f9eee6d"
