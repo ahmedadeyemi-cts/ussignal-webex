@@ -25,6 +25,7 @@
  * - PIN_LOCKOUT_SECONDS (default 900)           // 15 min
  * - PIN_SEED_URL (default: your GitHub raw URL used below)
  */
+
  /* =====================================================
        Helpers
     ===================================================== */
@@ -32,8 +33,6 @@ const JSON_HEADERS = {
   "content-type": "application/json",
   "cache-control": "no-store",
 };
-
-// let _JSZip = null;
 
 // =============================================
 // Webex API Base URLs
@@ -138,7 +137,6 @@ async function ciPollAndProcess(env, orgId, reportType) {
 ) {
 
     const buffer = await csvRes.arrayBuffer();
-    const JSZip = await getJSZip();
     const zip = await JSZip.loadAsync(buffer);
 
     const fileNames = Object.keys(zip.files);
@@ -3152,8 +3150,7 @@ if (
 ) {
 
     const buffer = await csvRes.arrayBuffer();
-   const JSZip = await getJSZip();
-   const zip = await JSZip.loadAsync(buffer);
+    const zip = await JSZip.loadAsync(buffer);
 
     const fileNames = Object.keys(zip.files);
     const csvFileName = fileNames.find(name =>
