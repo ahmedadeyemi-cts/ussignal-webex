@@ -25,7 +25,7 @@
  * - PIN_LOCKOUT_SECONDS (default 900)           // 15 min
  * - PIN_SEED_URL (default: your GitHub raw URL used below)
  */
-
+import JSZip from "jszip";
  /* =====================================================
        Helpers
     ===================================================== */
