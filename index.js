@@ -7968,8 +7968,8 @@ await mapLimit(orgs, 3, async (org) => {
     );
     if (!template) return;
 
-    // const token = await getAccessToken(env);
-   const token = await getAccessTokenForOrg(env, org.id);
+    const token = await getAccessToken(env);
+  // const token = await getAccessTokenForOrg(env, org.id);
 
     const end = new Date();
     const start = new Date();
