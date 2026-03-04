@@ -3306,8 +3306,8 @@ if (
   const payload = r.data?.items?.[0] || r.data;
   if (!payload.downloadURL) return json({ error: "not_ready" }, 400);
 
-  const token = await getAccessTokenForOrg(env, orgId); // IMPORTANT FIX
-
+// const token = await getAccessTokenForOrg(env, orgId); // IMPORTANT FIX
+ const token = await getAccessToken(env);
   const csvRes = await fetch(payload.downloadURL, {
     headers: { Authorization: `Bearer ${token}` }
   });
