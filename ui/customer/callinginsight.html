@@ -2602,23 +2602,35 @@ createReport = async function(){
    AUTO LOAD + PARSE
 ========================= */
 async function autoLoadAndParse(reportId){
- const reportObj = REPORTS.find(x => String(x.id) === String(reportId)) || SELECTED_REPORT;
 
-if(isCdrReport(reportObj)){
-  window.location.href = "/customer/cdr";
-  return;
-}
+  // Ensure SELECTED_REPORT is set
+  if(!SELECTED_REPORT || String(SELECTED_REPORT.id) !== String(reportId)){
+    const details = await loadReportDetails(reportId);
+    if(details){
+      SELECTED_REPORT = details;
+    } else {
+      console.error("Could not resolve report details for", reportId);
+      return;
+    }
+  }
+
   const csv = await loadReportCsv(reportId);
   if(!csv) return;
 
   SELECTED_REPORT_CSV = csv;
+
   const parsed = parseCsvToJson(csv);
   SELECTED_REPORT_ROWS = parsed.rows || [];
-  SELECTED_METRICS = extractQualityMetrics(SELECTED_REPORT_ROWS, SELECTED_REPORT.title);
+
+  SELECTED_METRICS = extractQualityMetrics(
+    SELECTED_REPORT_ROWS,
+    SELECTED_REPORT?.title || "Report"
+  );
 
   renderAlertingPanel();
   renderKPIs();
   renderCanvases();
+  renderReportDataTable();
 }
 async function autoRunLast7Days(){
 
