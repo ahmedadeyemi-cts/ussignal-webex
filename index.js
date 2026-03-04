@@ -7976,7 +7976,8 @@ await mapLimit(orgs, 3, async (org) => {
     start.setDate(end.getDate() - 7);
 
    // await fetch("https://webexapis.com/v1/reports", {
-   await fetch(`https://webexapis.com/v1/reports?orgId=${encodeURIComponent(org.id)}`, {
+  // await fetch(`https://webexapis.com/v1/reports?orgId=${encodeURIComponent(org.id)}`, {
+   await fetch("https://webexapis.com/v1/reports", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
