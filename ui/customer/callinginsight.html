@@ -1230,7 +1230,8 @@ async function loadReportDetails(reportId){
     return null;
   }
   // normalize
-  const obj = normalizeReportItem(r.data || {});
+  const raw = r.data?.report || r.data;
+  const obj = normalizeReportItem(raw || {});
   return obj;
 }
 
