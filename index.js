@@ -25,6 +25,8 @@
  * - PIN_SEED_URL (default: your GitHub raw URL used below)
  */
 import JSZip from "jszip";
+import Papa from "papaparse";
+
  /* =====================================================
        Helpers
     ===================================================== */
@@ -538,6 +540,22 @@ function diag(name, result) {
     status: result?.status ?? 0,
     error: result?.ok ? null : (result?.error || "failed"),
     preview: result?.ok ? null : String(result?.preview || "").slice(0, 220)
+  };
+}
+function parseCsvToJson(csvText){
+  if(!csvText || !csvText.trim()) {
+    return { headers:[], rows:[] };
+  }
+
+  const result = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true,
+    dynamicTyping: false
+  });
+
+  return {
+    headers: result.meta.fields || [],
+    rows: result.data || []
   };
 }
 async function auditLog(env, userEmail, path, metadata = {}) {
