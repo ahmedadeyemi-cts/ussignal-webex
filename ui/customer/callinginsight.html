@@ -1807,71 +1807,42 @@ function drawAxes(ctx,w,h){
 /* =========================
    CSV PARSER (keep your existing behavior)
 ========================= */
-function parseCsvToJson(csvText, { maxRows = 50000 } = {}) {
-  const text = String(csvText || "");
-  if (!text.trim()) return { headers: [], rows: [] };
+function parseCsvToJson(csvText){
 
-  const rows = [];
-  let row = [];
-  let cur = "";
-  let i = 0;
-  let inQuotes = false;
-
-  while (i < text.length) {
-    const ch = text[i];
-
-    if (inQuotes) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') { // escaped quote
-          cur += '"';
-          i += 2;
-          continue;
-        }
-        inQuotes = false;
-        i++;
-        continue;
-      }
-      cur += ch;
-      i++;
-      continue;
-    }
-
-    if (ch === '"') { inQuotes = true; i++; continue; }
-    if (ch === ",") { row.push(cur); cur = ""; i++; continue; }
-    if (ch === "\r") { i++; continue; }
-    if (ch === "\n") {
-      row.push(cur);
-      rows.push(row);
-      if (rows.length >= maxRows) break;
-      row = [];
-      cur = "";
-      i++;
-      continue;
-    }
-
-    cur += ch;
-    i++;
+  if(!csvText || !csvText.trim()){
+    return { headers:[], rows:[] };
   }
 
-  if (cur.length || row.length) {
-    row.push(cur);
-    rows.push(row);
+  // Normalize all line endings to \n
+  const lines = csvText
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .filter(line => line.trim() !== "");
+
+  if(lines.length < 2){
+    return { headers:[], rows:[] };
   }
 
-  const headers = (rows.shift() || []).map(h => String(h || "").replace(/^\ufeff/, "").trim());
-  const out = rows
-    .filter(r => r.some(x => String(x || "").trim() !== ""))
-    .map(r => {
-      const obj = {};
-      for (let c = 0; c < headers.length; c++) {
-        obj[headers[c] || `col_${c}`] = r[c] ?? "";
-      }
-      return obj;
+  // Extract headers
+  const headers = lines[0]
+    .split(",")
+    .map(h => h.replace(/^\ufeff/, "").trim());
+
+  // Build row objects
+  const rows = lines.slice(1).map(line => {
+    const cols = line.split(",");
+    const obj = {};
+
+    headers.forEach((header, index) => {
+      obj[header] = cols[index] ?? "";
     });
 
-  return { headers, rows: out };
-}
+    return obj;
+  });
 
+  return { headers, rows };
+}
 /* =========================
    METRIC EXTRACTION (flexible mapping)
 ========================= */
