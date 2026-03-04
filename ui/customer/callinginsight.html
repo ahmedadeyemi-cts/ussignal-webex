@@ -2575,22 +2575,66 @@ async function autoLoadAndParse(reportId){
     }
   }
 
-  const csv = await loadReportCsv(reportId);
-  if(!csv) return;
+  const url = buildPath(
+    `/api/calling-insight/reports/${encodeURIComponent(reportId)}/csv`
+  );
 
-  SELECTED_REPORT_CSV = csv;
+  const response = await fetch(url, { cache: "no-store" });
 
-  const parsed = parseCsvToJson(csv);
-  SELECTED_REPORT_ROWS = parsed.rows || [];
+  if(!response.ok){
+    console.error("CSV load failed:", response.status);
+    return;
+  }
 
+  const contentType = (response.headers.get("content-type") || "").toLowerCase();
+
+  // =====================================================
+  // CASE 1: Worker already parsed CSV and returned JSON
+  // =====================================================
+  if(contentType.includes("application/json")){
+
+    const json = await response.json();
+
+    console.log("Worker returned JSON payload");
+
+    if(json?.rows && Array.isArray(json.rows)){
+      SELECTED_REPORT_ROWS = json.rows;
+      SELECTED_REPORT_CSV = null;
+      console.log("Parsed rows from JSON:", SELECTED_REPORT_ROWS.length);
+    } else {
+      console.error("JSON response missing rows array");
+      return;
+    }
+
+  } 
+  // =====================================================
+  // CASE 2: Worker returned raw CSV text
+  // =====================================================
+  else {
+
+    const csvText = await response.text();
+
+    console.log("Worker returned raw CSV");
+    console.log("CSV length:", csvText?.length);
+    console.log("FIRST 500 CHARS:");
+    console.log(csvText.slice(0, 500));
+
+    SELECTED_REPORT_CSV = csvText;
+
+    const parsed = parseCsvToJson(csvText);
+    SELECTED_REPORT_ROWS = parsed.rows || [];
+
+    console.log("Parsed rows from CSV:", SELECTED_REPORT_ROWS.length);
+  }
+
+  // =====================================================
+  // METRIC EXTRACTION
+  // =====================================================
   SELECTED_METRICS = extractQualityMetrics(
     SELECTED_REPORT_ROWS,
     SELECTED_REPORT?.title || "Report"
   );
-console.log("CSV length:", csv?.length);
-console.log("FIRST 500 CHARS:");
-console.log(csv.slice(0, 500));
-console.log("Parsed rows:", SELECTED_REPORT_ROWS?.length);
+
   renderAlertingPanel();
   renderKPIs();
   renderCanvases();
