@@ -5,7 +5,7 @@
 <title>US Signal | Calling Insight</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<!-- <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>-->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
 :root{
   --bg:#f8fafc;
@@ -2626,7 +2626,8 @@ async function autoLoadAndParse(reportId){
     SELECTED_REPORT_ROWS,
     SELECTED_REPORT?.title || "Report"
   );
-
+  console.log("CSV length:", csv?.length);
+console.log("Parsed rows:", SELECTED_REPORT_ROWS?.length);
   renderAlertingPanel();
   renderKPIs();
   renderCanvases();
