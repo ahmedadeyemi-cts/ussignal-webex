@@ -2562,7 +2562,7 @@ createReport = async function(){
 /* =========================
    AUTO LOAD + PARSE
 ========================= */
-async function autoLoadAndParse(reportId){
+ /*async function autoLoadAndParse(reportId){
 
   // Ensure SELECTED_REPORT is set
   if(!SELECTED_REPORT || String(SELECTED_REPORT.id) !== String(reportId)){
@@ -2634,6 +2634,42 @@ async function autoLoadAndParse(reportId){
     SELECTED_REPORT_ROWS,
     SELECTED_REPORT?.title || "Report"
   );
+
+  renderAlertingPanel();
+  renderKPIs();
+  renderCanvases();
+  renderReportDataTable();
+}
+*/
+  async function autoLoadAndParse(reportId){
+
+  if(!SELECTED_REPORT || String(SELECTED_REPORT.id) !== String(reportId)){
+    const details = await loadReportDetails(reportId);
+    if(details){
+      SELECTED_REPORT = details;
+    } else {
+      console.error("Could not resolve report details for", reportId);
+      return;
+    }
+  }
+
+  const response = await loadReportCsv(reportId);
+  if(!response) return;
+
+  // 🔥 NEW: handle JSON payload
+  if (typeof response === "object" && response.rows) {
+    SELECTED_REPORT_ROWS = response.rows || [];
+  } else {
+    const parsed = parseCsvToJson(response);
+    SELECTED_REPORT_ROWS = parsed.rows || [];
+  }
+
+  SELECTED_METRICS = extractQualityMetrics(
+    SELECTED_REPORT_ROWS,
+    SELECTED_REPORT?.title || "Report"
+  );
+
+  console.log("Parsed rows:", SELECTED_REPORT_ROWS?.length);
 
   renderAlertingPanel();
   renderKPIs();
