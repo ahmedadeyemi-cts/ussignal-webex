@@ -5,7 +5,7 @@
 <title>US Signal | Calling Insight</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<!--<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>-->
 <style>
 :root{
   --bg:#f8fafc;
@@ -1052,9 +1052,9 @@ function normalizeReportItem(r){
     downloadDomain: r?.downloadDomain || ""
   };
 }
-  function isCdrReport(r){
+function isCdrReport(r){
   const t = safeLower(r?.title || "");
-  return t.includes("calling detailed call history");
+  return t.includes("detailed call history") || t.includes("cdr");
 }
 async function listReports(){
   // expected: { items: [...], numberOfReports }
@@ -1072,17 +1072,7 @@ async function listReports(){
   [];
   REPORTS = items.map(normalizeReportItem);
   // 🔵 Auto-detect latest CDR report
-const latestCdr = REPORTS
-  .filter(isCdrReport)
-  .sort((a,b)=> String(b.created||"").localeCompare(String(a.created||"")))
-  [0];
 
-if(latestCdr){
-  SELECTED_REPORT = latestCdr;
-  await autoLoadAndParse(latestCdr.id);
-  renderReportDataTable();
-  renderSelectedSummary();
-}
   applyReportFilter();
   renderReportList();
   renderKPIs();
@@ -1211,12 +1201,10 @@ async function createReport(autoDownload = true){
         body:"Downloading automatically…"
       });
 
-      if(autoDownload){
-        window.open(
-          `/api/calling-insight/reports/${reportId}/csv?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`,
-          "_blank"
-        );
-      }
+     if(autoDownload){
+  await autoLoadAndParse(reportId);
+  renderReportDataTable();
+}
 
       await listReports();
       return;
@@ -1512,15 +1500,10 @@ async function downloadClick(id){
   const r = REPORTS.find(x=>String(x.id)===String(id));
   if(!r) return;
 
-  if(!SELECTED_ORG_ID){
-    pushAlert({severity:"warn", title:"Missing orgId", body:"No tenant selected.", primaryText:"", primaryHref:""});
-    return;
-  }
+  SELECTED_REPORT = r;
 
-  window.open(
-    `/api/calling-insight/reports/${encodeURIComponent(r.id)}/csv?orgId=${encodeURIComponent(SELECTED_ORG_ID)}`,
-    "_blank"
-  );
+  await autoLoadAndParse(r.id);
+  renderReportDataTable();
 }
 function renderVirtualTable(rows){
 
@@ -1567,11 +1550,7 @@ function renderVirtualTable(rows){
 
   scroll.dispatchEvent(new Event("scroll"));
 }
-function toggleColumn(col, visible){
-  if(visible) TABLE_VISIBLE_COLUMNS.add(col);
-  else TABLE_VISIBLE_COLUMNS.delete(col);
-  renderReportDataTable();
-}
+
   function exportExcel(){
   if(!SELECTED_REPORT_ROWS || !SELECTED_REPORT_ROWS.length) return;
 
@@ -2623,6 +2602,12 @@ createReport = async function(){
    AUTO LOAD + PARSE
 ========================= */
 async function autoLoadAndParse(reportId){
+ const reportObj = REPORTS.find(x => String(x.id) === String(reportId)) || SELECTED_REPORT;
+
+if(isCdrReport(reportObj)){
+  window.location.href = "/customer/cdr";
+  return;
+}
   const csv = await loadReportCsv(reportId);
   if(!csv) return;
 
