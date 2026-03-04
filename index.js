@@ -7968,13 +7968,15 @@ await mapLimit(orgs, 3, async (org) => {
     );
     if (!template) return;
 
-    const token = await getAccessToken(env);
+    // const token = await getAccessToken(env);
+   const token = await getAccessTokenForOrg(env, org.id);
 
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - 7);
 
-    await fetch("https://webexapis.com/v1/reports", {
+   // await fetch("https://webexapis.com/v1/reports", {
+   await fetch(`https://webexapis.com/v1/reports?orgId=${encodeURIComponent(org.id)}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
