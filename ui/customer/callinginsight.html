@@ -1810,15 +1810,22 @@ function drawAxes(ctx,w,h){
    CSV PARSER (keep your existing behavior)
 ========================= */
 
-  function parseCsvToJson(csvText){
-  if(!csvText || !csvText.trim()) {
+ function parseCsvToJson(csvText){
+
+  if(!csvText || !csvText.trim()){
     return { headers:[], rows:[] };
+  }
+
+  // Remove BOM if present
+  if(csvText.charCodeAt(0) === 0xFEFF){
+    csvText = csvText.slice(1);
   }
 
   const result = Papa.parse(csvText, {
     header: true,
     skipEmptyLines: true,
-    dynamicTyping: false
+    dynamicTyping: true,
+    delimitersToGuess: [',',';','\t','|']
   });
 
   return {
@@ -2580,7 +2587,9 @@ async function autoLoadAndParse(reportId){
     SELECTED_REPORT_ROWS,
     SELECTED_REPORT?.title || "Report"
   );
-  console.log("CSV length:", csv?.length);
+console.log("CSV length:", csv?.length);
+console.log("FIRST 500 CHARS:");
+console.log(csv.slice(0, 500));
 console.log("Parsed rows:", SELECTED_REPORT_ROWS?.length);
   renderAlertingPanel();
   renderKPIs();
