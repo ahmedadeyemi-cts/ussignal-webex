@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
 :root{
   --bg:#f8fafc;
@@ -1808,41 +1809,22 @@ function drawAxes(ctx,w,h){
 /* =========================
    CSV PARSER (keep your existing behavior)
 ========================= */
-function parseCsvToJson(csvText){
 
-  if(!csvText || !csvText.trim()){
+  function parseCsvToJson(csvText){
+  if(!csvText || !csvText.trim()) {
     return { headers:[], rows:[] };
   }
 
-  // Normalize all line endings to \n
-  const lines = csvText
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .split("\n")
-    .filter(line => line.trim() !== "");
-
-  if(lines.length < 2){
-    return { headers:[], rows:[] };
-  }
-
-  // Extract headers
-  const headers = lines[0]
-    .split(",")
-    .map(h => h.replace(/^\ufeff/, "").trim());
-
-  // Build row objects
-  const rows = lines.slice(1).map(line => {
-    const cols = line.split(",");
-    const obj = {};
-
-    headers.forEach((header, index) => {
-      obj[header] = cols[index] ?? "";
-    });
-
-    return obj;
+  const result = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true,
+    dynamicTyping: false
   });
 
-  return { headers, rows };
+  return {
+    headers: result.meta.fields || [],
+    rows: result.data || []
+  };
 }
 /* =========================
    METRIC EXTRACTION (flexible mapping)
