@@ -447,26 +447,42 @@ pre{
   </div>
 
   <!-- KPI Grid -->
-  <div class="grid">
-    <div class="kpi">
-      <div class="label">Total Calls</div>
-      <div class="value" id="kpiTotal">—</div>
-      <div class="hint">Loaded from /api/cdr</div>
-    </div>
-    <div class="kpi">
-      <div class="label">Failure Rate</div>
-      <div class="value" id="kpiFailRate">—</div>
-      <div class="hint">Based on callResult categorization</div>
-    </div>
-    <div class="kpi">
-      <div class="label">P95 Duration</div>
-      <div class="value" id="kpiP95">—</div>
-      <div class="hint">Seconds</div>
-    </div>
-    <div class="kpi">
-      <div class="label">SLA Status</div>
-      <div class="value" id="kpiSla">—</div>
-      <div class="hint" id="kpiSlaHint">—</div>
+  <div class="grid" style="grid-template-columns: repeat(6,minmax(160px,1fr));">
+
+<div class="kpi">
+  <div class="label">Total Calls</div>
+  <div class="value" id="kpiTotal">—</div>
+  <div class="hint">Loaded from /api/cdr</div>
+</div>
+
+<div class="kpi">
+  <div class="label">Failure Rate</div>
+  <div class="value" id="kpiFailRate">—</div>
+  <div class="hint">Based on callResult categorization</div>
+</div>
+
+<div class="kpi">
+  <div class="label">P95 Duration</div>
+  <div class="value" id="kpiP95">—</div>
+  <div class="hint">Seconds</div>
+</div>
+
+<div class="kpi">
+  <div class="label">Avg MOS</div>
+  <div class="value" id="kpiMos">—</div>
+  <div class="hint">Mean opinion score</div>
+</div>
+
+<div class="kpi">
+  <div class="label">Packet Loss</div>
+  <div class="value" id="kpiPacket">—</div>
+  <div class="hint">Average network loss</div>
+</div>
+
+<div class="kpi">
+  <div class="label">SLA Status</div>
+  <div class="value" id="kpiSla">—</div>
+  <div class="hint" id="kpiSlaHint">—</div>
     </div>
   </div>
 
@@ -948,6 +964,15 @@ async function loadCDR(){
 
   const r = await api(`/api/cdr?${q.toString()}`);
 
+if (Array.isArray(r.data?.trends)) {
+
+  window.SERVER_TRENDS = r.data.trends.map(x => ({
+    key: x.day,
+    calls: x.calls || 0
+  }));
+
+}
+
   if(!r.ok){
     if(r.status === 401){
       setError("Tenant not resolved. Please verify your PIN.");
@@ -960,7 +985,9 @@ async function loadCDR(){
     return;
   }
 
-  const items = Array.isArray(r.data?.items) ? r.data.items : (Array.isArray(r.data) ? r.data : []);
+  const items = Array.isArray(r.data?.records)
+  ? r.data.records
+  : (Array.isArray(r.data?.items) ? r.data.items : []);
   const normalized = items.map(normalizeCdrRecord);
 
   // Optional: filter by time window locally (in case worker ignores from/to)
@@ -970,8 +997,20 @@ async function loadCDR(){
     if(Number.isNaN(t)) return true;
     return t >= range.from && t <= range.to;
   });
+if (r.data?.summary) {
 
+  const mos = r.data.summary.mosAverage;
+  const loss = r.data.summary.packetLossAverage;
+
+  $("kpiMos").textContent =
+    Number.isFinite(mos) ? mos.toFixed(2) : "—";
+
+  $("kpiPacket").textContent =
+    Number.isFinite(loss) ? (loss*100).toFixed(2) + "%" : "—";
+
+}
   CDR_RAW = filteredByTime.sort((a,b)=>{
+    
     const ta = new Date(a.startTime || 0).getTime();
     const tb = new Date(b.startTime || 0).getTime();
     return tb - ta;
@@ -1171,7 +1210,7 @@ function drawTrendChart(){
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  const points = buildDailyTrend(CDR_RAW, 30);
+ const points = window.SERVER_TRENDS || buildDailyTrend(CDR_RAW, 30);
 
   // line
   const w = canvas.width;
