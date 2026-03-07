@@ -7032,7 +7032,12 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
 
   return json(result);
 }
-     if (url.pathname === "/api/analytics/media" &&
+     /* ============================================================
+   MEDIA RECORDS ENDPOINT
+   Used for device / location / quality drilldowns
+============================================================ */
+
+if (url.pathname === "/api/analytics/media" &&
     request.method === "GET") {
 
   const user = getCurrentUser(request);
@@ -7064,6 +7069,7 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
     return json({
       ok:true,
       orgId:resolvedOrgId,
+      count:0,
       records:[]
     });
   }
@@ -7077,94 +7083,282 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
     records
   });
 }
-/*if (url.pathname === "/api/analytics" && request.method === "GET") {
-  return await apiCallingAnalytics(env, request);
-}*/
-   if (url.pathname === "/api/analytics" && request.method === "GET") {
+
+
+/* ============================================================
+   ANALYTICS DASHBOARD ENDPOINT
+   Drives analytics.html
+============================================================ */
+
+if (url.pathname === "/api/analytics" &&
+    request.method === "GET") {
 
   const user = getCurrentUser(request);
-  if (!user) return json({ ok:false, error:"access_required" }, 401);
+  if (!user) return json({ ok:false, error:"access_required" },401);
 
-  const session = await getSession(env, user.email);
+  const session = await getSession(env,user.email);
   const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
   let resolvedOrgId;
 
   if (user.isAdmin) {
-    if (!requestedOrgId) {
-      return json({ ok:false, error:"missing_orgId" }, 400);
-    }
+
+    if (!requestedOrgId)
+      return json({ ok:false, error:"missing_orgId" },400);
+
     resolvedOrgId = requestedOrgId;
+
   } else {
-    if (!session?.orgId) {
-      return json({ ok:false, error:"pin_required" }, 401);
-    }
+
+    if (!session?.orgId)
+      return json({ ok:false, error:"pin_required" },401);
+
     resolvedOrgId = session.orgId;
   }
 
-  const now = new Date();
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const from = sevenDaysAgo.toISOString();
-  const to = now.toISOString();
+  /* --------------------------------------------
+     Load Cached Media Records
+  -------------------------------------------- */
 
-  const path =
-    `/analytics/calling/callRecords` +
-    `?from=${encodeURIComponent(from)}` +
-    `&to=${encodeURIComponent(to)}`;
+  const cached = await env.WEBEX.get(`mediaCache:${resolvedOrgId}`);
 
-  const result = await webexFetchSafe(env, path, resolvedOrgId);
+  if (!cached) {
 
-  if (!result.ok) {
     return json({
-      ok:false,
-      orgId: resolvedOrgId,
-      error:"webex_analytics_failed",
-      upstreamStatus: result.status,
-      upstreamPreview: result.preview
-    }, 200); // 🔥 never crash UI
+      ok:true,
+      orgId:resolvedOrgId,
+      summary:{
+        totalCalls:0,
+        successRate:1,
+        mosAverage:0,
+        packetLossAverage:0,
+        jitterAverage:0
+      },
+      trends:[],
+      devices:[],
+      locations:[]
+    });
+
   }
 
-  const records = result.data?.items || [];
+  const records = JSON.parse(cached);
 
-  const volume7d = records.length;
 
-  const last24h = records.filter(r =>
-    new Date(r.startTime) > new Date(Date.now() - 24*60*60*1000)
+  /* --------------------------------------------
+     BASIC METRICS
+  -------------------------------------------- */
+
+  const totalCalls = records.length;
+
+  const failures = records.filter(r =>
+    String(r.callResult || "")
+      .toLowerCase()
+      .includes("fail")
   ).length;
 
-  const failedCalls = records.filter(r =>
-    r.callResult && r.callResult.toLowerCase().includes("fail")
-  ).length;
+  const successRate =
+    totalCalls === 0 ? 1 :
+    (totalCalls - failures) / totalCalls;
 
-  const peakConcurrency = Math.max(1, Math.round(volume7d / 24));
 
-  const availabilityPercent =
-    volume7d === 0 ? 100 :
-    Math.max(90, 100 - (failedCalls / volume7d) * 100);
+  /* --------------------------------------------
+     QUALITY METRICS
+  -------------------------------------------- */
+
+  const mosValues = records
+    .map(r => Number(r.mos))
+    .filter(v => Number.isFinite(v));
+
+  const packetValues = records
+    .map(r => Number(r.packetLoss))
+    .filter(v => Number.isFinite(v));
+
+  const jitterValues = records
+    .map(r => Number(r.jitter))
+    .filter(v => Number.isFinite(v));
+
+  const avg = arr =>
+    arr.length
+      ? arr.reduce((a,b)=>a+b,0) / arr.length
+      : 0;
+
+  const mosAverage = avg(mosValues);
+  const packetLossAverage = avg(packetValues);
+  const jitterAverage = avg(jitterValues);
+
+
+  /* --------------------------------------------
+     TREND ANALYTICS (30 days)
+  -------------------------------------------- */
+
+  const trendMap = {};
+
+  for (const r of records) {
+
+    if (!r.startTime) continue;
+
+    const day = r.startTime.slice(0,10);
+
+    if (!trendMap[day]) {
+      trendMap[day] = {
+        day,
+        calls:0,
+        failures:0,
+        mos:[],
+        packetLoss:[],
+        jitter:[]
+      };
+    }
+
+    trendMap[day].calls++;
+
+    if (String(r.callResult || "")
+        .toLowerCase()
+        .includes("fail"))
+      trendMap[day].failures++;
+
+    if (Number.isFinite(Number(r.mos)))
+      trendMap[day].mos.push(Number(r.mos));
+
+    if (Number.isFinite(Number(r.packetLoss)))
+      trendMap[day].packetLoss.push(Number(r.packetLoss));
+
+    if (Number.isFinite(Number(r.jitter)))
+      trendMap[day].jitter.push(Number(r.jitter));
+  }
+
+  const trends = Object.values(trendMap)
+    .sort((a,b)=>a.day.localeCompare(b.day))
+    .slice(-30)
+    .map(d => ({
+      day:d.day,
+      calls:d.calls,
+      failures:d.failures,
+      mos:avg(d.mos),
+      packetLoss:avg(d.packetLoss),
+      jitter:avg(d.jitter)
+    }));
+
+
+  /* --------------------------------------------
+     DEVICE QUALITY ANALYTICS
+  -------------------------------------------- */
+
+  const deviceMap = {};
+
+  for (const r of records) {
+
+    const device = r.device || "Unknown";
+
+    if (!deviceMap[device]) {
+      deviceMap[device] = {
+        device,
+        calls:0,
+        mos:[],
+        packetLoss:[]
+      };
+    }
+
+    deviceMap[device].calls++;
+
+    if (Number.isFinite(Number(r.mos)))
+      deviceMap[device].mos.push(Number(r.mos));
+
+    if (Number.isFinite(Number(r.packetLoss)))
+      deviceMap[device].packetLoss.push(Number(r.packetLoss));
+  }
+
+  const devices = Object.values(deviceMap)
+    .map(d => ({
+      device:d.device,
+      calls:d.calls,
+      mos:avg(d.mos),
+      packetLoss:avg(d.packetLoss)
+    }))
+    .sort((a,b)=>b.calls-a.calls)
+    .slice(0,10);
+
+
+  /* --------------------------------------------
+     LOCATION QUALITY ANALYTICS
+  -------------------------------------------- */
+
+  const locationMap = {};
+
+  for (const r of records) {
+
+    const location = r.location || r.region || "Unknown";
+
+    if (!locationMap[location]) {
+      locationMap[location] = {
+        location,
+        calls:0,
+        mos:[]
+      };
+    }
+
+    locationMap[location].calls++;
+
+    if (Number.isFinite(Number(r.mos)))
+      locationMap[location].mos.push(Number(r.mos));
+  }
+
+  const locations = Object.values(locationMap)
+    .map(l => ({
+      location:l.location,
+      calls:l.calls,
+      mos:avg(l.mos)
+    }))
+    .sort((a,b)=>b.calls-a.calls)
+    .slice(0,10);
+
+
+  /* --------------------------------------------
+     FINAL RESPONSE
+  -------------------------------------------- */
 
   return json({
+
     ok:true,
-    orgId: resolvedOrgId,
-    volume7d,
-    volume24h: last24h,
-    peakConcurrency,
-    failedCalls,
-    availabilityPercent: Number(availabilityPercent.toFixed(2))
-  }, 200);
+    orgId:resolvedOrgId,
+
+    summary:{
+      totalCalls,
+      successRate,
+      mosAverage,
+      packetLossAverage,
+      jitterAverage
+    },
+
+    trends,
+    devices,
+    locations
+
+  });
+
 }
-     if (path === "/api/delegation/warm" && request.method === "POST") {
+
+
+/* ============================================================
+   DELEGATION WARM ENDPOINT
+============================================================ */
+
+if (path === "/api/delegation/warm" &&
+    request.method === "POST") {
+
   const { ok, user } = requireUser(request);
   if (!ok) return user;
 
   const body = await request.json();
   const orgId = body?.orgId;
 
-  if (!orgId) return json({ error: "missing_orgId" }, 400);
+  if (!orgId)
+    return json({ error:"missing_orgId" },400);
 
-  const success = await warmDelegation(env, orgId);
+  const success = await warmDelegation(env,orgId);
 
-  return json({ ok: success });
+  return json({ ok:success });
 }
 /* if (url.pathname === "/api/cdr" && request.method === "GET") {
   return await apiCDR(env, request);
