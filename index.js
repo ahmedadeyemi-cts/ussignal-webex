@@ -176,6 +176,119 @@ async function resolveOrgIdForAdmin(env, key) {
 
   return null;
 }
+async function runCachedCallReports(env) {
+
+  const orgResult = await webexFetch(env, "/organizations");
+  if (!orgResult.ok) return;
+
+  const orgs = orgResult.data.items || [];
+
+  await mapLimit(orgs, 3, async (org) => {
+
+    try {
+
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - 7);
+
+      // -----------------------------
+      // CALL DETAILED CALL HISTORY
+      // -----------------------------
+      const callHistory = await createWebexReport(
+        env,
+        org.id,
+        "callingDetailedCallHistory",
+        {
+          startDate: start.toISOString().slice(0,10),
+          endDate: end.toISOString().slice(0,10)
+        }
+      );
+
+      if (callHistory.ok) {
+
+        const reportId = callHistory.data.id;
+
+        const file = await downloadWebexReport(
+          env,
+          org.id,
+          reportId
+        );
+
+        if (file.ok) {
+
+          const text = await file.body.text();
+          const parsed = parseCsv(text);
+
+          await env.WEBEX.put(
+            `cdrCache:${org.id}`,
+            JSON.stringify(parsed),
+            { expirationTtl: 60 * 60 * 24 * 7 }
+          );
+        }
+      }
+
+      // -----------------------------
+      // CALL MEDIA QUALITY REPORT
+      // -----------------------------
+      const mediaReport = await createWebexReport(
+        env,
+        org.id,
+        "callingMediaQuality",
+        {
+          startDate: start.toISOString().slice(0,10),
+          endDate: end.toISOString().slice(0,10)
+        }
+      );
+
+      if (mediaReport.ok) {
+
+        const reportId = mediaReport.data.id;
+
+        const file = await downloadWebexReport(
+          env,
+          org.id,
+          reportId
+        );
+
+        if (file.ok) {
+
+          const text = await file.body.text();
+          const parsed = parseCsv(text);
+
+          await env.WEBEX.put(
+            `mediaCache:${org.id}`,
+            JSON.stringify(parsed),
+            { expirationTtl: 60 * 60 * 24 * 7 }
+          );
+        }
+      }
+
+    } catch (e) {
+      console.log("Cached report failed:", org.id);
+    }
+
+  });
+}
+function parseCsv(text) {
+
+  const lines = text.split("\n");
+  const headers = lines.shift().split(",");
+
+  return lines
+    .filter(l => l.trim().length)
+    .map(line => {
+
+      const values = line.split(",");
+      const obj = {};
+
+      headers.forEach((h,i)=>{
+        obj[h.trim()] = values[i]?.trim();
+      });
+
+      return obj;
+
+    });
+}
 async function ciPollAndProcess(env, orgId, reportType) {
 
   const state = await ciGetReportState(env, orgId, reportType);
@@ -6919,6 +7032,51 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
 
   return json(result);
 }
+     if (url.pathname === "/api/analytics/media" &&
+    request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ error:"access_required" },401);
+
+  const session = await getSession(env,user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId;
+
+  if (user.isAdmin) {
+
+    if (!requestedOrgId)
+      return json({ error:"missing_orgId" },400);
+
+    resolvedOrgId = requestedOrgId;
+
+  } else {
+
+    if (!session?.orgId)
+      return json({ error:"pin_required" },401);
+
+    resolvedOrgId = session.orgId;
+  }
+
+  const cached = await env.WEBEX.get(`mediaCache:${resolvedOrgId}`);
+
+  if (!cached) {
+    return json({
+      ok:true,
+      orgId:resolvedOrgId,
+      records:[]
+    });
+  }
+
+  const records = JSON.parse(cached);
+
+  return json({
+    ok:true,
+    orgId:resolvedOrgId,
+    count:records.length,
+    records
+  });
+}
 /*if (url.pathname === "/api/analytics" && request.method === "GET") {
   return await apiCallingAnalytics(env, request);
 }*/
@@ -7011,7 +7169,7 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
 /* if (url.pathname === "/api/cdr" && request.method === "GET") {
   return await apiCDR(env, request);
 } */
- if (url.pathname === "/api/cdr" && request.method === "GET") {
+if (url.pathname === "/api/cdr" && request.method === "GET") {
 
   const user = getCurrentUser(request);
   if (!user) return json({ error: "access_required" }, 401);
@@ -7034,56 +7192,169 @@ if (url.pathname === "/api/admin/resolve" && request.method === "POST") {
   }
 
   const windowDays = Math.min(Number(url.searchParams.get("days") || 7), 30);
-  const max = Math.min(Number(url.searchParams.get("max") || 200), 1000);
 
-  const now = new Date().toISOString();
-  const from = new Date(
-    Date.now() - windowDays * 24 * 60 * 60 * 1000
-  ).toISOString();
+  // ====================================
+  // TRY KV CACHE FIRST
+  // ====================================
 
-  // 🔹 Try CDR Feed first
-  const feedPath =
-    `/cdr_feed?startTime=${encodeURIComponent(from)}` +
-    `&endTime=${encodeURIComponent(now)}` +
-    `&max=${max}`;
+  const cached = await env.WEBEX.get(`cdrCache:${resolvedOrgId}`);
 
-  const tryFeed = await webexFetchSafe(env, feedPath, resolvedOrgId);
+  let records = [];
 
-  // 🔹 Fallback to legacy CDR
-  let tryCalls = null;
-  if (!tryFeed.ok) {
-    const callsPath =
-      `/cdr/calls?startTime=${encodeURIComponent(from)}` +
+  if (cached) {
+
+    records = JSON.parse(cached);
+
+  } else {
+
+    // ====================================
+    // FALLBACK TO LIVE WEBEX CDR
+    // ====================================
+
+    const now = new Date().toISOString();
+    const from = new Date(
+      Date.now() - windowDays * 24 * 60 * 60 * 1000
+    ).toISOString();
+
+    const feedPath =
+      `/cdr_feed?startTime=${encodeURIComponent(from)}` +
       `&endTime=${encodeURIComponent(now)}` +
-      `&max=${max}`;
+      `&max=1000`;
 
-    tryCalls = await webexFetchSafe(env, callsPath, resolvedOrgId);
+    const tryFeed = await webexFetchSafe(env, feedPath, resolvedOrgId);
+
+    if (!tryFeed.ok) {
+
+      return json({
+        ok:false,
+        orgId:resolvedOrgId,
+        error:"cdr_unavailable"
+      },200);
+
+    }
+
+    records = normalizeCdrItems(tryFeed.data);
+
   }
 
-  const picked = tryFeed.ok ? tryFeed : tryCalls;
+  // ====================================
+  // BUILD ANALYTICS
+  // ====================================
 
-  if (!picked || !picked.ok) {
-    return json({
-      ok: false,
-      orgId: resolvedOrgId,
-      error: "cdr_unavailable",
-      upstreamStatus: picked?.status ?? 0,
-      upstreamPreview: picked?.preview ?? null
-    }, 200); // 🔥 never crash UI
+  let mosTotal = 0;
+  let mosCount = 0;
+
+  let packetLossTotal = 0;
+  let packetLossCount = 0;
+
+  const trends = {};
+
+  for (const r of records) {
+
+    const day = (r.startTime || "").slice(0,10);
+
+    if (!trends[day]) {
+      trends[day] = {
+        calls:0,
+        mosTotal:0,
+        mosCount:0,
+        packetLossTotal:0,
+        packetLossCount:0
+      };
+    }
+
+    trends[day].calls++;
+
+    const mos = Number(r.averageMos || r.mos || 0);
+
+    if (mos) {
+      mosTotal += mos;
+      mosCount++;
+      trends[day].mosTotal += mos;
+      trends[day].mosCount++;
+    }
+
+    const packetLoss = Number(r.packetLossRate || 0);
+
+    if (packetLoss) {
+      packetLossTotal += packetLoss;
+      packetLossCount++;
+      trends[day].packetLossTotal += packetLoss;
+      trends[day].packetLossCount++;
+    }
+
   }
 
-  const records = normalizeCdrItems(picked.data);
+  // ====================================
+  // BUILD 30 DAY TREND
+  // ====================================
+
+  const trendArray = Object.entries(trends)
+    .sort((a,b)=>a[0].localeCompare(b[0]))
+    .map(([day,v]) => {
+
+      return {
+        day,
+        calls:v.calls,
+        avgMos: v.mosCount ? v.mosTotal / v.mosCount : null,
+        avgPacketLoss: v.packetLossCount ? v.packetLossTotal / v.packetLossCount : null
+      };
+
+    });
+
+  // ====================================
+  // MOS AVERAGE
+  // ====================================
+
+  const mosAverage = mosCount ? mosTotal / mosCount : null;
+
+  // ====================================
+  // PACKET LOSS
+  // ====================================
+
+  const packetLossAverage = packetLossCount
+    ? packetLossTotal / packetLossCount
+    : null;
 
   return json({
-    ok: true,
-    orgId: resolvedOrgId,
-    source: tryFeed.ok ? "cdr_feed" : "cdr_calls",
-    windowDays,
-    count: records.length,
-    records
-  }, 200);
-}
 
+    ok:true,
+    orgId:resolvedOrgId,
+    source: cached ? "kv_cache" : "live_feed",
+
+    windowDays,
+
+    summary:{
+      totalCalls:records.length,
+      mosAverage,
+      packetLossAverage
+    },
+
+    trends:trendArray,
+
+    records
+
+  },200);
+}
+     if (url.pathname === "/api/cdr/detail") {
+
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  const callId = url.searchParams.get("callId");
+
+  const cached = await env.WEBEX.get(`cdrCache:${orgId}`);
+
+  if (!cached) return json({ ok:false });
+
+  const records = JSON.parse(cached);
+
+  const record = records.find(r => r.callId === callId);
+
+  return json({
+    ok:true,
+    record
+  });
+
+}
      // =====================================================
 // POST /api/reports
 // =====================================================
@@ -7945,6 +8216,7 @@ async scheduled(event, env, ctx) {
   }
 });
      ctx.waitUntil(ciBackgroundPollAll(env));
+     ctx.waitUntil(runCachedCallReports(env));
       const CONCURRENCY = 5;
       await ciAutoRefreshAllTenants(env);
      // 🔵 MEDIA QUALITY AUTO-RUN (4 hour throttle)
