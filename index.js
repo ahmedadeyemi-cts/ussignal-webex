@@ -7784,10 +7784,10 @@ if (url.pathname.endsWith("/file") &&
   }
 } */
 async function collectCdrHistory(env, orgId){
-async function collectCdrHistory(env, orgId){
 
   const now = new Date().toISOString();
-  const from = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+ /*const from = new Date(Date.now() - 7*24*60*60*1000)*/
+  const from = new Date(Date.now() - 24*60*60*1000).toISOString();
 
   const path =
     `/v1/cdr_feed?startTime=${encodeURIComponent(from)}` +
