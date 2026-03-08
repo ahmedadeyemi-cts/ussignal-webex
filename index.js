@@ -14,7 +14,7 @@
  * - KV: USER_SESSION_KV
  * Required env vars:
  * - CLIENT_ID
- * - CLIENT_SECRET
+ * - CLIENT_SECRETS
  * - REFRESH_TOKEN
  *
  * Optional env vars:
