@@ -1,576 +1,2137 @@
 <!DOCTYPE html>
-
 <html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8"/>
+<meta charset="UTF-8" />
 <title>US Signal | Analytics Intelligence 2.0</title>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
+/* ======================================================
+   ANALYTICS INTELLIGENCE 2.0 (ENTERPRISE)
+   - Layout + Theme aligns to Licenses / Devices architecture
+   - Uses:
+     - GET /api/me
+     - GET /api/org
+     - GET /api/analytics?orgId=...
+     - GET /api/analytics/media?orgId=...
+====================================================== */
 
-/* ================================================
-THEME (Matches License Intelligence)
-================================================ */
-
+/* ---------- Theme Tokens (LIGHT default) ---------- */
 :root{
---bg:#f6f8fb;
---card:#ffffff;
---text:#0f172a;
---muted:#64748b;
---line:rgba(15,23,42,.10);
---shadow:0 8px 24px rgba(15,23,42,.08);
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
 
---accent:#0f62fe;
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
 
---good:#16a34a;
---warn:#f59e0b;
---bad:#dc2626;
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
+
+  --chip:rgba(15,98,254,.08);
+  --chipText:#1d4ed8;
+
+  --rowHover:rgba(15,98,254,.04);
+  --pillBg:#fff;
+  --pillBorder:rgba(15,23,42,.14);
+
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-*{box-sizing:border-box}
+/* ---------- Theme Tokens (DARK) ---------- */
+html[data-theme="dark"]{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --line:rgba(226,232,240,.12);
+  --shadow:0 12px 32px rgba(0,0,0,.35);
+
+  --accent:#3b82f6;
+  --accent2:#60a5fa;
+
+  --good:#22c55e;
+  --warn:#f59e0b;
+  --bad:#ef4444;
+
+  --chip:rgba(59,130,246,.18);
+  --chipText:#bfdbfe;
+
+  --rowHover:rgba(59,130,246,.10);
+  --pillBg:rgba(15,23,42,.35);
+  --pillBorder:rgba(226,232,240,.14);
+}
+
+/* ---------- Base ---------- */
+*{ box-sizing:border-box; }
 
 body{
-margin:0;
-font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-background:var(--bg);
-color:var(--text);
-display:flex;
-min-height:100vh;
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  min-height:100vh;
 }
 
-/* SIDEBAR */
+/* ======================================================
+   SIDEBAR
+====================================================== */
 
 .sidebar{
-width:270px;
-background:var(--card);
-border-right:1px solid var(--line);
-padding:18px 14px;
-display:flex;
-flex-direction:column;
-gap:14px;
+  width:270px;
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
 }
 
 .brand{
-display:flex;
-align-items:center;
-gap:12px;
-padding-bottom:14px;
-border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
 }
+.brand img{ height:34px; border-radius:8px; }
+.brand .title{ display:flex; flex-direction:column; }
+.brand .title b{ font-size:14px; letter-spacing:.2px; }
+.brand .title span{ font-size:12px; color:var(--muted); }
 
-.brand img{height:34px;border-radius:8px}
-
-.nav{display:flex;flex-direction:column;gap:6px}
-
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
 .nav a{
-padding:10px;
-border-radius:12px;
-font-weight:800;
-font-size:13px;
-text-decoration:none;
-color:var(--text);
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+  text-decoration:none;
+  color:var(--text);
 }
-
+.nav a:hover{ background:var(--chip); color:var(--accent2); }
 .nav a.active{
-background:rgba(15,98,254,.12);
-border:1px solid rgba(15,98,254,.20);
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
 }
 
-/* RAG */
+.sidebarFooter{
+  margin-top:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+}
 
 .ragPill{
-margin-top:auto;
-padding:12px;
-border-radius:999px;
-border:1px solid var(--line);
-display:flex;
-justify-content:space-between;
-font-weight:900;
+  padding:10px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
+  font-size:12px;
+  font-weight:1000;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
 }
+.ragDot{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--good);
+  box-shadow:0 0 0 3px rgba(22,163,74,.15);
+}
+.ragPill.amber .ragDot{ background:var(--warn); box-shadow:0 0 0 3px rgba(245,158,11,.15); }
+.ragPill.red .ragDot{ background:var(--bad); box-shadow:0 0 0 3px rgba(239,68,68,.15); }
+.ragText{ display:flex; flex-direction:column; line-height:1.1; }
+.ragText b{ font-size:12px; }
+.ragText span{ font-size:11px; color:var(--muted); font-weight:800; }
 
-.ragGreen{color:var(--good)}
-.ragAmber{color:var(--warn)}
-.ragRed{color:var(--bad)}
+.sideBtnRow{ display:flex; gap:10px; }
+.sideBtnRow button{ width:100%; }
 
-/* MAIN */
+/* ======================================================
+   MAIN AREA
+====================================================== */
 
 .main{
-flex:1;
-padding:22px;
-display:flex;
-flex-direction:column;
-gap:18px;
+  flex:1;
+  padding:22px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
 }
-
-/* HEADER */
 
 .header-card{
-background:var(--card);
-border:1px solid var(--line);
-border-radius:16px;
-box-shadow:var(--shadow);
-padding:16px;
-display:flex;
-justify-content:space-between;
-align-items:center;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
 }
 
-/* CARDS */
+.header-left{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.header-left .h{
+  font-size:16px;
+  font-weight:1000;
+}
+.header-left .sub{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.header-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.pill{
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+}
 
 .card{
-background:var(--card);
-border:1px solid var(--line);
-border-radius:16px;
-box-shadow:var(--shadow);
-padding:16px;
-}
-
-.grid4{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:12px;
-}
-
-.kpi{
-border:1px solid var(--line);
-border-radius:16px;
-padding:12px;
-}
-
-.kpi .label{
-font-size:12px;
-color:var(--muted);
-font-weight:900;
-}
-
-.kpi .value{
-font-size:22px;
-font-weight:1000;
-margin-top:6px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:16px;
 }
 
 .sectionTitle{
-display:flex;
-justify-content:space-between;
-align-items:flex-end;
-margin-bottom:10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:10px;
+  margin-bottom:10px;
+}
+.sectionTitle h2{
+  margin:0;
+  font-size:14px;
+  font-weight:1000;
+}
+.sectionTitle .hint{
+  font-size:12px;
+  color:var(--muted);
+  font-weight:900;
 }
 
-.sectionTitle h2{
-margin:0;
-font-size:14px;
-font-weight:1000;
+.muted{ font-size:12px; color:var(--muted); }
+.row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
 }
+
+.grid3{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:12px;
+}
+.grid6{
+  display:grid;
+  grid-template-columns:repeat(6, minmax(0,1fr));
+  gap:12px;
+}
+.grid2{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:12px;
+}
+@media (max-width: 1300px){
+  .grid6{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+}
+@media (max-width: 1100px){
+  .grid3, .grid2{ grid-template-columns:1fr; }
+  .grid6{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 720px){
+  .grid6{ grid-template-columns:1fr; }
+}
+
+.kpi{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(255,255,255,.02);
+}
+.kpi .label{ font-size:12px;color:var(--muted);font-weight:900; }
+.kpi .value{ font-size:18px;font-weight:1000;margin-top:6px; }
+.kpi .sub{ font-size:12px;color:var(--muted);margin-top:6px; font-weight:800; }
 
 .table-wrap{
-border:1px solid var(--line);
-border-radius:16px;
-overflow:auto;
+  margin-top:10px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  overflow:auto;
 }
 
 table{
-width:100%;
-border-collapse:collapse;
+  width:100%;
+  border-collapse:collapse;
 }
-
 thead th{
-padding:12px;
-font-size:12px;
-color:var(--muted);
-text-transform:uppercase;
+  padding:12px;
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  text-align:right;
+  white-space:nowrap;
 }
-
+thead th:first-child{ text-align:left; }
 tbody td{
-padding:12px;
-border-top:1px solid rgba(15,23,42,.06);
-font-size:13px;
+  padding:12px;
+  border-top:1px solid rgba(15,23,42,.06);
+  font-size:13px;
+  text-align:right;
+  white-space:nowrap;
+  vertical-align:top;
 }
+tbody td:first-child{ text-align:left; }
+tbody tr:hover{ background:var(--rowHover); }
 
 .badge{
-padding:6px 10px;
-border-radius:999px;
-font-weight:1000;
-font-size:11px;
-border:1px solid var(--line);
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  font-weight:1000;
+  font-size:11px;
+  background:var(--pillBg);
 }
+.badge.good{ color:var(--good); }
+.badge.warn{ color:var(--warn); }
+.badge.bad{ color:var(--bad); }
 
-.badge.good{color:var(--good)}
-.badge.warn{color:var(--warn)}
-.badge.bad{color:var(--bad)}
-
-canvas{
-width:100%;
-height:220px;
+.dot{
+  width:8px;height:8px;border-radius:50%;
+  background:currentColor;
+  opacity:.9;
 }
 
 button{
-background:var(--accent);
-color:#fff;
-border:none;
-padding:8px 14px;
-border-radius:10px;
-font-weight:900;
-cursor:pointer;
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:900;
+  cursor:pointer;
 }
-
+button:disabled{ opacity:.65; cursor:not-allowed; }
 .btn-outline{
-background:transparent;
-border:1px solid var(--line);
-color:var(--text);
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--text);
 }
 
-</style>
+input[type="text"], select{
+  padding:8px 12px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--text);
+  font-size:13px;
+}
+select{ cursor:pointer; }
 
+.health-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:1000;
+  font-size:12px;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
+}
+.health-good{ color:var(--good); }
+.health-mid{ color:var(--warn); }
+.health-bad{ color:var(--bad); }
+
+.mono{ font-family:var(--mono); }
+
+.chartWrap{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(255,255,255,.02);
+}
+canvas{ width:100%; height:220px; display:block; }
+
+.modalOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+  padding:16px;
+}
+.modal{
+  background:var(--card);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+  border-radius:16px;
+  width:1100px;
+  max-width:100%;
+  max-height:90vh;
+  overflow:auto;
+}
+.modalHeader{
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
+.modalHeader h3{
+  margin:0;
+  font-size:15px;
+  font-weight:1000;
+}
+.modalBody{
+  padding:16px;
+}
+.modalFooter{
+  padding:14px 16px;
+  border-top:1px solid var(--line);
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+hr.sep{
+  border:none;
+  border-top:1px solid var(--line);
+  margin:14px 0;
+}
+.small{ font-size:12px; color:var(--muted); font-weight:800; }
+.hidden{ display:none !important; }
+
+.aiInsight{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px;
+  background:linear-gradient(180deg, rgba(15,98,254,.08), rgba(15,98,254,0));
+}
+.aiInsight .title{
+  font-size:13px;
+  font-weight:1000;
+  margin-bottom:8px;
+}
+.aiInsight .body{
+  font-size:13px;
+  line-height:1.5;
+}
+.aiInsight .body b{
+  color:var(--accent2);
+}
+.heatLegend{
+  display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;
+}
+.legendChip{
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--pillBorder);
+  background:var(--pillBg);
+  font-size:11px;
+  font-weight:1000;
+}
+.rightText{ text-align:right; }
+.clickable{ cursor:pointer; font-weight:1000; color:var(--accent2); }
+.clickable:hover{ text-decoration:underline; }
+</style>
 </head>
 
 <body>
 
 <div class="sidebar">
 
-<div>
-<div class="brand">
-<img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg">
-<div>
-<b>US Signal</b>
-<div style="font-size:12px;color:var(--muted)">Customer Portal</div>
-</div>
-</div>
+  <div>
+    <div class="brand">
+      <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" alt="US Signal" />
+      <div class="title">
+        <b>US Signal</b>
+        <span>Customer Portal</span>
+      </div>
+    </div>
 
-<div class="nav">
-<a href="/customer">Dashboard</a>
-<a href="/customer/observability">Observability</a>
-<a href="/customer/licenses">Licenses</a>
-<a href="/customer/devices">Devices</a>
-<a class="active" href="/customer/analytics">Analytics</a>
-<a href="/customer/pstn">PSTN</a>
-<a href="/customer/cdr">CDR</a>
-</div>
-</div>
+    <div class="nav" style="margin-top:12px;">
+      <a href="/customer">Dashboard</a>
+      <a href="/customer/observability">Observability</a>
+      <a href="/customer/licenses">Licenses</a>
+      <a href="/customer/devices">Devices</a>
+      <a href="/customer/analytics" class="active">Analytics</a>
+      <a href="/customer/cdr">CDR</a>
+      <a href="/customer/pstn">PSTN</a>
+      <a href="/customer/callinginsight">Calling Insight</a>
+      <a href="/customer/maintenance">Maintenance</a>
+      <a href="/customer/status">Status</a>
+      <a href="/customer/incidents">Incidents</a>
+      <a href="/customer/support">Support Contact</a>
+      <a href="/customer/user-guide">User Guide</a>
+    </div>
+  </div>
 
-<div id="ragPill" class="ragPill ragGreen">
-<span>CALL HEALTH</span>
-<span id="healthScore">100</span>
-</div>
+  <div class="sidebarFooter">
+    <div id="ragPill" class="ragPill">
+      <span class="ragDot" id="ragDot"></span>
+      <div class="ragText">
+        <b id="ragTitle">GREEN</b>
+        <span id="ragSub">Call quality healthy</span>
+      </div>
+      <span class="mono" id="ragScore">100</span>
+    </div>
+
+    <div class="sideBtnRow">
+      <button class="btn-outline" id="btnTheme">Dark Mode</button>
+      <button class="btn-outline" id="btnLogout">Logout</button>
+    </div>
+
+    <div class="muted" id="buildHint" style="font-weight:900;">
+      Analytics Intelligence 2.0
+    </div>
+  </div>
 
 </div>
 
 <div class="main">
 
-<div class="header-card">
-<div>
-<div style="font-weight:1000">Webex Calling — Analytics Intelligence 2.0</div>
-<div style="font-size:12px;color:var(--muted)" id="tenantLine">Loading…</div>
+  <!-- HEADER -->
+  <div class="header-card">
+    <div class="header-left">
+      <div class="h">Webex Calling — Analytics Intelligence 2.0</div>
+      <div class="sub" id="whoLine">Loading…</div>
+    </div>
+
+    <div class="header-actions">
+      <div class="pill" id="tenantPill">Tenant: —</div>
+      <div class="pill" id="lastRefreshPill">Last refresh: —</div>
+      <button class="btn-outline" id="btnRefresh">Refresh</button>
+      <button class="btn-outline" id="btnExportCsv">Export CSV</button>
+    </div>
+  </div>
+
+  <!-- TENANT CONTEXT -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>Tenant Context</h2>
+      <div class="hint" id="orgContext">Loading…</div>
+    </div>
+
+    <div id="adminNote" class="muted" style="display:none; font-weight:900; margin-bottom:10px;">
+      US Signal Admin View — select a tenant to review calling analytics posture.
+    </div>
+
+    <div class="row">
+      <select id="tenantSelect" disabled>
+        <option>Loading tenants…</option>
+      </select>
+
+      <button id="btnLoad">Load Analytics</button>
+
+      <span class="muted" id="errBox" style="display:none; font-weight:900;"></span>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <div class="row">
+      <span class="badge" id="resolutionBadge"><span class="dot"></span><span id="resolutionText">Resolution: —</span></span>
+      <span class="badge" id="snapshotBadge"><span class="dot"></span><span id="snapshotText">History: —</span></span>
+      <span class="badge" id="recordBadge"><span class="dot"></span><span id="recordText">Media records: —</span></span>
+      <span class="badge" id="predictionBadge"><span class="dot"></span><span id="predictionText">Prediction: —</span></span>
+    </div>
+  </div>
+
+  <!-- KPI / HEALTH -->
+  <div class="grid6">
+    <div class="kpi">
+      <div class="label">Call Health Score</div>
+      <div class="value" id="healthScore">—</div>
+      <div class="sub" id="healthScoreSub">Calculating…</div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">Total Calls</div>
+      <div class="value" id="kTotalCalls">—</div>
+      <div class="sub" id="kTotalCallsSub">From cached media insights</div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">Failure Rate</div>
+      <div class="value" id="kFailRate">—</div>
+      <div class="sub" id="kFailRateSub">Operational reliability</div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">Avg MOS</div>
+      <div class="value" id="kMos">—</div>
+      <div class="sub" id="kMosSub">Voice quality score</div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">Packet Loss</div>
+      <div class="value" id="kPacket">—</div>
+      <div class="sub" id="kPacketSub">Network path quality</div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">Jitter</div>
+      <div class="value" id="kJitter">—</div>
+      <div class="sub" id="kJitterSub">Latency variation</div>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>Actions</h2>
+      <div class="hint">Exports and local history controls</div>
+    </div>
+
+    <div class="row">
+      <button id="btnExportHistory" class="btn-outline">Export 30-Day History CSV</button>
+      <button id="btnClearHistory" class="btn-outline">Clear Local History</button>
+      <span class="muted" style="font-weight:900;">Analytics history stored locally per tenant for trend modeling.</span>
+    </div>
+  </div>
+
+  <!-- AI INSIGHT -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>AI Insight</h2>
+      <div class="hint">Heuristic explanation engine based on media + trend data</div>
+    </div>
+
+    <div class="aiInsight">
+      <div class="title">Call Quality Narrative</div>
+      <div class="body" id="aiInsightBody">Loading insight…</div>
+    </div>
+  </div>
+
+  <!-- PREDICTIVE SLA -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>Predictive SLA Breach Timeline</h2>
+      <div class="hint" id="slaHint">Using local 30-day trend history</div>
+    </div>
+
+    <div class="chartWrap">
+      <canvas id="slaTimelineChart" width="1200" height="280"></canvas>
+      <div class="row" style="margin-top:10px; justify-content:space-between;">
+        <div class="muted" style="font-weight:900;" id="slaSummary">
+          Predictive model uses MOS, packet loss, jitter, and failure rate slope.
+        </div>
+        <div class="row">
+          <span class="badge"><span class="dot" style="color:var(--accent);"></span><span>Observed Health</span></span>
+          <span class="badge"><span class="dot" style="color:var(--warn);"></span><span>Projected Health</span></span>
+          <span class="badge"><span class="dot" style="color:var(--bad);"></span><span>SLA Threshold</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 30-DAY QUALITY TRENDS -->
+  <div class="grid2">
+    <div class="card">
+      <div class="sectionTitle">
+        <h2>30-Day MOS Trend</h2>
+        <div class="hint">History + current insights</div>
+      </div>
+      <div class="chartWrap">
+        <canvas id="mosTrendChart" width="1000" height="260"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sectionTitle">
+        <h2>30-Day Packet Loss Trend</h2>
+        <div class="hint">History + current insights</div>
+      </div>
+      <div class="chartWrap">
+        <canvas id="packetTrendChart" width="1000" height="260"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="sectionTitle">
+        <h2>30-Day Jitter Trend</h2>
+        <div class="hint">History + current insights</div>
+      </div>
+      <div class="chartWrap">
+        <canvas id="jitterTrendChart" width="1000" height="260"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sectionTitle">
+        <h2>MOS Distribution Histogram</h2>
+        <div class="hint">Current media quality mix</div>
+      </div>
+      <div class="chartWrap">
+        <canvas id="mosHistogramChart" width="1000" height="260"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROOT CAUSE / ANOMALY -->
+  <div class="grid2">
+    <div class="card">
+      <div class="sectionTitle">
+        <h2>Automatic Root Cause Detection</h2>
+        <div class="hint">Network / Device / Codec / PSTN path</div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Detected Issue</th>
+              <th>Affected Calls</th>
+              <th>Root Cause</th>
+              <th>Impact</th>
+            </tr>
+          </thead>
+          <tbody id="rootCauseRows">
+            <tr><td colspan="4" class="muted" style="text-align:left;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sectionTitle">
+        <h2>Packet Loss & Jitter Anomalies</h2>
+        <div class="hint">Worst current outliers</div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Start Time</th>
+              <th>Packet Loss</th>
+              <th>Jitter</th>
+              <th>MOS</th>
+              <th>Likely Cause</th>
+            </tr>
+          </thead>
+          <tbody id="anomalyRows">
+            <tr><td colspan="5" class="muted" style="text-align:left;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEATMAP -->
+  <div class="card">
+    <div class="sectionTitle">
+      <h2>Call Quality Heatmap</h2>
+      <div class="hint">Packet loss vs MOS for current records</div>
+    </div>
+
+    <div class="chartWrap">
+      <canvas id="qualityHeatmapChart" width="1200" height="320"></canvas>
+      <div class="heatLegend">
+        <span class="legendChip">X-axis: Packet loss</span>
+        <span class="legendChip">Y-axis: MOS</span>
+        <span class="legendChip">Dense upper-left cluster = healthy</span>
+        <span class="legendChip">Lower-right drift = degraded</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEVICE / LOCATION -->
+  <div class="grid2">
+    <div class="card">
+      <div class="sectionTitle">
+        <h2>Device Quality Leaderboard</h2>
+        <div class="hint">Top observed endpoint models by volume and risk</div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Device</th>
+              <th>Calls</th>
+              <th>Avg MOS</th>
+              <th>Packet Loss</th>
+              <th>Risk</th>
+            </tr>
+          </thead>
+          <tbody id="deviceRows">
+            <tr><td colspan="5" class="muted" style="text-align:left;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sectionTitle">
+        <h2>Location Quality Heatmap</h2>
+        <div class="hint">Top locations by call quality posture</div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Location</th>
+              <th>Calls</th>
+              <th>Avg MOS</th>
+              <th>Packet Loss</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="locationRows">
+            <tr><td colspan="5" class="muted" style="text-align:left;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<div>
-<button id="btnRefresh">Refresh</button>
-<button class="btn-outline" id="btnExport">Export CSV</button>
-</div>
-</div>
+<!-- MODAL -->
+<div id="detailModalOverlay" class="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="detailModalTitle">
+    <div class="modalHeader">
+      <div>
+        <h3 id="detailModalTitle">Analytics Detail</h3>
+        <div class="small" id="detailModalSub">—</div>
+      </div>
+      <div class="row">
+        <button class="btn-outline" id="btnCloseDetailModal">Close</button>
+      </div>
+    </div>
 
-<!-- KPI GRID -->
+    <div class="modalBody">
+      <div class="grid3">
+        <div class="kpi">
+          <div class="label">Calls</div>
+          <div class="value" id="mCalls">—</div>
+          <div class="sub" id="mCallsSub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Average MOS</div>
+          <div class="value" id="mMos">—</div>
+          <div class="sub" id="mMosSub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Quality Risk</div>
+          <div class="value" id="mRisk">—</div>
+          <div class="sub" id="mRiskSub">—</div>
+        </div>
+      </div>
 
-<div class="grid4">
+      <hr class="sep"/>
 
-<div class="kpi">
-<div class="label">Call Health Score</div>
-<div class="value" id="kHealth">—</div>
-</div>
+      <div class="sectionTitle">
+        <h2 style="margin:0;">30-Day Entity Trend</h2>
+        <div class="hint" id="entityTrendHint">Local history trend</div>
+      </div>
+      <div class="chartWrap">
+        <canvas id="entityTrendChart" width="1200" height="260"></canvas>
+      </div>
 
-<div class="kpi">
-<div class="label">Avg MOS</div>
-<div class="value" id="kMos">—</div>
-</div>
+      <hr class="sep"/>
 
-<div class="kpi">
-<div class="label">Packet Loss</div>
-<div class="value" id="kLoss">—</div>
-</div>
+      <div class="sectionTitle">
+        <h2 style="margin:0;">Operational Guidance</h2>
+        <div class="hint">What to do next</div>
+      </div>
+      <div class="muted" style="font-weight:900;" id="entityGuidance">—</div>
+    </div>
 
-<div class="kpi">
-<div class="label">Jitter</div>
-<div class="value" id="kJitter">—</div>
-</div>
-
-</div>
-
-<!-- QUALITY TREND -->
-
-<div class="card">
-
-<div class="sectionTitle">
-<h2>30-Day Call Quality Trend</h2>
-</div>
-
-<canvas id="mosTrend"></canvas>
-
-</div>
-
-<!-- MOS HISTOGRAM -->
-
-<div class="card">
-
-<div class="sectionTitle">
-<h2>MOS Distribution</h2>
-</div>
-
-<canvas id="mosHistogram"></canvas>
-
-</div>
-
-<!-- ROOT CAUSE -->
-
-<div class="card">
-
-<div class="sectionTitle">
-<h2>Automatic Root Cause Detection</h2>
-</div>
-
-<div class="table-wrap">
-<table>
-<thead>
-<tr>
-<th>Cause</th>
-<th>Affected Calls</th>
-<th>Classification</th>
-</tr>
-</thead>
-<tbody id="rootRows"></tbody>
-</table>
-</div>
-
-</div>
-
-<!-- ANOMALIES -->
-
-<div class="card">
-
-<div class="sectionTitle">
-<h2>Packet Loss Anomalies</h2>
-</div>
-
-<div class="table-wrap">
-<table>
-<thead>
-<tr>
-<th>Time</th>
-<th>Packet Loss</th>
-<th>MOS</th>
-</tr>
-</thead>
-<tbody id="anomalyRows"></tbody>
-</table>
-</div>
-
-</div>
-
+    <div class="modalFooter">
+      <button class="btn-outline" id="btnExportEntityCsv">Export Entity CSV</button>
+    </div>
+  </div>
 </div>
 
 <script>
+const $ = (id) => document.getElementById(id);
 
-/* =====================================
-STATE
-===================================== */
+/* -----------------------------
+   THEME
+----------------------------- */
+function loadTheme(){
+  const saved = localStorage.getItem("uiTheme");
+  const theme = saved === "dark" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  const b = $("btnTheme");
+  if (b) b.textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme") || "light";
+  const next = cur === "dark" ? "light" : "dark";
+  localStorage.setItem("uiTheme", next);
+  loadTheme();
+  if (SELECTED_ORG_ID) {
+    renderAll();
+  }
+}
+$("btnTheme").addEventListener("click", toggleTheme);
+loadTheme();
 
-let ORG_ID
-let MEDIA=[]
-
-/* =====================================
-API
-===================================== */
-
-async function api(path){
-const r=await fetch(path)
-return r.json()
+/* -----------------------------
+   API helper
+----------------------------- */
+async function api(path, opts){
+  const res = await fetch(path, opts);
+  const txt = await res.text();
+  let data = null;
+  try { data = txt ? JSON.parse(txt) : null; }
+  catch { data = { raw: txt }; }
+  return { ok: res.ok, status: res.status, data };
 }
 
-/* =====================================
-INIT
-===================================== */
+/* -----------------------------
+   Helpers
+----------------------------- */
+function setError(msg){
+  const box = $("errBox");
+  if (!msg){
+    box.style.display = "none";
+    box.textContent = "";
+    return;
+  }
+  box.style.display = "inline";
+  box.textContent = msg;
+}
+function num(v){
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function avg(arr){
+  const vals = (arr || []).filter(v => Number.isFinite(v));
+  if (!vals.length) return null;
+  return vals.reduce((a,b)=>a+b,0)/vals.length;
+}
+function sum(arr){
+  return (arr||[]).filter(v=>Number.isFinite(v)).reduce((a,b)=>a+b,0);
+}
+function escapeHtml(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function fmtInt(n){
+  if (!Number.isFinite(n)) return "—";
+  return Math.round(n).toLocaleString();
+}
+function fmtPctUnit(n){
+  if (!Number.isFinite(n)) return "—";
+  return `${n.toFixed(2)}%`;
+}
+function fmtPctFraction(n){
+  if (!Number.isFinite(n)) return "—";
+  return `${(n*100).toFixed(2)}%`;
+}
+function fmtMos(n){
+  if (!Number.isFinite(n)) return "—";
+  return n.toFixed(2);
+}
+function fmtMs(n){
+  if (!Number.isFinite(n)) return "—";
+  return `${n.toFixed(1)} ms`;
+}
+function safeFile(name){
+  return String(name || "export").replaceAll(/[^a-zA-Z0-9_\-]+/g, "_").slice(0,80);
+}
+function toLocal(ts){
+  if (!ts) return "—";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return String(ts);
+  return d.toLocaleString();
+}
+function cssVar(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function todayKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
 
+/* -----------------------------
+   State
+----------------------------- */
+let ME = null;
+let ORGS = [];
+let SELECTED_ORG_ID = null;
+
+let ANALYTICS = null;
+let MEDIA = [];
+let INSIGHT = null;
+let ACTIVE_ENTITY = null;
+
+/* -----------------------------
+   History storage
+----------------------------- */
+function histKey(orgId){ return `AI2_ANALYTICS_HISTORY::${orgId || "unknown"}`; }
+function loadHistory(orgId){
+  try{
+    const raw = localStorage.getItem(histKey(orgId));
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+function saveHistory(orgId, arr){
+  try{
+    localStorage.setItem(histKey(orgId), JSON.stringify(arr));
+  } catch {}
+}
+function pruneHistory(arr){
+  const map = new Map();
+  for (const s of (arr||[])){
+    if (s && s.day) map.set(s.day, s);
+  }
+  return Array.from(map.values())
+    .sort((a,b)=> (a.day||"").localeCompare(b.day||""))
+    .slice(-30);
+}
+
+/* -----------------------------
+   Data extraction helpers
+----------------------------- */
+function valAny(obj, keys, fallback=null){
+  for (const k of keys){
+    if (obj && obj[k] !== undefined && obj[k] !== null && obj[k] !== "") return obj[k];
+  }
+  return fallback;
+}
+function recStart(r){
+  return valAny(r, ["startTime","Start Time","time","timestamp","date"], null);
+}
+function recMos(r){
+  return num(valAny(r, [
+    "mos","MOS","averageMos","Average MOS","avgMos","AverageMOS","Media MOS"
+  ], null));
+}
+function recPacket(r){
+  const v = num(valAny(r, [
+    "packetLoss","Packet Loss","packetLossRate","packetLossPercent","Average Packet Loss","avgPacketLoss"
+  ], null));
+  if (!Number.isFinite(v)) return null;
+  return v > 1 ? v/100 : v;
+}
+function recJitter(r){
+  return num(valAny(r, [
+    "jitter","Jitter","averageJitter","Average Jitter","avgJitter"
+  ], null));
+}
+function recDevice(r){
+  return String(valAny(r, [
+    "device","deviceModel","Device","Device Model","endpoint","endpointModel","Phone Model"
+  ], "Unknown"));
+}
+function recLocation(r){
+  return String(valAny(r, [
+    "location","Location","region","Region","site","Site"
+  ], "Unknown"));
+}
+function recResult(r){
+  return String(valAny(r, [
+    "callResult","Call Result","result","Result","status","Status"
+  ], ""));
+}
+function normalizeMediaRecord(r){
+  return {
+    _raw: r,
+    startTime: recStart(r),
+    mos: recMos(r),
+    packetLoss: recPacket(r),
+    jitter: recJitter(r),
+    device: recDevice(r),
+    location: recLocation(r),
+    callResult: recResult(r)
+  };
+}
+
+/* -----------------------------
+   Health scoring / AI insight
+----------------------------- */
+function computeCallHealth(summary){
+  let score = 100;
+
+  const failRate = Number(summary.failRate || 0);
+  const mos = Number(summary.mosAverage || 0);
+  const loss = Number(summary.packetLossAverage || 0);
+  const jitter = Number(summary.jitterAverage || 0);
+
+  if (loss > 0.03) score -= 25;
+  else if (loss > 0.01) score -= 10;
+
+  if (jitter > 40) score -= 20;
+  else if (jitter > 20) score -= 10;
+
+  if (mos < 3.4) score -= 25;
+  else if (mos < 3.8) score -= 15;
+
+  if (failRate > 0.05) score -= 25;
+  else if (failRate > 0.02) score -= 10;
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  const rag = score >= 90 ? "green" : score >= 75 ? "amber" : "red";
+  return { score, rag };
+}
+function linearSlope(points){
+  const vals = (points || []).filter(p => Number.isFinite(p.y));
+  if (vals.length < 2) return 0;
+  const n = vals.length;
+  const xs = vals.map((_,i)=>i);
+  const ys = vals.map(v=>v.y);
+  const sx = sum(xs), sy = sum(ys);
+  const sxy = sum(xs.map((x,i)=> x*ys[i]));
+  const sxx = sum(xs.map(x=>x*x));
+  const den = (n*sxx - sx*sx);
+  if (!den) return 0;
+  return (n*sxy - sx*sy)/den;
+}
+function buildAiInsight(summary, history){
+  const mosSlope = linearSlope(history.map((h,i)=>({x:i, y:Number(h.mosAverage||0)})));
+  const lossSlope = linearSlope(history.map((h,i)=>({x:i, y:Number(h.packetLossAverage||0)})));
+  const failSlope = linearSlope(history.map((h,i)=>({x:i, y:Number(h.failRate||0)})));
+
+  const health = computeCallHealth(summary);
+  const facts = [];
+
+  if (summary.totalCalls === 0){
+    return {
+      title: "No observed call media records",
+      body: "No cached media records were found for the selected tenant. Validate that the scheduled report ran successfully and that the report parser stored current media quality data in KV.",
+      risk: "low",
+      breachDays: null
+    };
+  }
+
+  if (summary.mosAverage >= 4.2) facts.push("MOS remains in a healthy band");
+  else if (summary.mosAverage >= 3.8) facts.push("MOS is acceptable but should be monitored");
+  else facts.push("MOS is below target and indicates degraded user experience");
+
+  if (summary.packetLossAverage > 0.03) facts.push("packet loss is materially elevated");
+  else if (summary.packetLossAverage > 0.01) facts.push("packet loss is moderately elevated");
+  else facts.push("packet loss is low");
+
+  if (summary.jitterAverage > 40) facts.push("jitter is high and likely user-impacting");
+  else if (summary.jitterAverage > 20) facts.push("jitter is above preferred threshold");
+  else facts.push("jitter is stable");
+
+  if (mosSlope < -0.02) facts.push("MOS trend is declining");
+  if (lossSlope > 0.002) facts.push("packet loss trend is worsening");
+  if (failSlope > 0.002) facts.push("failure trend is increasing");
+
+  let root = "Overall quality posture is stable.";
+  if (summary.packetLossAverage > 0.02 || summary.jitterAverage > 30){
+    root = "Primary signal points to <b>network-path degradation</b>, with packet loss and/or jitter driving user experience issues.";
+  } else if (summary.mosAverage < 3.5 && summary.packetLossAverage < 0.01){
+    root = "Primary signal points to a <b>codec or endpoint quality issue</b>, because MOS is low without significant packet loss.";
+  } else if (summary.failRate > 0.04){
+    root = "Primary signal points to a <b>PSTN or signaling-path issue</b>, because failure rate is elevated.";
+  }
+
+  let risk = "low";
+  if (health.rag === "amber") risk = "medium";
+  if (health.rag === "red") risk = "high";
+
+  let breachDays = null;
+  if (history.length >= 3){
+    const projectedHealthDecline = (Math.max(0, (-mosSlope * 18)) + Math.max(0, lossSlope * 500) + Math.max(0, failSlope * 300));
+    if (projectedHealthDecline > 0){
+      const currentScore = health.score;
+      const threshold = 75;
+      const dailyImpact = projectedHealthDecline;
+      if (dailyImpact > 0 && currentScore > threshold){
+        breachDays = Math.max(1, Math.round((currentScore - threshold) / dailyImpact));
+      }
+    }
+  }
+
+  const body =
+    `${root} ` +
+    `Current profile indicates <b>${risk.toUpperCase()}</b> operational risk. ` +
+    `Observed facts: ${facts.join("; ")}.` +
+    (breachDays ? ` Predictive model estimates an SLA risk threshold in approximately <b>${breachDays} day(s)</b> if the current trend persists.` : "");
+
+  return {
+    title: "AI quality narrative",
+    body,
+    risk,
+    breachDays
+  };
+}
+
+/* -----------------------------
+   Aggregations
+----------------------------- */
+function buildDerivedAnalytics(analytics, media){
+  const records = (media || []).map(normalizeMediaRecord);
+  const totalCalls = Number(analytics?.summary?.totalCalls ?? records.length ?? 0);
+
+  const failedCalls = records.filter(r=>{
+    const s = String(r.callResult || "").toLowerCase();
+    return s.includes("fail") || s.includes("failed") || s.includes("busy") || s.includes("no answer");
+  }).length;
+
+  const failRate = totalCalls > 0 ? failedCalls / totalCalls : 0;
+
+  const mosAverage = avg(records.map(r=>r.mos)) ?? Number(analytics?.summary?.mosAverage || 0);
+  const packetLossAverage = avg(records.map(r=>r.packetLoss)) ?? Number(analytics?.summary?.packetLossAverage || 0);
+  const jitterAverage = avg(records.map(r=>r.jitter)) ?? Number(analytics?.summary?.jitterAverage || 0);
+
+  const trends = Array.isArray(analytics?.trends) ? analytics.trends.map(t=>({
+    day: t.day,
+    calls: Number(t.calls || 0),
+    failures: Number(t.failures || 0),
+    mos: Number(t.mos || 0),
+    packetLoss: Number(t.packetLoss || 0),
+    jitter: Number(t.jitter || 0)
+  })) : [];
+
+  return {
+    records,
+    summary: {
+      totalCalls,
+      failedCalls,
+      failRate,
+      mosAverage,
+      packetLossAverage,
+      jitterAverage
+    },
+    trends,
+    devices: Array.isArray(analytics?.devices) ? analytics.devices : [],
+    locations: Array.isArray(analytics?.locations) ? analytics.locations : []
+  };
+}
+
+/* -----------------------------
+   History capture
+----------------------------- */
+function captureDailySnapshot(orgId, derived){
+  if (!orgId) return;
+  const hist = loadHistory(orgId);
+
+  const snapshot = {
+    day: todayKey(),
+    ts: Date.now(),
+    orgId,
+    totalCalls: derived.summary.totalCalls,
+    failRate: derived.summary.failRate,
+    mosAverage: derived.summary.mosAverage,
+    packetLossAverage: derived.summary.packetLossAverage,
+    jitterAverage: derived.summary.jitterAverage
+  };
+
+  saveHistory(orgId, pruneHistory([...(hist||[]), snapshot]));
+}
+
+/* -----------------------------
+   Chart primitives
+----------------------------- */
+function clearCanvas(ctx, w, h){
+  ctx.clearRect(0,0,w,h);
+}
+function drawAxes(ctx, w, h){
+  const line = cssVar("--line");
+  ctx.strokeStyle = line;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(40, 10);
+  ctx.lineTo(40, h-30);
+  ctx.lineTo(w-10, h-30);
+  ctx.stroke();
+}
+function drawText(ctx, text, x, y, opts={}){
+  ctx.fillStyle = opts.color || cssVar("--muted");
+  ctx.font = opts.font || "12px system-ui";
+  ctx.textAlign = opts.align || "left";
+  ctx.fillText(text, x, y);
+}
+function drawLineSeries(ctx, points, color, dashed=false){
+  if (!points.length) return;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  if (dashed) ctx.setLineDash([6,4]);
+  ctx.beginPath();
+  points.forEach((p,i)=>{
+    if (i===0) ctx.moveTo(p.x,p.y);
+    else ctx.lineTo(p.x,p.y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+function drawPoint(ctx, x, y, color, size=4, alpha=0.55){
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, size, size);
+  ctx.globalAlpha = 1;
+}
+function normalizeSeriesWithCurrent(history, key, currentVal){
+  const arr = (history || []).map(h=>({ day:h.day, value:Number(h[key] || 0) }));
+  const today = todayKey();
+  if (!arr.length || arr[arr.length-1].day !== today){
+    arr.push({ day: today, value: Number(currentVal || 0) });
+  }
+  return arr.slice(-30);
+}
+function renderSimpleTrend(canvasId, series, color, labelFormatter){
+  const canvas = $(canvasId);
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+
+  clearCanvas(ctx, w, h);
+  drawAxes(ctx, w, h);
+
+  if (!series.length){
+    drawText(ctx, "No trend data available yet.", 60, 60, { font:"13px system-ui" });
+    return;
+  }
+
+  const vals = series.map(s=>Number(s.value || 0));
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const plotW = w - 60;
+  const plotH = h - 50;
+  const left = 45;
+  const bottom = h - 30;
+  const span = (max - min) || 1;
+
+  const points = series.map((s,i)=>{
+    const x = left + (plotW * (series.length === 1 ? 0 : i/(series.length-1)));
+    const y = bottom - (plotH * ((s.value - min)/span));
+    return { x, y };
+  });
+
+  drawLineSeries(ctx, points, color);
+
+  drawText(ctx, labelFormatter ? labelFormatter(max) : String(max.toFixed?.(2) ?? max), 12, 18, { font:"10px system-ui" });
+  drawText(ctx, labelFormatter ? labelFormatter(min) : String(min.toFixed?.(2) ?? min), 12, bottom, { font:"10px system-ui" });
+
+  const tickEvery = Math.max(1, Math.floor(series.length / 6));
+  for (let i=0;i<series.length;i+=tickEvery){
+    drawText(ctx, String(series[i].day || "").slice(5), points[i].x, bottom + 18, { align:"center", font:"10px system-ui" });
+  }
+}
+function renderHistogram(canvasId, records){
+  const canvas = $(canvasId);
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  clearCanvas(ctx, w, h);
+  drawAxes(ctx, w, h);
+
+  const buckets = [
+    { label:"<3.0", min:-Infinity, max:3.0, count:0 },
+    { label:"3.0-3.5", min:3.0, max:3.5, count:0 },
+    { label:"3.5-4.0", min:3.5, max:4.0, count:0 },
+    { label:"4.0-4.5", min:4.0, max:4.5, count:0 },
+    { label:"4.5+", min:4.5, max:Infinity, count:0 }
+  ];
+  for (const r of records){
+    const m = Number(r.mos);
+    if (!Number.isFinite(m)) continue;
+    const b = buckets.find(x => m >= x.min && m < x.max);
+    if (b) b.count++;
+  }
+  const maxCount = Math.max(1, ...buckets.map(b=>b.count));
+  const plotW = w - 60;
+  const plotH = h - 50;
+  const left = 45;
+  const bottom = h - 30;
+  const barW = plotW / buckets.length * 0.65;
+
+  buckets.forEach((b,i)=>{
+    const x = left + (plotW / buckets.length) * i + 14;
+    const bh = (b.count / maxCount) * plotH;
+    const y = bottom - bh;
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = cssVar("--accent");
+    ctx.fillRect(x, y, barW, bh);
+    ctx.globalAlpha = 1;
+    drawText(ctx, b.label, x + barW/2, bottom + 16, { align:"center", font:"10px system-ui" });
+    drawText(ctx, String(b.count), x + barW/2, y - 6, { align:"center", font:"10px system-ui" });
+  });
+}
+function renderHeatmap(canvasId, records){
+  const canvas = $(canvasId);
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  clearCanvas(ctx, w, h);
+  drawAxes(ctx, w, h);
+
+  drawText(ctx, "MOS", 12, 18, { font:"10px system-ui" });
+  drawText(ctx, "Packet Loss", w-40, h-8, { font:"10px system-ui", align:"right" });
+
+  const plotW = w - 60;
+  const plotH = h - 50;
+  const left = 45;
+  const bottom = h - 30;
+
+  const sample = records.slice(0, 600);
+
+  for (const r of sample){
+    const loss = Math.max(0, Math.min(0.12, Number(r.packetLoss || 0)));
+    const mos = Math.max(1, Math.min(5, Number(r.mos || 0)));
+    const x = left + (loss / 0.12) * plotW;
+    const y = bottom - ((mos - 1) / 4) * plotH;
+
+    let color = cssVar("--good");
+    if (loss > 0.03 || mos < 3.5) color = cssVar("--bad");
+    else if (loss > 0.01 || mos < 4.0) color = cssVar("--warn");
+
+    drawPoint(ctx, x, y, color, 5, 0.35);
+  }
+
+  drawText(ctx, "Healthy cluster", left + 20, 24, { font:"10px system-ui", color: cssVar("--good") });
+  drawText(ctx, "Degraded cluster", w - 120, 24, { font:"10px system-ui", color: cssVar("--bad") });
+}
+function renderSlaTimeline(canvasId, history, currentHealth, breachDays){
+  const canvas = $(canvasId);
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  clearCanvas(ctx, w, h);
+  drawAxes(ctx, w, h);
+
+  const observed = normalizeSeriesWithCurrent(history, "healthScore", currentHealth)
+    .map(x=>({ day:x.day, value:Number(x.value||0) }));
+
+  const projectionDays = 7;
+  const lastVal = observed.length ? observed[observed.length-1].value : currentHealth;
+  const prevVal = observed.length > 1 ? observed[observed.length-2].value : lastVal;
+  const slope = lastVal - prevVal;
+
+  const projected = [];
+  for (let i=1;i<=projectionDays;i++){
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const day = d.toISOString().slice(0,10);
+    const v = Math.max(0, Math.min(100, lastVal + slope*i - (breachDays ? i*0.5 : 0)));
+    projected.push({ day, value:v });
+  }
+
+  const all = [...observed, ...projected];
+  const plotW = w - 60;
+  const plotH = h - 50;
+  const left = 45;
+  const bottom = h - 30;
+
+  const ptsObs = observed.map((s,i)=>{
+    const x = left + (plotW * (all.length === 1 ? 0 : i/(all.length-1)));
+    const y = bottom - (plotH * (s.value/100));
+    return { x, y };
+  });
+  const ptsProj = projected.map((s,i)=>{
+    const idx = observed.length + i;
+    const x = left + (plotW * (all.length === 1 ? 0 : idx/(all.length-1)));
+    const y = bottom - (plotH * (s.value/100));
+    return { x, y };
+  });
+
+  drawLineSeries(ctx, ptsObs, cssVar("--accent"));
+  drawLineSeries(ctx, ptsProj, cssVar("--warn"), true);
+
+  // SLA line at 75
+  const ySla = bottom - (plotH * (75/100));
+  ctx.strokeStyle = cssVar("--bad");
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(40, ySla);
+  ctx.lineTo(w-10, ySla);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  drawText(ctx, "75", 12, ySla + 4, { font:"10px system-ui" });
+
+  const tickEvery = Math.max(1, Math.floor(all.length / 6));
+  all.forEach((s,i)=>{
+    if (i % tickEvery === 0){
+      const x = left + (plotW * (all.length === 1 ? 0 : i/(all.length-1)));
+      drawText(ctx, String(s.day).slice(5), x, bottom + 18, { align:"center", font:"10px system-ui" });
+    }
+  });
+}
+
+/* -----------------------------
+   Tenant / me
+----------------------------- */
+function safeOrgLabel(o){
+  const name = o.displayName || o.name || o.orgName || "Unknown";
+  const id = o.id || o.orgId || "";
+  return `${name}${id ? " — " + id.slice(0,10) + "…" : ""}`;
+}
+async function loadMe(){
+  const r = await api("/api/me");
+  if (!r.ok) throw new Error("Failed to load /api/me");
+  ME = r.data;
+
+  if (ME.role !== "admin" && !ME.orgId){
+    window.location.href = "/pin";
+    return false;
+  }
+
+  $("whoLine").textContent = `${ME.email} (${ME.role})`;
+  $("tenantPill").textContent = `Tenant: ${ME.orgName || "—"}`;
+  $("orgContext").textContent = ME.orgName
+    ? `${ME.orgName} (${ME.resolution} resolution)`
+    : "No tenant resolved";
+
+  $("adminNote").style.display = ME.role === "admin" ? "block" : "none";
+  $("resolutionText").textContent = `Resolution: ${ME.resolution || "—"}`;
+  $("resolutionBadge").className = "badge";
+  $("resolutionBadge").classList.add(ME.resolution ? "good" : "warn");
+  $("resolutionBadge").querySelector(".dot").style.color = ME.resolution ? cssVar("--good") : cssVar("--warn");
+
+  return true;
+}
+async function loadOrgs(){
+  const r = await api("/api/org");
+  if (!r.ok){
+    if (r.status === 401){
+      setError("Tenant not resolved. Please verify your PIN or contact US Signal.");
+      return;
+    }
+    setError("Failed to load org list.");
+    return;
+  }
+
+  ORGS = Array.isArray(r.data) ? r.data : [];
+  const sel = $("tenantSelect");
+  sel.innerHTML = "";
+
+  if (!ORGS.length){
+    sel.innerHTML = `<option value="">No organizations available</option>`;
+    sel.disabled = true;
+    $("btnLoad").disabled = true;
+    return;
+  }
+
+  for (const o of ORGS){
+    const opt = document.createElement("option");
+    opt.value = o.id || o.orgId || "";
+    opt.textContent = safeOrgLabel(o);
+    sel.appendChild(opt);
+  }
+
+  sel.disabled = false;
+  $("btnLoad").disabled = false;
+
+  const defaultOrgId = ME?.orgId || (ORGS[0].id || ORGS[0].orgId);
+  if (defaultOrgId) sel.value = defaultOrgId;
+  SELECTED_ORG_ID = sel.value;
+
+  const hist = loadHistory(SELECTED_ORG_ID);
+  $("snapshotText").textContent = `History: ${hist.length} snapshot(s)`;
+}
+
+/* -----------------------------
+   Load analytics
+----------------------------- */
+function setLastRefresh(){
+  $("lastRefreshPill").textContent = `Last refresh: ${new Date().toLocaleString()}`;
+}
+async function loadAnalytics(){
+  setError(null);
+
+  const orgId = SELECTED_ORG_ID || "";
+  const q = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
+
+  const [aRes, mRes] = await Promise.all([
+    api(`/api/analytics${q}`),
+    api(`/api/analytics/media${q}`)
+  ]);
+
+  if (!aRes.ok){
+    const msg = (aRes.data && (aRes.data.message || aRes.data.error)) || `Failed to load analytics (HTTP ${aRes.status}).`;
+    setError(msg);
+    return;
+  }
+  if (!mRes.ok){
+    const msg = (mRes.data && (mRes.data.message || mRes.data.error)) || `Failed to load media analytics (HTTP ${mRes.status}).`;
+    setError(msg);
+    return;
+  }
+
+  ANALYTICS = aRes.data || {};
+  MEDIA = Array.isArray(mRes.data?.records) ? mRes.data.records : [];
+
+  const derived = buildDerivedAnalytics(ANALYTICS, MEDIA);
+  captureDailySnapshot(SELECTED_ORG_ID, derived);
+  setLastRefresh();
+  renderAll();
+}
+
+/* -----------------------------
+   Render all
+----------------------------- */
+function renderAll(){
+  const derived = buildDerivedAnalytics(ANALYTICS, MEDIA);
+  const history = loadHistory(SELECTED_ORG_ID);
+
+  // history with score
+  const histWithScores = history.map(h=>{
+    const c = computeCallHealth({
+      failRate: Number(h.failRate||0),
+      mosAverage: Number(h.mosAverage||0),
+      packetLossAverage: Number(h.packetLossAverage||0),
+      jitterAverage: Number(h.jitterAverage||0)
+    });
+    return { ...h, healthScore: c.score };
+  });
+
+  INSIGHT = buildAiInsight(derived.summary, histWithScores);
+  const health = computeCallHealth(derived.summary);
+
+  // badges
+  $("snapshotText").textContent = `History: ${history.length} snapshot(s)`;
+  $("snapshotBadge").className = "badge";
+  $("snapshotBadge").classList.add(history.length >= 2 ? "good" : "warn");
+  $("snapshotBadge").querySelector(".dot").style.color = history.length >= 2 ? cssVar("--good") : cssVar("--warn");
+
+  $("recordText").textContent = `Media records: ${fmtInt(derived.records.length)}`;
+  $("recordBadge").className = "badge";
+  $("recordBadge").classList.add(derived.records.length > 0 ? "good" : "warn");
+  $("recordBadge").querySelector(".dot").style.color = derived.records.length > 0 ? cssVar("--good") : cssVar("--warn");
+
+  $("predictionText").textContent = INSIGHT.breachDays ? `Prediction: ~${INSIGHT.breachDays} day(s)` : `Prediction: Stable`;
+  $("predictionBadge").className = "badge";
+  $("predictionBadge").classList.add(INSIGHT.breachDays ? "warn" : "good");
+  $("predictionBadge").querySelector(".dot").style.color = INSIGHT.breachDays ? cssVar("--warn") : cssVar("--good");
+
+  // KPIs
+  $("healthScore").textContent = `${health.score}/100`;
+  $("healthScoreSub").textContent =
+    health.rag === "green" ? "Healthy call quality posture." :
+    health.rag === "amber" ? "Moderate risk — quality drift observed." :
+    "Elevated risk — user impact likely.";
+
+  $("kTotalCalls").textContent = fmtInt(derived.summary.totalCalls);
+  $("kFailRate").textContent = fmtPctFraction(derived.summary.failRate);
+  $("kMos").textContent = fmtMos(derived.summary.mosAverage);
+  $("kPacket").textContent = fmtPctFraction(derived.summary.packetLossAverage);
+  $("kJitter").textContent = fmtMs(derived.summary.jitterAverage);
+
+  // Sidebar RAG
+  const rag = $("ragPill");
+  rag.classList.remove("amber","red");
+  $("ragTitle").textContent = health.rag.toUpperCase();
+  $("ragScore").textContent = String(health.score);
+
+  if (health.rag === "green"){
+    $("ragSub").textContent = "Call quality healthy";
+    $("ragDot").style.background = cssVar("--good");
+  } else if (health.rag === "amber"){
+    rag.classList.add("amber");
+    $("ragSub").textContent = "Quality drift detected";
+    $("ragDot").style.background = cssVar("--warn");
+  } else {
+    rag.classList.add("red");
+    $("ragSub").textContent = "Potential user-impacting issues";
+    $("ragDot").style.background = cssVar("--bad");
+  }
+
+  // AI narrative
+  $("aiInsightBody").innerHTML = INSIGHT.body;
+
+  // Charts
+  renderSlaTimeline("slaTimelineChart", histWithScores, health.score, INSIGHT.breachDays);
+  $("slaSummary").textContent = INSIGHT.breachDays
+    ? `Model predicts health crossing SLA risk threshold in approximately ${INSIGHT.breachDays} day(s) if the current slope persists.`
+    : `No near-term SLA breach predicted from current trend slope.`;
+
+  renderSimpleTrend(
+    "mosTrendChart",
+    normalizeSeriesWithCurrent(history, "mosAverage", derived.summary.mosAverage),
+    cssVar("--accent"),
+    (v)=>Number(v).toFixed(2)
+  );
+  renderSimpleTrend(
+    "packetTrendChart",
+    normalizeSeriesWithCurrent(history, "packetLossAverage", derived.summary.packetLossAverage).map(x=>({day:x.day, value:x.value*100})),
+    cssVar("--warn"),
+    (v)=>`${Number(v).toFixed(2)}%`
+  );
+  renderSimpleTrend(
+    "jitterTrendChart",
+    normalizeSeriesWithCurrent(history, "jitterAverage", derived.summary.jitterAverage),
+    cssVar("--bad"),
+    (v)=>`${Number(v).toFixed(1)}`
+  );
+  renderHistogram("mosHistogramChart", derived.records);
+  renderHeatmap("qualityHeatmapChart", derived.records);
+
+  // tables
+  renderRootCauseTable(derived.records);
+  renderAnomalyTable(derived.records);
+  renderDeviceTable(derived);
+  renderLocationTable(derived);
+}
+
+/* -----------------------------
+   Tables
+----------------------------- */
+function renderRootCauseTable(records){
+  const network = records.filter(r => (Number(r.packetLoss||0) > 0.03) || (Number(r.jitter||0) > 30));
+  const device = records.filter(r => r.device && r.device !== "Unknown" && Number(r.mos||0) > 0 && Number(r.mos||0) < 3.5);
+  const codec = records.filter(r => Number(r.mos||0) > 0 && Number(r.mos||0) < 3.2 && Number(r.packetLoss||0) < 0.01 && Number(r.jitter||0) < 20);
+  const pstn = records.filter(r => String(r.callResult||"").toLowerCase().includes("fail"));
+
+  const rows = [
+    {
+      issue:"High packet loss / jitter calls",
+      count:network.length,
+      cause:"Network",
+      impact: network.length > 20 ? "High" : network.length > 0 ? "Moderate" : "Low",
+      cls: network.length > 20 ? "bad" : network.length > 0 ? "warn" : "good"
+    },
+    {
+      issue:"Low MOS tied to endpoint quality",
+      count:device.length,
+      cause:"Device",
+      impact: device.length > 20 ? "High" : device.length > 0 ? "Moderate" : "Low",
+      cls: device.length > 20 ? "bad" : device.length > 0 ? "warn" : "good"
+    },
+    {
+      issue:"Low MOS without network impairment",
+      count:codec.length,
+      cause:"Codec",
+      impact: codec.length > 20 ? "High" : codec.length > 0 ? "Moderate" : "Low",
+      cls: codec.length > 20 ? "bad" : codec.length > 0 ? "warn" : "good"
+    },
+    {
+      issue:"Call failures / signaling issues",
+      count:pstn.length,
+      cause:"PSTN Path",
+      impact: pstn.length > 20 ? "High" : pstn.length > 0 ? "Moderate" : "Low",
+      cls: pstn.length > 20 ? "bad" : pstn.length > 0 ? "warn" : "good"
+    }
+  ];
+
+  $("rootCauseRows").innerHTML = rows.map(r=>`
+    <tr>
+      <td>${escapeHtml(r.issue)}</td>
+      <td>${fmtInt(r.count)}</td>
+      <td><span class="badge ${r.cls}"><span class="dot"></span>${escapeHtml(r.cause.toUpperCase())}</span></td>
+      <td><span class="health-pill ${r.cls==="good"?"health-good":r.cls==="warn"?"health-mid":"health-bad"}">${escapeHtml(r.impact)}</span></td>
+    </tr>
+  `).join("");
+}
+function classifyAnomaly(r){
+  if (Number(r.packetLoss||0) > 0.05 && Number(r.jitter||0) > 35) return "Network";
+  if (Number(r.mos||0) < 3.2 && Number(r.packetLoss||0) < 0.01) return "Codec / Device";
+  if (String(r.callResult||"").toLowerCase().includes("fail")) return "PSTN / Signaling";
+  return "General quality";
+}
+function renderAnomalyTable(records){
+  const rows = [...records]
+    .filter(r => (Number(r.packetLoss||0) > 0.03) || (Number(r.jitter||0) > 30) || (Number(r.mos||0) > 0 && Number(r.mos||0) < 3.4))
+    .sort((a,b)=>{
+      const sa = (Number(a.packetLoss||0)*100) + Number(a.jitter||0) + (5 - Number(a.mos||5))*20;
+      const sb = (Number(b.packetLoss||0)*100) + Number(b.jitter||0) + (5 - Number(b.mos||5))*20;
+      return sb - sa;
+    })
+    .slice(0, 12);
+
+  if (!rows.length){
+    $("anomalyRows").innerHTML = `<tr><td colspan="5" class="muted" style="text-align:left;">No significant current anomalies detected.</td></tr>`;
+    return;
+  }
+
+  $("anomalyRows").innerHTML = rows.map(r=>`
+    <tr>
+      <td>${escapeHtml(toLocal(r.startTime))}</td>
+      <td>${fmtPctFraction(Number(r.packetLoss||0))}</td>
+      <td>${fmtMs(Number(r.jitter||0))}</td>
+      <td>${fmtMos(Number(r.mos||0))}</td>
+      <td class="muted" style="font-weight:900;">${escapeHtml(classifyAnomaly(r))}</td>
+    </tr>
+  `).join("");
+}
+function riskForEntity(mos, packetLoss){
+  if ((Number(packetLoss||0) > 0.03) || (Number(mos||5) < 3.5)) return { label:"HIGH", cls:"bad" };
+  if ((Number(packetLoss||0) > 0.01) || (Number(mos||5) < 4.0)) return { label:"MEDIUM", cls:"warn" };
+  return { label:"LOW", cls:"good" };
+}
+function buildDeviceRows(derived){
+  const fromWorker = Array.isArray(derived.devices) ? derived.devices : [];
+  if (fromWorker.length) {
+    return fromWorker.map(d=>{
+      const mos = Number(d.mos || 0);
+      const packet = Number(d.packetLoss || 0);
+      const risk = riskForEntity(mos, packet);
+      return {
+        key: String(d.device || "Unknown"),
+        calls: Number(d.calls || 0),
+        mos,
+        packetLoss: packet,
+        risk
+      };
+    });
+  }
+
+  const map = new Map();
+  for (const r of derived.records){
+    const k = r.device || "Unknown";
+    const cur = map.get(k) || { key:k, calls:0, mos:[], packetLoss:[] };
+    cur.calls++;
+    if (Number.isFinite(r.mos)) cur.mos.push(Number(r.mos));
+    if (Number.isFinite(r.packetLoss)) cur.packetLoss.push(Number(r.packetLoss));
+    map.set(k, cur);
+  }
+  return Array.from(map.values()).map(x=>{
+    const risk = riskForEntity(avg(x.mos), avg(x.packetLoss));
+    return { key:x.key, calls:x.calls, mos:avg(x.mos)||0, packetLoss:avg(x.packetLoss)||0, risk };
+  }).sort((a,b)=> b.calls - a.calls).slice(0,10);
+}
+function buildLocationRows(derived){
+  const fromWorker = Array.isArray(derived.locations) ? derived.locations : [];
+  if (fromWorker.length) {
+    return fromWorker.map(l=>{
+      const mos = Number(l.mos || 0);
+      const packet = Number(l.packetLoss || 0);
+      const risk = riskForEntity(mos, packet);
+      return {
+        key: String(l.location || "Unknown"),
+        calls: Number(l.calls || 0),
+        mos,
+        packetLoss: packet,
+        risk
+      };
+    });
+  }
+
+  const map = new Map();
+  for (const r of derived.records){
+    const k = r.location || "Unknown";
+    const cur = map.get(k) || { key:k, calls:0, mos:[], packetLoss:[] };
+    cur.calls++;
+    if (Number.isFinite(r.mos)) cur.mos.push(Number(r.mos));
+    if (Number.isFinite(r.packetLoss)) cur.packetLoss.push(Number(r.packetLoss));
+    map.set(k, cur);
+  }
+  return Array.from(map.values()).map(x=>{
+    const risk = riskForEntity(avg(x.mos), avg(x.packetLoss));
+    return { key:x.key, calls:x.calls, mos:avg(x.mos)||0, packetLoss:avg(x.packetLoss)||0, risk };
+  }).sort((a,b)=> b.calls - a.calls).slice(0,10);
+}
+function renderDeviceTable(derived){
+  const rows = buildDeviceRows(derived);
+  if (!rows.length){
+    $("deviceRows").innerHTML = `<tr><td colspan="5" class="muted" style="text-align:left;">No device-level quality data available.</td></tr>`;
+    return;
+  }
+
+  $("deviceRows").innerHTML = rows.map(r=>`
+    <tr>
+      <td><span class="clickable" data-entity-type="device" data-entity-key="${escapeHtml(r.key)}">${escapeHtml(r.key)}</span></td>
+      <td>${fmtInt(r.calls)}</td>
+      <td>${fmtMos(r.mos)}</td>
+      <td>${fmtPctFraction(r.packetLoss)}</td>
+      <td><span class="badge ${r.risk.cls}"><span class="dot"></span>${r.risk.label}</span></td>
+    </tr>
+  `).join("");
+
+  $("deviceRows").querySelectorAll("[data-entity-key]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      openEntityModal(el.getAttribute("data-entity-type"), el.getAttribute("data-entity-key"));
+    });
+  });
+}
+function renderLocationTable(derived){
+  const rows = buildLocationRows(derived);
+  if (!rows.length){
+    $("locationRows").innerHTML = `<tr><td colspan="5" class="muted" style="text-align:left;">No location-level quality data available.</td></tr>`;
+    return;
+  }
+
+  $("locationRows").innerHTML = rows.map(r=>`
+    <tr>
+      <td><span class="clickable" data-entity-type="location" data-entity-key="${escapeHtml(r.key)}">${escapeHtml(r.key)}</span></td>
+      <td>${fmtInt(r.calls)}</td>
+      <td>${fmtMos(r.mos)}</td>
+      <td>${fmtPctFraction(r.packetLoss)}</td>
+      <td><span class="badge ${r.risk.cls}"><span class="dot"></span>${r.risk.label}</span></td>
+    </tr>
+  `).join("");
+
+  $("locationRows").querySelectorAll("[data-entity-key]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      openEntityModal(el.getAttribute("data-entity-type"), el.getAttribute("data-entity-key"));
+    });
+  });
+}
+
+/* -----------------------------
+   Modal
+----------------------------- */
+function filterEntityRecords(type, key){
+  const derived = buildDerivedAnalytics(ANALYTICS, MEDIA);
+  if (type === "device") return derived.records.filter(r => String(r.device || "Unknown") === String(key));
+  if (type === "location") return derived.records.filter(r => String(r.location || "Unknown") === String(key));
+  return [];
+}
+function entityHistorySeries(type, key){
+  // Current page stores only tenant aggregate history.
+  // Build best-effort entity history from current records only.
+  const rows = filterEntityRecords(type, key);
+  const map = new Map();
+  for (const r of rows){
+    const day = String(r.startTime || "").slice(0,10);
+    if (!day) continue;
+    const cur = map.get(day) || { day, mos:[], packetLoss:[], calls:0 };
+    cur.calls++;
+    if (Number.isFinite(r.mos)) cur.mos.push(Number(r.mos));
+    if (Number.isFinite(r.packetLoss)) cur.packetLoss.push(Number(r.packetLoss));
+    map.set(day, cur);
+  }
+  return Array.from(map.values())
+    .sort((a,b)=> a.day.localeCompare(b.day))
+    .map(x=>({ day:x.day, mos:avg(x.mos)||0, packetLoss:avg(x.packetLoss)||0, calls:x.calls }));
+}
+function renderEntityTrend(type, key){
+  const canvas = $("entityTrendChart");
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  clearCanvas(ctx, w, h);
+  drawAxes(ctx, w, h);
+
+  const series = entityHistorySeries(type, key);
+  if (!series.length){
+    drawText(ctx, "No entity trend data available.", 60, 60, { font:"13px system-ui" });
+    return;
+  }
+
+  const vals = series.map(s=>s.mos);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const plotW = w - 60;
+  const plotH = h - 50;
+  const left = 45;
+  const bottom = h - 30;
+  const span = (max - min) || 1;
+
+  const points = series.map((s,i)=>{
+    const x = left + (plotW * (series.length === 1 ? 0 : i/(series.length-1)));
+    const y = bottom - (plotH * ((s.mos - min)/span));
+    return { x, y };
+  });
+  drawLineSeries(ctx, points, cssVar("--accent"));
+
+  const tickEvery = Math.max(1, Math.floor(series.length / 6));
+  for (let i=0;i<series.length;i+=tickEvery){
+    drawText(ctx, series[i].day.slice(5), points[i].x, bottom + 18, { align:"center", font:"10px system-ui" });
+  }
+}
+function openEntityModal(type, key){
+  ACTIVE_ENTITY = { type, key };
+  const rows = filterEntityRecords(type, key);
+
+  const calls = rows.length;
+  const mos = avg(rows.map(r=>r.mos));
+  const loss = avg(rows.map(r=>r.packetLoss));
+  const risk = riskForEntity(mos, loss);
+
+  $("detailModalOverlay").style.display = "flex";
+  $("detailModalTitle").textContent = `${type === "device" ? "Device" : "Location"} Detail — ${key}`;
+  $("detailModalSub").textContent = `Tenant orgId: ${SELECTED_ORG_ID || "—"} • Current cached media records`;
+
+  $("mCalls").textContent = fmtInt(calls);
+  $("mCallsSub").textContent = "Current observed records";
+  $("mMos").textContent = fmtMos(mos);
+  $("mMosSub").textContent = `Packet Loss: ${fmtPctFraction(loss)}`;
+  $("mRisk").textContent = risk.label;
+  $("mRisk").style.color = risk.cls === "bad" ? cssVar("--bad") : risk.cls === "warn" ? cssVar("--warn") : cssVar("--good");
+  $("mRiskSub").textContent =
+    risk.cls === "bad" ? "Entity is contributing to degraded quality." :
+    risk.cls === "warn" ? "Entity should be monitored." :
+    "Entity quality appears stable.";
+
+  renderEntityTrend(type, key);
+
+  const guidance = [];
+  if (type === "device"){
+    if (risk.cls === "bad"){
+      guidance.push("Review endpoint firmware, network attachment type, and user-reported symptoms for this device model.");
+      guidance.push("Compare wired vs wireless usage and validate whether the device is overrepresented in low-MOS calls.");
+    } else if (risk.cls === "warn"){
+      guidance.push("Monitor this device class for recurring degradation and validate patch/firmware consistency.");
+    } else {
+      guidance.push("Device posture appears stable. Keep monitoring for trend drift.");
+    }
+  } else {
+    if (risk.cls === "bad"){
+      guidance.push("Validate WAN/SD-WAN path, packet loss on the site edge, and local congestion for this location.");
+      guidance.push("Correlate this location with provider incidents or PSTN handoff issues.");
+    } else if (risk.cls === "warn"){
+      guidance.push("Monitor this location for early signs of network-path degradation.");
+    } else {
+      guidance.push("Location posture appears stable. Continue routine monitoring.");
+    }
+  }
+  $("entityGuidance").textContent = guidance.join(" ");
+
+  $("btnExportEntityCsv").onclick = ()=> exportEntityCsv(type, key, rows);
+}
+function closeEntityModal(){
+  $("detailModalOverlay").style.display = "none";
+  ACTIVE_ENTITY = null;
+}
+$("btnCloseDetailModal").addEventListener("click", closeEntityModal);
+$("detailModalOverlay").addEventListener("click", (e)=>{
+  if (e.target && e.target.id === "detailModalOverlay") closeEntityModal();
+});
+document.addEventListener("keydown", (e)=>{
+  if (e.key === "Escape") closeEntityModal();
+});
+function exportEntityCsv(type, key, rows){
+  const csvRows = [["type","key","startTime","mos","packetLoss","jitter","callResult"]];
+  for (const r of rows){
+    csvRows.push([
+      type,
+      key,
+      r.startTime || "",
+      Number.isFinite(r.mos) ? r.mos : "",
+      Number.isFinite(r.packetLoss) ? r.packetLoss : "",
+      Number.isFinite(r.jitter) ? r.jitter : "",
+      r.callResult || ""
+    ]);
+  }
+  downloadCsv(`${type}_${safeFile(key)}_${todayKey()}.csv`, csvRows);
+}
+
+/* -----------------------------
+   CSV export
+----------------------------- */
+function downloadCsv(filename, rows){
+  const csv = rows.map(r => r.map(v=>{
+    const s = String(v ?? "");
+    const needs = s.includes(",") || s.includes('"') || s.includes("\n");
+    if (!needs) return s;
+    return `"${s.replaceAll('"','""')}"`;
+  }).join(",")).join("\n");
+
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+$("btnExportCsv").addEventListener("click", ()=>{
+  const derived = buildDerivedAnalytics(ANALYTICS, MEDIA);
+  const rows = [["startTime","mos","packetLoss","jitter","device","location","callResult"]];
+  for (const r of derived.records){
+    rows.push([
+      r.startTime || "",
+      Number.isFinite(r.mos) ? r.mos : "",
+      Number.isFinite(r.packetLoss) ? r.packetLoss : "",
+      Number.isFinite(r.jitter) ? r.jitter : "",
+      r.device || "",
+      r.location || "",
+      r.callResult || ""
+    ]);
+  }
+  downloadCsv(`analytics_${safeFile(SELECTED_ORG_ID)}_${todayKey()}.csv`, rows);
+});
+$("btnExportHistory").addEventListener("click", ()=>{
+  const hist = loadHistory(SELECTED_ORG_ID);
+  const rows = [["day","totalCalls","failRate","mosAverage","packetLossAverage","jitterAverage"]];
+  hist.forEach(h=>{
+    rows.push([h.day, h.totalCalls, h.failRate, h.mosAverage, h.packetLossAverage, h.jitterAverage]);
+  });
+  downloadCsv(`analytics_history_${safeFile(SELECTED_ORG_ID)}_${todayKey()}.csv`, rows);
+});
+$("btnClearHistory").addEventListener("click", ()=>{
+  if (!SELECTED_ORG_ID) return;
+  try { localStorage.removeItem(histKey(SELECTED_ORG_ID)); } catch {}
+  renderAll();
+});
+
+/* -----------------------------
+   Events
+----------------------------- */
+$("btnLoad").addEventListener("click", async ()=>{
+  SELECTED_ORG_ID = $("tenantSelect").value;
+  await loadAnalytics();
+});
+$("btnRefresh").addEventListener("click", async ()=>{
+  await loadAnalytics();
+});
+$("tenantSelect").addEventListener("change", ()=>{
+  SELECTED_ORG_ID = $("tenantSelect").value;
+  const hist = loadHistory(SELECTED_ORG_ID);
+  $("snapshotText").textContent = `History: ${hist.length} snapshot(s)`;
+});
+$("btnLogout").addEventListener("click", async ()=>{
+  try { await fetch("/api/logout", { method:"POST" }); } catch {}
+  window.location.href = "/pin";
+});
+
+/* -----------------------------
+   Init
+----------------------------- */
 async function init(){
+  try{
+    setError(null);
 
-const me=await api("/api/me")
+    const ok = await loadMe();
+    if (!ok) return;
 
-ORG_ID=me.orgId
+    await loadOrgs();
+    SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
 
-document.getElementById("tenantLine").textContent=me.orgName
+    await loadAnalytics();
 
-const media=await api(`/api/analytics/media?orgId=${ORG_ID}`)
-
-MEDIA=media.records||[]
-
-analyze()
-
+  } catch (e){
+    setError(e?.message || String(e));
+  }
 }
 
-function analyze(){
-
-if(!MEDIA.length)return
-
-let mos=0
-let loss=0
-let jitter=0
-
-MEDIA.forEach(r=>{
-mos+=r.mos||0
-loss+=r.packetLoss||0
-jitter+=r.jitter||0
-})
-
-mos/=MEDIA.length
-loss/=MEDIA.length
-jitter/=MEDIA.length
-
-document.getElementById("kMos").textContent=mos.toFixed(2)
-document.getElementById("kLoss").textContent=(loss*100).toFixed(2)+"%"
-document.getElementById("kJitter").textContent=jitter.toFixed(1)
-
-const score=computeHealth(mos,loss,jitter)
-
-document.getElementById("kHealth").textContent=score
-
-drawHistogram()
-detectRoot()
-detectAnomalies()
-
-}
-
-function computeHealth(mos,loss,jitter){
-
-let score=100
-
-if(loss>0.03)score-=25
-else if(loss>0.01)score-=10
-
-if(jitter>40)score-=20
-else if(jitter>20)score-=10
-
-if(mos<3.8)score-=15
-if(mos<3.4)score-=25
-
-score=Math.max(0,score)
-
-document.getElementById("healthScore").textContent=score
-
-return score
-
-}
-
-/* MOS HISTOGRAM */
-
-function drawHistogram(){
-
-const bins=[0,0,0,0,0]
-
-MEDIA.forEach(r=>{
-const m=r.mos||0
-
-if(m>=4.5)bins[4]++
-else if(m>=4)bins[3]++
-else if(m>=3.5)bins[2]++
-else if(m>=3)bins[1]++
-else bins[0]++
-
-})
-
-const canvas=document.getElementById("mosHistogram")
-const ctx=canvas.getContext("2d")
-
-const max=Math.max(...bins)
-
-bins.forEach((b,i)=>{
-const h=(b/max)*canvas.height
-ctx.fillStyle="#0f62fe"
-ctx.fillRect(i*80,canvas.height-h,60,h)
-})
-
-}
-
-/* ROOT CAUSE */
-
-function detectRoot(){
-
-const net=MEDIA.filter(r=>r.packetLoss>0.03||r.jitter>30)
-const device=MEDIA.filter(r=>r.deviceModel&&r.mos<3.5)
-const codec=MEDIA.filter(r=>r.mos<3.2&&r.packetLoss<0.01)
-const pstn=MEDIA.filter(r=>r.callResult==="failed")
-
-const rows=document.getElementById("rootRows")
-
-rows.innerHTML=`
-
-<tr>
-<td>Network impairment</td>
-<td>${net.length}</td>
-<td><span class="badge bad">Network</span></td>
-</tr>
-
-<tr>
-<td>Endpoint quality</td>
-<td>${device.length}</td>
-<td><span class="badge warn">Device</span></td>
-</tr>
-
-<tr>
-<td>Codec degradation</td>
-<td>${codec.length}</td>
-<td><span class="badge warn">Codec</span></td>
-</tr>
-
-<tr>
-<td>Call failures</td>
-<td>${pstn.length}</td>
-<td><span class="badge bad">PSTN</span></td>
-</tr>
-
-`
-
-}
-
-/* ANOMALIES */
-
-function detectAnomalies(){
-
-const rows=document.getElementById("anomalyRows")
-
-MEDIA.filter(r=>r.packetLoss>0.05).slice(0,10).forEach(r=>{
-
-rows.innerHTML+=`
-<tr>
-<td>${r.startTime}</td>
-<td>${(r.packetLoss*100).toFixed(2)}%</td>
-<td>${r.mos.toFixed(2)}</td>
-</tr>
-`
-
-})
-
-}
-
-/* EXPORT */
-
-document.getElementById("btnExport").onclick=()=>{
-
-let csv="time,mos,packetLoss,jitter\n"
-
-MEDIA.forEach(r=>{
-csv+=`${r.startTime},${r.mos},${r.packetLoss},${r.jitter}\n`
-})
-
-const blob=new Blob([csv])
-const a=document.createElement("a")
-
-a.href=URL.createObjectURL(blob)
-a.download="analytics.csv"
-a.click()
-
-}
-
-document.getElementById("btnRefresh").onclick=()=>init()
-
-init()
-
+init();
 </script>
 
 </body>
