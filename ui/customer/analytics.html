@@ -526,20 +526,23 @@ hr.sep{
 
 <div class="main">
 
-  <!-- HEADER -->
-  <div class="header-card">
-    <div class="header-left">
-      <div class="h">Webex Calling — Analytics Intelligence 2.0</div>
-      <div class="sub" id="whoLine">Loading…</div>
-    </div>
-
-    <div class="header-actions">
-      <div class="pill" id="tenantPill">Tenant: —</div>
-      <div class="pill" id="lastRefreshPill">Last refresh: —</div>
-      <button class="btn-outline" id="btnRefresh">Refresh</button>
-      <button class="btn-outline" id="btnExportCsv">Export CSV</button>
-    </div>
+<!-- HEADER -->
+<div class="header-card">
+  <div class="header-left">
+    <div class="h">Webex Calling — Analytics Intelligence 2.0</div>
+    <div class="sub" id="whoLine">Loading…</div>
   </div>
+
+  <div class="header-actions">
+    <div class="pill" id="tenantPill">Tenant: —</div>
+    <div class="pill" id="lastRefreshPill">Last refresh: —</div>
+
+    <button class="btn-outline" id="btnRunReports">Run Reports</button>
+
+    <button class="btn-outline" id="btnRefresh">Refresh</button>
+    <button class="btn-outline" id="btnExportCsv">Export CSV</button>
+  </div>
+</div>
 
   <!-- TENANT CONTEXT -->
   <div class="card">
@@ -2130,7 +2133,41 @@ async function init(){
     setError(e?.message || String(e));
   }
 }
+document.getElementById("btnRunReports").addEventListener("click", runReports);
 
+async function runReports(){
+
+  const btn = document.getElementById("btnRunReports");
+
+  btn.disabled = true;
+  btn.textContent = "Running…";
+
+  try {
+
+    const r = await fetch("/api/admin/run-reports",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ orgId: ORG_ID })
+    });
+
+    const data = await r.json();
+
+    alert(
+      "CDR Records: " + (data.cdrRecords || 0) +
+      "\nMedia Records: " + (data.mediaRecords || 0)
+    );
+
+    await loadAnalytics();
+
+  } catch(err){
+
+    alert("Failed to run reports: " + err);
+
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Run Reports";
+}
 init();
 </script>
 
