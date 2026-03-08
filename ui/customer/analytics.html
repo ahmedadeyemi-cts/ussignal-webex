@@ -33,8 +33,6 @@ display:flex;
 min-height:100vh;
 }
 
-/* SIDEBAR */
-
 .sidebar{
 width:270px;
 background:var(--card);
@@ -82,8 +80,6 @@ text-align:center;
 .summary-green{background:rgba(22,163,74,.15);color:var(--good);}
 .summary-amber{background:rgba(245,158,11,.15);color:var(--warn);}
 .summary-red{background:rgba(220,38,38,.15);color:var(--bad);}
-
-/* MAIN */
 
 .main{
 flex:1;
@@ -169,6 +165,18 @@ font-size:11px;
 .badge-warn{background:rgba(245,158,11,.15);color:var(--warn);}
 .badge-bad{background:rgba(220,38,38,.15);color:var(--bad);}
 
+.rc-pill{
+padding:6px 10px;
+border-radius:8px;
+font-weight:900;
+font-size:12px;
+}
+
+.rc-network{background:#fee2e2;color:#991b1b;}
+.rc-device{background:#dbeafe;color:#1e40af;}
+.rc-codec{background:#fef3c7;color:#92400e;}
+.rc-pstn{background:#e0f2fe;color:#0369a1;}
+
 </style>
 
 </head>
@@ -187,7 +195,6 @@ font-size:11px;
 
 <div class="nav">
 <a href="/customer">Dashboard</a>
-<a href="/customer/observability">Observability</a>
 <a href="/customer/licenses">Licenses</a>
 <a href="/customer/devices">Devices</a>
 <a class="active" href="/customer/analytics">Analytics</a>
@@ -210,57 +217,26 @@ font-size:11px;
 <button id="btnExport">Export CSV</button>
 </div>
 
-<!-- KPI ROW -->
-
-<div class="row">
-
-<div class="card" style="flex:1">
-<h2>Total Calls</h2>
-<div style="font-size:28px;font-weight:1000" id="kpiCalls">—</div>
-</div>
-
-<div class="card" style="flex:1">
-<h2>Success Rate</h2>
-<div style="font-size:28px;font-weight:1000" id="kpiSuccess">—</div>
-</div>
-
-<div class="card" style="flex:1">
-<h2>Avg MOS</h2>
-<div style="font-size:28px;font-weight:1000" id="kpiMos">—</div>
-</div>
-
-<div class="card" style="flex:1">
-<h2>Packet Loss</h2>
-<div style="font-size:28px;font-weight:1000" id="kpiPacket">—</div>
-</div>
-
-<div class="card" style="flex:1">
-<h2>Jitter</h2>
-<div style="font-size:28px;font-weight:1000" id="kpiJitter">—</div>
-</div>
-
-<div class="card" style="flex:1">
-<h2>SLA</h2>
-<div id="slaStatus">—</div>
-</div>
-
-</div>
-
-<!-- TREND CHARTS -->
+<!-- ROOT CAUSE ANALYSIS -->
 
 <div class="card">
-<h2>Call Volume Trend</h2>
-<canvas id="trendChart" height="100"></canvas>
-</div>
 
-<div class="card">
-<h2>MOS Trend</h2>
-<canvas id="mosChart" height="100"></canvas>
-</div>
+<h2>Automatic Root Cause Detection</h2>
 
-<div class="card">
-<h2>Packet Loss Trend</h2>
-<canvas id="packetChart" height="100"></canvas>
+<table>
+
+<thead>
+<tr>
+<th>Detected Issue</th>
+<th class="right">Affected Calls</th>
+<th>Root Cause</th>
+</tr>
+</thead>
+
+<tbody id="rootCauseRows"></tbody>
+
+</table>
+
 </div>
 
 <!-- MOS HISTOGRAM -->
@@ -274,6 +250,7 @@ font-size:11px;
 
 <div class="card">
 <h2>Packet Loss Anomalies</h2>
+
 <table>
 <thead>
 <tr>
@@ -282,48 +259,18 @@ font-size:11px;
 <th class="right">MOS</th>
 </tr>
 </thead>
+
 <tbody id="anomalyRows"></tbody>
+
 </table>
+
 </div>
 
 <!-- HEATMAP -->
 
 <div class="card">
 <h2>Call Quality Heatmap</h2>
-<canvas id="qualityHeatmap" height="200"></canvas>
-</div>
-
-<!-- DEVICE TABLE -->
-
-<div class="card">
-<h2>Device Quality</h2>
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th class="right">Calls</th>
-<th class="right">MOS</th>
-<th class="right">Packet Loss</th>
-</tr>
-</thead>
-<tbody id="deviceRows"></tbody>
-</table>
-</div>
-
-<!-- LOCATION TABLE -->
-
-<div class="card">
-<h2>Location Quality</h2>
-<table>
-<thead>
-<tr>
-<th>Location</th>
-<th class="right">Calls</th>
-<th class="right">MOS</th>
-</tr>
-</thead>
-<tbody id="locationRows"></tbody>
-</table>
+<canvas id="qualityHeatmap" height="220"></canvas>
 </div>
 
 </div>
@@ -331,87 +278,44 @@ font-size:11px;
 <script>
 
 let ORG_ID
-let DATA
 let MEDIA=[]
 
 async function init(){
 
 const me=await fetch("/api/me").then(r=>r.json())
+
 ORG_ID=me.orgId
+
 document.getElementById("tenantLine").textContent=me.orgName
 
-DATA=await fetch(`/api/analytics?orgId=${ORG_ID}`).then(r=>r.json())
-MEDIA=await fetch(`/api/analytics/media?orgId=${ORG_ID}`).then(r=>r.json())
+const media=await fetch(`/api/analytics/media?orgId=${ORG_ID}`).then(r=>r.json())
 
-render()
-
-}
-
-function render(){
-
-const s=DATA.summary
-
-document.getElementById("kpiCalls").textContent=s.totalCalls.toLocaleString()
-document.getElementById("kpiSuccess").textContent=(s.successRate*100).toFixed(1)+"%"
-document.getElementById("kpiMos").textContent=s.mosAverage.toFixed(2)
-document.getElementById("kpiPacket").textContent=(s.packetLossAverage*100).toFixed(2)+"%"
-document.getElementById("kpiJitter").textContent=s.jitterAverage.toFixed(2)
-
-setSLA(s.successRate)
-
-drawLine("trendChart",DATA.trends.map(x=>x.calls))
-drawLine("mosChart",DATA.trends.map(x=>x.mos))
-drawLine("packetChart",DATA.trends.map(x=>x.packetLoss))
+MEDIA=media.records || []
 
 drawHistogram()
 drawHeatmap()
-renderDevices()
-renderLocations()
+detectRootCauses()
 renderAnomalies()
 
 }
-
-function drawLine(id,data){
-
-const canvas=document.getElementById(id)
-const ctx=canvas.getContext("2d")
-
-const max=Math.max(...data)
-
-ctx.beginPath()
-
-data.forEach((v,i)=>{
-
-const x=i*(canvas.width/(data.length-1))
-const y=canvas.height-(v/max)*canvas.height
-
-if(i===0)ctx.moveTo(x,y)
-else ctx.lineTo(x,y)
-
-})
-
-ctx.strokeStyle="#0f62fe"
-ctx.stroke()
-
-}
-
-/* MOS HISTOGRAM */
 
 function drawHistogram(){
 
 const canvas=document.getElementById("mosHistogram")
 const ctx=canvas.getContext("2d")
 
-const mos=MEDIA.records.map(r=>r.mos||0)
-
 const bins=[0,0,0,0,0]
 
-mos.forEach(v=>{
-if(v>=4.5)bins[4]++
-else if(v>=4)bins[3]++
-else if(v>=3.5)bins[2]++
-else if(v>=3)bins[1]++
+MEDIA.forEach(r=>{
+
+const mos=r.mos||0
+
+if(mos>=4.5)bins[4]++
+else if(mos>=4)bins[3]++
+else if(mos>=3.5)bins[2]++
+else if(mos>=3)bins[1]++
 else bins[0]++
+
 })
 
 const max=Math.max(...bins)
@@ -428,17 +332,11 @@ ctx.fillRect(x,canvas.height-h,50,h)
 
 }
 
-/* ANOMALY DETECTION */
-
 function renderAnomalies(){
 
 const rows=document.getElementById("anomalyRows")
-rows.innerHTML=""
 
-MEDIA.records
-.filter(r=>r.packetLoss>0.05)
-.slice(0,10)
-.forEach(r=>{
+MEDIA.filter(r=>r.packetLoss>0.05).slice(0,10).forEach(r=>{
 
 rows.innerHTML+=`
 <tr>
@@ -452,14 +350,12 @@ rows.innerHTML+=`
 
 }
 
-/* HEATMAP */
-
 function drawHeatmap(){
 
 const canvas=document.getElementById("qualityHeatmap")
 const ctx=canvas.getContext("2d")
 
-MEDIA.records.slice(0,500).forEach(r=>{
+MEDIA.slice(0,500).forEach(r=>{
 
 const x=r.packetLoss*canvas.width*5
 const y=canvas.height-(r.mos*40)
@@ -471,92 +367,52 @@ ctx.fillRect(x,y,4,4)
 
 }
 
-/* DEVICES */
+/* ROOT CAUSE DETECTION */
 
-function renderDevices(){
+function detectRootCauses(){
 
-const tbody=document.getElementById("deviceRows")
-tbody.innerHTML=""
+const rows=document.getElementById("rootCauseRows")
 
-DATA.devices.forEach(d=>{
+const network=MEDIA.filter(r=>r.packetLoss>0.03||r.jitter>30)
+const device=MEDIA.filter(r=>r.deviceModel && r.mos<3.5)
+const codec=MEDIA.filter(r=>r.mos<3.2 && r.packetLoss<0.01)
+const pstn=MEDIA.filter(r=>r.callResult==="failed")
 
-tbody.innerHTML+=`
+rows.innerHTML=`
+
 <tr>
-<td>${d.device}</td>
-<td class="right">${d.calls}</td>
-<td class="right">${d.mos.toFixed(2)}</td>
-<td class="right">${(d.packetLoss*100).toFixed(2)}%</td>
+<td>High packet loss / jitter</td>
+<td class="right">${network.length}</td>
+<td><span class="rc-pill rc-network">Network</span></td>
 </tr>
-`
 
-})
-
-}
-
-/* LOCATIONS */
-
-function renderLocations(){
-
-const tbody=document.getElementById("locationRows")
-tbody.innerHTML=""
-
-DATA.locations.forEach(l=>{
-
-tbody.innerHTML+=`
 <tr>
-<td>${l.location}</td>
-<td class="right">${l.calls}</td>
-<td class="right">${l.mos.toFixed(2)}</td>
+<td>Low MOS by endpoint</td>
+<td class="right">${device.length}</td>
+<td><span class="rc-pill rc-device">Device</span></td>
 </tr>
+
+<tr>
+<td>Low MOS without packet loss</td>
+<td class="right">${codec.length}</td>
+<td><span class="rc-pill rc-codec">Codec</span></td>
+</tr>
+
+<tr>
+<td>Failed calls</td>
+<td class="right">${pstn.length}</td>
+<td><span class="rc-pill rc-pstn">PSTN Path</span></td>
+</tr>
+
 `
-
-})
-
-}
-
-function setSLA(rate){
-
-const el=document.getElementById("slaStatus")
-const pill=document.getElementById("ragPill")
-
-if(rate>=0.98){
-el.innerHTML='<span class="badge badge-good">MEETING SLA</span>'
-pill.className="summary-pill summary-green"
-pill.textContent="GREEN"
-}
-else if(rate>=0.95){
-el.innerHTML='<span class="badge badge-warn">AT RISK</span>'
-pill.className="summary-pill summary-amber"
-pill.textContent="AMBER"
-}
-else{
-el.innerHTML='<span class="badge badge-bad">BREACH</span>'
-pill.className="summary-pill summary-red"
-pill.textContent="RED"
-}
-
-}
-
-document.getElementById("btnExport").onclick=()=>{
-
-let csv="day,calls,mos\n"
-
-DATA.trends.forEach(d=>{
-csv+=`${d.day},${d.calls},${d.mos}\n`
-})
-
-const blob=new Blob([csv])
-const url=URL.createObjectURL(blob)
-
-const a=document.createElement("a")
-a.href=url
-a.download="analytics.csv"
-a.click()
 
 }
 
 function logout(){
-fetch("/api/logout",{method:"POST"}).then(()=>location.href="/")
+
+fetch("/api/logout",{method:"POST"})
+.then(()=>location.href="/")
+
 }
 
 init()
