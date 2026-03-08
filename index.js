@@ -7786,11 +7786,11 @@ if (url.pathname.endsWith("/file") &&
 async function collectCdrHistory(env, orgId){
 
   const now = new Date().toISOString();
- /*const from = new Date(Date.now() - 7*24*60*60*1000)*/
   const from = new Date(Date.now() - 24*60*60*1000).toISOString();
 
   const path =
-    `/v1/cdr_feed?startTime=${encodeURIComponent(from)}` +
+    `/cdr_feed` +
+    `?startTime=${encodeURIComponent(from)}` +
     `&endTime=${encodeURIComponent(now)}` +
     `&max=1000`;
 
@@ -7803,7 +7803,18 @@ async function collectCdrHistory(env, orgId){
     );
   }
 
-  const records = normalizeCdrItems(result.data);
+  const items = result.data?.items || [];
+
+  const records = items.map(x => ({
+    callId: x.id,
+    startTime: x.startTime,
+    duration: x.durationSeconds || 0,
+    result: x.callResult || "unknown",
+    calling: x.localCallId || "",
+    called: x.remoteCallId || "",
+    direction: x.direction || "",
+    device: x.deviceType || ""
+  }));
 
   await env.WEBEX.put(
     `cdrCache:${orgId}`,
