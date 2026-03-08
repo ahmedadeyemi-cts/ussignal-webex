@@ -525,6 +525,156 @@ function scopeModeForPath(path) {
   const rule = ORG_SCOPE_RULES.find(r => r.test(p));
   return rule ? rule.mode : "header";
 }
+/* =====================================================
+   GLOBAL WEBEX API THROTTLE CONTROLLER
+   - per-worker pacing
+   - retry-after aware
+   - exponential backoff with jitter
+   - concurrency cap
+===================================================== */
+
+const WEBEX_THROTTLE = {
+  minSpacingMs: 250,      // base spacing between outbound Webex calls
+  maxRetries: 6,          // retries for 429/5xx
+  baseBackoffMs: 1000,    // starting backoff
+  maxBackoffMs: 20000,    // ceiling
+  maxConcurrency: 2       // per worker isolate
+};
+
+let __webexInFlight = 0;
+let __webexLastCallAt = 0;
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function jitter(ms) {
+  return Math.floor(ms * (0.85 + Math.random() * 0.3));
+}
+
+async function acquireWebexSlot() {
+  while (__webexInFlight >= WEBEX_THROTTLE.maxConcurrency) {
+    await sleep(100);
+  }
+
+  __webexInFlight++;
+
+  const now = Date.now();
+  const waitForSpacing = Math.max(
+    0,
+    (__webexLastCallAt + WEBEX_THROTTLE.minSpacingMs) - now
+  );
+
+  if (waitForSpacing > 0) {
+    await sleep(waitForSpacing);
+  }
+
+  __webexLastCallAt = Date.now();
+}
+
+function releaseWebexSlot() {
+  __webexInFlight = Math.max(0, __webexInFlight - 1);
+}
+
+function parseRetryAfter(headers) {
+  const ra =
+    headers.get("retry-after") ||
+    headers.get("Retry-After") ||
+    "";
+
+  if (!ra) return null;
+
+  const sec = Number(ra);
+  if (Number.isFinite(sec)) {
+    return sec * 1000;
+  }
+
+  const when = new Date(ra).getTime();
+  if (Number.isFinite(when)) {
+    return Math.max(0, when - Date.now());
+  }
+
+  return null;
+}
+
+async function throttledWebexFetch(url, init = {}) {
+  let lastErr = null;
+
+  for (let attempt = 0; attempt <= WEBEX_THROTTLE.maxRetries; attempt++) {
+    await acquireWebexSlot();
+
+    try {
+      const res = await fetch(url, init);
+
+      if (res.ok) {
+        return res;
+      }
+
+      const shouldRetry =
+        res.status === 429 ||
+        res.status === 408 ||
+        res.status === 425 ||
+        res.status === 500 ||
+        res.status === 502 ||
+        res.status === 503 ||
+        res.status === 504;
+
+      if (!shouldRetry) {
+        return res;
+      }
+
+      const retryAfterMs = parseRetryAfter(res.headers);
+
+      const expBackoff = Math.min(
+        WEBEX_THROTTLE.maxBackoffMs,
+        WEBEX_THROTTLE.baseBackoffMs * Math.pow(2, attempt)
+      );
+
+      const waitMs = retryAfterMs ?? jitter(expBackoff);
+
+      console.log("WEBEX RETRY", {
+        status: res.status,
+        attempt,
+        waitMs,
+        url: String(url).slice(0, 250)
+      });
+
+      if (attempt === WEBEX_THROTTLE.maxRetries) {
+        return res;
+      }
+
+      await sleep(waitMs);
+      continue;
+
+    } catch (err) {
+      lastErr = err;
+
+      const waitMs = jitter(
+        Math.min(
+          WEBEX_THROTTLE.maxBackoffMs,
+          WEBEX_THROTTLE.baseBackoffMs * Math.pow(2, attempt)
+        )
+      );
+
+      console.log("WEBEX FETCH EXCEPTION RETRY", {
+        attempt,
+        waitMs,
+        error: String(err)
+      });
+
+      if (attempt === WEBEX_THROTTLE.maxRetries) {
+        throw err;
+      }
+
+      await sleep(waitMs);
+
+    } finally {
+      releaseWebexSlot();
+    }
+  }
+
+  throw lastErr || new Error("webex_fetch_failed_unknown");
+}
 async function webexFetch(env, path, orgId = null, options = {}) {
 
   if (orgId) {
@@ -546,7 +696,6 @@ async function webexFetch(env, path, orgId = null, options = {}) {
     finalPath.startsWith("/calling/analytics") ||
     finalPath.startsWith("/cdr_feed");
 
-
   const base = isAnalytics ? analyticsBase(env) : webexBase(env);
   const url = `${base}${finalPath}`;
 
@@ -556,7 +705,6 @@ async function webexFetch(env, path, orgId = null, options = {}) {
     ...(options.headers || {})
   };
 
-  // Auto-set JSON header if body exists
   if (options.body && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
   }
@@ -576,83 +724,82 @@ async function webexFetch(env, path, orgId = null, options = {}) {
     isAnalytics
   });
 
-  const res = await fetch(url, {
+  let res = await throttledWebexFetch(url, {
     method: options.method || "GET",
     headers,
     body: options.body || null
   });
+
+  // One automatic token refresh + retry on 401
+  if (res.status === 401) {
+    console.log("WEBEX 401 - clearing cached token and retrying once");
+
+    try {
+      await env.WEBEX.delete("access_token");
+    } catch (err) {
+      console.log("Failed clearing cached token:", err);
+    }
+
+    const freshToken = await getAccessToken(env);
+
+    const retryHeaders = {
+      ...headers,
+      Authorization: `Bearer ${freshToken}`
+    };
+
+    res = await throttledWebexFetch(url, {
+      method: options.method || "GET",
+      headers: retryHeaders,
+      body: options.body || null
+    });
+  }
 
   const text = await res.text();
   const preview = text.slice(0, 500);
 
   try {
     const data = JSON.parse(text);
-    return { ok: res.ok, status: res.status, data, preview };
+    return {
+      ok: res.ok,
+      status: res.status,
+      data,
+      preview
+    };
   } catch {
-    return { ok: false, status: res.status, error: "not_json", preview };
+    return {
+      ok: false,
+      status: res.status,
+      error: "not_json",
+      preview
+    };
   }
 }
-/* ============================================================
-WEBEX TOKEN MANAGER
-Enterprise-safe OAuth handling
-============================================================ */
 
-async function getAccessToken(env){
+async function getCachedOrganizations(env) {
 
-  const cacheKey = "webex_access_token";
+  const key = "org_list_cache";
 
-  // check KV cache
-  const cached = await env.WEBEX.get(cacheKey, { type:"json" });
+  const cached = await env.WEBEX.get(key, { type: "json" });
 
-  if (cached && cached.token && cached.expiresAt > Date.now()) {
-    return cached.token;
+  if (cached?.items?.length) {
+    return cached.items;
   }
 
-  console.log("Refreshing Webex OAuth token...");
+  const result = await webexFetch(env, "/organizations");
 
-  const body = new URLSearchParams({
-    grant_type: "refresh_token",
-    client_id: env.CLIENT_ID,
-    client_secret: env.CLIENT_SECRET,
-    refresh_token: env.REFRESH_TOKEN
-  });
-
-  const res = await fetch(
-    "https://idbroker.webex.com/idb/oauth2/v1/access_token",
-    {
-      method:"POST",
-      headers:{
-        "Content-Type":"application/x-www-form-urlencoded"
-      },
-      body
-    }
-  );
-
-  const data = await res.json();
-
-  if (!res.ok){
-    console.error("WEBEX TOKEN ERROR:", data);
-    throw new Error(
-      `Webex token refresh failed (${res.status}): ${JSON.stringify(data)}`
-    );
+  if (!result.ok) {
+    throw new Error(`organizations_failed: ${result.preview}`);
   }
 
-  const token = data.access_token;
-
-  // expire 5 minutes early for safety
-  const expiresAt =
-    Date.now() + ((data.expires_in - 300) * 1000);
+  const items = result.data?.items || [];
 
   await env.WEBEX.put(
-    cacheKey,
-    JSON.stringify({
-      token,
-      expiresAt
-    }),
-    { expirationTtl: 86400 }
+    key,
+    JSON.stringify({ items }),
+    { expirationTtl: 300 } // 5 minute cache
   );
 
-  return token;
+  return items;
 }
 // =====================================================
 // PSTN helpers (SAFE)
@@ -1113,48 +1260,73 @@ async function downloadWebexReport(env, orgId, reportId) {
   };
 }
     /* =====================================================
-       Webex Token Handling (refresh + KV cache)
-    ===================================================== */
+   Webex Token Handling (refresh + KV cache)
+   Production Safe Version
+===================================================== */
 
-    async function getAccessToken(env) {
-      const cached = await env.WEBEX.get("access_token", { type: "json" });
+async function getAccessToken(env) {
 
-      if (cached && cached.token && cached.expires_at > nowMs()) {
-        return cached.token;
-      }
+  const cacheKey = "access_token";
 
-      const body = new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: env.CLIENT_ID,
-        client_secret: env.CLIENT_SECRET,
-        refresh_token: env.REFRESH_TOKEN,
-      });
+  let cached = null;
 
-      const res = await fetch("https://idbroker.webex.com/idb/oauth2/v1/access_token", {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body,
-      });
+  try {
+    cached = await env.WEBEX.get(cacheKey, { type: "json" });
+  } catch (err) {
+    console.log("Token cache read error:", err);
+  }
 
-      const data = await res.json();
+  // valid cached token
+  if (cached?.token && cached?.expires_at && cached.expires_at > Date.now()) {
+    return cached.token;
+  }
 
-      if (!res.ok) {
-        throw new Error(`Webex token refresh failed (${res.status}): ${JSON.stringify(data)}`);
-      }
+  console.log("Refreshing Webex OAuth token...");
 
-      const expiresAt = nowMs() + data.expires_in * 1000 - 60_000; // 60s cushion
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    client_id: env.CLIENT_ID,
+    client_secret: env.CLIENT_SECRET,
+    refresh_token: env.REFRESH_TOKEN
+  });
 
-      await env.WEBEX.put(
-        "access_token",
-        JSON.stringify({
-          token: data.access_token,
-          expires_at: expiresAt,
-        })
-      );
-
-      return data.access_token;
+  const res = await fetch(
+    "https://idbroker.webex.com/idb/oauth2/v1/access_token",
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      body
     }
- 
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    console.error("WEBEX TOKEN ERROR:", data);
+    throw new Error(
+      `Webex token refresh failed (${res.status}): ${JSON.stringify(data)}`
+    );
+  }
+
+  const token = data.access_token;
+
+  // expire 5 minutes early
+  const expiresAt =
+    Date.now() + ((data.expires_in - 300) * 1000);
+
+  await env.WEBEX.put(
+    cacheKey,
+    JSON.stringify({
+      token,
+      expires_at: expiresAt
+    }),
+    { expirationTtl: 86400 }
+  );
+
+  return token;
+}
 // =====================================================
 // Delegation Engine (Enterprise Multi-Tenant)
 // =====================================================
@@ -4355,33 +4527,21 @@ if (url.pathname === "/api/org") {
       return json({ error: "not_authenticated" }, 401);
     }
 
-    // ADMIN FLOW
+    /* ===============================
+       ADMIN FLOW
+    =============================== */
+
     if (user.isAdmin === true) {
 
-      const token = await getAccessToken(env);
+      const orgs = await getCachedOrganizations(env);
 
-      const res = await fetch("https://webexapis.com/v1/organizations", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json"
-        }
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.log("WEBEX ORG FETCH FAILED:", data);
-        return json({
-          error: "webex_fetch_failed",
-          detail: data
-        }, 500);
-      }
-
-      return json(data.items || []);
+      return json(orgs);
     }
 
-    // CUSTOMER FLOW
+    /* ===============================
+       CUSTOMER FLOW
+    =============================== */
+
     const session = await getSession(env, user.email);
 
     if (!session || !session.orgId) {
@@ -7926,16 +8086,14 @@ async function collectCdrHistory(env, orgId){
     return date.toISOString().replace(/\.\d{3}Z$/, "Z");
   }
 
-  const token = await getAccessToken(env);
-
-   const lastKey = `cdrLastFetch:${orgId}`;
-   const cacheKey = `cdrCache:${orgId}`;
-   const analyticsKey = `analyticsCache:${orgId}`;
+  const lastKey = `cdrLastFetch:${orgId}`;
+  const cacheKey = `cdrCache:${orgId}`;
+  const analyticsKey = `analyticsCache:${orgId}`;
 
   // Webex requires endTime older than 5 minutes
-   const endMs = Date.now() - (6 * 60 * 1000);
+  const endMs = Date.now() - (6 * 60 * 1000);
 
-   const chunkMs = 12 * 60 * 60 * 1000;
+  const chunkMs = 12 * 60 * 60 * 1000;
 
   // load last ingestion checkpoint
   let startMs = Number(await env.WEBEX.get(lastKey));
@@ -7944,17 +8102,18 @@ async function collectCdrHistory(env, orgId){
   if (!startMs){
     startMs = endMs - (24 * 60 * 60 * 1000);
   }
- 
+
   let all = [];
   let seen = new Set();
 
   const existing = await env.WEBEX.get(cacheKey);
+
   if (existing){
-    try {
+    try{
       const parsed = JSON.parse(existing);
       all = parsed;
       parsed.forEach(x => seen.add(x.callId));
-    } catch {}
+    }catch{}
   }
 
   let totalCalls = 0;
@@ -7969,14 +8128,16 @@ async function collectCdrHistory(env, orgId){
     const endTime = isoNoMs(new Date(chunkEnd));
 
     let url =
-      `https://analytics-calling.webexapis.com/v1/cdr_feed` +
+      "https://analytics-calling.webexapis.com/v1/cdr_feed" +
       `?startTime=${encodeURIComponent(startTime)}` +
       `&endTime=${encodeURIComponent(endTime)}` +
       `&max=1000`;
 
     while (url){
 
-      const res = await fetch(url,{
+      const token = await getAccessToken(env);
+
+      const res = await throttledWebexFetch(url,{
         method:"GET",
         headers:{
           "Authorization":`Bearer ${token}`,
@@ -7984,17 +8145,26 @@ async function collectCdrHistory(env, orgId){
         }
       });
 
-      const data = await res.json();
+      const text = await res.text();
+
+      let data = {};
+      try{
+        data = JSON.parse(text);
+      }catch{}
 
       if (!res.ok){
 
-        if (String(data?.message || "").includes("threshold")){
-          await new Promise(res => setTimeout(res,4000));
+        const msg = String(data?.message || "");
+
+        // Webex analytics throttling protection
+        if (msg.includes("threshold") || res.status === 429){
+          console.log("CDR throttle detected, backing off...");
+          await sleep(4000);
           continue;
         }
 
         throw new Error(
-          "cdr_fetch_failed: " + JSON.stringify(data)
+          "cdr_fetch_failed: " + text.slice(0,400)
         );
       }
 
@@ -8003,7 +8173,10 @@ async function collectCdrHistory(env, orgId){
       for (const x of items){
 
         const callId = x.id || "";
-        if (!callId || seen.has(callId)) continue;
+
+        if (!callId || seen.has(callId)){
+          continue;
+        }
 
         seen.add(callId);
 
@@ -8029,9 +8202,11 @@ async function collectCdrHistory(env, orgId){
         }
       }
 
-      url = data?.next || null;
+      // pagination
+      url = data?.links?.next || data?.next || null;
 
-      await new Promise(res => setTimeout(res,800));
+      // small delay prevents Webex analytics throttling
+      await sleep(350);
     }
   }
 
@@ -8047,16 +8222,12 @@ async function collectCdrHistory(env, orgId){
     ? Math.round((1 - failedCalls / totalCalls) * 100)
     : 100;
 
-  /* Real-time quality score */
-
   const qualityScore = Math.max(
     0,
     100
     - (failedCalls * 2)
     - (avgDuration < 10 ? 5 : 0)
   );
-
-  /* Predictive SLA risk */
 
   let predictedSlaRisk = "LOW";
 
@@ -8067,8 +8238,6 @@ async function collectCdrHistory(env, orgId){
   if (successRate < 95){
     predictedSlaRisk = "HIGH";
   }
-
-  /* AI Root Cause */
 
   const aiInsight = analyzeCallQuality(all);
 
