@@ -2263,10 +2263,9 @@ async function runReports(){
       throw new Error(data.error || "Unknown error");
     }
 
-    alert(
-      "CDR Records: " + (data.cdrRecords || 0) +
-      "\nMedia Records: " + (data.mediaRecords || 0)
-    );
+   alert(
+  "CDR Records: " + (data.cdrRecords || 0)
+);
 
     await loadAnalytics();
 
