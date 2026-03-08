@@ -7083,7 +7083,21 @@ if (url.pathname === "/api/analytics/media" &&
     records
   });
 }
+if (url.pathname === "/api/analytics-summary"){
 
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  const analytics = await env.WEBEX.get(
+    `analyticsCache:${orgId}`,
+    { type:"json" }
+  );
+
+  return json({
+    ok:true,
+    data:analytics
+  });
+
+}
 
 /* ============================================================
    ANALYTICS DASHBOARD ENDPOINT
@@ -7789,6 +7803,8 @@ async function collectCdrHistory(env, orgId){
     return date.toISOString().replace(/\.\d{3}Z$/, "Z");
   }
 
+  const token = await getAccessToken(env);
+
   const lastKey = `cdrLastFetch:${orgId}`;
   const cacheKey = `cdrCache:${orgId}`;
   const analyticsKey = `analyticsCache:${orgId}`;
@@ -7796,7 +7812,7 @@ async function collectCdrHistory(env, orgId){
   let startMs = Number(await env.WEBEX.get(lastKey));
 
   if (!startMs){
-    startMs = Date.now() - (24 * 60 * 60 * 1000); // first run = 24h
+    startMs = Date.now() - (24 * 60 * 60 * 1000);
   }
 
   const endMs = Date.now();
@@ -7833,22 +7849,29 @@ async function collectCdrHistory(env, orgId){
 
     while (url){
 
-      const r = await webexFetchSafe(env, url, orgId);
+      const res = await fetch(url,{
+        method:"GET",
+        headers:{
+          "Authorization":`Bearer ${token}`,
+          "Accept":"application/json"
+        }
+      });
 
-      if (!r?.ok){
+      const data = await res.json();
 
-        if (String(r?.error || "").includes("threshold")){
-          await new Promise(res => setTimeout(res, 4000));
+      if (!res.ok){
+
+        if (String(data?.message || "").includes("threshold")){
+          await new Promise(res => setTimeout(res,4000));
           continue;
         }
 
         throw new Error(
-          "cdr_fetch_failed: " +
-          (r?.error || r?.status || "unknown")
+          "cdr_fetch_failed: " + JSON.stringify(data)
         );
       }
 
-      const items = r.data?.items || [];
+      const items = data?.items || [];
 
       for (const x of items){
 
@@ -7879,11 +7902,15 @@ async function collectCdrHistory(env, orgId){
         }
       }
 
-      url = r.data?.links?.next || null;
+      url = data?.next || null;
 
-      await new Promise(res => setTimeout(res, 800));
+      await new Promise(res => setTimeout(res,800));
     }
   }
+
+  /* ----------------------------
+     Analytics Calculations
+  -----------------------------*/
 
   const avgDuration = totalCalls
     ? Math.round(durationSum / totalCalls)
@@ -7893,15 +7920,45 @@ async function collectCdrHistory(env, orgId){
     ? Math.round((1 - failedCalls / totalCalls) * 100)
     : 100;
 
+  /* Real-time quality score */
+
+  const qualityScore = Math.max(
+    0,
+    100
+    - (failedCalls * 2)
+    - (avgDuration < 10 ? 5 : 0)
+  );
+
+  /* Predictive SLA risk */
+
+  let predictedSlaRisk = "LOW";
+
+  if (successRate < 98){
+    predictedSlaRisk = "MEDIUM";
+  }
+
+  if (successRate < 95){
+    predictedSlaRisk = "HIGH";
+  }
+
+  /* AI Root Cause */
+
+  const aiInsight = analyzeCallQuality(all);
+
   const analytics = {
     totalCalls,
     failedCalls,
     successRate,
     avgDuration,
+    qualityScore,
+    predictedSlaRisk,
+    aiInsight,
     lastUpdated: new Date().toISOString()
   };
- const aiInsight = analyzeCallQuality(cdrRecords, mediaRecords);
-analytics.aiInsight = aiInsight;
+
+  /* ----------------------------
+     Cache Results
+  -----------------------------*/
 
   await env.WEBEX.put(
     cacheKey,
@@ -7925,32 +7982,6 @@ analytics.aiInsight = aiInsight;
     newCalls: totalCalls,
     analytics
   };
-}
-     async function collectMediaQuality(env, orgId){
-
-  const now = new Date().toISOString();
-  const from = new Date(Date.now() - 7*24*60*60*1000).toISOString();
-
-  const path =
-    `/analytics/calling/mediaQuality` +
-    `?from=${encodeURIComponent(from)}` +
-    `&to=${encodeURIComponent(now)}`;
-
-  const result = await webexFetchSafe(env, path, orgId);
-
-  if (!result.ok) {
-    throw new Error("media_fetch_failed");
-  }
-
-  const records = result.data?.items || [];
-
-  await env.WEBEX.put(
-    `mediaCache:${orgId}`,
-    JSON.stringify(records),
-    { expirationTtl: 86400 }
-  );
-
-  return records;
 }
  function analyzeCallQuality(cdrRecords, mediaRecords){
 
@@ -8029,7 +8060,56 @@ analytics.aiInsight = aiInsight;
       : "Call quality metrics indicate healthy network and device conditions."
   };
 }
-     
+     function analyzeCallQuality(records){
+
+  if (!records || records.length === 0){
+    return {
+      primaryCause:"Healthy",
+      summary:"No call quality issues detected."
+    };
+  }
+
+  let failures = 0;
+  let shortCalls = 0;
+
+  const deviceMap = {};
+  const locationMap = {};
+
+  for (const r of records){
+
+    if (r.result.toLowerCase().includes("fail")){
+      failures++;
+    }
+
+    if (r.duration < 5){
+      shortCalls++;
+    }
+
+    if (r.device){
+      deviceMap[r.device] = (deviceMap[r.device] || 0) + 1;
+    }
+  }
+
+  const failureRate = failures / records.length;
+
+  let cause = "Healthy";
+
+  if (failureRate > 0.05){
+    cause = "Network";
+  }
+  else if (shortCalls / records.length > 0.2){
+    cause = "Device";
+  }
+
+  return {
+    primaryCause:cause,
+    summary:
+      cause === "Healthy"
+        ? "Call quality operating normally."
+        : "Detected elevated call failures likely caused by " + cause
+  };
+
+}
 // =====================================================
 // /api/pstn (GET) — hardened multi-tenant + caching + summary
 // - Always scopes org via ?orgId= (NO header switching / NO null orgId)
