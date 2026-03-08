@@ -7785,37 +7785,38 @@ if (url.pathname.endsWith("/file") &&
 } */
 async function collectCdrHistory(env, orgId){
 
-  function isoNoMs(date){
+  function iso(date){
     return date.toISOString().replace(/\.\d{3}Z$/, "");
   }
 
-  const now = isoNoMs(new Date());
-  const from = isoNoMs(new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)));
+  const now = iso(new Date());
+  const from = iso(new Date(Date.now() - (24 * 60 * 60 * 1000)));
 
-  const path =
+  const url =
     `https://analytics-calling.webexapis.com/v1/cdr_feed` +
     `?startTime=${encodeURIComponent(from)}` +
     `&endTime=${encodeURIComponent(now)}` +
     `&max=1000`;
 
-  const result = await webexFetchSafe(env, path, orgId);
+  const token = await getTokenForOrg(env, orgId);   // whatever function your worker uses
 
-  if (!result || !result.ok){
-
-    const cached = await env.WEBEX.get(`cdrCache:${orgId}`);
-
-    if (cached){
-      try { return JSON.parse(cached); }
-      catch {}
+  const r = await fetch(url,{
+    method: "GET",
+    headers:{
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/json"
     }
+  });
 
-    throw new Error(
-      "cdr_fetch_failed: " +
-      (result?.error || result?.status || "unknown")
-    );
+  if(!r.ok){
+
+    const body = await r.text();
+
+    throw new Error("cdr_fetch_failed: " + body);
   }
 
-  const items = result.data?.items || [];
+  const data = await r.json();
+  const items = data.items || [];
 
   const records = items.map(x => ({
     callId: x.id || "",
