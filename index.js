@@ -7785,17 +7785,14 @@ if (url.pathname.endsWith("/file") &&
 } */
 async function collectCdrHistory(env, orgId){
 
-  function isoNoMs(date){
-    return date.toISOString().replace(/\.\d{3}Z$/, "Z");
-  }
-
-  const now = isoNoMs(new Date());
-  const from = isoNoMs(new Date(Date.now() - 24*60*60*1000));
+  // Webex CDR feed requires epoch milliseconds
+  const now = Date.now();
+  const from = now - (24 * 60 * 60 * 1000);
 
   const path =
     `/cdr_feed` +
-    `?startTime=${encodeURIComponent(from)}` +
-    `&endTime=${encodeURIComponent(now)}` +
+    `?startTime=${from}` +
+    `&endTime=${now}` +
     `&max=1000`;
 
   const result = await webexFetchSafe(env, path, orgId);
@@ -7810,8 +7807,8 @@ async function collectCdrHistory(env, orgId){
   const items = result.data?.items || [];
 
   const records = items.map(x => ({
-    callId: x.id,
-    startTime: x.startTime,
+    callId: x.id || "",
+    startTime: x.startTime || "",
     duration: x.durationSeconds || 0,
     result: x.callResult || "unknown",
     caller: x.localCallId || "",
@@ -7823,7 +7820,7 @@ async function collectCdrHistory(env, orgId){
   await env.WEBEX.put(
     `cdrCache:${orgId}`,
     JSON.stringify(records),
-    { expirationTtl: 604800 }
+    { expirationTtl: 604800 } // 7 days
   );
 
   return records;
