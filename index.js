@@ -7811,11 +7811,12 @@ async function collectCdrHistory(env, orgId){
 
   let startMs = Number(await env.WEBEX.get(lastKey));
 
-  if (!startMs){
-    startMs = Date.now() - (24 * 60 * 60 * 1000);
-  }
+ if (!startMs){
+  startMs = endMs - (24 * 60 * 60 * 1000); // first run = last 24h
+}
 
-  const endMs = Date.now();
+  // Webex requires endTime to be at least 5 minutes old
+  const endMs = Date.now() - (6 * 60 * 1000);
   const chunkMs = 12 * 60 * 60 * 1000;
 
   let all = [];
