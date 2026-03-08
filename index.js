@@ -7794,8 +7794,8 @@ async function collectCdrHistory(env, orgId){
 
   const path =
     `/cdr_feed` +
-    `?startTime=${from}` +
-    `&endTime=${now}` +
+    `?startTime=${encodeURIComponent(from)}` +
+    `&endTime=${encodeURIComponent(now)}` +
     `&max=1000`;
 
   const result = await webexFetchSafe(env, path, orgId);
