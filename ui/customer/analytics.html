@@ -2,89 +2,81 @@
 
 <html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <title>US Signal | Webex Calling Analytics</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 
 <style>
 
-/* ===============================
-   THEME (UNCHANGED)
-================================ */
-
 :root{
-  --bg:#f6f8fb;
-  --card:#ffffff;
-  --text:#0f172a;
-  --muted:#64748b;
-  --line:rgba(15,23,42,.10);
-  --shadow:0 8px 24px rgba(15,23,42,.08);
+--bg:#f6f8fb;
+--card:#ffffff;
+--text:#0f172a;
+--muted:#64748b;
+--line:rgba(15,23,42,.10);
+--shadow:0 8px 24px rgba(15,23,42,.08);
 
-  --accent:#0f62fe;
-  --good:#16a34a;
-  --warn:#f59e0b;
-  --bad:#dc2626;
+--accent:#0f62fe;
+--good:#16a34a;
+--warn:#f59e0b;
+--bad:#dc2626;
 }
 
 *{box-sizing:border-box;}
 
 body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-  display:flex;
-  min-height:100vh;
+margin:0;
+font-family:system-ui,-apple-system,Segoe UI,Roboto;
+background:var(--bg);
+color:var(--text);
+display:flex;
+min-height:100vh;
 }
 
 /* SIDEBAR */
 
 .sidebar{
-  width:270px;
-  background:var(--card);
-  border-right:1px solid var(--line);
-  padding:18px 14px;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
+width:270px;
+background:var(--card);
+border-right:1px solid var(--line);
+padding:18px 14px;
+display:flex;
+flex-direction:column;
+gap:14px;
 }
 
 .brand{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding-bottom:14px;
-  border-bottom:1px solid var(--line);
+display:flex;
+align-items:center;
+gap:12px;
+padding-bottom:14px;
+border-bottom:1px solid var(--line);
 }
 
 .brand img{height:34px;}
 
-.nav{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
+.nav{display:flex;flex-direction:column;gap:6px;}
 
 .nav a{
-  padding:10px;
-  border-radius:12px;
-  font-weight:800;
-  font-size:13px;
-  text-decoration:none;
-  color:var(--text);
+padding:10px;
+border-radius:12px;
+font-weight:800;
+font-size:13px;
+text-decoration:none;
+color:var(--text);
 }
 
 .nav a.active{
-  background:rgba(15,98,254,.12);
-  border:1px solid rgba(15,98,254,.20);
+background:rgba(15,98,254,.12);
+border:1px solid rgba(15,98,254,.20);
 }
 
 .summary-pill{
-  margin-top:auto;
-  padding:12px;
-  border-radius:12px;
-  font-weight:900;
-  text-align:center;
+margin-top:auto;
+padding:12px;
+border-radius:12px;
+font-weight:900;
+text-align:center;
 }
 
 .summary-green{background:rgba(22,163,74,.15);color:var(--good);}
@@ -94,84 +86,83 @@ body{
 /* MAIN */
 
 .main{
-  flex:1;
-  padding:22px;
-  display:flex;
-  flex-direction:column;
+flex:1;
+padding:22px;
+display:flex;
+flex-direction:column;
+gap:18px;
 }
 
 .header-card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  padding:16px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+background:var(--card);
+border:1px solid var(--line);
+border-radius:16px;
+box-shadow:var(--shadow);
+padding:16px;
+display:flex;
+justify-content:space-between;
+align-items:center;
 }
 
-.section{margin-top:18px;}
-
 .card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  padding:16px;
+background:var(--card);
+border:1px solid var(--line);
+border-radius:16px;
+box-shadow:var(--shadow);
+padding:16px;
 }
 
 .row{
-  display:flex;
-  gap:16px;
-  flex-wrap:wrap;
+display:flex;
+gap:16px;
+flex-wrap:wrap;
 }
 
 h2{
-  margin:0 0 12px 0;
-  font-size:14px;
-  font-weight:1000;
+margin:0 0 12px 0;
+font-size:14px;
+font-weight:1000;
 }
 
 .muted{color:var(--muted);font-size:12px;}
 
 table{
-  width:100%;
-  border-collapse:collapse;
+width:100%;
+border-collapse:collapse;
 }
 
 thead th{
-  padding:12px;
-  font-size:12px;
-  color:var(--muted);
-  text-transform:uppercase;
+padding:12px;
+font-size:12px;
+color:var(--muted);
+text-transform:uppercase;
 }
 
 tbody td{
-  padding:12px;
-  border-top:1px solid rgba(15,23,42,.06);
-  font-size:13px;
+padding:12px;
+border-top:1px solid rgba(15,23,42,.06);
+font-size:13px;
 }
 
 .right{text-align:right;}
 
 button{
-  background:var(--accent);
-  color:#fff;
-  border:none;
-  padding:8px 14px;
-  border-radius:10px;
-  font-weight:800;
-  cursor:pointer;
+background:var(--accent);
+color:#fff;
+border:none;
+padding:8px 14px;
+border-radius:10px;
+font-weight:800;
+cursor:pointer;
 }
 
 canvas{width:100%;}
 
 .badge{
-  padding:4px 10px;
-  border-radius:999px;
-  font-weight:900;
-  font-size:11px;
+padding:4px 10px;
+border-radius:999px;
+font-weight:900;
+font-size:11px;
 }
 
 .badge-good{background:rgba(22,163,74,.15);color:var(--good);}
@@ -185,111 +176,128 @@ canvas{width:100%;}
 <body>
 
 <div class="sidebar">
-  <div class="brand">
-    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg">
-    <div>
-      <div style="font-weight:900;">US Signal</div>
-      <div class="muted">Customer Portal</div>
-    </div>
-  </div>
 
-  <div class="nav">
-      <a href="/customer">Dashboard</a>
-      <a href="/customer/observability">Observability</a>
-      <a href="/customer/licenses">Licenses</a>
-      <a href="/customer/devices">Devices</a>
-      <a class="active" href="/customer/analytics">Analytics</a>
-      <a href="/customer/cdr">CDR</a>
-  </div>
+<div class="brand">
+<img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg">
+<div>
+<div style="font-weight:900;">US Signal</div>
+<div class="muted">Customer Portal</div>
+</div>
+</div>
 
-  <div id="ragPill" class="summary-pill summary-green">GREEN</div>
-  <button onclick="logout()">Logout</button>
+<div class="nav">
+<a href="/customer">Dashboard</a>
+<a href="/customer/observability">Observability</a>
+<a href="/customer/licenses">Licenses</a>
+<a href="/customer/devices">Devices</a>
+<a class="active" href="/customer/analytics">Analytics</a>
+<a href="/customer/cdr">CDR</a>
+</div>
+
+<div id="ragPill" class="summary-pill summary-green">GREEN</div>
+
+<button onclick="logout()">Logout</button>
+
 </div>
 
 <div class="main">
 
 <div class="header-card">
-  <div>
-    <div style="font-size:16px;font-weight:1000;">Operational Calling Analytics</div>
-    <div class="muted" id="tenantLine">Loading…</div>
-  </div>
-  <button id="btnExport">Export CSV</button>
+<div>
+<div style="font-size:16px;font-weight:1000;">Operational Calling Analytics</div>
+<div class="muted" id="tenantLine">Loading…</div>
+</div>
+<button id="btnExport">Export CSV</button>
 </div>
 
-<!-- KPI SECTION -->
+<!-- KPI ROW -->
 
-<div class="section">
 <div class="row">
 
-<div class="card" style="flex:1;min-width:220px;">
+<div class="card" style="flex:1">
 <h2>Total Calls</h2>
-<div style="font-size:28px;font-weight:1000;" id="kpiCalls">—</div>
+<div style="font-size:28px;font-weight:1000" id="kpiCalls">—</div>
 </div>
 
-<div class="card" style="flex:1;min-width:220px;">
+<div class="card" style="flex:1">
 <h2>Success Rate</h2>
-<div style="font-size:28px;font-weight:1000;" id="kpiSuccess">—</div>
+<div style="font-size:28px;font-weight:1000" id="kpiSuccess">—</div>
 </div>
 
-<div class="card" style="flex:1;min-width:220px;">
+<div class="card" style="flex:1">
 <h2>Avg MOS</h2>
-<div style="font-size:28px;font-weight:1000;" id="kpiMos">—</div>
+<div style="font-size:28px;font-weight:1000" id="kpiMos">—</div>
 </div>
 
-<div class="card" style="flex:1;min-width:220px;">
+<div class="card" style="flex:1">
 <h2>Packet Loss</h2>
-<div style="font-size:28px;font-weight:1000;" id="kpiPacket">—</div>
+<div style="font-size:28px;font-weight:1000" id="kpiPacket">—</div>
 </div>
 
-<div class="card" style="flex:1;min-width:220px;">
+<div class="card" style="flex:1">
 <h2>Jitter</h2>
-<div style="font-size:28px;font-weight:1000;" id="kpiJitter">—</div>
+<div style="font-size:28px;font-weight:1000" id="kpiJitter">—</div>
 </div>
 
-<div class="card" style="flex:1;min-width:220px;">
-<h2>SLA Status</h2>
+<div class="card" style="flex:1">
+<h2>SLA</h2>
 <div id="slaStatus">—</div>
 </div>
 
 </div>
-</div>
 
-<!-- CALL TREND -->
+<!-- TREND CHARTS -->
 
-<div class="section">
 <div class="card">
-<h2>30-Day Call Volume</h2>
+<h2>Call Volume Trend</h2>
 <canvas id="trendChart" height="100"></canvas>
 </div>
-</div>
 
-<!-- MOS TREND -->
-
-<div class="section">
 <div class="card">
 <h2>MOS Trend</h2>
 <canvas id="mosChart" height="100"></canvas>
 </div>
-</div>
 
-<!-- PACKET LOSS TREND -->
-
-<div class="section">
 <div class="card">
 <h2>Packet Loss Trend</h2>
 <canvas id="packetChart" height="100"></canvas>
 </div>
+
+<!-- MOS HISTOGRAM -->
+
+<div class="card">
+<h2>MOS Distribution</h2>
+<canvas id="mosHistogram" height="120"></canvas>
 </div>
 
-<!-- DEVICE QUALITY -->
+<!-- PACKET LOSS ANOMALY -->
 
-<div class="section">
 <div class="card">
-
-<h2>Device Quality</h2>
-
+<h2>Packet Loss Anomalies</h2>
 <table>
+<thead>
+<tr>
+<th>Time</th>
+<th class="right">Packet Loss</th>
+<th class="right">MOS</th>
+</tr>
+</thead>
+<tbody id="anomalyRows"></tbody>
+</table>
+</div>
 
+<!-- HEATMAP -->
+
+<div class="card">
+<h2>Call Quality Heatmap</h2>
+<canvas id="qualityHeatmap" height="200"></canvas>
+</div>
+
+<!-- DEVICE TABLE -->
+
+<div class="card">
+<h2>Device Quality</h2>
+<table>
 <thead>
 <tr>
 <th>Device</th>
@@ -298,23 +306,15 @@ canvas{width:100%;}
 <th class="right">Packet Loss</th>
 </tr>
 </thead>
-
 <tbody id="deviceRows"></tbody>
-
 </table>
-
-</div>
 </div>
 
-<!-- LOCATION QUALITY -->
+<!-- LOCATION TABLE -->
 
-<div class="section">
 <div class="card">
-
 <h2>Location Quality</h2>
-
 <table>
-
 <thead>
 <tr>
 <th>Location</th>
@@ -322,32 +322,26 @@ canvas{width:100%;}
 <th class="right">MOS</th>
 </tr>
 </thead>
-
 <tbody id="locationRows"></tbody>
-
 </table>
-
-</div>
 </div>
 
 </div>
 
 <script>
 
-let ORG_ID=null
-let DATA=null
+let ORG_ID
+let DATA
+let MEDIA=[]
 
 async function init(){
 
 const me=await fetch("/api/me").then(r=>r.json())
-
 ORG_ID=me.orgId
-
 document.getElementById("tenantLine").textContent=me.orgName
 
-const r=await fetch(`/api/analytics?orgId=${encodeURIComponent(ORG_ID)}`)
-
-DATA=await r.json()
+DATA=await fetch(`/api/analytics?orgId=${ORG_ID}`).then(r=>r.json())
+MEDIA=await fetch(`/api/analytics/media?orgId=${ORG_ID}`).then(r=>r.json())
 
 render()
 
@@ -358,74 +352,29 @@ function render(){
 const s=DATA.summary
 
 document.getElementById("kpiCalls").textContent=s.totalCalls.toLocaleString()
-
 document.getElementById("kpiSuccess").textContent=(s.successRate*100).toFixed(1)+"%"
-
 document.getElementById("kpiMos").textContent=s.mosAverage.toFixed(2)
-
 document.getElementById("kpiPacket").textContent=(s.packetLossAverage*100).toFixed(2)+"%"
-
 document.getElementById("kpiJitter").textContent=s.jitterAverage.toFixed(2)
 
 setSLA(s.successRate)
 
-renderCharts()
-renderDevices()
-renderLocations()
-
-}
-
-
-function setSLA(rate){
-
-const el=document.getElementById("slaStatus")
-const pill=document.getElementById("ragPill")
-
-if(rate>=0.98){
-
-el.innerHTML=`<span class="badge badge-good">MEETING SLA</span>`
-pill.className="summary-pill summary-green"
-pill.textContent="GREEN"
-
-}
-
-else if(rate>=0.95){
-
-el.innerHTML=`<span class="badge badge-warn">AT RISK</span>`
-pill.className="summary-pill summary-amber"
-pill.textContent="AMBER"
-
-}
-
-else{
-
-el.innerHTML=`<span class="badge badge-bad">BREACH</span>`
-pill.className="summary-pill summary-red"
-pill.textContent="RED"
-
-}
-
-}
-
-
-function renderCharts(){
-
 drawLine("trendChart",DATA.trends.map(x=>x.calls))
-
 drawLine("mosChart",DATA.trends.map(x=>x.mos))
-
 drawLine("packetChart",DATA.trends.map(x=>x.packetLoss))
 
-}
+drawHistogram()
+drawHeatmap()
+renderDevices()
+renderLocations()
+renderAnomalies()
 
+}
 
 function drawLine(id,data){
 
 const canvas=document.getElementById(id)
-
 const ctx=canvas.getContext("2d")
-
-ctx.clearRect(0,0,canvas.width,canvas.height)
 
 const max=Math.max(...data)
 
@@ -434,7 +383,6 @@ ctx.beginPath()
 data.forEach((v,i)=>{
 
 const x=i*(canvas.width/(data.length-1))
-
 const y=canvas.height-(v/max)*canvas.height
 
 if(i===0)ctx.moveTo(x,y)
@@ -447,60 +395,154 @@ ctx.stroke()
 
 }
 
+/* MOS HISTOGRAM */
+
+function drawHistogram(){
+
+const canvas=document.getElementById("mosHistogram")
+const ctx=canvas.getContext("2d")
+
+const mos=MEDIA.records.map(r=>r.mos||0)
+
+const bins=[0,0,0,0,0]
+
+mos.forEach(v=>{
+if(v>=4.5)bins[4]++
+else if(v>=4)bins[3]++
+else if(v>=3.5)bins[2]++
+else if(v>=3)bins[1]++
+else bins[0]++
+})
+
+const max=Math.max(...bins)
+
+bins.forEach((b,i)=>{
+
+const x=i*80
+const h=(b/max)*canvas.height
+
+ctx.fillStyle="#0f62fe"
+ctx.fillRect(x,canvas.height-h,50,h)
+
+})
+
+}
+
+/* ANOMALY DETECTION */
+
+function renderAnomalies(){
+
+const rows=document.getElementById("anomalyRows")
+rows.innerHTML=""
+
+MEDIA.records
+.filter(r=>r.packetLoss>0.05)
+.slice(0,10)
+.forEach(r=>{
+
+rows.innerHTML+=`
+<tr>
+<td>${r.startTime}</td>
+<td class="right">${(r.packetLoss*100).toFixed(2)}%</td>
+<td class="right">${r.mos?.toFixed(2)}</td>
+</tr>
+`
+
+})
+
+}
+
+/* HEATMAP */
+
+function drawHeatmap(){
+
+const canvas=document.getElementById("qualityHeatmap")
+const ctx=canvas.getContext("2d")
+
+MEDIA.records.slice(0,500).forEach(r=>{
+
+const x=r.packetLoss*canvas.width*5
+const y=canvas.height-(r.mos*40)
+
+ctx.fillStyle="rgba(15,98,254,.4)"
+ctx.fillRect(x,y,4,4)
+
+})
+
+}
+
+/* DEVICES */
 
 function renderDevices(){
 
 const tbody=document.getElementById("deviceRows")
-
 tbody.innerHTML=""
 
 DATA.devices.forEach(d=>{
 
-const tr=document.createElement("tr")
-
-tr.innerHTML=`
+tbody.innerHTML+=`
+<tr>
 <td>${d.device}</td>
 <td class="right">${d.calls}</td>
 <td class="right">${d.mos.toFixed(2)}</td>
 <td class="right">${(d.packetLoss*100).toFixed(2)}%</td>
+</tr>
 `
-
-tbody.appendChild(tr)
 
 })
 
 }
 
+/* LOCATIONS */
 
 function renderLocations(){
 
 const tbody=document.getElementById("locationRows")
-
 tbody.innerHTML=""
 
 DATA.locations.forEach(l=>{
 
-const tr=document.createElement("tr")
-
-tr.innerHTML=`
+tbody.innerHTML+=`
+<tr>
 <td>${l.location}</td>
 <td class="right">${l.calls}</td>
 <td class="right">${l.mos.toFixed(2)}</td>
+</tr>
 `
-
-tbody.appendChild(tr)
 
 })
 
 }
 
+function setSLA(rate){
+
+const el=document.getElementById("slaStatus")
+const pill=document.getElementById("ragPill")
+
+if(rate>=0.98){
+el.innerHTML='<span class="badge badge-good">MEETING SLA</span>'
+pill.className="summary-pill summary-green"
+pill.textContent="GREEN"
+}
+else if(rate>=0.95){
+el.innerHTML='<span class="badge badge-warn">AT RISK</span>'
+pill.className="summary-pill summary-amber"
+pill.textContent="AMBER"
+}
+else{
+el.innerHTML='<span class="badge badge-bad">BREACH</span>'
+pill.className="summary-pill summary-red"
+pill.textContent="RED"
+}
+
+}
 
 document.getElementById("btnExport").onclick=()=>{
 
-let csv="day,calls,failures,mos\n"
+let csv="day,calls,mos\n"
 
 DATA.trends.forEach(d=>{
-csv+=`${d.day},${d.calls},${d.failures},${d.mos}\n`
+csv+=`${d.day},${d.calls},${d.mos}\n`
 })
 
 const blob=new Blob([csv])
@@ -513,12 +555,8 @@ a.click()
 
 }
 
-
 function logout(){
-
-fetch("/api/logout",{method:"POST"})
-.then(()=>location.href="/")
-
+fetch("/api/logout",{method:"POST"}).then(()=>location.href="/")
 }
 
 init()
