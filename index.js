@@ -7785,57 +7785,144 @@ if (url.pathname.endsWith("/file") &&
 } */
 async function collectCdrHistory(env, orgId){
 
-  function iso(date){
-    return date.toISOString().replace(/\.\d{3}Z$/, "");
+  function isoNoMs(date){
+    return date.toISOString().replace(/\.\d{3}Z$/, "Z");
   }
 
-  const now = iso(new Date());
-  const from = iso(new Date(Date.now() - (24 * 60 * 60 * 1000)));
+  const lastKey = `cdrLastFetch:${orgId}`;
+  const cacheKey = `cdrCache:${orgId}`;
+  const analyticsKey = `analyticsCache:${orgId}`;
 
-  const url =
-    `https://analytics-calling.webexapis.com/v1/cdr_feed` +
-    `?startTime=${encodeURIComponent(from)}` +
-    `&endTime=${encodeURIComponent(now)}` +
-    `&max=1000`;
+  let startMs = Number(await env.WEBEX.get(lastKey));
 
-  const token = await getTokenForOrg(env, orgId);   // whatever function your worker uses
+  if (!startMs){
+    startMs = Date.now() - (24 * 60 * 60 * 1000); // first run = 24h
+  }
 
-  const r = await fetch(url,{
-    method: "GET",
-    headers:{
-      "Authorization": `Bearer ${token}`,
-      "Accept": "application/json"
+  const endMs = Date.now();
+  const chunkMs = 12 * 60 * 60 * 1000;
+
+  let all = [];
+  let seen = new Set();
+
+  const existing = await env.WEBEX.get(cacheKey);
+  if (existing){
+    try {
+      const parsed = JSON.parse(existing);
+      all = parsed;
+      parsed.forEach(x => seen.add(x.callId));
+    } catch {}
+  }
+
+  let totalCalls = 0;
+  let failedCalls = 0;
+  let durationSum = 0;
+
+  for (let chunkStart = startMs; chunkStart < endMs; chunkStart += chunkMs){
+
+    const chunkEnd = Math.min(chunkStart + chunkMs, endMs);
+
+    const startTime = isoNoMs(new Date(chunkStart));
+    const endTime = isoNoMs(new Date(chunkEnd));
+
+    let url =
+      `https://analytics-calling.webexapis.com/v1/cdr_feed` +
+      `?startTime=${encodeURIComponent(startTime)}` +
+      `&endTime=${encodeURIComponent(endTime)}` +
+      `&max=1000`;
+
+    while (url){
+
+      const r = await webexFetchSafe(env, url, orgId);
+
+      if (!r?.ok){
+
+        if (String(r?.error || "").includes("threshold")){
+          await new Promise(res => setTimeout(res, 4000));
+          continue;
+        }
+
+        throw new Error(
+          "cdr_fetch_failed: " +
+          (r?.error || r?.status || "unknown")
+        );
+      }
+
+      const items = r.data?.items || [];
+
+      for (const x of items){
+
+        const callId = x.id || "";
+        if (!callId || seen.has(callId)) continue;
+
+        seen.add(callId);
+
+        const duration = x.durationSeconds || 0;
+        const result = x.callResult || "unknown";
+
+        all.push({
+          callId,
+          startTime: x.startTime || "",
+          duration,
+          result,
+          caller: x.localCallId || "",
+          callee: x.remoteCallId || "",
+          direction: x.direction || "",
+          device: x.deviceType || ""
+        });
+
+        totalCalls++;
+        durationSum += duration;
+
+        if (result.toLowerCase().includes("fail")){
+          failedCalls++;
+        }
+      }
+
+      url = r.data?.links?.next || null;
+
+      await new Promise(res => setTimeout(res, 800));
     }
-  });
-
-  if(!r.ok){
-
-    const body = await r.text();
-
-    throw new Error("cdr_fetch_failed: " + body);
   }
 
-  const data = await r.json();
-  const items = data.items || [];
+  const avgDuration = totalCalls
+    ? Math.round(durationSum / totalCalls)
+    : 0;
 
-  const records = items.map(x => ({
-    callId: x.id || "",
-    startTime: x.startTime || "",
-    duration: x.durationSeconds || 0,
-    result: x.callResult || "",
-    caller: x.localCallId || "",
-    callee: x.remoteCallId || "",
-    direction: x.direction || "",
-    device: x.deviceType || ""
-  }));
+  const successRate = totalCalls
+    ? Math.round((1 - failedCalls / totalCalls) * 100)
+    : 100;
+
+  const analytics = {
+    totalCalls,
+    failedCalls,
+    successRate,
+    avgDuration,
+    lastUpdated: new Date().toISOString()
+  };
 
   await env.WEBEX.put(
-    `cdrCache:${orgId}`,
-    JSON.stringify(records),
+    cacheKey,
+    JSON.stringify(all),
     { expirationTtl: 604800 }
   );
 
-  return records;
+  await env.WEBEX.put(
+    analyticsKey,
+    JSON.stringify(analytics),
+    { expirationTtl: 604800 }
+  );
+
+  await env.WEBEX.put(
+    lastKey,
+    String(endMs)
+  );
+
+  return {
+    records: all.length,
+    newCalls: totalCalls,
+    analytics
+  };
 }
      async function collectMediaQuality(env, orgId){
 
