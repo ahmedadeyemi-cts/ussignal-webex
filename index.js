@@ -4283,48 +4283,42 @@ if (user.isAdmin) {
 const filtered = (orgData.items || []).filter(o => o.id === session.orgId);
 return json(filtered);
 } */
-     if (url.pathname === "/api/org") {
+if (url.pathname === "/api/org") {
+  try {
 
-  const user = getCurrentUser(request);
+    const user = getCurrentUser(request);
+    if (!user) return json({ error:"not_authenticated" },401);
 
-  if (!user) {
-    return json({ error: "not_authenticated" }, 401);
-  }
+    const session = await getSession(env, user.email);
 
-  const token = await getAccessToken(env);
-  const session = await getSession(env, user.email);
-
-  // customers require tenant resolution (email OR PIN)
-  if (!user.isAdmin) {
-    if (!session || !session.orgId) {
-      return json({ error: "pin_required" }, 401);
+    if (!user.isAdmin && (!session || !session.orgId)) {
+      return json({ error:"pin_required" },401);
     }
+
+    const result = await webexFetch(env, "/organizations");
+
+    if (!result.ok) {
+      return json({ error:"webex_error", detail: result.status },500);
+    }
+
+    const orgData = result.data;
+
+    if (user.isAdmin) {
+      return json(orgData.items || []);
+    }
+
+    return json((orgData.items || []).filter(o => o.id === session.orgId));
+
+  } catch (err) {
+
+    console.log("ORG ROUTE ERROR:", err);
+
+    return json({
+      error:"org_route_failure",
+      detail:String(err)
+    },500);
+
   }
-
-  // session expiry check
-  if (session?.expiresAt && session.expiresAt <= nowMs()) {
-    await clearSession(env, user.email);
-    return json(
-      { error: "pin_required_or_expired", message: "PIN required." },
-      401
-    );
-  }
-
-  const result = await webexFetch(env, "/organizations");
-
-  if (!result.ok) {
-    throw new Error(`/organizations failed: ${result.status}`);
-  }
-
-  const orgData = result.data;
-
-  if (user.isAdmin) {
-    return json(orgData.items || []);
-  }
-
-  const filtered = (orgData.items || []).filter(o => o.id === session.orgId);
-
-  return json(filtered);
 }
 /* -----------------------------
    /api/licenses
