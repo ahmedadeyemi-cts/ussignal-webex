@@ -4287,36 +4287,50 @@ if (url.pathname === "/api/org") {
   try {
 
     const user = getCurrentUser(request);
-    if (!user) return json({ error:"not_authenticated" },401);
+    if (!user) {
+      return json({ error: "not_authenticated" }, 401);
+    }
 
     const session = await getSession(env, user.email);
 
+    // Customers must resolve a tenant via PIN/email mapping
     if (!user.isAdmin && (!session || !session.orgId)) {
-      return json({ error:"pin_required" },401);
+      return json({ error: "pin_required" }, 401);
     }
 
+    // Fetch organizations from Webex
     const result = await webexFetch(env, "/organizations");
 
     if (!result.ok) {
-      return json({ error:"webex_error", detail: result.status },500);
+      console.log("WEBEX /organizations FAILED:", result);
+      return json({
+        error: "webex_error",
+        status: result.status,
+        detail: result.preview || result.data || "unknown_error"
+      }, 500);
     }
 
-    const orgData = result.data;
+    const orgData = result.data || {};
+    const orgs = Array.isArray(orgData.items) ? orgData.items : [];
 
+    // Admins can see all orgs
     if (user.isAdmin) {
-      return json(orgData.items || []);
+      return json(orgs);
     }
 
-    return json((orgData.items || []).filter(o => o.id === session.orgId));
+    // Customers only see their assigned org
+    const filtered = orgs.filter(o => o.id === session.orgId);
+
+    return json(filtered);
 
   } catch (err) {
 
     console.log("ORG ROUTE ERROR:", err);
 
     return json({
-      error:"org_route_failure",
-      detail:String(err)
-    },500);
+      error: "org_route_failure",
+      detail: String(err)
+    }, 500);
 
   }
 }
