@@ -887,6 +887,12 @@ hr.sep{
 </div>
 
 <script>
+/* ===============================
+STATE
+================================ */
+
+let ORG_ID = null;
+let ANALYTICS_HISTORY = [];
 const $ = (id) => document.getElementById(id);
 
 /* -----------------------------
@@ -2133,9 +2139,15 @@ async function init(){
     setError(e?.message || String(e));
   }
 }
+
 document.getElementById("btnRunReports").addEventListener("click", runReports);
 
 async function runReports(){
+
+  if (!SELECTED_ORG_ID){
+    alert("No tenant selected.");
+    return;
+  }
 
   const btn = document.getElementById("btnRunReports");
 
@@ -2147,10 +2159,14 @@ async function runReports(){
     const r = await fetch("/api/admin/run-reports",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ orgId: ORG_ID })
+      body:JSON.stringify({ orgId: SELECTED_ORG_ID })
     });
 
     const data = await r.json();
+
+    if (!data.ok){
+      throw new Error(data.error || "Unknown error");
+    }
 
     alert(
       "CDR Records: " + (data.cdrRecords || 0) +
