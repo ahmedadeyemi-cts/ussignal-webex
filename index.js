@@ -4293,35 +4293,30 @@ if (url.pathname === "/api/org") {
 
     const session = await getSession(env, user.email);
 
-    // Customers must resolve a tenant via PIN/email mapping
     if (!user.isAdmin && (!session || !session.orgId)) {
       return json({ error: "pin_required" }, 401);
     }
 
-    // Fetch organizations from Webex
     const result = await webexFetch(env, "/organizations");
 
     if (!result.ok) {
-      console.log("WEBEX /organizations FAILED:", result);
+      console.log("WEBEX ORG ERROR:", result);
+
       return json({
-        error: "webex_error",
+        error: "webex_fetch_failed",
         status: result.status,
-        detail: result.preview || result.data || "unknown_error"
+        preview: result.preview
       }, 500);
     }
 
     const orgData = result.data || {};
     const orgs = Array.isArray(orgData.items) ? orgData.items : [];
 
-    // Admins can see all orgs
     if (user.isAdmin) {
       return json(orgs);
     }
 
-    // Customers only see their assigned org
-    const filtered = orgs.filter(o => o.id === session.orgId);
-
-    return json(filtered);
+    return json(orgs.filter(o => o.id === session.orgId));
 
   } catch (err) {
 
