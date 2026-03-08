@@ -7783,7 +7783,58 @@ if (url.pathname.endsWith("/file") &&
     return json({ ok: false, error: "pstn_failed", message: e.message }, 500);
   }
 } */
+async function collectCdrHistory(env, orgId){
 
+  const now = new Date().toISOString();
+  const from = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+
+  const path =
+    `/cdr_feed?startTime=${encodeURIComponent(from)}` +
+    `&endTime=${encodeURIComponent(now)}` +
+    `&max=1000`;
+
+  const result = await webexFetchSafe(env, path, orgId);
+
+  if (!result.ok) {
+    throw new Error("cdr_fetch_failed");
+  }
+
+  const records = normalizeCdrItems(result.data);
+
+  await env.WEBEX.put(
+    `cdrCache:${orgId}`,
+    JSON.stringify(records),
+    { expirationTtl: 86400 }
+  );
+
+  return records;
+}
+     async function collectMediaQuality(env, orgId){
+
+  const now = new Date().toISOString();
+  const from = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+
+  const path =
+    `/analytics/calling/mediaQuality` +
+    `?from=${encodeURIComponent(from)}` +
+    `&to=${encodeURIComponent(now)}`;
+
+  const result = await webexFetchSafe(env, path, orgId);
+
+  if (!result.ok) {
+    throw new Error("media_fetch_failed");
+  }
+
+  const records = result.data?.items || [];
+
+  await env.WEBEX.put(
+    `mediaCache:${orgId}`,
+    JSON.stringify(records),
+    { expirationTtl: 86400 }
+  );
+
+  return records;
+}
 // =====================================================
 // /api/pstn (GET) — hardened multi-tenant + caching + summary
 // - Always scopes org via ?orgId= (NO header switching / NO null orgId)
