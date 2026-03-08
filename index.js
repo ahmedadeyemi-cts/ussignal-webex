@@ -402,7 +402,7 @@ async function apiCDR(env, request) {
 
   const base =
     (env.WEBEX_ANALYTICS_BASE ||
-      "https://analytics-calling.webexapis.com/v1")
+      "https://webexapis.com/v1")
       .replace(/\/+$/, "");
 
   const endpoint =
