@@ -7793,10 +7793,10 @@ async function collectCdrHistory(env, orgId){
   const from = isoNoMs(new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)));
 
   const path =
-    `/cdr/calls` +
-    `?startTime=${encodeURIComponent(from)}` +
-    `&endTime=${encodeURIComponent(now)}` +
-    `&max=1000`;
+  `/v1/cdr/calls` +
+  `?startTime=${encodeURIComponent(from)}` +
+  `&endTime=${encodeURIComponent(now)}` +
+  `&max=1000`;
 
   const result = await webexFetchSafe(env, path, orgId);
 
