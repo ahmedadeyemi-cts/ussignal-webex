@@ -4284,39 +4284,48 @@ const filtered = (orgData.items || []).filter(o => o.id === session.orgId);
 return json(filtered);
 } */
 if (url.pathname === "/api/org") {
+
   try {
 
     const user = getCurrentUser(request);
+
     if (!user) {
       return json({ error: "not_authenticated" }, 401);
     }
 
-    const session = await getSession(env, user.email);
-
-    if (!user.isAdmin && (!session || !session.orgId)) {
-      return json({ error: "pin_required" }, 401);
-    }
-
-    const result = await webexFetch(env, "/organizations");
-
-    if (!result.ok) {
-      console.log("WEBEX ORG ERROR:", result);
-
-      return json({
-        error: "webex_fetch_failed",
-        status: result.status,
-        preview: result.preview
-      }, 500);
-    }
-
-    const orgData = result.data || {};
-    const orgs = Array.isArray(orgData.items) ? orgData.items : [];
-
+    // Admin users: fetch all orgs from Webex
     if (user.isAdmin) {
+
+      const result = await webexFetch(env, "/organizations");
+
+      if (!result.ok) {
+        console.log("WEBEX /organizations FAILED:", result);
+        return json({
+          error: "webex_fetch_failed",
+          status: result.status,
+          preview: result.preview
+        }, 500);
+      }
+
+      const orgData = result.data || {};
+      const orgs = Array.isArray(orgData.items) ? orgData.items : [];
+
       return json(orgs);
     }
 
-    return json(orgs.filter(o => o.id === session.orgId));
+    // Customer users: resolve org from session
+    const session = await getSession(env, user.email);
+
+    if (!session || !session.orgId) {
+      return json({ error: "pin_required" }, 401);
+    }
+
+    return json([
+      {
+        id: session.orgId,
+        displayName: session.orgName || "Customer Organization"
+      }
+    ]);
 
   } catch (err) {
 
