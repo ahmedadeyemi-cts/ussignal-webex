@@ -7983,6 +7983,7 @@ async function collectCdrHistory(env, orgId){
     analytics
   };
 }
+     /*
  function analyzeCallQuality(cdrRecords, mediaRecords){
 
   const insights = [];
@@ -8059,56 +8060,70 @@ async function collectCdrHistory(env, orgId){
 
       : "Call quality metrics indicate healthy network and device conditions."
   };
-}
-     function analyzeCallQuality(records){
+} */
+function analyzeCallQuality(records){
 
   if (!records || records.length === 0){
     return {
-      primaryCause:"Healthy",
-      summary:"No call quality issues detected."
+      title: "AI quality narrative",
+      primaryCause: "Healthy",
+      summary: "No call quality issues detected.",
+      risk: "low",
+      breachDays: null
     };
   }
 
   let failures = 0;
   let shortCalls = 0;
-
-  const deviceMap = {};
-  const locationMap = {};
+  let longCalls = 0;
+  const deviceCounts = {};
 
   for (const r of records){
+    const result = String(r.result || r.callResult || "").toLowerCase();
+    const duration = Number(r.duration || 0);
 
-    if (r.result.toLowerCase().includes("fail")){
-      failures++;
-    }
-
-    if (r.duration < 5){
-      shortCalls++;
-    }
+    if (result.includes("fail")) failures++;
+    if (duration > 0 && duration < 5) shortCalls++;
+    if (duration > 1800) longCalls++;
 
     if (r.device){
-      deviceMap[r.device] = (deviceMap[r.device] || 0) + 1;
+      deviceCounts[r.device] = (deviceCounts[r.device] || 0) + 1;
     }
   }
 
-  const failureRate = failures / records.length;
+  const total = records.length || 1;
+  const failureRate = failures / total;
+  const shortRate = shortCalls / total;
 
-  let cause = "Healthy";
+  let primaryCause = "Healthy";
+  let summary = "Call quality operating normally.";
+  let risk = "low";
+  let breachDays = null;
 
   if (failureRate > 0.05){
-    cause = "Network";
-  }
-  else if (shortCalls / records.length > 0.2){
-    cause = "Device";
+    primaryCause = "Network";
+    summary = "Elevated call failures suggest a likely network-path issue.";
+    risk = "high";
+    breachDays = 3;
+  } else if (shortRate > 0.20){
+    primaryCause = "Device";
+    summary = "A high number of very short calls suggests endpoint or handset instability.";
+    risk = "medium";
+    breachDays = 7;
+  } else if (longCalls > total * 0.10){
+    primaryCause = "PSTN";
+    summary = "Unusual call duration behavior suggests PSTN or signaling-path inconsistency.";
+    risk = "medium";
+    breachDays = 5;
   }
 
   return {
-    primaryCause:cause,
-    summary:
-      cause === "Healthy"
-        ? "Call quality operating normally."
-        : "Detected elevated call failures likely caused by " + cause
+    title: "AI quality narrative",
+    primaryCause,
+    summary,
+    risk,
+    breachDays
   };
-
 }
 // =====================================================
 // /api/pstn (GET) — hardened multi-tenant + caching + summary
