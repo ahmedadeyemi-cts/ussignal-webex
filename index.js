@@ -592,6 +592,68 @@ async function webexFetch(env, path, orgId = null, options = {}) {
     return { ok: false, status: res.status, error: "not_json", preview };
   }
 }
+/* ============================================================
+WEBEX TOKEN MANAGER
+Enterprise-safe OAuth handling
+============================================================ */
+
+async function getAccessToken(env){
+
+  const cacheKey = "webex_access_token";
+
+  // check KV cache
+  const cached = await env.WEBEX.get(cacheKey, { type:"json" });
+
+  if (cached && cached.token && cached.expiresAt > Date.now()) {
+    return cached.token;
+  }
+
+  console.log("Refreshing Webex OAuth token...");
+
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    client_id: env.CLIENT_ID,
+    client_secret: env.CLIENT_SECRET,
+    refresh_token: env.REFRESH_TOKEN
+  });
+
+  const res = await fetch(
+    "https://idbroker.webex.com/idb/oauth2/v1/access_token",
+    {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/x-www-form-urlencoded"
+      },
+      body
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok){
+    console.error("WEBEX TOKEN ERROR:", data);
+    throw new Error(
+      `Webex token refresh failed (${res.status}): ${JSON.stringify(data)}`
+    );
+  }
+
+  const token = data.access_token;
+
+  // expire 5 minutes early for safety
+  const expiresAt =
+    Date.now() + ((data.expires_in - 300) * 1000);
+
+  await env.WEBEX.put(
+    cacheKey,
+    JSON.stringify({
+      token,
+      expiresAt
+    }),
+    { expirationTtl: 86400 }
+  );
+
+  return token;
+}
 // =====================================================
 // PSTN helpers (SAFE)
 // Place directly AFTER webexFetch()
