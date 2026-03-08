@@ -4246,7 +4246,7 @@ if (url.pathname === "/api/admin/org-health" && request.method === "GET") {
          - Admin: returns all orgs
          - Customer: requires session; returns only matching org
       ----------------------------- */
-     if (url.pathname === "/api/org") {
+  /*   if (url.pathname === "/api/org") {
   const user = getCurrentUser(request);
   const token = await getAccessToken(env);
   const session = await getSession(env, user.email);
@@ -4282,6 +4282,49 @@ if (user.isAdmin) {
 
 const filtered = (orgData.items || []).filter(o => o.id === session.orgId);
 return json(filtered);
+} */
+     if (url.pathname === "/api/org") {
+
+  const user = getCurrentUser(request);
+
+  if (!user) {
+    return json({ error: "not_authenticated" }, 401);
+  }
+
+  const token = await getAccessToken(env);
+  const session = await getSession(env, user.email);
+
+  // customers require tenant resolution (email OR PIN)
+  if (!user.isAdmin) {
+    if (!session || !session.orgId) {
+      return json({ error: "pin_required" }, 401);
+    }
+  }
+
+  // session expiry check
+  if (session?.expiresAt && session.expiresAt <= nowMs()) {
+    await clearSession(env, user.email);
+    return json(
+      { error: "pin_required_or_expired", message: "PIN required." },
+      401
+    );
+  }
+
+  const result = await webexFetch(env, "/organizations");
+
+  if (!result.ok) {
+    throw new Error(`/organizations failed: ${result.status}`);
+  }
+
+  const orgData = result.data;
+
+  if (user.isAdmin) {
+    return json(orgData.items || []);
+  }
+
+  const filtered = (orgData.items || []).filter(o => o.id === session.orgId);
+
+  return json(filtered);
 }
 /* -----------------------------
    /api/licenses
