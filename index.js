@@ -7360,6 +7360,43 @@ if (path === "/api/delegation/warm" &&
 
   return json({ ok:success });
 }
+     /* ============================================================
+MANUAL REPORT TRIGGER (FOR TESTING / ADMIN)
+============================================================ */
+
+if (url.pathname === "/api/admin/run-reports" && request.method === "POST") {
+
+  const user = getCurrentUser(request);
+  if (!user || !user.isAdmin)
+    return json({ error:"admin_required" },403);
+
+  const body = await request.json();
+  const orgId = normalizeOrgIdParam(body?.orgId);
+
+  if (!orgId)
+    return json({ error:"missing_orgId" },400);
+
+  try {
+
+    const cdr = await collectCdrHistory(env, orgId);
+    const media = await collectMediaQuality(env, orgId);
+
+    return json({
+      ok:true,
+      orgId,
+      cdrRecords:cdr?.length || 0,
+      mediaRecords:media?.length || 0
+    });
+
+  } catch (err) {
+
+    return json({
+      ok:false,
+      error:String(err)
+    });
+
+  }
+}
 /* if (url.pathname === "/api/cdr" && request.method === "GET") {
   return await apiCDR(env, request);
 } */
