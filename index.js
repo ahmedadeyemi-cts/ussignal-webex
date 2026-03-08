@@ -7785,6 +7785,10 @@ if (url.pathname.endsWith("/file") &&
 } */
 async function collectCdrHistory(env, orgId){
 
+  /* -------------------------------------------------------
+     helper: ISO timestamp without milliseconds
+  ------------------------------------------------------- */
+
   function isoNoMs(date){
     return date.toISOString().replace(/\.\d{3}Z$/, "Z");
   }
@@ -7798,14 +7802,56 @@ async function collectCdrHistory(env, orgId){
     `&endTime=${encodeURIComponent(now)}` +
     `&max=1000`;
 
-  const result = await webexFetchSafe(env, path, orgId);
+  let result = null;
 
-  if (!result.ok) {
+  /* -------------------------------------------------------
+     retry logic for Webex rate limiting
+  ------------------------------------------------------- */
+
+  for (let attempt = 0; attempt < 3; attempt++){
+
+    result = await webexFetchSafe(env, path, orgId);
+
+    if (result?.ok) break;
+
+    if (result?.error && result.error.includes("threshold")){
+
+      /* exponential backoff */
+      const wait = 1500 * (attempt + 1);
+      await new Promise(r => setTimeout(r, wait));
+
+      continue;
+    }
+
+    break;
+  }
+
+  /* -------------------------------------------------------
+     fallback to cached data if Webex throttles
+  ------------------------------------------------------- */
+
+  if (!result || !result.ok){
+
+    if (result?.error && result.error.includes("threshold")){
+
+      const cached = await env.WEBEX.get(`cdrCache:${orgId}`);
+
+      if (cached){
+        try {
+          return JSON.parse(cached);
+        } catch {}
+      }
+    }
+
     throw new Error(
       "cdr_fetch_failed: " +
-      (result.error || result.status || "unknown")
+      (result?.error || result?.status || "unknown")
     );
   }
+
+  /* -------------------------------------------------------
+     normalize records
+  ------------------------------------------------------- */
 
   const items = result.data?.items || [];
 
@@ -7820,11 +7866,21 @@ async function collectCdrHistory(env, orgId){
     device: x.deviceType || ""
   }));
 
-  await env.WEBEX.put(
-    `cdrCache:${orgId}`,
-    JSON.stringify(records),
-    { expirationTtl: 604800 }
-  );
+  /* -------------------------------------------------------
+     store records in KV
+  ------------------------------------------------------- */
+
+  try {
+
+    await env.WEBEX.put(
+      `cdrCache:${orgId}`,
+      JSON.stringify(records),
+      { expirationTtl: 604800 }   // 7 days
+    );
+
+  } catch(e){
+    console.warn("cdrCache write failed", e);
+  }
 
   return records;
 }
