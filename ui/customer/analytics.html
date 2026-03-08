@@ -1137,6 +1137,27 @@ function linearSlope(points){
   if (!den) return 0;
   return (n*sxy - sx*sy)/den;
 }
+   function predictCallVolume(history){
+
+  if(!history || history.length < 3) return null;
+
+  const slope = linearSlope(
+    history.map((h,i)=>({x:i,y:Number(h.totalCalls||0)}))
+  );
+
+  const last = history[history.length-1]?.totalCalls || 0;
+
+  const forecast=[];
+
+  for(let i=1;i<=7;i++){
+    forecast.push({
+      day:i,
+      calls:Math.max(0, Math.round(last + slope*i))
+    });
+  }
+
+  return forecast;
+}
 function buildAiInsight(summary, history){
   const mosSlope = linearSlope(history.map((h,i)=>({x:i, y:Number(h.mosAverage||0)})));
   const lossSlope = linearSlope(history.map((h,i)=>({x:i, y:Number(h.packetLossAverage||0)})));
@@ -1618,6 +1639,9 @@ async function loadAnalytics(){
 function renderAll(){
   const derived = buildDerivedAnalytics(ANALYTICS, MEDIA);
   const history = loadHistory(SELECTED_ORG_ID);
+  const failurePatterns = detectFailurePatterns(derived.records);
+  const networkAnomalies = detectNetworkAnomalies(derived.records);
+  const volumeForecast = predictCallVolume(history);
 
   // history with score
   const histWithScores = history.map(h=>{
@@ -1779,6 +1803,41 @@ function classifyAnomaly(r){
   if (String(r.callResult||"").toLowerCase().includes("fail")) return "PSTN / Signaling";
   return "General quality";
 }
+   function detectFailurePatterns(records){
+
+  const patterns = {
+    network:0,
+    device:0,
+    pstn:0
+  };
+
+  for(const r of records){
+
+    const loss = Number(r.packetLoss||0);
+    const jitter = Number(r.jitter||0);
+    const mos = Number(r.mos||0);
+    const res = String(r.callResult||"").toLowerCase();
+
+    if(loss > 0.03 || jitter > 30){
+      patterns.network++;
+    }
+    else if(mos < 3.3 && loss < 0.01){
+      patterns.device++;
+    }
+
+    if(res.includes("fail")){
+      patterns.pstn++;
+    }
+  }
+
+  const total = records.length || 1;
+
+  return {
+    networkRate:patterns.network/total,
+    deviceRate:patterns.device/total,
+    pstnRate:patterns.pstn/total
+  };
+}
 function renderAnomalyTable(records){
   const rows = [...records]
     .filter(r => (Number(r.packetLoss||0) > 0.03) || (Number(r.jitter||0) > 30) || (Number(r.mos||0) > 0 && Number(r.mos||0) < 3.4))
@@ -1803,6 +1862,28 @@ function renderAnomalyTable(records){
       <td class="muted" style="font-weight:900;">${escapeHtml(classifyAnomaly(r))}</td>
     </tr>
   `).join("");
+}
+   function detectNetworkAnomalies(records){
+
+  const anomalies=[];
+
+  for(const r of records){
+
+    const loss = Number(r.packetLoss||0);
+    const jitter = Number(r.jitter||0);
+    const mos = Number(r.mos||0);
+
+    if(loss>0.04 || jitter>40 || mos<3.3){
+      anomalies.push({
+        startTime:r.startTime,
+        packetLoss:loss,
+        jitter:jitter,
+        mos:mos
+      });
+    }
+  }
+
+  return anomalies;
 }
 function riskForEntity(mos, packetLoss){
   if ((Number(packetLoss||0) > 0.03) || (Number(mos||5) < 3.5)) return { label:"HIGH", cls:"bad" };
