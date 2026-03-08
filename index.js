@@ -7374,7 +7374,7 @@ if (path === "/api/delegation/warm" &&
 
   return json({ ok:success });
 }
-     /* ============================================================
+ /* ============================================================
 MANUAL REPORT TRIGGER (FOR TESTING / ADMIN)
 ============================================================ */
 
@@ -7382,31 +7382,30 @@ if (url.pathname === "/api/admin/run-reports" && request.method === "POST") {
 
   const user = getCurrentUser(request);
   if (!user || !user.isAdmin)
-    return json({ error:"admin_required" },403);
+    return json({ error: "admin_required" }, 403);
 
   const body = await request.json();
   const orgId = normalizeOrgIdParam(body?.orgId);
 
   if (!orgId)
-    return json({ error:"missing_orgId" },400);
+    return json({ error: "missing_orgId" }, 400);
 
   try {
 
-    const cdr = await collectCdrHistory(env, orgId);
-    const media = await collectMediaQuality(env, orgId);
+    // Only collect CDR history (Webex public analytics source)
+    const result = await collectCdrHistory(env, orgId);
 
     return json({
-      ok:true,
+      ok: true,
       orgId,
-      cdrRecords:cdr?.length || 0,
-      mediaRecords:media?.length || 0
+      cdrRecords: result?.records || result?.length || 0
     });
 
   } catch (err) {
 
     return json({
-      ok:false,
-      error:String(err)
+      ok: false,
+      error: String(err)
     });
 
   }
@@ -7987,118 +7986,7 @@ async function collectCdrHistory(env, orgId){
     analytics
   };
 }
-     async function collectMediaQuality(env, orgId){
-
-  function isoNoMs(date){
-    return date.toISOString().replace(/\.\d{3}Z$/, "Z");
-  }
-
-  const lastKey = `mediaLastFetch:${orgId}`;
-  const cacheKey = `mediaCache:${orgId}`;
-
-  // Webex requires endTime older than ~5 minutes
-  const endMs = Date.now() - (6 * 60 * 1000);
-
-  const chunkMs = 12 * 60 * 60 * 1000; // same Cisco limit as CDR
-
-  let startMs = Number(await env.WEBEX.get(lastKey));
-
-  if(!startMs){
-    startMs = endMs - (24 * 60 * 60 * 1000);
-  }
-
-  let all = [];
-  let seen = new Set();
-
-  const existing = await env.WEBEX.get(cacheKey);
-  if(existing){
-    try{
-      const parsed = JSON.parse(existing);
-      all = parsed;
-      parsed.forEach(x => seen.add(x.startTime + x.device));
-    }catch{}
-  }
-
-  for(let chunkStart = startMs; chunkStart < endMs; chunkStart += chunkMs){
-
-    const chunkEnd = Math.min(chunkStart + chunkMs, endMs);
-
-    const startTime = isoNoMs(new Date(chunkStart));
-    const endTime = isoNoMs(new Date(chunkEnd));
-
-    let url =
-      "https://analytics-calling.webexapis.com/v1/media_quality" +
-      `?startTime=${encodeURIComponent(startTime)}` +
-      `&endTime=${encodeURIComponent(endTime)}` +
-      `&max=1000`;
-
-    while(url){
-
-      const token = await getAccessToken(env);
-
-      const res = await fetch(url,{
-        method:"GET",
-        headers:{
-          Authorization:`Bearer ${token}`,
-          Accept:"application/json"
-        }
-      });
-
-      const data = await res.json();
-
-      if(!res.ok){
-
-        if(String(data?.message || "").toLowerCase().includes("threshold")){
-          await new Promise(r=>setTimeout(r,3000));
-          continue;
-        }
-
-        throw new Error(
-          "media_fetch_failed: " +
-          (data?.message || JSON.stringify(data))
-        );
-      }
-
-      const items = data?.items || [];
-
-      for(const r of items){
-
-        const key = (r.startTime || "") + (r.deviceType || "");
-
-        if(seen.has(key)) continue;
-        seen.add(key);
-
-        all.push({
-          startTime: r.startTime || "",
-          mos: r.averageMos || r.mos || 0,
-          packetLoss: r.packetLoss || 0,
-          jitter: r.jitter || 0,
-          device: r.deviceModel || r.deviceType || "",
-          location: r.locationName || "",
-          callResult: r.callResult || ""
-        });
-      }
-
-      url = data?.links?.next || null;
-
-      // gentle pacing to avoid throttling
-      await new Promise(r=>setTimeout(r,800));
-    }
-  }
-
-  await env.WEBEX.put(
-    cacheKey,
-    JSON.stringify(all),
-    { expirationTtl: 86400 }
-  );
-
-  await env.WEBEX.put(
-    lastKey,
-    String(endMs)
-  );
-
-  return all;
-}
+  
      /*
  function analyzeCallQuality(cdrRecords, mediaRecords){
 
