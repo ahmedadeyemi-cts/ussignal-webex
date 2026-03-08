@@ -7987,6 +7987,51 @@ async function collectCdrHistory(env, orgId){
     analytics
   };
 }
+     async function collectMediaQuality(env, orgId){
+
+  const token = await getAccessToken(env);
+
+  const url =
+    "https://analytics.webexapis.com/v1/calling/mediaQuality" +
+    "?max=200";
+
+  const res = await fetch(url,{
+    method:"GET",
+    headers:{
+      "Authorization":`Bearer ${token}`,
+      "Accept":"application/json"
+    }
+  });
+
+  const data = await res.json();
+
+  if(!res.ok){
+    throw new Error(
+      "media_fetch_failed: " +
+      (data?.message || res.status)
+    );
+  }
+
+  const records = data?.items || [];
+
+  const normalized = records.map(r => ({
+    startTime: r.startTime || "",
+    mos: r.averageMos || r.mos || 0,
+    packetLoss: r.packetLoss || 0,
+    jitter: r.jitter || 0,
+    device: r.deviceModel || r.deviceType || "",
+    location: r.locationName || "",
+    callResult: r.callResult || ""
+  }));
+
+  await env.WEBEX.put(
+    `mediaCache:${orgId}`,
+    JSON.stringify(normalized),
+    { expirationTtl: 86400 }
+  );
+
+  return normalized;
+}
      /*
  function analyzeCallQuality(cdrRecords, mediaRecords){
 
