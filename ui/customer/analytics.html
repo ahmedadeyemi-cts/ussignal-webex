@@ -635,10 +635,10 @@ hr.sep{
       <div class="hint">Heuristic explanation engine based on media + trend data</div>
     </div>
 
-    <div class="aiInsight">
-      <div class="title">Call Quality Narrative</div>
-      <div class="body" id="aiInsightBody">Loading insight…</div>
-    </div>
+   <div class="aiInsight">
+  <div class="title">AI Operational Insight</div>
+  <div class="body" id="aiInsightBody">Analyzing call quality signals…</div>
+</div>
   </div>
 
   <!-- PREDICTIVE SLA -->
@@ -1630,7 +1630,12 @@ function renderAll(){
     return { ...h, healthScore: c.score };
   });
 
+  // Prefer Worker-side AI if available
+if (ANALYTICS?.aiInsight) {
+  INSIGHT = ANALYTICS.aiInsight;
+} else {
   INSIGHT = buildAiInsight(derived.summary, histWithScores);
+}
   const health = computeCallHealth(derived.summary);
 
   // badges
@@ -1682,7 +1687,8 @@ function renderAll(){
   }
 
   // AI narrative
-  $("aiInsightBody").innerHTML = INSIGHT.body;
+ $("aiInsightBody").innerHTML =
+  `<b>${INSIGHT.title || "AI Quality Insight"}</b><br>${INSIGHT.body || "No insight available."}`;
 
   // Charts
   renderSlaTimeline("slaTimelineChart", histWithScores, health.score, INSIGHT.breachDays);
@@ -2134,6 +2140,7 @@ async function init(){
     SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
 
     await loadAnalytics();
+     setInterval(loadAnalytics, 30000);
 
   } catch (e){
     setError(e?.message || String(e));
