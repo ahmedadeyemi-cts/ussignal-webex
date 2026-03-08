@@ -3,10 +3,14 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8"/>
-<title>US Signal | Webex Calling Analytics</title>
+<title>US Signal | Analytics Intelligence 2.0</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 
 <style>
+
+/* ================================================
+THEME (Matches License Intelligence)
+================================================ */
 
 :root{
 --bg:#f6f8fb;
@@ -17,21 +21,24 @@
 --shadow:0 8px 24px rgba(15,23,42,.08);
 
 --accent:#0f62fe;
+
 --good:#16a34a;
 --warn:#f59e0b;
 --bad:#dc2626;
 }
 
-*{box-sizing:border-box;}
+*{box-sizing:border-box}
 
 body{
 margin:0;
-font-family:system-ui,-apple-system,Segoe UI,Roboto;
+font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
 background:var(--bg);
 color:var(--text);
 display:flex;
 min-height:100vh;
 }
+
+/* SIDEBAR */
 
 .sidebar{
 width:270px;
@@ -51,9 +58,9 @@ padding-bottom:14px;
 border-bottom:1px solid var(--line);
 }
 
-.brand img{height:34px;}
+.brand img{height:34px;border-radius:8px}
 
-.nav{display:flex;flex-direction:column;gap:6px;}
+.nav{display:flex;flex-direction:column;gap:6px}
 
 .nav a{
 padding:10px;
@@ -69,17 +76,23 @@ background:rgba(15,98,254,.12);
 border:1px solid rgba(15,98,254,.20);
 }
 
-.summary-pill{
+/* RAG */
+
+.ragPill{
 margin-top:auto;
 padding:12px;
-border-radius:12px;
+border-radius:999px;
+border:1px solid var(--line);
+display:flex;
+justify-content:space-between;
 font-weight:900;
-text-align:center;
 }
 
-.summary-green{background:rgba(22,163,74,.15);color:var(--good);}
-.summary-amber{background:rgba(245,158,11,.15);color:var(--warn);}
-.summary-red{background:rgba(220,38,38,.15);color:var(--bad);}
+.ragGreen{color:var(--good)}
+.ragAmber{color:var(--warn)}
+.ragRed{color:var(--bad)}
+
+/* MAIN */
 
 .main{
 flex:1;
@@ -88,6 +101,8 @@ display:flex;
 flex-direction:column;
 gap:18px;
 }
+
+/* HEADER */
 
 .header-card{
 background:var(--card);
@@ -100,6 +115,8 @@ justify-content:space-between;
 align-items:center;
 }
 
+/* CARDS */
+
 .card{
 background:var(--card);
 border:1px solid var(--line);
@@ -108,19 +125,48 @@ box-shadow:var(--shadow);
 padding:16px;
 }
 
-.row{
-display:flex;
-gap:16px;
-flex-wrap:wrap;
+.grid4{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:12px;
 }
 
-h2{
-margin:0 0 12px 0;
+.kpi{
+border:1px solid var(--line);
+border-radius:16px;
+padding:12px;
+}
+
+.kpi .label{
+font-size:12px;
+color:var(--muted);
+font-weight:900;
+}
+
+.kpi .value{
+font-size:22px;
+font-weight:1000;
+margin-top:6px;
+}
+
+.sectionTitle{
+display:flex;
+justify-content:space-between;
+align-items:flex-end;
+margin-bottom:10px;
+}
+
+.sectionTitle h2{
+margin:0;
 font-size:14px;
 font-weight:1000;
 }
 
-.muted{color:var(--muted);font-size:12px;}
+.table-wrap{
+border:1px solid var(--line);
+border-radius:16px;
+overflow:auto;
+}
 
 table{
 width:100%;
@@ -140,7 +186,22 @@ border-top:1px solid rgba(15,23,42,.06);
 font-size:13px;
 }
 
-.right{text-align:right;}
+.badge{
+padding:6px 10px;
+border-radius:999px;
+font-weight:1000;
+font-size:11px;
+border:1px solid var(--line);
+}
+
+.badge.good{color:var(--good)}
+.badge.warn{color:var(--warn)}
+.badge.bad{color:var(--bad)}
+
+canvas{
+width:100%;
+height:220px;
+}
 
 button{
 background:var(--accent);
@@ -148,34 +209,15 @@ color:#fff;
 border:none;
 padding:8px 14px;
 border-radius:10px;
-font-weight:800;
+font-weight:900;
 cursor:pointer;
 }
 
-canvas{width:100%;}
-
-.badge{
-padding:4px 10px;
-border-radius:999px;
-font-weight:900;
-font-size:11px;
+.btn-outline{
+background:transparent;
+border:1px solid var(--line);
+color:var(--text);
 }
-
-.badge-good{background:rgba(22,163,74,.15);color:var(--good);}
-.badge-warn{background:rgba(245,158,11,.15);color:var(--warn);}
-.badge-bad{background:rgba(220,38,38,.15);color:var(--bad);}
-
-.rc-pill{
-padding:6px 10px;
-border-radius:8px;
-font-weight:900;
-font-size:12px;
-}
-
-.rc-network{background:#fee2e2;color:#991b1b;}
-.rc-device{background:#dbeafe;color:#1e40af;}
-.rc-codec{background:#fef3c7;color:#92400e;}
-.rc-pstn{background:#e0f2fe;color:#0369a1;}
 
 </style>
 
@@ -185,25 +227,30 @@ font-size:12px;
 
 <div class="sidebar">
 
+<div>
 <div class="brand">
 <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg">
 <div>
-<div style="font-weight:900;">US Signal</div>
-<div class="muted">Customer Portal</div>
+<b>US Signal</b>
+<div style="font-size:12px;color:var(--muted)">Customer Portal</div>
 </div>
 </div>
 
 <div class="nav">
 <a href="/customer">Dashboard</a>
+<a href="/customer/observability">Observability</a>
 <a href="/customer/licenses">Licenses</a>
 <a href="/customer/devices">Devices</a>
 <a class="active" href="/customer/analytics">Analytics</a>
+<a href="/customer/pstn">PSTN</a>
 <a href="/customer/cdr">CDR</a>
 </div>
+</div>
 
-<div id="ragPill" class="summary-pill summary-green">GREEN</div>
-
-<button onclick="logout()">Logout</button>
+<div id="ragPill" class="ragPill ragGreen">
+<span>CALL HEALTH</span>
+<span id="healthScore">100</span>
+</div>
 
 </div>
 
@@ -211,128 +258,279 @@ font-size:12px;
 
 <div class="header-card">
 <div>
-<div style="font-size:16px;font-weight:1000;">Operational Calling Analytics</div>
-<div class="muted" id="tenantLine">Loading…</div>
-</div>
-<button id="btnExport">Export CSV</button>
+<div style="font-weight:1000">Webex Calling — Analytics Intelligence 2.0</div>
+<div style="font-size:12px;color:var(--muted)" id="tenantLine">Loading…</div>
 </div>
 
-<!-- ROOT CAUSE ANALYSIS -->
+<div>
+<button id="btnRefresh">Refresh</button>
+<button class="btn-outline" id="btnExport">Export CSV</button>
+</div>
+</div>
+
+<!-- KPI GRID -->
+
+<div class="grid4">
+
+<div class="kpi">
+<div class="label">Call Health Score</div>
+<div class="value" id="kHealth">—</div>
+</div>
+
+<div class="kpi">
+<div class="label">Avg MOS</div>
+<div class="value" id="kMos">—</div>
+</div>
+
+<div class="kpi">
+<div class="label">Packet Loss</div>
+<div class="value" id="kLoss">—</div>
+</div>
+
+<div class="kpi">
+<div class="label">Jitter</div>
+<div class="value" id="kJitter">—</div>
+</div>
+
+</div>
+
+<!-- QUALITY TREND -->
 
 <div class="card">
 
-<h2>Automatic Root Cause Detection</h2>
+<div class="sectionTitle">
+<h2>30-Day Call Quality Trend</h2>
+</div>
 
-<table>
-
-<thead>
-<tr>
-<th>Detected Issue</th>
-<th class="right">Affected Calls</th>
-<th>Root Cause</th>
-</tr>
-</thead>
-
-<tbody id="rootCauseRows"></tbody>
-
-</table>
+<canvas id="mosTrend"></canvas>
 
 </div>
 
 <!-- MOS HISTOGRAM -->
 
 <div class="card">
+
+<div class="sectionTitle">
 <h2>MOS Distribution</h2>
-<canvas id="mosHistogram" height="120"></canvas>
 </div>
 
-<!-- PACKET LOSS ANOMALY -->
+<canvas id="mosHistogram"></canvas>
+
+</div>
+
+<!-- ROOT CAUSE -->
 
 <div class="card">
-<h2>Packet Loss Anomalies</h2>
 
+<div class="sectionTitle">
+<h2>Automatic Root Cause Detection</h2>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Cause</th>
+<th>Affected Calls</th>
+<th>Classification</th>
+</tr>
+</thead>
+<tbody id="rootRows"></tbody>
+</table>
+</div>
+
+</div>
+
+<!-- ANOMALIES -->
+
+<div class="card">
+
+<div class="sectionTitle">
+<h2>Packet Loss Anomalies</h2>
+</div>
+
+<div class="table-wrap">
 <table>
 <thead>
 <tr>
 <th>Time</th>
-<th class="right">Packet Loss</th>
-<th class="right">MOS</th>
+<th>Packet Loss</th>
+<th>MOS</th>
 </tr>
 </thead>
-
 <tbody id="anomalyRows"></tbody>
-
 </table>
-
 </div>
 
-<!-- HEATMAP -->
-
-<div class="card">
-<h2>Call Quality Heatmap</h2>
-<canvas id="qualityHeatmap" height="220"></canvas>
 </div>
 
 </div>
 
 <script>
 
+/* =====================================
+STATE
+===================================== */
+
 let ORG_ID
 let MEDIA=[]
 
+/* =====================================
+API
+===================================== */
+
+async function api(path){
+const r=await fetch(path)
+return r.json()
+}
+
+/* =====================================
+INIT
+===================================== */
+
 async function init(){
 
-const me=await fetch("/api/me").then(r=>r.json())
+const me=await api("/api/me")
 
 ORG_ID=me.orgId
 
 document.getElementById("tenantLine").textContent=me.orgName
 
-const media=await fetch(`/api/analytics/media?orgId=${ORG_ID}`).then(r=>r.json())
+const media=await api(`/api/analytics/media?orgId=${ORG_ID}`)
 
-MEDIA=media.records || []
+MEDIA=media.records||[]
 
-drawHistogram()
-drawHeatmap()
-detectRootCauses()
-renderAnomalies()
+analyze()
 
 }
 
-function drawHistogram(){
+function analyze(){
 
-const canvas=document.getElementById("mosHistogram")
-const ctx=canvas.getContext("2d")
+if(!MEDIA.length)return
+
+let mos=0
+let loss=0
+let jitter=0
+
+MEDIA.forEach(r=>{
+mos+=r.mos||0
+loss+=r.packetLoss||0
+jitter+=r.jitter||0
+})
+
+mos/=MEDIA.length
+loss/=MEDIA.length
+jitter/=MEDIA.length
+
+document.getElementById("kMos").textContent=mos.toFixed(2)
+document.getElementById("kLoss").textContent=(loss*100).toFixed(2)+"%"
+document.getElementById("kJitter").textContent=jitter.toFixed(1)
+
+const score=computeHealth(mos,loss,jitter)
+
+document.getElementById("kHealth").textContent=score
+
+drawHistogram()
+detectRoot()
+detectAnomalies()
+
+}
+
+function computeHealth(mos,loss,jitter){
+
+let score=100
+
+if(loss>0.03)score-=25
+else if(loss>0.01)score-=10
+
+if(jitter>40)score-=20
+else if(jitter>20)score-=10
+
+if(mos<3.8)score-=15
+if(mos<3.4)score-=25
+
+score=Math.max(0,score)
+
+document.getElementById("healthScore").textContent=score
+
+return score
+
+}
+
+/* MOS HISTOGRAM */
+
+function drawHistogram(){
 
 const bins=[0,0,0,0,0]
 
 MEDIA.forEach(r=>{
+const m=r.mos||0
 
-const mos=r.mos||0
-
-if(mos>=4.5)bins[4]++
-else if(mos>=4)bins[3]++
-else if(mos>=3.5)bins[2]++
-else if(mos>=3)bins[1]++
+if(m>=4.5)bins[4]++
+else if(m>=4)bins[3]++
+else if(m>=3.5)bins[2]++
+else if(m>=3)bins[1]++
 else bins[0]++
 
 })
 
+const canvas=document.getElementById("mosHistogram")
+const ctx=canvas.getContext("2d")
+
 const max=Math.max(...bins)
 
 bins.forEach((b,i)=>{
-
-const x=i*80
 const h=(b/max)*canvas.height
-
 ctx.fillStyle="#0f62fe"
-ctx.fillRect(x,canvas.height-h,50,h)
-
+ctx.fillRect(i*80,canvas.height-h,60,h)
 })
 
 }
 
-function renderAnomalies(){
+/* ROOT CAUSE */
+
+function detectRoot(){
+
+const net=MEDIA.filter(r=>r.packetLoss>0.03||r.jitter>30)
+const device=MEDIA.filter(r=>r.deviceModel&&r.mos<3.5)
+const codec=MEDIA.filter(r=>r.mos<3.2&&r.packetLoss<0.01)
+const pstn=MEDIA.filter(r=>r.callResult==="failed")
+
+const rows=document.getElementById("rootRows")
+
+rows.innerHTML=`
+
+<tr>
+<td>Network impairment</td>
+<td>${net.length}</td>
+<td><span class="badge bad">Network</span></td>
+</tr>
+
+<tr>
+<td>Endpoint quality</td>
+<td>${device.length}</td>
+<td><span class="badge warn">Device</span></td>
+</tr>
+
+<tr>
+<td>Codec degradation</td>
+<td>${codec.length}</td>
+<td><span class="badge warn">Codec</span></td>
+</tr>
+
+<tr>
+<td>Call failures</td>
+<td>${pstn.length}</td>
+<td><span class="badge bad">PSTN</span></td>
+</tr>
+
+`
+
+}
+
+/* ANOMALIES */
+
+function detectAnomalies(){
 
 const rows=document.getElementById("anomalyRows")
 
@@ -341,8 +539,8 @@ MEDIA.filter(r=>r.packetLoss>0.05).slice(0,10).forEach(r=>{
 rows.innerHTML+=`
 <tr>
 <td>${r.startTime}</td>
-<td class="right">${(r.packetLoss*100).toFixed(2)}%</td>
-<td class="right">${r.mos?.toFixed(2)}</td>
+<td>${(r.packetLoss*100).toFixed(2)}%</td>
+<td>${r.mos.toFixed(2)}</td>
 </tr>
 `
 
@@ -350,70 +548,26 @@ rows.innerHTML+=`
 
 }
 
-function drawHeatmap(){
+/* EXPORT */
 
-const canvas=document.getElementById("qualityHeatmap")
-const ctx=canvas.getContext("2d")
+document.getElementById("btnExport").onclick=()=>{
 
-MEDIA.slice(0,500).forEach(r=>{
+let csv="time,mos,packetLoss,jitter\n"
 
-const x=r.packetLoss*canvas.width*5
-const y=canvas.height-(r.mos*40)
-
-ctx.fillStyle="rgba(15,98,254,.4)"
-ctx.fillRect(x,y,4,4)
-
+MEDIA.forEach(r=>{
+csv+=`${r.startTime},${r.mos},${r.packetLoss},${r.jitter}\n`
 })
 
-}
+const blob=new Blob([csv])
+const a=document.createElement("a")
 
-/* ROOT CAUSE DETECTION */
-
-function detectRootCauses(){
-
-const rows=document.getElementById("rootCauseRows")
-
-const network=MEDIA.filter(r=>r.packetLoss>0.03||r.jitter>30)
-const device=MEDIA.filter(r=>r.deviceModel && r.mos<3.5)
-const codec=MEDIA.filter(r=>r.mos<3.2 && r.packetLoss<0.01)
-const pstn=MEDIA.filter(r=>r.callResult==="failed")
-
-rows.innerHTML=`
-
-<tr>
-<td>High packet loss / jitter</td>
-<td class="right">${network.length}</td>
-<td><span class="rc-pill rc-network">Network</span></td>
-</tr>
-
-<tr>
-<td>Low MOS by endpoint</td>
-<td class="right">${device.length}</td>
-<td><span class="rc-pill rc-device">Device</span></td>
-</tr>
-
-<tr>
-<td>Low MOS without packet loss</td>
-<td class="right">${codec.length}</td>
-<td><span class="rc-pill rc-codec">Codec</span></td>
-</tr>
-
-<tr>
-<td>Failed calls</td>
-<td class="right">${pstn.length}</td>
-<td><span class="rc-pill rc-pstn">PSTN Path</span></td>
-</tr>
-
-`
+a.href=URL.createObjectURL(blob)
+a.download="analytics.csv"
+a.click()
 
 }
 
-function logout(){
-
-fetch("/api/logout",{method:"POST"})
-.then(()=>location.href="/")
-
-}
+document.getElementById("btnRefresh").onclick=()=>init()
 
 init()
 
