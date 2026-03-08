@@ -7784,19 +7784,23 @@ if (url.pathname.endsWith("/file") &&
   }
 } */
 async function collectCdrHistory(env, orgId){
+async function collectCdrHistory(env, orgId){
 
   const now = new Date().toISOString();
   const from = new Date(Date.now() - 7*24*60*60*1000).toISOString();
 
   const path =
-    `/cdr_feed?startTime=${encodeURIComponent(from)}` +
+    `/v1/cdr_feed?startTime=${encodeURIComponent(from)}` +
     `&endTime=${encodeURIComponent(now)}` +
     `&max=1000`;
 
   const result = await webexFetchSafe(env, path, orgId);
 
   if (!result.ok) {
-    throw new Error("cdr_fetch_failed");
+    throw new Error(
+      "cdr_fetch_failed: " +
+      (result.preview || result.status || "unknown")
+    );
   }
 
   const records = normalizeCdrItems(result.data);
