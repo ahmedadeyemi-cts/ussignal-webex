@@ -7786,37 +7786,44 @@ if (url.pathname.endsWith("/file") &&
 async function collectCdrHistory(env, orgId){
 
   function isoNoMs(date){
-    return date.toISOString().replace(/\.\d{3}Z$/, "Z");
+    return date.toISOString().replace(/\.\d{3}Z$/, "");
   }
 
   const now = isoNoMs(new Date());
   const from = isoNoMs(new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)));
 
-  const path =
-  `/v1/cdr/calls` +
-  `?startTime=${encodeURIComponent(from)}` +
-  `&endTime=${encodeURIComponent(now)}` +
-  `&max=1000`;
+  const url =
+    `https://analytics-calling.webexapis.com/v1/cdr_feed` +
+    `?startTime=${encodeURIComponent(from)}` +
+    `&endTime=${encodeURIComponent(now)}` +
+    `&max=1000`;
 
-  const result = await webexFetchSafe(env, path, orgId);
+  const token = await getWebexAccessToken(env, orgId);
 
-  /* fallback to cache if Webex errors */
-  if (!result || !result.ok){
+  const r = await fetch(url,{
+    headers:{
+      "Authorization":`Bearer ${token}`,
+      "Accept":"application/json"
+    }
+  });
+
+  if(!r.ok){
 
     const cached = await env.WEBEX.get(`cdrCache:${orgId}`);
-
-    if (cached){
-      try { return JSON.parse(cached); }
-      catch {}
+    if(cached){
+      try { return JSON.parse(cached); } catch{}
     }
 
+    const text = await r.text();
+
     throw new Error(
-      "cdr_fetch_failed: " +
-      (result?.error || result?.status || "unknown")
+      "cdr_fetch_failed: " + text
     );
   }
 
-  const items = result.data?.items || [];
+  const data = await r.json();
+
+  const items = data.items || [];
 
   const records = items.map(x => ({
     callId: x.id || "",
@@ -7832,7 +7839,7 @@ async function collectCdrHistory(env, orgId){
   await env.WEBEX.put(
     `cdrCache:${orgId}`,
     JSON.stringify(records),
-    { expirationTtl: 604800 }   // 7 days
+    { expirationTtl: 604800 }
   );
 
   return records;
