@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8" />
@@ -8,7 +9,7 @@
 <style>
 
 /* ===============================
-   THEME (MATCH DEVICES)
+   THEME (UNCHANGED)
 ================================ */
 
 :root{
@@ -77,8 +78,6 @@ body{
   background:rgba(15,98,254,.12);
   border:1px solid rgba(15,98,254,.20);
 }
-
-/* RAG */
 
 .summary-pill{
   margin-top:auto;
@@ -166,10 +165,7 @@ button{
   cursor:pointer;
 }
 
-.sparkline{
-  width:120px;
-  height:30px;
-}
+canvas{width:100%;}
 
 .badge{
   padding:4px 10px;
@@ -183,6 +179,7 @@ button{
 .badge-bad{background:rgba(220,38,38,.15);color:var(--bad);}
 
 </style>
+
 </head>
 
 <body>
@@ -203,13 +200,6 @@ button{
       <a href="/customer/devices">Devices</a>
       <a class="active" href="/customer/analytics">Analytics</a>
       <a href="/customer/cdr">CDR</a>
-      <a href="/customer/pstn">PSTN</a>
-      <a href="/customer/callinginsight">Calling Insight</a>
-      <a href="/customer/maintenance">Maintenance</a>
-      <a href="/customer/status">Status</a>
-      <a href="/customer/incidents">Incidents</a>
-      <a href="/customer/support">Support Contact</a>
-     <a href="/customer/user-guide">User Guide</a>
   </div>
 
   <div id="ragPill" class="summary-pill summary-green">GREEN</div>
@@ -223,28 +213,37 @@ button{
     <div style="font-size:16px;font-weight:1000;">Operational Calling Analytics</div>
     <div class="muted" id="tenantLine">Loading…</div>
   </div>
-  <div>
-    <button id="btnExport">Export CSV</button>
-  </div>
+  <button id="btnExport">Export CSV</button>
 </div>
 
 <!-- KPI SECTION -->
+
 <div class="section">
 <div class="row">
 
 <div class="card" style="flex:1;min-width:220px;">
-<h2>Total Calls (7d)</h2>
-<div style="font-size:28px;font-weight:1000;" id="totalCalls">—</div>
+<h2>Total Calls</h2>
+<div style="font-size:28px;font-weight:1000;" id="kpiCalls">—</div>
 </div>
 
 <div class="card" style="flex:1;min-width:220px;">
 <h2>Success Rate</h2>
-<div style="font-size:28px;font-weight:1000;" id="successRate">—</div>
+<div style="font-size:28px;font-weight:1000;" id="kpiSuccess">—</div>
 </div>
 
 <div class="card" style="flex:1;min-width:220px;">
-<h2>Avg Duration</h2>
-<div style="font-size:28px;font-weight:1000;" id="avgDuration">—</div>
+<h2>Avg MOS</h2>
+<div style="font-size:28px;font-weight:1000;" id="kpiMos">—</div>
+</div>
+
+<div class="card" style="flex:1;min-width:220px;">
+<h2>Packet Loss</h2>
+<div style="font-size:28px;font-weight:1000;" id="kpiPacket">—</div>
+</div>
+
+<div class="card" style="flex:1;min-width:220px;">
+<h2>Jitter</h2>
+<div style="font-size:28px;font-weight:1000;" id="kpiJitter">—</div>
 </div>
 
 <div class="card" style="flex:1;min-width:220px;">
@@ -255,29 +254,79 @@ button{
 </div>
 </div>
 
-<!-- TREND -->
+<!-- CALL TREND -->
+
 <div class="section">
 <div class="card">
-<h2>30-Day Call Volume Trend</h2>
+<h2>30-Day Call Volume</h2>
 <canvas id="trendChart" height="100"></canvas>
 </div>
 </div>
 
-<!-- DAILY BREAKDOWN -->
+<!-- MOS TREND -->
+
 <div class="section">
 <div class="card">
-<h2>7-Day Breakdown</h2>
+<h2>MOS Trend</h2>
+<canvas id="mosChart" height="100"></canvas>
+</div>
+</div>
+
+<!-- PACKET LOSS TREND -->
+
+<div class="section">
+<div class="card">
+<h2>Packet Loss Trend</h2>
+<canvas id="packetChart" height="100"></canvas>
+</div>
+</div>
+
+<!-- DEVICE QUALITY -->
+
+<div class="section">
+<div class="card">
+
+<h2>Device Quality</h2>
+
 <table>
+
 <thead>
 <tr>
-<th>Date</th>
+<th>Device</th>
 <th class="right">Calls</th>
-<th class="right">Failures</th>
-<th>Trend</th>
+<th class="right">MOS</th>
+<th class="right">Packet Loss</th>
 </tr>
 </thead>
-<tbody id="analyticsRows"></tbody>
+
+<tbody id="deviceRows"></tbody>
+
 </table>
+
+</div>
+</div>
+
+<!-- LOCATION QUALITY -->
+
+<div class="section">
+<div class="card">
+
+<h2>Location Quality</h2>
+
+<table>
+
+<thead>
+<tr>
+<th>Location</th>
+<th class="right">Calls</th>
+<th class="right">MOS</th>
+</tr>
+</thead>
+
+<tbody id="locationRows"></tbody>
+
+</table>
+
 </div>
 </div>
 
@@ -285,185 +334,196 @@ button{
 
 <script>
 
-/* ===============================
-   STATE
-================================ */
-
-let ORG_ID=null;
-let ANALYTICS=[];
-
-/* ===============================
-   INIT
-================================ */
+let ORG_ID=null
+let DATA=null
 
 async function init(){
-  const me=await fetch("/api/me").then(r=>r.json());
-  ORG_ID=me.orgId;
-  document.getElementById("tenantLine").textContent=me.orgName||"Unknown";
-  await loadAnalytics();
+
+const me=await fetch("/api/me").then(r=>r.json())
+
+ORG_ID=me.orgId
+
+document.getElementById("tenantLine").textContent=me.orgName
+
+const r=await fetch(`/api/analytics?orgId=${encodeURIComponent(ORG_ID)}`)
+
+DATA=await r.json()
+
+render()
+
 }
 
-/* ===============================
-   LOAD ANALYTICS
-================================ */
+function render(){
 
-async function loadAnalytics(){
-  const r=await fetch(`/api/analytics?orgId=${encodeURIComponent(ORG_ID)}`);
-  const data=await r.json();
+const s=DATA.summary
 
-  const total=data?.data?.aggregations?.[0]?.metrics?.[0]?.value||0;
+document.getElementById("kpiCalls").textContent=s.totalCalls.toLocaleString()
 
-  ANALYTICS=generateOperationalBreakdown(total);
+document.getElementById("kpiSuccess").textContent=(s.successRate*100).toFixed(1)+"%"
 
-  document.getElementById("totalCalls").textContent=total.toLocaleString();
+document.getElementById("kpiMos").textContent=s.mosAverage.toFixed(2)
 
-  const successPct=calculateSuccessRate();
-  document.getElementById("successRate").textContent=successPct+"%";
+document.getElementById("kpiPacket").textContent=(s.packetLossAverage*100).toFixed(2)+"%"
 
-  const avgDur=calculateAvgDuration();
-  document.getElementById("avgDuration").textContent=avgDur+" sec";
+document.getElementById("kpiJitter").textContent=s.jitterAverage.toFixed(2)
 
-  setSLA(successPct);
+setSLA(s.successRate)
 
-  renderTable();
-  renderTrend();
+renderCharts()
+renderDevices()
+renderLocations()
+
 }
 
-/* ===============================
-   OPERATIONAL METRICS
-================================ */
-
-function calculateSuccessRate(){
-  const total=ANALYTICS.reduce((a,b)=>a+b.calls,0);
-  const failures=ANALYTICS.reduce((a,b)=>a+b.failures,0);
-  return total?Math.round((1-failures/total)*100):100;
-}
-
-function calculateAvgDuration(){
-  return Math.round(Math.random()*300+120);
-}
 
 function setSLA(rate){
-  const el=document.getElementById("slaStatus");
-  const pill=document.getElementById("ragPill");
 
-  if(rate>=98){
-    el.innerHTML=`<span class="badge badge-good">MEETING SLA</span>`;
-    pill.className="summary-pill summary-green";
-    pill.textContent="GREEN";
-  }else if(rate>=95){
-    el.innerHTML=`<span class="badge badge-warn">AT RISK</span>`;
-    pill.className="summary-pill summary-amber";
-    pill.textContent="AMBER";
-  }else{
-    el.innerHTML=`<span class="badge badge-bad">BREACH</span>`;
-    pill.className="summary-pill summary-red";
-    pill.textContent="RED";
-  }
+const el=document.getElementById("slaStatus")
+const pill=document.getElementById("ragPill")
+
+if(rate>=0.98){
+
+el.innerHTML=`<span class="badge badge-good">MEETING SLA</span>`
+pill.className="summary-pill summary-green"
+pill.textContent="GREEN"
+
 }
 
-/* ===============================
-   TABLE
-================================ */
+else if(rate>=0.95){
 
-function renderTable(){
-  const tbody=document.getElementById("analyticsRows");
-  tbody.innerHTML="";
+el.innerHTML=`<span class="badge badge-warn">AT RISK</span>`
+pill.className="summary-pill summary-amber"
+pill.textContent="AMBER"
 
-  ANALYTICS.forEach(d=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td>${d.date}</td>
-      <td class="right">${d.calls}</td>
-      <td class="right">${d.failures}</td>
-      <td><canvas class="sparkline"></canvas></td>
-    `;
-    tbody.appendChild(tr);
-    drawSpark(tr.querySelector("canvas"),d.spark);
-  });
 }
 
-function drawSpark(canvas,data){
-  const ctx=canvas.getContext("2d");
-  canvas.width=120;
-  canvas.height=30;
-  ctx.strokeStyle="#0f62fe";
-  ctx.beginPath();
-  data.forEach((v,i)=>{
-    const x=i*(canvas.width/(data.length-1));
-    const y=canvas.height-(v/100)*canvas.height;
-    if(i===0)ctx.moveTo(x,y);
-    else ctx.lineTo(x,y);
-  });
-  ctx.stroke();
+else{
+
+el.innerHTML=`<span class="badge badge-bad">BREACH</span>`
+pill.className="summary-pill summary-red"
+pill.textContent="RED"
+
 }
 
-/* ===============================
-   TREND CHART
-================================ */
-
-function renderTrend(){
-  const canvas=document.getElementById("trendChart");
-  const ctx=canvas.getContext("2d");
-  const data=generateOperationalBreakdown(1000,30);
-
-  ctx.strokeStyle="#0f62fe";
-  ctx.beginPath();
-  data.forEach((d,i)=>{
-    const x=i*(canvas.width/(data.length-1));
-    const y=canvas.height-(d.calls/Math.max(...data.map(x=>x.calls)))*canvas.height;
-    if(i===0)ctx.moveTo(x,y);
-    else ctx.lineTo(x,y);
-  });
-  ctx.stroke();
 }
 
-/* ===============================
-   CSV EXPORT
-================================ */
 
-document.getElementById("btnExport").addEventListener("click",()=>{
-  let csv="Date,Calls,Failures\n";
-  ANALYTICS.forEach(d=>{
-    csv+=`${d.date},${d.calls},${d.failures}\n`;
-  });
-  const blob=new Blob([csv],{type:"text/csv"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url;
-  a.download="analytics.csv";
-  a.click();
-});
+function renderCharts(){
 
-/* ===============================
-   DATA GENERATION
-================================ */
+drawLine("trendChart",DATA.trends.map(x=>x.calls))
 
-function generateOperationalBreakdown(total,days=7){
-  const arr=[];
-  for(let i=days;i>0;i--){
-    const calls=Math.floor(total/days*(0.8+Math.random()*0.4));
-    const failures=Math.floor(calls*(Math.random()*0.05));
-    arr.push({
-      date:new Date(Date.now()-i*86400000).toLocaleDateString(),
-      calls,
-      failures,
-      spark:Array.from({length:10},()=>Math.random()*100)
-    });
-  }
-  return arr;
+drawLine("mosChart",DATA.trends.map(x=>x.mos))
+
+drawLine("packetChart",DATA.trends.map(x=>x.packetLoss))
+
 }
 
-/* ===============================
-   LOGOUT
-================================ */
+
+function drawLine(id,data){
+
+const canvas=document.getElementById(id)
+
+const ctx=canvas.getContext("2d")
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+const max=Math.max(...data)
+
+ctx.beginPath()
+
+data.forEach((v,i)=>{
+
+const x=i*(canvas.width/(data.length-1))
+
+const y=canvas.height-(v/max)*canvas.height
+
+if(i===0)ctx.moveTo(x,y)
+else ctx.lineTo(x,y)
+
+})
+
+ctx.strokeStyle="#0f62fe"
+ctx.stroke()
+
+}
+
+
+function renderDevices(){
+
+const tbody=document.getElementById("deviceRows")
+
+tbody.innerHTML=""
+
+DATA.devices.forEach(d=>{
+
+const tr=document.createElement("tr")
+
+tr.innerHTML=`
+<td>${d.device}</td>
+<td class="right">${d.calls}</td>
+<td class="right">${d.mos.toFixed(2)}</td>
+<td class="right">${(d.packetLoss*100).toFixed(2)}%</td>
+`
+
+tbody.appendChild(tr)
+
+})
+
+}
+
+
+function renderLocations(){
+
+const tbody=document.getElementById("locationRows")
+
+tbody.innerHTML=""
+
+DATA.locations.forEach(l=>{
+
+const tr=document.createElement("tr")
+
+tr.innerHTML=`
+<td>${l.location}</td>
+<td class="right">${l.calls}</td>
+<td class="right">${l.mos.toFixed(2)}</td>
+`
+
+tbody.appendChild(tr)
+
+})
+
+}
+
+
+document.getElementById("btnExport").onclick=()=>{
+
+let csv="day,calls,failures,mos\n"
+
+DATA.trends.forEach(d=>{
+csv+=`${d.day},${d.calls},${d.failures},${d.mos}\n`
+})
+
+const blob=new Blob([csv])
+const url=URL.createObjectURL(blob)
+
+const a=document.createElement("a")
+a.href=url
+a.download="analytics.csv"
+a.click()
+
+}
+
 
 function logout(){
-  fetch("/api/logout",{method:"POST"}).then(()=>location.href="/");
+
+fetch("/api/logout",{method:"POST"})
+.then(()=>location.href="/")
+
 }
 
-init();
+init()
 
 </script>
+
 </body>
 </html>
