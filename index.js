@@ -4288,16 +4288,18 @@ if (url.pathname === "/api/org") {
   try {
 
     const user = getCurrentUser(request);
+
     if (!user) {
       return json({ error: "not_authenticated" }, 401);
     }
 
-    // ADMIN: fetch orgs directly from Webex
-    if (user.isAdmin) {
+    // ADMIN FLOW
+    if (user.isAdmin === true) {
 
       const token = await getAccessToken(env);
 
       const res = await fetch("https://webexapis.com/v1/organizations", {
+        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json"
@@ -4307,9 +4309,9 @@ if (url.pathname === "/api/org") {
       const data = await res.json();
 
       if (!res.ok) {
-        console.log("WEBEX ORG ERROR:", data);
+        console.log("WEBEX ORG FETCH FAILED:", data);
         return json({
-          error: "webex_org_fetch_failed",
+          error: "webex_fetch_failed",
           detail: data
         }, 500);
       }
@@ -4341,6 +4343,7 @@ if (url.pathname === "/api/org") {
     }, 500);
 
   }
+
 }
 /* -----------------------------
    /api/licenses
