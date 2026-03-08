@@ -7805,24 +7805,23 @@ async function collectCdrHistory(env, orgId){
 
   const token = await getAccessToken(env);
 
-  const lastKey = `cdrLastFetch:${orgId}`;
-  const cacheKey = `cdrCache:${orgId}`;
-  const analyticsKey = `analyticsCache:${orgId}`;
+   const lastKey = `cdrLastFetch:${orgId}`;
+   const cacheKey = `cdrCache:${orgId}`;
+   const analyticsKey = `analyticsCache:${orgId}`;
 
+  // Webex requires endTime older than 5 minutes
+   const endMs = Date.now() - (6 * 60 * 1000);
+
+   const chunkMs = 12 * 60 * 60 * 1000;
+
+  // load last ingestion checkpoint
   let startMs = Number(await env.WEBEX.get(lastKey));
 
-// Webex requires endTime to be at least 5 minutes old
-const endMs = Date.now() - (6 * 60 * 1000);
-
-const chunkMs = 12 * 60 * 60 * 1000;
-
-let startMs = Number(await env.WEBEX.get(lastKey));
-
-if (!startMs){
-  // first run = last 24h
-  startMs = endMs - (24 * 60 * 60 * 1000);
-}
-
+  // first run fallback = last 24h
+  if (!startMs){
+    startMs = endMs - (24 * 60 * 60 * 1000);
+  }
+ 
   let all = [];
   let seen = new Set();
 
