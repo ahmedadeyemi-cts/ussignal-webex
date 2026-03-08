@@ -7900,6 +7900,8 @@ async function collectCdrHistory(env, orgId){
     avgDuration,
     lastUpdated: new Date().toISOString()
   };
+ const aiInsight = analyzeCallQuality(cdrRecords, mediaRecords);
+analytics.aiInsight = aiInsight;
 
   await env.WEBEX.put(
     cacheKey,
@@ -7950,6 +7952,84 @@ async function collectCdrHistory(env, orgId){
 
   return records;
 }
+ function analyzeCallQuality(cdrRecords, mediaRecords){
+
+  const insights = [];
+
+  let networkIssues = 0;
+  let deviceIssues = 0;
+  let pstnIssues = 0;
+  let codecIssues = 0;
+
+  for (const call of mediaRecords){
+
+    const mos = call.mos || 0;
+    const packetLoss = call.packetLoss || 0;
+    const jitter = call.jitter || 0;
+    const device = (call.deviceType || "").toLowerCase();
+    const direction = (call.direction || "").toLowerCase();
+
+    if (packetLoss > 3 || jitter > 30){
+      networkIssues++;
+      continue;
+    }
+
+    if (mos < 3.5 && device.includes("phone")){
+      deviceIssues++;
+      continue;
+    }
+
+    if (direction === "pstn" && mos < 3.5){
+      pstnIssues++;
+      continue;
+    }
+
+    if (mos < 3.5 && packetLoss < 1 && jitter < 10){
+      codecIssues++;
+    }
+  }
+
+  const total = mediaRecords.length || 1;
+
+  function pct(x){
+    return Math.round((x / total) * 100);
+  }
+
+  let primaryCause = "Healthy";
+
+  const max = Math.max(networkIssues, deviceIssues, pstnIssues, codecIssues);
+
+  if (max === networkIssues) primaryCause = "Network";
+  else if (max === deviceIssues) primaryCause = "Device";
+  else if (max === pstnIssues) primaryCause = "PSTN";
+  else if (max === codecIssues) primaryCause = "Codec";
+
+  return {
+    primaryCause,
+    breakdown:{
+      network:pct(networkIssues),
+      device:pct(deviceIssues),
+      pstn:pct(pstnIssues),
+      codec:pct(codecIssues)
+    },
+    summary:
+
+      primaryCause === "Network"
+        ? "Most degraded calls show packet loss or jitter consistent with network congestion."
+
+      : primaryCause === "Device"
+        ? "Call quality degradation is concentrated on endpoint devices suggesting firmware or headset issues."
+
+      : primaryCause === "PSTN"
+        ? "Degraded calls are primarily on PSTN routes indicating possible carrier path problems."
+
+      : primaryCause === "Codec"
+        ? "Low MOS without packet loss suggests codec negotiation or transcoding issues."
+
+      : "Call quality metrics indicate healthy network and device conditions."
+  };
+}
+     
 // =====================================================
 // /api/pstn (GET) — hardened multi-tenant + caching + summary
 // - Always scopes org via ?orgId= (NO header switching / NO null orgId)
