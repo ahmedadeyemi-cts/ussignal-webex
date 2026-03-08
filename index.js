@@ -7785,8 +7785,12 @@ if (url.pathname.endsWith("/file") &&
 } */
 async function collectCdrHistory(env, orgId){
 
-  const now = new Date().toISOString();
-  const from = new Date(Date.now() - 24*60*60*1000).toISOString();
+  function isoNoMs(date){
+    return date.toISOString().replace(/\.\d{3}Z$/, "Z");
+  }
+
+  const now = isoNoMs(new Date());
+  const from = isoNoMs(new Date(Date.now() - 24*60*60*1000));
 
   const path =
     `/cdr_feed` +
@@ -7799,7 +7803,7 @@ async function collectCdrHistory(env, orgId){
   if (!result.ok) {
     throw new Error(
       "cdr_fetch_failed: " +
-      (result.preview || result.status || "unknown")
+      (result.error || result.status || "unknown")
     );
   }
 
@@ -7810,8 +7814,8 @@ async function collectCdrHistory(env, orgId){
     startTime: x.startTime,
     duration: x.durationSeconds || 0,
     result: x.callResult || "unknown",
-    calling: x.localCallId || "",
-    called: x.remoteCallId || "",
+    caller: x.localCallId || "",
+    callee: x.remoteCallId || "",
     direction: x.direction || "",
     device: x.deviceType || ""
   }));
@@ -7819,7 +7823,7 @@ async function collectCdrHistory(env, orgId){
   await env.WEBEX.put(
     `cdrCache:${orgId}`,
     JSON.stringify(records),
-    { expirationTtl: 86400 }
+    { expirationTtl: 604800 }
   );
 
   return records;
