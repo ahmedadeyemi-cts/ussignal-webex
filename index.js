@@ -7992,8 +7992,8 @@ async function collectCdrHistory(env, orgId){
   const token = await getAccessToken(env);
 
   const url =
-    "https://analytics.webexapis.com/v1/calling/mediaQuality" +
-    "?max=200";
+  "https://analytics-calling.webexapis.com/v1/media_quality" +
+  "?max=1000";
 
   const res = await fetch(url,{
     method:"GET",
