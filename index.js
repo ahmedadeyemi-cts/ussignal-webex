@@ -4288,32 +4288,36 @@ if (url.pathname === "/api/org") {
   try {
 
     const user = getCurrentUser(request);
-
     if (!user) {
       return json({ error: "not_authenticated" }, 401);
     }
 
-    // Admin users: fetch all orgs from Webex
+    // ADMIN: fetch orgs directly from Webex
     if (user.isAdmin) {
 
-      const result = await webexFetch(env, "/organizations");
+      const token = await getAccessToken(env);
 
-      if (!result.ok) {
-        console.log("WEBEX /organizations FAILED:", result);
+      const res = await fetch("https://webexapis.com/v1/organizations", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json"
+        }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.log("WEBEX ORG ERROR:", data);
         return json({
-          error: "webex_fetch_failed",
-          status: result.status,
-          preview: result.preview
+          error: "webex_org_fetch_failed",
+          detail: data
         }, 500);
       }
 
-      const orgData = result.data || {};
-      const orgs = Array.isArray(orgData.items) ? orgData.items : [];
-
-      return json(orgs);
+      return json(data.items || []);
     }
 
-    // Customer users: resolve org from session
+    // CUSTOMER FLOW
     const session = await getSession(env, user.email);
 
     if (!session || !session.orgId) {
@@ -4323,7 +4327,7 @@ if (url.pathname === "/api/org") {
     return json([
       {
         id: session.orgId,
-        displayName: session.orgName || "Customer Organization"
+        displayName: session.orgName || session.orgId
       }
     ]);
 
