@@ -1711,7 +1711,15 @@ if (ANALYTICS?.aiInsight) {
   }
 
   // AI narrative
- $("aiInsightBody").innerHTML =
+  $("aiInsightBody").innerHTML =
+  `<b>${INSIGHT.title || "AI Quality Insight"}</b><br>
+  ${INSIGHT.body || "No insight available."}
+  <br><br>
+  <b>Failure Pattern AI:</b><br>
+  Network related: ${(failurePatterns.networkRate*100).toFixed(1)}%<br>
+  Device related: ${(failurePatterns.deviceRate*100).toFixed(1)}%<br>
+  PSTN signaling: ${(failurePatterns.pstnRate*100).toFixed(1)}%
+  `;
   `<b>${INSIGHT.title || "AI Quality Insight"}</b><br>${INSIGHT.body || "No insight available."}`;
 
   // Charts
