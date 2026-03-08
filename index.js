@@ -7785,62 +7785,42 @@ if (url.pathname.endsWith("/file") &&
 } */
 async function collectCdrHistory(env, orgId){
 
-  /* -------------------------------------------------------
-     helper: ISO timestamp without milliseconds
-  ------------------------------------------------------- */
-
   function isoNoMs(date){
     return date.toISOString().replace(/\.\d{3}Z$/, "Z");
   }
 
   const now = isoNoMs(new Date());
-  const from = isoNoMs(new Date(Date.now() - (24 * 60 * 60 * 1000)));
+  const from = isoNoMs(new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)));
 
-  const path =
-    `/cdr_feed` +
-    `?startTime=${encodeURIComponent(from)}` +
+  /* ---------- try CDR FEED first ---------- */
+
+  const feedPath =
+    `/cdr_feed?startTime=${encodeURIComponent(from)}` +
     `&endTime=${encodeURIComponent(now)}` +
     `&max=1000`;
 
-  let result = null;
+  let result = await webexFetchSafe(env, feedPath, orgId);
 
-  /* -------------------------------------------------------
-     retry logic for Webex rate limiting
-  ------------------------------------------------------- */
+  /* ---------- fallback to legacy CDR ---------- */
 
-  for (let attempt = 0; attempt < 3; attempt++){
+  if (!result.ok){
 
-    result = await webexFetchSafe(env, path, orgId);
+    const callsPath =
+      `/cdr/calls?startTime=${encodeURIComponent(from)}` +
+      `&endTime=${encodeURIComponent(now)}` +
+      `&max=1000`;
 
-    if (result?.ok) break;
-
-    if (result?.error && result.error.includes("threshold")){
-
-      /* exponential backoff */
-      const wait = 1500 * (attempt + 1);
-      await new Promise(r => setTimeout(r, wait));
-
-      continue;
-    }
-
-    break;
+    result = await webexFetchSafe(env, callsPath, orgId);
   }
 
-  /* -------------------------------------------------------
-     fallback to cached data if Webex throttles
-  ------------------------------------------------------- */
+  /* ---------- handle failure ---------- */
 
   if (!result || !result.ok){
 
-    if (result?.error && result.error.includes("threshold")){
-
-      const cached = await env.WEBEX.get(`cdrCache:${orgId}`);
-
-      if (cached){
-        try {
-          return JSON.parse(cached);
-        } catch {}
-      }
+    const cached = await env.WEBEX.get(`cdrCache:${orgId}`);
+    if (cached){
+      try { return JSON.parse(cached); }
+      catch {}
     }
 
     throw new Error(
@@ -7849,38 +7829,28 @@ async function collectCdrHistory(env, orgId){
     );
   }
 
-  /* -------------------------------------------------------
-     normalize records
-  ------------------------------------------------------- */
+  /* ---------- normalize records ---------- */
 
-  const items = result.data?.items || [];
+  const items = result.data?.items || result.data?.records || [];
 
   const records = items.map(x => ({
-    callId: x.id || "",
+    callId: x.id || x.callId || "",
     startTime: x.startTime || "",
-    duration: x.durationSeconds || 0,
-    result: x.callResult || "unknown",
-    caller: x.localCallId || "",
-    callee: x.remoteCallId || "",
+    duration: x.durationSeconds || x.duration || 0,
+    result: x.callResult || "",
+    caller: x.localCallId || x.caller || "",
+    callee: x.remoteCallId || x.callee || "",
     direction: x.direction || "",
     device: x.deviceType || ""
   }));
 
-  /* -------------------------------------------------------
-     store records in KV
-  ------------------------------------------------------- */
+  /* ---------- store in KV ---------- */
 
-  try {
-
-    await env.WEBEX.put(
-      `cdrCache:${orgId}`,
-      JSON.stringify(records),
-      { expirationTtl: 604800 }   // 7 days
-    );
-
-  } catch(e){
-    console.warn("cdrCache write failed", e);
-  }
+  await env.WEBEX.put(
+    `cdrCache:${orgId}`,
+    JSON.stringify(records),
+    { expirationTtl: 604800 }
+  );
 
   return records;
 }
