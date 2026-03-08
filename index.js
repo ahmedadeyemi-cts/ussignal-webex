@@ -41,7 +41,7 @@ const JSON_HEADERS = {
 
 const WEBEX_API_BASE_DEFAULT = "https://webexapis.com/v1";
 
-const ANALYTICS_BASE_DEFAULT = "https://webexapis.com/v1";
+const ANALYTICS_BASE_DEFAULT = "https://analytics-calling.webexapis.com/v1";
 // If you prefer the partner host instead, set:
 // WEBEX_ANALYTICS_BASE = https://analytics-calling.webexapis.com/v1
 
@@ -402,7 +402,7 @@ async function apiCDR(env, request) {
 
   const base =
     (env.WEBEX_ANALYTICS_BASE ||
-      "https://webexapis.com/v1")
+      "https://analytics-calling.webexapis.com/v1")
       .replace(/\/+$/, "");
 
   const endpoint =
@@ -7792,38 +7792,30 @@ async function collectCdrHistory(env, orgId){
   const now = isoNoMs(new Date());
   const from = isoNoMs(new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)));
 
-  const url =
+  const path =
     `https://analytics-calling.webexapis.com/v1/cdr_feed` +
     `?startTime=${encodeURIComponent(from)}` +
     `&endTime=${encodeURIComponent(now)}` +
     `&max=1000`;
 
-  const token = await getWebexAccessToken(env, orgId);
+  const result = await webexFetchSafe(env, path, orgId);
 
-  const r = await fetch(url,{
-    headers:{
-      "Authorization":`Bearer ${token}`,
-      "Accept":"application/json"
-    }
-  });
-
-  if(!r.ok){
+  if (!result || !result.ok){
 
     const cached = await env.WEBEX.get(`cdrCache:${orgId}`);
-    if(cached){
-      try { return JSON.parse(cached); } catch{}
+
+    if (cached){
+      try { return JSON.parse(cached); }
+      catch {}
     }
 
-    const text = await r.text();
-
     throw new Error(
-      "cdr_fetch_failed: " + text
+      "cdr_fetch_failed: " +
+      (result?.error || result?.status || "unknown")
     );
   }
 
-  const data = await r.json();
-
-  const items = data.items || [];
+  const items = result.data?.items || [];
 
   const records = items.map(x => ({
     callId: x.id || "",
