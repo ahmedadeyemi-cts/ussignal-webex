@@ -922,9 +922,6 @@ async function auditLog(env, userEmail, path, metadata = {}) {
       return Date.now();
     }
 
-    function sleep(ms) {
-      return new Promise((r) => setTimeout(r, ms));
-    }
 
     function constantTimeEqual(a, b) {
       // a, b strings
