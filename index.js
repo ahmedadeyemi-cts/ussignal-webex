@@ -7792,32 +7792,19 @@ async function collectCdrHistory(env, orgId){
   const now = isoNoMs(new Date());
   const from = isoNoMs(new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)));
 
-  /* ---------- try CDR FEED first ---------- */
-
-  const feedPath =
-    `/cdr_feed?startTime=${encodeURIComponent(from)}` +
+  const path =
+    `/cdr/calls` +
+    `?startTime=${encodeURIComponent(from)}` +
     `&endTime=${encodeURIComponent(now)}` +
     `&max=1000`;
 
-  let result = await webexFetchSafe(env, feedPath, orgId);
+  const result = await webexFetchSafe(env, path, orgId);
 
-  /* ---------- fallback to legacy CDR ---------- */
-
-  if (!result.ok){
-
-    const callsPath =
-      `/cdr/calls?startTime=${encodeURIComponent(from)}` +
-      `&endTime=${encodeURIComponent(now)}` +
-      `&max=1000`;
-
-    result = await webexFetchSafe(env, callsPath, orgId);
-  }
-
-  /* ---------- handle failure ---------- */
-
+  /* fallback to cache if Webex errors */
   if (!result || !result.ok){
 
     const cached = await env.WEBEX.get(`cdrCache:${orgId}`);
+
     if (cached){
       try { return JSON.parse(cached); }
       catch {}
@@ -7829,27 +7816,23 @@ async function collectCdrHistory(env, orgId){
     );
   }
 
-  /* ---------- normalize records ---------- */
-
-  const items = result.data?.items || result.data?.records || [];
+  const items = result.data?.items || [];
 
   const records = items.map(x => ({
-    callId: x.id || x.callId || "",
+    callId: x.id || "",
     startTime: x.startTime || "",
-    duration: x.durationSeconds || x.duration || 0,
+    duration: x.durationSeconds || 0,
     result: x.callResult || "",
-    caller: x.localCallId || x.caller || "",
-    callee: x.remoteCallId || x.callee || "",
+    caller: x.localCallId || "",
+    callee: x.remoteCallId || "",
     direction: x.direction || "",
     device: x.deviceType || ""
   }));
 
-  /* ---------- store in KV ---------- */
-
   await env.WEBEX.put(
     `cdrCache:${orgId}`,
     JSON.stringify(records),
-    { expirationTtl: 604800 }
+    { expirationTtl: 604800 }   // 7 days
   );
 
   return records;
