@@ -4524,21 +4524,29 @@ if (url.pathname === "/api/org") {
       return json({ error: "not_authenticated" }, 401);
     }
 
-    /* ===============================
-       ADMIN FLOW
-    =============================== */
-
+    // ADMIN FLOW
     if (user.isAdmin === true) {
 
-      const orgs = await getCachedOrganizations(env);
+      const r = await webexFetch(env, "/organizations");
 
-      return json(orgs);
+      if (!r.ok) {
+        console.log("WEBEX ORG FETCH FAILED:", r.preview);
+        return json({
+          error: "webex_org_failed",
+          detail: r.preview
+        }, 500);
+      }
+
+      const items = r.data?.items || [];
+
+      return json(items.map(x => ({
+        id: x.id,
+        displayName: x.displayName
+      })));
+
     }
 
-    /* ===============================
-       CUSTOMER FLOW
-    =============================== */
-
+    // CUSTOMER FLOW
     const session = await getSession(env, user.email);
 
     if (!session || !session.orgId) {
