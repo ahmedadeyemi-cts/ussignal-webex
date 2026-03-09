@@ -397,26 +397,33 @@ async function loadOrgs(){
 
   const res = await api("/api/admin/orgs");
 
-  const orgs = res?.items || [];
+  console.log("ORG API RESPONSE:", res);
 
-  if (!Array.isArray(orgs)) {
-    console.error("Invalid org response", res);
+  const orgs = Array.isArray(res)
+    ? res
+    : Array.isArray(res?.items)
+      ? res.items
+      : [];
+
+  if (!orgs.length) {
+    console.error("No orgs returned", res);
+    $("orgSelect").innerHTML =
+      `<option>No organizations found</option>`;
     return;
   }
 
   const select = $("orgSelect");
 
   select.innerHTML = orgs.map(o =>
-    `<option value="${o.orgId}">${o.orgName}</option>`
+    `<option value="${o.orgId || o.id}">
+      ${o.orgName || o.displayName}
+    </option>`
   ).join("");
 
-  if (orgs.length) {
-    loadDevices(orgs[0].orgId);
-  }
+  loadDevices(orgs[0].orgId || orgs[0].id);
 
   select.onchange = e => loadDevices(e.target.value);
 }
-
 async function loadDevices(orgId){
   const data = await api(`/api/devices?orgId=${orgId}`);
 
