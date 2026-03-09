@@ -72,6 +72,10 @@ function looksLikeWebexOrgId(s) {
   const v = String(s || "");
   return v.startsWith("Y2lzY29zcGFyazov"); // Webex orgId base64-ish prefix
 }
+async function ensureDelegation(env, orgId) {
+  // Delegation disabled — no-op
+  return true;
+}
 function isUnassignedNumber(n){
   const s = String(n?.status || n?.state || "").toLowerCase();
   if (s.includes("unassign")) return true;
