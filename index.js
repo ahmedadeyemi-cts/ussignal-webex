@@ -1833,7 +1833,11 @@ async function renderAdminLicensesHTML() {
   if (!res.ok) throw new Error("Failed to load admin licenses UI");
   return await res.text();
 }
-
+async function renderAdminObservabilityHTML() {
+  const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/observability.html");
+  if (!res.ok) throw new Error("Failed to load admin licenses UI");
+  return await res.text();
+}
 async function renderAdminDevicesHTML() {
   const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/devices.html");
   if (!res.ok) throw new Error("Failed to load admin devices UI");
@@ -3319,9 +3323,9 @@ if (url.pathname === "/admin/pins" && request.method === "GET") {
   });
 }
 if (url.pathname === "/admin/observability") {
-  return env.ASSETS.fetch(
-    new Request(new URL("/admin/observability.html", request.url))
-  );
+  return text(await renderAdminObservabilityHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
 }
 
   const user = getCurrentUser(request);
