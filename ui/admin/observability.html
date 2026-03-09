@@ -424,9 +424,11 @@ return await r.json()
 
 function badge(status){
 
-if(status==="critical")return `<span class="badge bad">Critical</span>`
-if(status==="degraded")return `<span class="badge warn">Degraded</span>`
-return `<span class="badge good">Healthy</span>`
+if(status==="critical") return `<span class="badge bad">Critical</span>`
+if(status==="degraded") return `<span class="badge warn">Degraded</span>`
+if(status==="healthy") return `<span class="badge good">Healthy</span>`
+
+return `<span class="badge warn">Unknown</span>`
 
 }
 
@@ -439,23 +441,38 @@ $("kpiHealthy").textContent=data.summary.healthy
 $("kpiDegraded").textContent=data.summary.degraded
 $("kpiCritical").textContent=data.summary.critical
 
-const rows=data.items.map(o=>`
+const rows=data.items.map(o=>{
 
-<tr onclick='openModal(${JSON.stringify(o.ai.issues||[])})'>
+  const ai = o.ai || {
+    status:"unknown",
+    riskScore:"—",
+    issues:[]
+  }
 
-<td><b>${o.orgName}</b></td>
+  const metrics = o.metrics || {
+    deviceCount:"—",
+    licenseCount:"—"
+  }
 
-<td>${o.metrics.deviceCount}</td>
+  return `
 
-<td>${o.metrics.licenseCount}</td>
+<tr onclick='openModal(${JSON.stringify(ai.issues||[])})'>
 
-<td>${o.ai.riskScore}</td>
+<td><b>${o.orgName||"Unknown Tenant"}</b></td>
 
-<td>${badge(o.ai.status)}</td>
+<td>${metrics.deviceCount}</td>
+
+<td>${metrics.licenseCount}</td>
+
+<td>${ai.riskScore}</td>
+
+<td>${badge(ai.status)}</td>
 
 </tr>
 
-`).join("")
+`
+
+}).join("")
 
 $("obsRows").innerHTML=rows
 
