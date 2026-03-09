@@ -4474,7 +4474,7 @@ if (url.pathname === "/api/admin/org-health" && request.method === "GET") {
          - Admin: returns all orgs
          - Customer: requires session; returns only matching org
       ----------------------------- */
-  /*   if (url.pathname === "/api/org") {
+ if (url.pathname === "/api/org") {
   const user = getCurrentUser(request);
   const token = await getAccessToken(env);
   const session = await getSession(env, user.email);
@@ -4510,48 +4510,8 @@ if (user.isAdmin) {
 
 const filtered = (orgData.items || []).filter(o => o.id === session.orgId);
 return json(filtered);
-} */
-if (url.pathname === "/api/org") {
+} 
 
-  try {
-
-    const r = await webexFetch(env, "/people/me");
-
-    if (!r.ok) {
-      return json({
-        ok: false,
-        error: "webex_me_failed",
-        detail: r.preview
-      }, 500);
-    }
-
-    const orgId = r.data?.orgId;
-
-    if (!orgId) {
-      return json({
-        ok: false,
-        error: "org_not_found"
-      }, 500);
-    }
-
-    return json({
-      ok: true,
-      orgId
-    });
-
-  } catch (err) {
-
-    console.log("ORG ROUTE FAILURE:", err);
-
-    return json({
-      ok: false,
-      error: "org_route_failed",
-      detail: String(err)
-    }, 500);
-
-  }
-
-}
 /* -----------------------------
    /api/licenses
    - Admin: may specify ?orgId=...
