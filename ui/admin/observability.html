@@ -460,7 +460,43 @@ const rows=data.items.map(o=>`
 $("obsRows").innerHTML=rows
 
 }
+function startObservabilitySocket(){
 
+  const ws = new WebSocket(
+    `wss://${location.host}/ws/observability`
+  );
+
+  ws.onopen = () => {
+    console.log("Observability stream connected");
+  };
+
+  ws.onmessage = event => {
+
+    const data = JSON.parse(event.data);
+
+    if(data.type === "tenant_update"){
+
+      console.log("Telemetry update", data);
+
+      // Future improvement:
+      // Update table rows live instead of refreshing
+
+    }
+
+  };
+
+  ws.onerror = err => {
+    console.log("Observability socket error", err);
+  };
+
+  ws.onclose = () => {
+    console.log("Observability socket closed");
+
+    // optional auto-reconnect
+    setTimeout(startObservabilitySocket, 5000);
+  };
+
+}
 function openModal(data){
 
 $("modalTitle").textContent="Observability Issues"
@@ -485,19 +521,22 @@ window.location="/pin"
 
 async function init(){
 
-const me=await api("/api/me")
+  const me = await api("/api/me");
 
-if(me.role!=="admin")window.location="/pin"
+  if(me.role!=="admin") window.location="/pin";
 
-$("whoami").textContent=me.email
+  $("whoami").textContent = me.email;
 
-$("sessionLine").textContent="Session: "+(me.sessionExpiresInSeconds||0)+"s"
+  $("sessionLine").textContent =
+    "Session: "+(me.sessionExpiresInSeconds||0)+"s";
 
-loadObservability()
+  loadObservability();
+
+  startObservabilitySocket();
 
 }
 
-init()
+init();
 
 </script>
 
