@@ -3373,6 +3373,18 @@ if (url.pathname === "/admin/observability") {
     items: results
   });
 }
+     if (url.pathname === "/api/admin/run-telemetry") {
+
+  const user = getCurrentUser(request);
+
+  if (!user?.isAdmin) {
+    return json({ error: "admin_only" }, 403);
+  }
+
+  await runTelemetryCycle(env);
+
+  return json({ ok: true });
+}
 // =====================================================
 // /api/routes — Dynamic Customer Portal Route Config
 // =====================================================
