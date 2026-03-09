@@ -396,23 +396,22 @@ function badge(status){
 async function loadOrgs(){
 
   const res = await api("/api/admin/orgs");
-
-  if (!res || !Array.isArray(res.items)) {
-    console.error("Invalid org response", res);
-    return;
-  }
+if (!Array.isArray(res)) {
+  console.error("Invalid org response", res);
+  return;
+}
 
   const select = $("orgSelect");
 
-  select.innerHTML = res.items.map(o =>
-    `<option value="${o.orgId}">${o.orgName}</option>`
-  ).join("");
+  select.innerHTML = res.map(o =>
+  `<option value="${o.id}">${o.displayName}</option>`
+).join("");
 
-  if (res.items.length){
-    loadDevices(res.items[0].orgId);
-  }
+if (res.length){
+  loadDevices(res[0].id);
+}
 
-  select.onchange = e => loadDevices(e.target.value);
+select.onchange = e => loadDevices(e.target.value);
 }
 
 async function loadDevices(orgId){
