@@ -394,16 +394,25 @@ function badge(status){
 }
 
 async function loadOrgs(){
-  const orgs = await api("/api/admin/orgs");
+
+  const res = await api("/api/admin/orgs");
+
+  if (!res || !Array.isArray(res.items)) {
+    console.error("Invalid org response", res);
+    return;
+  }
+
   const select = $("orgSelect");
 
-  select.innerHTML = orgs.items.map(o =>
+  select.innerHTML = res.items.map(o =>
     `<option value="${o.orgId}">${o.orgName}</option>`
   ).join("");
 
-  loadDevices(select.value);
+  if (res.items.length){
+    loadDevices(res.items[0].orgId);
+  }
 
-  select.onchange = e=> loadDevices(e.target.value);
+  select.onchange = e => loadDevices(e.target.value);
 }
 
 async function loadDevices(orgId){
