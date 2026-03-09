@@ -585,7 +585,32 @@ let __webexLastCallAt = 0;
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+async function startObservabilityStream(ws, env, orgId) {
 
+  const interval = setInterval(async () => {
+
+    try {
+
+      const data = await collectObservability(env, orgId);
+
+      ws.send(JSON.stringify(data));
+
+    } catch (err) {
+
+      ws.send(JSON.stringify({
+        type: "error",
+        message: err.message
+      }));
+
+    }
+
+  }, 3000);
+
+  ws.addEventListener("close", () => {
+    clearInterval(interval);
+  });
+
+}
 function jitter(ms) {
   return Math.floor(ms * (0.85 + Math.random() * 0.3));
 }
@@ -3463,7 +3488,7 @@ if (url.pathname === "/customer/observability" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
-     if (url.pathname === "/ws/observability") {
+   if (url.pathname === "/ws/observability") {
 
   if (request.headers.get("Upgrade") !== "websocket") {
     return new Response("Expected websocket", { status: 426 });
@@ -3474,10 +3499,15 @@ if (url.pathname === "/customer/observability" && request.method === "GET") {
 
   server.accept();
 
+  const orgId = url.searchParams.get("orgId");
+
   server.send(JSON.stringify({
-    status: "connected",
-    ts: Date.now()
+    type: "connected",
+    ts: Date.now(),
+    orgId
   }));
+
+  startObservabilityStream(server, env, orgId);
 
   return new Response(null, {
     status: 101,
@@ -9229,4 +9259,136 @@ async function ciBackgroundPollAll(env) {
     }
 
   }
+}
+// =====================================================
+// OBSERVABILITY STREAM ENGINE
+// =====================================================
+
+async function startObservabilityStream(ws, env, orgId) {
+
+  const interval = setInterval(async () => {
+
+    try {
+
+      const data = await collectObservability(env, orgId);
+
+      ws.send(JSON.stringify(data));
+
+    } catch (err) {
+
+      ws.send(JSON.stringify({
+        type: "error",
+        message: err.message
+      }));
+
+    }
+
+  }, 3000);
+
+  ws.addEventListener("close", () => {
+    clearInterval(interval);
+  });
+
+}
+
+
+// =====================================================
+// OBSERVABILITY DATA COLLECTOR
+// =====================================================
+
+async function collectObservability(env, orgId) {
+
+  const timestamp = Date.now();
+
+  let apiLatency = 0;
+  let licenseCount = 0;
+  let deviceCount = 0;
+
+  try {
+
+    const start = Date.now();
+
+    const lic = await webexFetch(env, "/licenses", orgId);
+
+    apiLatency = Date.now() - start;
+
+    if (lic.ok) {
+      licenseCount = (lic.data.items || []).length;
+    }
+
+  } catch {}
+
+  try {
+
+    const dev = await webexFetch(env, "/devices", orgId);
+
+    if (dev.ok) {
+      deviceCount = (dev.data.items || []).length;
+    }
+
+  } catch {}
+
+  const ai = computeAIStatus({
+    apiLatency,
+    licenseCount,
+    deviceCount
+  });
+
+  return {
+    type: "observability",
+    timestamp,
+    orgId,
+    metrics: {
+      apiLatency,
+      licenseCount,
+      deviceCount
+    },
+    ai
+  };
+
+}
+
+
+// =====================================================
+// AI STATUS ENGINE
+// =====================================================
+
+function computeAIStatus(data) {
+
+  const issues = [];
+
+  if (data.apiLatency > 2500) {
+    issues.push({
+      level: "warning",
+      message: "Webex API latency elevated"
+    });
+  }
+
+  if (data.deviceCount === 0) {
+    issues.push({
+      level: "warning",
+      message: "No devices detected"
+    });
+  }
+
+  if (data.licenseCount === 0) {
+    issues.push({
+      level: "critical",
+      message: "No licenses returned from Webex"
+    });
+  }
+
+  let status = "healthy";
+
+  if (issues.some(i => i.level === "critical")) {
+    status = "critical";
+  } else if (issues.length > 0) {
+    status = "degraded";
+  }
+
+  return {
+    status,
+    issues
+  };
+
 }
