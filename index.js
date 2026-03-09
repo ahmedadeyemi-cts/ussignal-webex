@@ -4539,54 +4539,37 @@ if (url.pathname === "/api/org") {
 
   try {
 
-    const user = getCurrentUser(request);
+    const r = await webexFetch(env, "/people/me");
 
-    if (!user) {
-      return json({ error: "not_authenticated" }, 401);
+    if (!r.ok) {
+      return json({
+        ok: false,
+        error: "webex_me_failed",
+        detail: r.preview
+      }, 500);
     }
 
-    // ADMIN FLOW
-    if (user.isAdmin === true) {
+    const orgId = r.data?.orgId;
 
-      const r = await webexFetch(env, "/organizations");
-
-      if (!r.ok) {
-        console.log("WEBEX ORG FETCH FAILED:", r.preview);
-        return json({
-          error: "webex_org_failed",
-          detail: r.preview
-        }, 500);
-      }
-
-      const items = r.data?.items || [];
-
-      return json(items.map(x => ({
-        id: x.id,
-        displayName: x.displayName
-      })));
-
+    if (!orgId) {
+      return json({
+        ok: false,
+        error: "org_not_found"
+      }, 500);
     }
 
-    // CUSTOMER FLOW
-    const session = await getSession(env, user.email);
-
-    if (!session || !session.orgId) {
-      return json({ error: "pin_required" }, 401);
-    }
-
-    return json([
-      {
-        id: session.orgId,
-        displayName: session.orgName || session.orgId
-      }
-    ]);
+    return json({
+      ok: true,
+      orgId
+    });
 
   } catch (err) {
 
-    console.log("ORG ROUTE ERROR:", err);
+    console.log("ORG ROUTE FAILURE:", err);
 
     return json({
-      error: "org_route_failure",
+      ok: false,
+      error: "org_route_failed",
       detail: String(err)
     }, 500);
 
