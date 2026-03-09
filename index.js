@@ -1273,22 +1273,20 @@ async function getAccessToken(env) {
     console.log("Token cache read error:", err);
   }
 
-  // valid cached token
   if (cached?.token && cached?.expires_at && cached.expires_at > Date.now()) {
     return cached.token;
   }
 
-  console.log("Refreshing Webex OAuth token...");
+  console.log("Requesting new Webex access token...");
 
   const body = new URLSearchParams({
-    grant_type: "refresh_token",
+    grant_type: "client_credentials",
     client_id: env.CLIENT_ID,
-    client_secret: env.CLIENT_SECRET,
-    refresh_token: env.REFRESH_TOKEN
+    client_secret: env.CLIENT_SECRET
   });
 
   const res = await fetch(
-    "https://idbroker.webex.com/idb/oauth2/v1/access_token",
+    "https://webexapis.com/v1/access_token",
     {
       method: "POST",
       headers: {
@@ -1303,15 +1301,13 @@ async function getAccessToken(env) {
   if (!res.ok) {
     console.error("WEBEX TOKEN ERROR:", data);
     throw new Error(
-      `Webex token refresh failed (${res.status}): ${JSON.stringify(data)}`
+      `Webex token request failed (${res.status}): ${JSON.stringify(data)}`
     );
   }
 
   const token = data.access_token;
 
-  // expire 5 minutes early
-  const expiresAt =
-    Date.now() + ((data.expires_in - 300) * 1000);
+  const expiresAt = Date.now() + ((data.expires_in - 300) * 1000);
 
   await env.WEBEX.put(
     cacheKey,
@@ -1319,53 +1315,10 @@ async function getAccessToken(env) {
       token,
       expires_at: expiresAt
     }),
-    { expirationTtl: 86400 }
+    { expirationTtl: data.expires_in }
   );
 
   return token;
-}
-// =====================================================
-// Delegation Engine (Enterprise Multi-Tenant)
-// =====================================================
-
-const DELEGATION_KV_PREFIX = "delegation:";
-
-async function isDelegated(env, orgId) {
-  const v = await env.WEBEX.get(`${DELEGATION_KV_PREFIX}${orgId}`);
-  return !!v;
-}
-
-async function markDelegated(env, orgId) {
-  await env.WEBEX.put(
-    `${DELEGATION_KV_PREFIX}${orgId}`,
-    "1",
-    { expirationTtl: 82800 } // 23h
-  );
-}
-
-async function warmDelegation(env, orgId) {
-  const token = await getAccessToken(env);
-
-  const res = await fetch(
-    `https://webexapis.com/v1/organizations/${orgId}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-
-  if (!res.ok) {
-    console.log("Delegation warm failed:", orgId, res.status);
-    return false;
-  }
-
-  await markDelegated(env, orgId);
-  return true;
-}
-
-async function ensureDelegation(env, orgId) {
-  if (!orgId) return;
-  const delegated = await isDelegated(env, orgId);
-  if (!delegated) {
-    await warmDelegation(env, orgId);
-  }
 }
     /* =====================================================
        Identity helpers
