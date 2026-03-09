@@ -1297,7 +1297,7 @@ async function getAccessToken(env) {
   }
 
   // Acquire lock
-  await env.WEBEX.put(lockKey, "1", { expirationTtl: 10 });
+  await env.WEBEX.put(lockKey, "1", { expirationTtl: 60 });
 
   console.log("Refreshing Webex OAuth token...");
 
