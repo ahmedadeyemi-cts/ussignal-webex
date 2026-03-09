@@ -3573,7 +3573,11 @@ if (url.pathname === "/customer/observability" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
-  if (url.pathname === "/ws/observability") {
+  // =====================================================
+// OBSERVABILITY WEBSOCKET
+// =====================================================
+
+if (url.pathname === "/ws/observability") {
 
   if (request.headers.get("Upgrade") !== "websocket") {
     return new Response("Expected websocket", { status: 426 });
@@ -3586,25 +3590,69 @@ if (url.pathname === "/customer/observability" && request.method === "GET") {
 
   const orgId = url.searchParams.get("orgId");
 
+  console.log("Observability websocket opened", {
+    orgId: orgId || "partner"
+  });
+
+  // --------------------------------------------------
+  // Send connection confirmation
+  // --------------------------------------------------
+
   server.send(JSON.stringify({
     type: "connected",
+    mode: orgId ? "tenant" : "partner",
     ts: Date.now(),
-    orgId
+    orgId: orgId || null
   }));
 
-  // CUSTOMER MODE
+  // --------------------------------------------------
+  // Tenant Mode (single org)
+  // --------------------------------------------------
+
   if (orgId) {
 
-    startObservabilityStream(server, env, orgId);
+    startObservabilityStream(server, env, orgId)
+      .catch(err => {
+        console.log("Tenant stream error:", err);
+      });
 
   }
 
-  // PARTNER MODE
+  // --------------------------------------------------
+  // Partner Mode (all tenants)
+  // --------------------------------------------------
+
   else {
 
-    startPartnerObservabilityStream(server, env);
+    startPartnerObservabilityStream(server, env)
+      .catch(err => {
+        console.log("Partner stream error:", err);
+      });
 
   }
+
+  // --------------------------------------------------
+  // Handle socket close
+  // --------------------------------------------------
+
+  server.addEventListener("close", evt => {
+
+    console.log("Observability websocket closed", {
+      code: evt.code,
+      reason: evt.reason
+    });
+
+  });
+
+  // --------------------------------------------------
+  // Handle socket errors
+  // --------------------------------------------------
+
+  server.addEventListener("error", err => {
+
+    console.log("Observability websocket error:", err);
+
+  });
 
   return new Response(null, {
     status: 101,
