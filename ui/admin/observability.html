@@ -456,17 +456,14 @@ const rows=data.items.map(o=>{
 
   return `
 
-<tr onclick='openModal(${JSON.stringify(ai.issues||[])})'>
+<tr data-org-id="${o.orgId}" onclick='openModal(${JSON.stringify(ai.issues||[])})'>
 
 <td><b>${o.orgName||"Unknown Tenant"}</b></td>
 
-<td>${metrics.deviceCount}</td>
-
-<td>${metrics.licenseCount}</td>
-
-<td>${ai.riskScore}</td>
-
-<td>${badge(ai.status)}</td>
+<td class="devices">${metrics.deviceCount}</td>
+<td class="licenses">${metrics.licenseCount}</td>
+<td class="risk">${ai.riskScore}</td>
+<td class="status">${badge(ai.status)}</td>
 
 </tr>
 
@@ -491,13 +488,36 @@ function startObservabilitySocket(){
 
     const data = JSON.parse(event.data);
 
-    if(data.type === "tenant_update"){
+    if(data.type !== "tenant_update") return;
 
-      console.log("Telemetry update", data);
+    console.log("Telemetry update", data);
 
-      // Future improvement:
-      // Update table rows live instead of refreshing
+    const row = document.querySelector(
+      `tr[data-org-id="${data.orgId}"]`
+    );
 
+    if(!row) return;
+
+    const telemetry = data.telemetry || {};
+    const metrics = telemetry.metrics || {};
+    const ai = telemetry.ai || {};
+
+    const devices = metrics.deviceCount ?? "—";
+    const licenses = metrics.licenseCount ?? "—";
+    const risk = ai.riskScore ?? "—";
+    const status = ai.status ?? "unknown";
+
+    const devCell = row.querySelector(".devices");
+    const licCell = row.querySelector(".licenses");
+    const riskCell = row.querySelector(".risk");
+    const statusCell = row.querySelector(".status");
+
+    if(devCell) devCell.textContent = devices;
+    if(licCell) licCell.textContent = licenses;
+    if(riskCell) riskCell.textContent = risk;
+
+    if(statusCell){
+      statusCell.innerHTML = badge(status);
     }
 
   };
@@ -508,8 +528,6 @@ function startObservabilitySocket(){
 
   ws.onclose = () => {
     console.log("Observability socket closed");
-
-    // optional auto-reconnect
     setTimeout(startObservabilitySocket, 5000);
   };
 
