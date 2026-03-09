@@ -9795,6 +9795,92 @@ async function getObservability(env, orgId) {
   return data;
 
 }
+
+async function startPartnerObservabilityStream(server, env) {
+
+  let closed = false;
+
+  async function stream() {
+    try {
+      const orgs = await webexFetch(
+        env,
+        "/organizations?managedByPartner=true&max=100"
+      );
+
+      const items = orgs.data?.items || [];
+      const batches = chunkArray(items, 4);
+
+      for (const batch of batches) {
+        if (closed) return;
+
+        const batchResults = await Promise.all(
+          batch.map(async org => {
+            try {
+              const telemetry = await getObservability(env, org.id);
+              return {
+                type: "tenant_update",
+                orgId: org.id,
+                orgName: org.displayName,
+                telemetry
+              };
+            } catch (err) {
+              return {
+                type: "tenant_update",
+                orgId: org.id,
+                orgName: org.displayName,
+                telemetry: {
+                  timestamp: Date.now(),
+                  metrics: {
+                    apiLatency: 0,
+                    licenseCount: 0,
+                    deviceCount: 0,
+                    licenseDeficit: 0,
+                    devicesOffline: 0
+                  },
+                  ai: {
+                    status: "critical",
+                    riskScore: 100,
+                    slaRisk: true,
+                    issues: [
+                      {
+                        level: "critical",
+                        message: `Telemetry collection failed: ${String(err.message || err)}`
+                      }
+                    ]
+                  }
+                }
+              };
+            }
+          })
+        );
+
+        for (const payload of batchResults) {
+          if (closed) return;
+          server.send(JSON.stringify(payload));
+        }
+
+        await sleep(400);
+      }
+
+    } catch (err) {
+      if (!closed) {
+        server.send(JSON.stringify({
+          type: "error",
+          message: "partner_stream_failed"
+        }));
+      }
+    }
+  }
+
+  await stream();
+
+  const interval = setInterval(stream, 30000);
+
+  server.addEventListener("close", () => {
+    closed = true;
+    clearInterval(interval);
+  });
+}
 async function runTelemetryCycle(env) {
 
   console.log("Starting telemetry cycle");
@@ -9893,149 +9979,6 @@ async function runTelemetryCycle(env) {
   } catch (err) {
 
     console.log("Snapshot write failed", err);
-
-  }
-
-}
-async function startPartnerObservabilityStream(server, env) {
-
-  let closed = false;
-
-  async function stream() {
-    try {
-      const orgs = await webexFetch(
-        env,
-        "/organizations?managedByPartner=true&max=100"
-      );
-
-      const items = orgs.data?.items || [];
-      const batches = chunkArray(items, 4);
-
-      for (const batch of batches) {
-        if (closed) return;
-
-        const batchResults = await Promise.all(
-          batch.map(async org => {
-            try {
-              const telemetry = await getObservability(env, org.id);
-              return {
-                type: "tenant_update",
-                orgId: org.id,
-                orgName: org.displayName,
-                telemetry
-              };
-            } catch (err) {
-              return {
-                type: "tenant_update",
-                orgId: org.id,
-                orgName: org.displayName,
-                telemetry: {
-                  timestamp: Date.now(),
-                  metrics: {
-                    apiLatency: 0,
-                    licenseCount: 0,
-                    deviceCount: 0,
-                    licenseDeficit: 0,
-                    devicesOffline: 0
-                  },
-                  ai: {
-                    status: "critical",
-                    riskScore: 100,
-                    slaRisk: true,
-                    issues: [
-                      {
-                        level: "critical",
-                        message: `Telemetry collection failed: ${String(err.message || err)}`
-                      }
-                    ]
-                  }
-                }
-              };
-            }
-          })
-        );
-
-        for (const payload of batchResults) {
-          if (closed) return;
-          server.send(JSON.stringify(payload));
-        }
-
-        await sleep(400);
-      }
-
-    } catch (err) {
-      if (!closed) {
-        server.send(JSON.stringify({
-          type: "error",
-          message: "partner_stream_failed"
-        }));
-      }
-    }
-  }
-
-  await stream();
-
-  const interval = setInterval(stream, 30000);
-
-  server.addEventListener("close", () => {
-    closed = true;
-    clearInterval(interval);
-  });
-}
-async function runTelemetryCycle(env) {
-
-  console.log("Starting partner telemetry cycle");
-
-  try {
-
-    const orgs = await webexFetch(
-      env,
-      "/organizations?managedByPartner=true&max=100"
-    );
-
-    const items = orgs.data?.items || [];
-
-    const batchSize = 4;
-
-    for (let i = 0; i < items.length; i += batchSize) {
-
-      const batch = items.slice(i, i + batchSize);
-
-      await Promise.all(
-
-        batch.map(async org => {
-
-          try {
-
-            const telemetry =
-              await collectObservability(env, org.id);
-
-            await storeTelemetry(env, org.id, telemetry);
-
-            console.log("Telemetry updated:", org.displayName);
-
-          } catch (err) {
-
-            console.log(
-              "Telemetry failed:",
-              org.displayName,
-              err
-            );
-
-          }
-
-        })
-
-      );
-
-      // small delay to avoid API bursts
-      await sleep(400);
-
-    }
-
-  } catch (err) {
-
-    console.log("Telemetry cycle error:", err);
 
   }
 
