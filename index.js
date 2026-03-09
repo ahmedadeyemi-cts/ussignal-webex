@@ -3318,7 +3318,11 @@ if (url.pathname === "/admin/pins" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
-if (url.pathname === "/api/admin/observability") {
+if (url.pathname === "/admin/observability") {
+  return env.ASSETS.fetch(
+    new Request(new URL("/admin/observability.html", request.url))
+  );
+}
 
   const user = getCurrentUser(request);
 
@@ -3534,7 +3538,7 @@ if (url.pathname === "/customer/observability" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
-   if (url.pathname === "/ws/observability") {
+  if (url.pathname === "/ws/observability") {
 
   if (request.headers.get("Upgrade") !== "websocket") {
     return new Response("Expected websocket", { status: 426 });
@@ -3553,12 +3557,25 @@ if (url.pathname === "/customer/observability" && request.method === "GET") {
     orgId
   }));
 
-  startObservabilityStream(server, env, orgId);
+  // CUSTOMER MODE
+  if (orgId) {
+
+    startObservabilityStream(server, env, orgId);
+
+  }
+
+  // PARTNER MODE
+  else {
+
+    startPartnerObservabilityStream(server, env);
+
+  }
 
   return new Response(null, {
     status: 101,
     webSocket: client
   });
+
 }
 /* -----------------------------
    Customer UI: Maintenance
@@ -3628,6 +3645,221 @@ if (url.pathname === "/api/debug/access" && request.method === "GET") {
   })));
 }
 
+if (url.pathname === "/api/admin/observability") {
+
+  const user = getCurrentUser(request);
+
+  if (!user?.isAdmin) {
+    return json({ error: "admin_only" }, 403);
+  }
+
+  try {
+
+    // --------------------------------------------------
+    // 1. FAST PATH: use global cached partner snapshot
+    // --------------------------------------------------
+
+    let snapshot = null;
+
+    try {
+      const cachedSnapshot = await env.OBS_CACHE.get("telemetry:partner_snapshot");
+      if (cachedSnapshot) {
+        snapshot = JSON.parse(cachedSnapshot);
+      }
+    } catch (err) {
+      console.log("OBS snapshot read failed:", err);
+    }
+
+    if (Array.isArray(snapshot) && snapshot.length) {
+
+      const results = snapshot
+        .filter(Boolean)
+        .sort((a, b) => Number(b.ai?.riskScore || 0) - Number(a.ai?.riskScore || 0));
+
+      const summary = {
+        total: results.length,
+        healthy: results.filter(o => o.ai?.status === "healthy").length,
+        degraded: results.filter(o => o.ai?.status === "degraded").length,
+        critical: results.filter(o => o.ai?.status === "critical").length,
+        avgRiskScore: results.length
+          ? Math.round(
+              results.reduce((a, x) => a + Number(x.ai?.riskScore || 0), 0) / results.length
+            )
+          : 0,
+        source: "partner_snapshot"
+      };
+
+      return json({
+        summary,
+        items: results
+      });
+    }
+
+    // --------------------------------------------------
+    // 2. FALLBACK: build from partner org list
+    // --------------------------------------------------
+
+    const orgs = await webexFetch(
+      env,
+      "/organizations?managedByPartner=true&max=100"
+    );
+
+    if (!orgs.ok) {
+      return json({
+        error: "partner_org_fetch_failed",
+        detail: orgs.preview || orgs.status || "unknown"
+      }, 500);
+    }
+
+    const items = orgs.data?.items || [];
+
+    const batchSize = 4;
+    const batches = chunkArray(items, batchSize);
+    const results = [];
+
+    for (const batch of batches) {
+
+      const batchResults = await Promise.all(
+        batch.map(async org => {
+          try {
+
+            const telemetry =
+              await loadTelemetry(env, org.id) ||
+              await collectObservability(env, org.id);
+
+            return {
+              orgId: org.id,
+              orgName: org.displayName,
+              ...telemetry
+            };
+
+          } catch (err) {
+
+            return {
+              orgId: org.id,
+              orgName: org.displayName,
+              type: "observability",
+              timestamp: Date.now(),
+              metrics: {
+                apiLatency: 0,
+                licenseCount: 0,
+                deviceCount: 0,
+                licenseDeficit: 0,
+                devicesOffline: 0
+              },
+              ai: {
+                status: "critical",
+                riskScore: 100,
+                slaRisk: true,
+                issues: [
+                  {
+                    level: "critical",
+                    message: `Telemetry collection failed: ${String(err?.message || err)}`
+                  }
+                ]
+              }
+            };
+
+          }
+        })
+      );
+
+      results.push(...batchResults);
+
+      // small delay between batches to avoid bursts against Webex
+      await sleep(400);
+    }
+
+    results.sort((a, b) => Number(b.ai?.riskScore || 0) - Number(a.ai?.riskScore || 0));
+
+    const summary = {
+      total: results.length,
+      healthy: results.filter(o => o.ai?.status === "healthy").length,
+      degraded: results.filter(o => o.ai?.status === "degraded").length,
+      critical: results.filter(o => o.ai?.status === "critical").length,
+      avgRiskScore: results.length
+        ? Math.round(
+            results.reduce((a, x) => a + Number(x.ai?.riskScore || 0), 0) / results.length
+          )
+        : 0,
+      source: "live_fallback"
+    };
+
+    return json({
+      summary,
+      items: results
+    });
+
+  } catch (err) {
+
+    console.log("ADMIN OBSERVABILITY ROUTE ERROR:", err);
+
+    return json({
+      error: "admin_observability_failed",
+      detail: String(err)
+    }, 500);
+
+  }
+}
+   function chunkArray(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) {
+    out.push(arr.slice(i, i + size));
+  }
+  return out;
+}
+
+async function getObservability(env, orgId, opts = {}) {
+  const maxAgeMs = opts.maxAgeMs ?? 5 * 60 * 1000;
+
+  const cached = await loadTelemetry(env, orgId);
+
+  if (cached && cached.timestamp && (Date.now() - cached.timestamp) < maxAgeMs) {
+    return cached;
+  }
+
+  const fresh = await collectObservability(env, orgId);
+  await storeTelemetry(env, orgId, fresh);
+  return fresh;
+}
+
+async function getObservabilitySafe(env, org) {
+  try {
+    const telemetry = await getObservability(env, org.id);
+    return {
+      ok: true,
+      orgId: org.id,
+      orgName: org.displayName,
+      ...telemetry
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      orgId: org.id,
+      orgName: org.displayName,
+      timestamp: Date.now(),
+      metrics: {
+        apiLatency: 0,
+        licenseCount: 0,
+        deviceCount: 0,
+        licenseDeficit: 0,
+        devicesOffline: 0
+      },
+      ai: {
+        status: "critical",
+        riskScore: 100,
+        slaRisk: true,
+        issues: [
+          {
+            level: "critical",
+            message: `Telemetry collection failed: ${String(err.message || err)}`
+          }
+        ]
+      }
+    };
+  }
+}
+   
 if (url.pathname === "/api/debug/whoami-webex") {
   const token = await getAccessToken(env);
 
@@ -9149,6 +9381,7 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
   },
 async scheduled(event, env, ctx) {
   ctx.waitUntil((async () => {
+   ctx.waitUntil(runTelemetryCycle(env));
    ctx.waitUntil(runDailyPartnerReports(env, ctx, { fanout: 6 }));
     try {
 
@@ -9504,29 +9737,21 @@ function computeAIStatus(data) {
 // =====================================================
 
 async function storeTelemetry(env, orgId, data) {
-
   try {
-
-    // Latest telemetry (used by dashboards)
     await env.OBS_CACHE.put(
       `telemetry:${orgId}`,
       JSON.stringify(data),
-      { expirationTtl: 300 } // 5 minutes
+      { expirationTtl: 300 }
     );
 
-    // Historical telemetry (used for trend analysis)
     await env.OBS_CACHE.put(
       `telemetry:${orgId}:${Date.now()}`,
       JSON.stringify(data),
-      { expirationTtl: 86400 } // 24 hours
+      { expirationTtl: 86400 }
     );
-
   } catch (err) {
-
     console.log("Telemetry store error", err);
-
   }
-
 }
 // =====================================================
 // LOAD TELEMETRY
@@ -9573,21 +9798,236 @@ async function runTelemetryCycle(env) {
 
   const items = orgs.data?.items || [];
 
-  for (const org of items) {
+  const batchSize = 4;
+  const batches = chunkArray(items, batchSize);
 
+  const snapshot = [];
+
+  for (const batch of batches) {
+
+    const results = await Promise.all(
+
+      batch.map(async org => {
+
+        try {
+
+          const telemetry = await collectObservability(env, org.id);
+
+          await storeTelemetry(env, org.id, telemetry);
+
+          const entry = {
+            orgId: org.id,
+            orgName: org.displayName,
+            ...telemetry
+          };
+
+          snapshot.push(entry);
+
+          console.log("Telemetry updated", org.displayName);
+
+          return entry;
+
+        } catch (err) {
+
+          console.log("Telemetry error", org.displayName, err);
+
+          const entry = {
+            orgId: org.id,
+            orgName: org.displayName,
+            type: "observability",
+            timestamp: Date.now(),
+            metrics: {
+              apiLatency: 0,
+              licenseCount: 0,
+              deviceCount: 0
+            },
+            ai: {
+              status: "critical",
+              riskScore: 100,
+              issues: [
+                {
+                  level: "critical",
+                  message: "Telemetry collection failed"
+                }
+              ]
+            }
+          };
+
+          snapshot.push(entry);
+
+          return entry;
+
+        }
+
+      })
+
+    );
+
+    // pause between API bursts
+    await sleep(400);
+
+  }
+
+  // ------------------------------------------------
+  // Save partner-wide snapshot (fast dashboard load)
+  // ------------------------------------------------
+
+  try {
+
+    await env.OBS_CACHE.put(
+      "telemetry:partner_snapshot",
+      JSON.stringify(snapshot),
+      { expirationTtl: 300 }
+    );
+
+    console.log("Partner snapshot updated");
+
+  } catch (err) {
+
+    console.log("Snapshot write failed", err);
+
+  }
+
+}
+async function startPartnerObservabilityStream(server, env) {
+
+  let closed = false;
+
+  async function stream() {
     try {
+      const orgs = await webexFetch(
+        env,
+        "/organizations?managedByPartner=true&max=100"
+      );
 
-      const telemetry = await collectObservability(env, org.id);
+      const items = orgs.data?.items || [];
+      const batches = chunkArray(items, 4);
 
-      await storeTelemetry(env, org.id, telemetry);
+      for (const batch of batches) {
+        if (closed) return;
 
-      console.log("Telemetry updated", org.displayName);
+        const batchResults = await Promise.all(
+          batch.map(async org => {
+            try {
+              const telemetry = await getObservability(env, org.id);
+              return {
+                type: "tenant_update",
+                orgId: org.id,
+                orgName: org.displayName,
+                telemetry
+              };
+            } catch (err) {
+              return {
+                type: "tenant_update",
+                orgId: org.id,
+                orgName: org.displayName,
+                telemetry: {
+                  timestamp: Date.now(),
+                  metrics: {
+                    apiLatency: 0,
+                    licenseCount: 0,
+                    deviceCount: 0,
+                    licenseDeficit: 0,
+                    devicesOffline: 0
+                  },
+                  ai: {
+                    status: "critical",
+                    riskScore: 100,
+                    slaRisk: true,
+                    issues: [
+                      {
+                        level: "critical",
+                        message: `Telemetry collection failed: ${String(err.message || err)}`
+                      }
+                    ]
+                  }
+                }
+              };
+            }
+          })
+        );
+
+        for (const payload of batchResults) {
+          if (closed) return;
+          server.send(JSON.stringify(payload));
+        }
+
+        await sleep(400);
+      }
 
     } catch (err) {
+      if (!closed) {
+        server.send(JSON.stringify({
+          type: "error",
+          message: "partner_stream_failed"
+        }));
+      }
+    }
+  }
 
-      console.log("Telemetry error", org.displayName, err);
+  await stream();
+
+  const interval = setInterval(stream, 30000);
+
+  server.addEventListener("close", () => {
+    closed = true;
+    clearInterval(interval);
+  });
+}
+async function runTelemetryCycle(env) {
+
+  console.log("Starting partner telemetry cycle");
+
+  try {
+
+    const orgs = await webexFetch(
+      env,
+      "/organizations?managedByPartner=true&max=100"
+    );
+
+    const items = orgs.data?.items || [];
+
+    const batchSize = 4;
+
+    for (let i = 0; i < items.length; i += batchSize) {
+
+      const batch = items.slice(i, i + batchSize);
+
+      await Promise.all(
+
+        batch.map(async org => {
+
+          try {
+
+            const telemetry =
+              await collectObservability(env, org.id);
+
+            await storeTelemetry(env, org.id, telemetry);
+
+            console.log("Telemetry updated:", org.displayName);
+
+          } catch (err) {
+
+            console.log(
+              "Telemetry failed:",
+              org.displayName,
+              err
+            );
+
+          }
+
+        })
+
+      );
+
+      // small delay to avoid API bursts
+      await sleep(400);
 
     }
+
+  } catch (err) {
+
+    console.log("Telemetry cycle error:", err);
 
   }
 
