@@ -4368,28 +4368,49 @@ if (url.pathname === "/api/admin/pin/allowlist" && request.method === "POST") {
   return json({ ok: true, orgId, orgName, pin, emails: normEmails }, 200);
 }
 
-if (url.pathname === "/api/admin/orgs" && request.method === "GET") {
-  const token = await getAccessToken(env);
- const user = getCurrentUser(request);
-if (!user || !user.isAdmin) return json({ error: "admin_only" }, 403);
+if (url.pathname === "/api/admin/orgs") {
 
+  try {
 
-const result = await webexFetch(env, "/organizations");
+    const user = getCurrentUser(request);
 
-if (!result.ok) {
-  return json({
-    error: "org_list_failed",
-    status: result.status,
-    preview: result.preview
-  }, 500);
-}
+    if (!user || user.isAdmin !== true) {
+      return json({ error: "admin_required" }, 403);
+    }
 
-return json({
-  items: (result.data.items || []).map(o => ({
-    orgId: o.id,
-    orgName: o.displayName
-  }))
-});
+    const r = await webexFetch(env, "/organizations");
+
+    if (!r.ok) {
+
+      console.log("ADMIN ORG FETCH FAILED:", r.preview);
+
+      return json({
+        error: "webex_orgs_failed",
+        detail: r.preview
+      }, 500);
+
+    }
+
+    const items = r.data?.items || [];
+
+    return json(
+      items.map(x => ({
+        id: x.id,
+        displayName: x.displayName
+      }))
+    );
+
+  } catch (err) {
+
+    console.log("ADMIN ORGS ROUTE ERROR:", err);
+
+    return json({
+      error: "admin_orgs_route_failure",
+      detail: String(err)
+    }, 500);
+
+  }
+
 }
       
 if (url.pathname === "/api/admin/org-health" && request.method === "GET") {
