@@ -521,9 +521,43 @@ const ORG_SCOPE_RULES = [
 ];
 
 function scopeModeForPath(path) {
-  const p = String(path || "");
-  const rule = ORG_SCOPE_RULES.find(r => r.test(p));
-  return rule ? rule.mode : "header";
+
+  const p = String(path || "").toLowerCase();
+
+  /* -------------------------
+     APIs that REQUIRE header
+     ------------------------- */
+
+  if (
+    p.startsWith("/devices") ||
+    p.startsWith("/licenses") ||
+    p.startsWith("/numbers") ||
+    p.startsWith("/locations") ||
+    p.startsWith("/workspaces") ||
+    p.startsWith("/telephony") ||
+    p.startsWith("/people") ||
+    p.startsWith("/organizations")
+  ) {
+    return "header";
+  }
+
+  /* -------------------------
+     Webex Analytics APIs
+     ------------------------- */
+
+  if (
+    p.startsWith("/analytics") ||
+    p.startsWith("/calling/analytics") ||
+    p.startsWith("/cdr_feed")
+  ) {
+    return "header";
+  }
+
+  /* -------------------------
+     Default behavior
+     ------------------------- */
+
+  return "header";
 }
 /* =====================================================
    GLOBAL WEBEX API THROTTLE CONTROLLER
