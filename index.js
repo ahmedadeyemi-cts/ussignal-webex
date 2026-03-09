@@ -3328,13 +3328,18 @@ if (url.pathname === "/admin/observability") {
   });
 }
 
+     if (url.pathname === "/api/admin/observability" && request.method === "GET") {
+
   const user = getCurrentUser(request);
 
   if (!user?.isAdmin) {
     return json({ error: "admin_only" }, 403);
   }
 
-  const orgs = await webexFetch(env, "/organizations?managedByPartner=true&max=100");
+  const orgs = await webexFetch(
+    env,
+    "/organizations?managedByPartner=true&max=100"
+  );
 
   const items = orgs.data?.items || [];
 
@@ -3358,16 +3363,15 @@ if (url.pathname === "/admin/observability") {
 
   const summary = {
     total: results.length,
-    healthy: results.filter(o => o.ai.status === "healthy").length,
-    degraded: results.filter(o => o.ai.status === "degraded").length,
-    critical: results.filter(o => o.ai.status === "critical").length
+    healthy: results.filter(o => o.ai?.status === "healthy").length,
+    degraded: results.filter(o => o.ai?.status === "degraded").length,
+    critical: results.filter(o => o.ai?.status === "critical").length
   };
 
   return json({
     summary,
     items: results
   });
-
 }
 // =====================================================
 // /api/routes — Dynamic Customer Portal Route Config
