@@ -1835,7 +1835,7 @@ async function renderAdminLicensesHTML() {
 }
 async function renderAdminObservabilityHTML() {
   const res = await fetch("https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/observability.html");
-  if (!res.ok) throw new Error("Failed to load admin licenses UI");
+  if (!res.ok) throw new Error("Failed to load admin Observability UI");
   return await res.text();
 }
 async function renderAdminDevicesHTML() {
