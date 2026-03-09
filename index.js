@@ -3463,6 +3463,27 @@ if (url.pathname === "/customer/observability" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
+     if (url.pathname === "/ws/observability") {
+
+  if (request.headers.get("Upgrade") !== "websocket") {
+    return new Response("Expected websocket", { status: 426 });
+  }
+
+  const pair = new WebSocketPair();
+  const [client, server] = Object.values(pair);
+
+  server.accept();
+
+  server.send(JSON.stringify({
+    status: "connected",
+    ts: Date.now()
+  }));
+
+  return new Response(null, {
+    status: 101,
+    webSocket: client
+  });
+}
 /* -----------------------------
    Customer UI: Maintenance
 ----------------------------- */
