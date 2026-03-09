@@ -4894,12 +4894,18 @@ if (url.pathname === "/api/admin/orgs") {
 
     const items = r.data?.items || [];
 
-    return json(
-      items.map(x => ({
-        id: x.id,
-        displayName: x.displayName
-      }))
-    );
+   // return json(
+   //   items.map(x => ({
+     //   id: x.id,
+    //    displayName: x.displayName
+  //    }))
+  //  ); 
+   return json({
+  items: items.map(x => ({
+    orgId: x.id,
+    orgName: x.displayName
+  }))
+});
 
   } catch (err) {
 
