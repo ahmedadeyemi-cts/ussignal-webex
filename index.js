@@ -586,6 +586,21 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 // =====================================================
+// Utility helpers
+// =====================================================
+
+function chunkArray(arr, size) {
+
+  const chunks = [];
+
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+
+  return chunks;
+
+}
+// =====================================================
 // OBSERVABILITY STREAM ENGINE
 // =====================================================
 async function startObservabilityStream(ws, env, orgId) {
