@@ -10,7 +10,7 @@
  *
  * Required bindings:
  * - KV: WEBEX
- * - KV: ORG_MAP_KV
+ * - KV: ORG_MAP_KV.
  * - KV: USER_SESSION_KV
  * Required env vars:
  * - CLIENT_ID
