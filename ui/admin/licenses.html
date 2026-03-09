@@ -416,8 +416,10 @@ async function loadOrgs(){
   const orgs = await api("/api/admin/orgs");
   const select = $("orgSelect");
 
-  select.innerHTML = orgs.items.map(o =>
-    `<option value="${o.orgId}">${o.orgName}</option>`
+  select.innerHTML = (orgs.items || orgs).map(o =>
+    `<option value="${o.orgId || o.id}">
+      ${o.orgName || o.displayName}
+    </option>`
   ).join("");
 
   loadLicenses(select.value);
