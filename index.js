@@ -3705,7 +3705,11 @@ if (url.pathname === "/api/admin/observability") {
       console.log("OBS snapshot read failed:", err);
     }
 
-    if (Array.isArray(snapshot) && snapshot.length) {
+    if (
+  Array.isArray(snapshot) &&
+  snapshot.length &&
+  snapshot[0]?.ai
+) {
 
       const results = snapshot
         .filter(Boolean)
