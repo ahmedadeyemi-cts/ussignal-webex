@@ -605,19 +605,31 @@ function chunkArray(arr, size) {
 // =====================================================
 async function startObservabilityStream(ws, env, orgId) {
 
+  let closed = false;
+
   const interval = setInterval(async () => {
+
+    if (closed) return;
 
     try {
 
-      const data = await collectObservability(env, orgId);
+      const telemetry =
+        await loadTelemetry(env, orgId) ||
+        await collectObservability(env, orgId);
 
-      ws.send(JSON.stringify(data));
+      ws.send(JSON.stringify({
+        type: "tenant_update",
+        orgId,
+        telemetry,
+        ts: Date.now()
+      }));
 
     } catch (err) {
 
       ws.send(JSON.stringify({
         type: "error",
-        message: err.message
+        orgId,
+        message: err.message || String(err)
       }));
 
     }
@@ -625,6 +637,7 @@ async function startObservabilityStream(ws, env, orgId) {
   }, 3000);
 
   ws.addEventListener("close", () => {
+    closed = true;
     clearInterval(interval);
   });
 
