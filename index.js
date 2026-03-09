@@ -1955,43 +1955,66 @@ async function computeTenantHealth(env, orgId) {
   let licenseFailed = false;
   let deviceFailed = false;
   let analyticsFailed = false;
- let pstnScore = null;
-let pstnDegraded = false;
-let pstnSingleTrunk = false;
-let pstnE911Risk = false;
-let pstnCapacityRed = false;
+
+  let pstnScore = null;
+  let pstnDegraded = false;
+  let pstnSingleTrunk = false;
+  let pstnE911Risk = false;
+  let pstnCapacityRed = false;
 
   /* -------------------------
      LICENSES
   -------------------------- */
+
   const lic = await webexFetch(env, "/licenses", orgId);
 
+  let licenseItems = [];
+
   if (lic.ok) {
-    for (const l of lic.data.items || []) {
+
+    licenseItems = lic.data?.items || [];
+
+    for (const l of licenseItems) {
+
       const total = Number(l.totalUnits ?? 0);
       const consumed = Number(l.consumedUnits ?? 0);
+
       deficit += Math.max(0, consumed - total);
+
     }
+
   } else {
+
     licenseFailed = true;
+
   }
 
   /* -------------------------
      DEVICES
   -------------------------- */
+
   const dev = await webexFetch(env, "/devices", orgId);
 
+  let deviceItems = [];
+
   if (dev.ok) {
-    offline = (dev.data.items || []).filter(d =>
+
+    deviceItems = dev.data?.items || [];
+
+    offline = deviceItems.filter(d =>
       String(d.connectionStatus || "").toLowerCase() !== "connected"
     ).length;
+
   } else {
+
     deviceFailed = true;
+
   }
 
   /* -------------------------
      CALLING ANALYTICS
   -------------------------- */
+
   const analytics = await webexFetch(
     env,
     CALLING_ANALYTICS_PATH,
@@ -1999,131 +2022,170 @@ let pstnCapacityRed = false;
   );
 
   if (analytics.ok) {
-    const rows = analytics.data.items || [];
+
+    const rows = analytics.data?.items || [];
+
     totalCalls = rows.reduce((a, r) => a + (r.totalCalls || 0), 0);
+
     failedCalls = rows.reduce((a, r) => a + (r.failedCalls || 0), 0);
+
   } else {
+
     analyticsFailed = true;
+
   }
 
   const failureRate = totalCalls > 0
     ? (failedCalls / totalCalls) * 100
     : 0;
 
- // PSTN (prefer KV snapshot written by cron)
-try {
-  const pstnSnap = await env.WEBEX.get(`pstn:${orgId}`, { type: "json" });
-  if (pstnSnap?.scores) {
-    pstnScore = pstnSnap.scores.pstnObservabilityScore ?? pstnSnap.scores.pstnReliabilityScore ?? null;
-    pstnDegraded = !!pstnSnap.risk?.apiDegraded;
-    pstnSingleTrunk = !!pstnSnap.risk?.singleTrunkRisk;
-    pstnE911Risk = !!pstnSnap.risk?.timezoneAwareE911Risk || !!pstnSnap.risk?.e911Missing;
-    pstnCapacityRed = !!pstnSnap.risk?.capacityRed;
-  } else {
-    // If missing or malformed, treat as degraded (but don’t hard fail)
+  /* -------------------------
+     PSTN SNAPSHOT
+  -------------------------- */
+
+  try {
+
+    const pstnSnap = await env.WEBEX.get(`pstn:${orgId}`, { type: "json" });
+
+    if (pstnSnap?.scores) {
+
+      pstnScore =
+        pstnSnap.scores.pstnObservabilityScore ??
+        pstnSnap.scores.pstnReliabilityScore ??
+        null;
+
+      pstnDegraded = !!pstnSnap.risk?.apiDegraded;
+      pstnSingleTrunk = !!pstnSnap.risk?.singleTrunkRisk;
+      pstnE911Risk =
+        !!pstnSnap.risk?.timezoneAwareE911Risk ||
+        !!pstnSnap.risk?.e911Missing;
+
+      pstnCapacityRed = !!pstnSnap.risk?.capacityRed;
+
+    } else {
+
+      pstnDegraded = true;
+
+    }
+
+  } catch {
+
     pstnDegraded = true;
+
   }
-} catch {
-  pstnDegraded = true;
-}
+
   /* =====================================================
      ENTERPRISE WEIGHTED SCORING
   ===================================================== */
 
   let score = 100;
 
-  // License deficit
   if (deficit > 0 && deficit <= 5) score -= 10;
   if (deficit > 5) score -= 25;
 
-  // Device offline penalties
   if (offline > 0 && offline <= 5) score -= 10;
   if (offline > 5 && offline <= 10) score -= 20;
   if (offline > 10) score -= 30;
 
-  // Call failure rate penalties
   if (failureRate > 3 && failureRate <= 5) score -= 10;
   if (failureRate > 5 && failureRate <= 10) score -= 20;
   if (failureRate > 10) score -= 35;
 
-  // Hard penalties for API failures
   if (licenseFailed) score -= 10;
   if (deviceFailed) score -= 10;
   if (analyticsFailed) score -= 15;
 
   if (score < 0) score = 0;
 
- // PSTN penalties (enterprise-grade)
-if (pstnScore != null) {
-  if (pstnScore < 85) score -= 8;
-  if (pstnScore < 70) score -= 12;
-  if (pstnScore < 55) score -= 18;
-} else {
-  // Unknown PSTN is a mild penalty (visibility gap)
-  score -= 5;
-}
+  if (pstnScore != null) {
 
-if (pstnDegraded) score -= 8;
-if (pstnSingleTrunk) score -= 7;
-if (pstnE911Risk) score -= 12;
-if (pstnCapacityRed) score -= 10;
+    if (pstnScore < 85) score -= 8;
+    if (pstnScore < 70) score -= 12;
+    if (pstnScore < 55) score -= 18;
+
+  } else {
+
+    score -= 5;
+
+  }
+
+  if (pstnDegraded) score -= 8;
+  if (pstnSingleTrunk) score -= 7;
+  if (pstnE911Risk) score -= 12;
+  if (pstnCapacityRed) score -= 10;
 
   /* -------------------------
      STATUS TIERS
   -------------------------- */
 
-  let status = "Healthy";
-  if (score < 85) status = "Warning";
-  if (score < 60) status = "Critical";
+  let status = "healthy";
 
-/* -------------------------
-   ALERT FLAGS
--------------------------- */
+  if (score < 85) status = "degraded";
+  if (score < 60) status = "critical";
 
-const alerts = {
-  licenseDeficit: deficit > 0,
-  minorDeviceOutage: offline > 0 && offline <= 5,
-  majorDeviceOutage: offline > 10,
-  elevatedCallFailures: failureRate > 5,
-  severeCallFailures: failureRate > 10,
-  apiDegraded: licenseFailed || deviceFailed || analyticsFailed,
+  /* -------------------------
+     ALERT FLAGS
+  -------------------------- */
 
-  // 🔵 PSTN Extensions (new)
-  pstnDegraded,
-  pstnSingleTrunk,
-  pstnE911Risk,
-  pstnCapacityRed
-};
+  const alerts = {
 
-/* -------------------------
-   METRICS BLOCK
--------------------------- */
+    licenseDeficit: deficit > 0,
+    minorDeviceOutage: offline > 0 && offline <= 5,
+    majorDeviceOutage: offline > 10,
 
-const metrics = {
-  deficit,
-  offlineDevices: offline,
-  failureRate: Number(failureRate.toFixed(2)),
-  totalCalls,
-  failedCalls,
+    elevatedCallFailures: failureRate > 5,
+    severeCallFailures: failureRate > 10,
 
-  // 🔵 PSTN metric added (no removal of existing fields)
-  pstnScore
-};
+    apiDegraded: licenseFailed || deviceFailed || analyticsFailed,
 
-/* -------------------------
-   FINAL RETURN
--------------------------- */
+    pstnDegraded,
+    pstnSingleTrunk,
+    pstnE911Risk,
+    pstnCapacityRed
 
-return {
-  orgId,
-  score,
-  status,
-  metrics,
-  alerts,
-  generatedAt: new Date().toISOString()
-};
+  };
+
+  /* -------------------------
+     FINAL RETURN
+  -------------------------- */
+
+  return {
+
+    orgId,
+
+    metrics: {
+
+      deviceCount: deviceItems.length,
+
+      licenseCount: licenseItems.reduce(
+        (a, l) => a + Number(l.consumedUnits || 0),
+        0
+      ),
+
+      offlineDevices: offline,
+
+      failureRate: Number(failureRate.toFixed(2)),
+
+      totalCalls,
+      failedCalls,
+
+      pstnScore
+
+    },
+
+    ai: {
+
+      riskScore: score,
+      status,
+      alerts
+
+    },
+
+    generatedAt: new Date().toISOString()
+
+  };
+
 }
-
 async function computeCallQuality(env, orgId) {
 
   const result = await webexFetch(
@@ -3364,7 +3426,7 @@ if (url.pathname === "/admin/observability") {
     env,
     "/organizations?managedByPartner=true&max=100"
   );
-
+  
   const items = orgs.data?.items || [];
 
   const results = [];
@@ -3820,8 +3882,8 @@ if (url.pathname === "/api/admin/observability") {
           try {
 
             const telemetry =
-              await loadTelemetry(env, org.id) ||
-              await collectObservability(env, org.id);
+            await loadTelemetry(env, org.id) ||
+            await computeTenantHealth(env, org.id);
 
             return {
               orgId: org.id,
