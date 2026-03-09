@@ -4446,7 +4446,7 @@ if (url.pathname === "/api/admin/orgs") {
       return json({ error: "admin_required" }, 403);
     }
 
-    const r = await webexFetch(env, "/organizations");
+    const r = await webexFetch(env, "/organizations?managedByPartner=true&max=100");
 
     if (!r.ok) {
 
