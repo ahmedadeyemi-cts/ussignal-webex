@@ -585,6 +585,9 @@ let __webexLastCallAt = 0;
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+// =====================================================
+// OBSERVABILITY STREAM ENGINE
+// =====================================================
 async function startObservabilityStream(ws, env, orgId) {
 
   const interval = setInterval(async () => {
@@ -9260,37 +9263,6 @@ async function ciBackgroundPollAll(env) {
 
   }
 }
-// =====================================================
-// OBSERVABILITY STREAM ENGINE
-// =====================================================
-
-async function startObservabilityStream(ws, env, orgId) {
-
-  const interval = setInterval(async () => {
-
-    try {
-
-      const data = await collectObservability(env, orgId);
-
-      ws.send(JSON.stringify(data));
-
-    } catch (err) {
-
-      ws.send(JSON.stringify({
-        type: "error",
-        message: err.message
-      }));
-
-    }
-
-  }, 3000);
-
-  ws.addEventListener("close", () => {
-    clearInterval(interval);
-  });
-
-}
-
 
 // =====================================================
 // OBSERVABILITY DATA COLLECTOR
