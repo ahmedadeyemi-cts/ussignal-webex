@@ -3336,7 +3336,7 @@ if (url.pathname === "/api/admin/observability") {
 
     try {
 
-      const telemetry = await getObservability(env, org.id);
+      const telemetry = await loadTelemetry(env, org.id);
 
       results.push({
         orgId: org.id,
@@ -9158,6 +9158,7 @@ async scheduled(event, env, ctx) {
       const orgs = orgResult.data.items || [];
      // 🔵 Delegation prewarm (safe, lightweight)
    await mapLimit(orgs, 5, async (org) => {
+   await runTelemetryCycle(env);
    try {
     await warmDelegation(env, org.id);
   } catch (e) {
@@ -9506,10 +9507,18 @@ async function storeTelemetry(env, orgId, data) {
 
   try {
 
+    // Latest telemetry (used by dashboards)
     await env.OBS_CACHE.put(
       `telemetry:${orgId}`,
       JSON.stringify(data),
-      { expirationTtl: 300 }
+      { expirationTtl: 300 } // 5 minutes
+    );
+
+    // Historical telemetry (used for trend analysis)
+    await env.OBS_CACHE.put(
+      `telemetry:${orgId}:${Date.now()}`,
+      JSON.stringify(data),
+      { expirationTtl: 86400 } // 24 hours
     );
 
   } catch (err) {
@@ -9551,5 +9560,35 @@ async function getObservability(env, orgId) {
   await storeTelemetry(env, orgId, data);
 
   return data;
+
+}
+async function runTelemetryCycle(env) {
+
+  console.log("Starting telemetry cycle");
+
+  const orgs = await webexFetch(
+    env,
+    "/organizations?managedByPartner=true&max=100"
+  );
+
+  const items = orgs.data?.items || [];
+
+  for (const org of items) {
+
+    try {
+
+      const telemetry = await collectObservability(env, org.id);
+
+      await storeTelemetry(env, org.id, telemetry);
+
+      console.log("Telemetry updated", org.displayName);
+
+    } catch (err) {
+
+      console.log("Telemetry error", org.displayName, err);
+
+    }
+
+  }
 
 }
