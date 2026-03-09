@@ -3318,6 +3318,49 @@ if (url.pathname === "/admin/pins" && request.method === "GET") {
     "content-type": "text/html; charset=utf-8",
   });
 }
+if (url.pathname === "/api/admin/observability") {
+
+  const user = getCurrentUser(request);
+
+  if (!user?.isAdmin) {
+    return json({ error: "admin_only" }, 403);
+  }
+
+  const orgs = await webexFetch(env, "/organizations?managedByPartner=true&max=100");
+
+  const items = orgs.data?.items || [];
+
+  const results = [];
+
+  for (const org of items) {
+
+    try {
+
+      const telemetry = await collectObservability(env, org.id);
+
+      results.push({
+        orgId: org.id,
+        orgName: org.displayName,
+        ...telemetry
+      });
+
+    } catch {}
+
+  }
+
+  const summary = {
+    total: results.length,
+    healthy: results.filter(o => o.ai.status === "healthy").length,
+    degraded: results.filter(o => o.ai.status === "degraded").length,
+    critical: results.filter(o => o.ai.status === "critical").length
+  };
+
+  return json({
+    summary,
+    items: results
+  });
+
+}
 // =====================================================
 // /api/routes — Dynamic Customer Portal Route Config
 // =====================================================
@@ -9276,6 +9319,9 @@ async function collectObservability(env, orgId) {
   let licenseCount = 0;
   let deviceCount = 0;
 
+  let licenseDeficit = 0;
+  let devicesOffline = 0;
+
   try {
 
     const start = Date.now();
@@ -9285,7 +9331,22 @@ async function collectObservability(env, orgId) {
     apiLatency = Date.now() - start;
 
     if (lic.ok) {
-      licenseCount = (lic.data.items || []).length;
+
+      const items = lic.data.items || [];
+
+      licenseCount = items.length;
+
+      for (const l of items) {
+
+        const total = Number(l.totalUnits ?? -1);
+        const consumed = Number(l.consumedUnits ?? 0);
+
+        if (total >= 0 && consumed > total) {
+          licenseDeficit += (consumed - total);
+        }
+
+      }
+
     }
 
   } catch {}
@@ -9295,7 +9356,15 @@ async function collectObservability(env, orgId) {
     const dev = await webexFetch(env, "/devices", orgId);
 
     if (dev.ok) {
-      deviceCount = (dev.data.items || []).length;
+
+      const devices = dev.data.items || [];
+
+      deviceCount = devices.length;
+
+      devicesOffline = devices.filter(d =>
+        d.connectionStatus === "disconnected"
+      ).length;
+
     }
 
   } catch {}
@@ -9303,24 +9372,28 @@ async function collectObservability(env, orgId) {
   const ai = computeAIStatus({
     apiLatency,
     licenseCount,
-    deviceCount
+    deviceCount,
+    licenseDeficit,
+    devicesOffline
   });
 
   return {
     type: "observability",
     timestamp,
     orgId,
+
     metrics: {
       apiLatency,
       licenseCount,
-      deviceCount
+      deviceCount,
+      licenseDeficit,
+      devicesOffline
     },
+
     ai
   };
 
 }
-
-
 // =====================================================
 // AI STATUS ENGINE
 // =====================================================
@@ -9329,37 +9402,98 @@ function computeAIStatus(data) {
 
   const issues = [];
 
+  let riskScore = 0;
+
+  // ---------------------------------------------------
+  // API Latency
+  // ---------------------------------------------------
+
   if (data.apiLatency > 2500) {
+
     issues.push({
       level: "warning",
       message: "Webex API latency elevated"
     });
+
+    riskScore += 10;
+
   }
 
-  if (data.deviceCount === 0) {
+  // ---------------------------------------------------
+  // License Issues
+  // ---------------------------------------------------
+
+  if (data.licenseDeficit > 0) {
+
     issues.push({
-      level: "warning",
-      message: "No devices detected"
+      level: "critical",
+      message: `License deficit detected (${data.licenseDeficit})`
     });
+
+    riskScore += 40;
+
   }
 
   if (data.licenseCount === 0) {
+
     issues.push({
       level: "critical",
       message: "No licenses returned from Webex"
     });
+
+    riskScore += 50;
+
   }
+
+  // ---------------------------------------------------
+  // Device Health
+  // ---------------------------------------------------
+
+  if (data.deviceCount === 0) {
+
+    issues.push({
+      level: "warning",
+      message: "No devices detected"
+    });
+
+    riskScore += 20;
+
+  }
+
+  if (data.devicesOffline > 5) {
+
+    issues.push({
+      level: "warning",
+      message: `${data.devicesOffline} devices offline`
+    });
+
+    riskScore += 15;
+
+  }
+
+  // ---------------------------------------------------
+  // Determine Status
+  // ---------------------------------------------------
 
   let status = "healthy";
 
-  if (issues.some(i => i.level === "critical")) {
+  if (riskScore >= 50) {
     status = "critical";
-  } else if (issues.length > 0) {
+  }
+  else if (riskScore >= 20) {
     status = "degraded";
   }
 
+  // ---------------------------------------------------
+  // SLA Risk
+  // ---------------------------------------------------
+
+  const slaRisk = status !== "healthy";
+
   return {
     status,
+    riskScore,
+    slaRisk,
     issues
   };
 
