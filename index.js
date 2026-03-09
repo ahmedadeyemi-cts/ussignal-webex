@@ -9664,13 +9664,12 @@ async function collectObservability(env, orgId) {
 
 }
 // =====================================================
-// AI STATUS ENGINE
+// AI STATUS ENGINE (Production Tuned)
 // =====================================================
 
 function computeAIStatus(data) {
 
   const issues = [];
-
   let riskScore = 0;
 
   // ---------------------------------------------------
@@ -9741,6 +9740,12 @@ function computeAIStatus(data) {
   }
 
   // ---------------------------------------------------
+  // Normalize Risk
+  // ---------------------------------------------------
+
+  if (riskScore > 100) riskScore = 100;
+
+  // ---------------------------------------------------
   // Determine Status
   // ---------------------------------------------------
 
@@ -9757,7 +9762,10 @@ function computeAIStatus(data) {
   // SLA Risk
   // ---------------------------------------------------
 
-  const slaRisk = status !== "healthy";
+  const slaRisk =
+    riskScore >= 20 ||
+    data.devicesOffline > 10 ||
+    data.licenseDeficit > 0;
 
   return {
     status,
