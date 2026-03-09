@@ -3336,7 +3336,7 @@ if (url.pathname === "/api/admin/observability") {
 
     try {
 
-      const telemetry = await collectObservability(env, org.id);
+      const telemetry = await getObservability(env, org.id);
 
       results.push({
         orgId: org.id,
@@ -9496,5 +9496,60 @@ function computeAIStatus(data) {
     slaRisk,
     issues
   };
+
+}
+// =====================================================
+// STORE TELEMETRY
+// =====================================================
+
+async function storeTelemetry(env, orgId, data) {
+
+  try {
+
+    await env.OBS_CACHE.put(
+      `telemetry:${orgId}`,
+      JSON.stringify(data),
+      { expirationTtl: 300 }
+    );
+
+  } catch (err) {
+
+    console.log("Telemetry store error", err);
+
+  }
+
+}
+// =====================================================
+// LOAD TELEMETRY
+// =====================================================
+
+async function loadTelemetry(env, orgId) {
+
+  try {
+
+    const cached = await env.OBS_CACHE.get(`telemetry:${orgId}`);
+
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
+  } catch {}
+
+  return null;
+
+}
+async function getObservability(env, orgId) {
+
+  const cached = await loadTelemetry(env, orgId);
+
+  if (cached) {
+    return cached;
+  }
+
+  const data = await collectObservability(env, orgId);
+
+  await storeTelemetry(env, orgId, data);
+
+  return data;
 
 }
