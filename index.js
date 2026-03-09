@@ -1264,6 +1264,7 @@ async function downloadWebexReport(env, orgId, reportId) {
 async function getAccessToken(env) {
 
   const cacheKey = "access_token";
+  const lockKey = "access_token_lock";
 
   let cached = null;
 
@@ -1273,20 +1274,42 @@ async function getAccessToken(env) {
     console.log("Token cache read error:", err);
   }
 
+  // Use cached token if valid
   if (cached?.token && cached?.expires_at && cached.expires_at > Date.now()) {
     return cached.token;
   }
 
-  console.log("Requesting new Webex access token...");
+  // Prevent multiple refreshes
+  const existingLock = await env.WEBEX.get(lockKey);
+
+  if (existingLock) {
+
+    // Wait for the other request to finish
+    for (let i = 0; i < 10; i++) {
+      await sleep(300);
+
+      const retry = await env.WEBEX.get(cacheKey, { type: "json" });
+
+      if (retry?.token && retry?.expires_at > Date.now()) {
+        return retry.token;
+      }
+    }
+  }
+
+  // Acquire lock
+  await env.WEBEX.put(lockKey, "1", { expirationTtl: 10 });
+
+  console.log("Refreshing Webex OAuth token...");
 
   const body = new URLSearchParams({
-    grant_type: "client_credentials",
+    grant_type: "refresh_token",
     client_id: env.CLIENT_ID,
-    client_secret: env.CLIENT_SECRET
+    client_secret: env.CLIENT_SECRET,
+    refresh_token: env.REFRESH_TOKEN
   });
 
   const res = await fetch(
-    "https://webexapis.com/v1/access_token",
+    "https://idbroker.webex.com/idb/oauth2/v1/access_token",
     {
       method: "POST",
       headers: {
@@ -1299,10 +1322,8 @@ async function getAccessToken(env) {
   const data = await res.json();
 
   if (!res.ok) {
-    console.error("WEBEX TOKEN ERROR:", data);
-    throw new Error(
-      `Webex token request failed (${res.status}): ${JSON.stringify(data)}`
-    );
+    await env.WEBEX.delete(lockKey);
+    throw new Error(`Webex token refresh failed (${res.status}): ${JSON.stringify(data)}`);
   }
 
   const token = data.access_token;
@@ -1317,6 +1338,8 @@ async function getAccessToken(env) {
     }),
     { expirationTtl: data.expires_in }
   );
+
+  await env.WEBEX.delete(lockKey);
 
   return token;
 }
