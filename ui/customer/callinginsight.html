@@ -2388,13 +2388,7 @@ async function loadMe(){
     return false;
   }
 
- if (ME.role !== "admin" && !SELECTED_ORG_ID) {
-  pushAlert({
-    severity:"bad",
-    title:"Missing tenant context",
-    body:"Customer session did not include orgId, so reports cannot run."
-  });
-}
+SELECTED_ORG_ID = ME.orgId || null;
 
   $("welcomeLine").textContent = ME.email || "—";
   $("roleLine").textContent = ME.role ? `Role: ${ME.role}` : "Role: —";
