@@ -9319,42 +9319,36 @@ if (
   }
 }
 
-// =====================================================
-// FULL PSTN (HTML-Compatible Version)
-// =====================================================
 if (url.pathname === "/api/pstn" && request.method === "GET") {
   try {
-
     const user = getCurrentUser(request);
-    if (!user) return json({ ok:false, error:"access_required" },401);
+    if (!user) return json({ ok: false, error: "access_required" }, 401);
 
     const session = await getSession(env, user.email);
     const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
     let resolvedOrgId;
-
     if (user.isAdmin) {
-      if (!requestedOrgId) return json({ ok:false, error:"missing_orgId" },400);
+      if (!requestedOrgId) return json({ ok: false, error: "missing_orgId" }, 400);
       resolvedOrgId = requestedOrgId;
     } else {
-      if (!session?.orgId) return json({ ok:false, error:"pin_required" },401);
+      if (!session?.orgId) return json({ ok: false, error: "pin_required" }, 401);
       resolvedOrgId = session.orgId;
     }
 
-    const ttl = clampInt(url.searchParams.get("ttl"),180,60,900);
-
+    const ttl = clampInt(url.searchParams.get("ttl"), 180, 60, 900);
     const cacheReq = pstnCacheReq(request, `pstn_full:v6:${resolvedOrgId}`);
-    const cached = await cacheGetJson(cacheReq);
-    if (cached) return json({ ...cached, _cache:"HIT" },200);
 
-    // MUST RUN FIRST
+    const cached = await cacheGetJson(cacheReq);
+    if (cached) return json({ ...cached, _cache: "HIT" }, 200);
+
     await ensureDelegation(env, resolvedOrgId);
 
     const safe = (path) =>
       webexFetchSafe(env, withOrgQuery(path, resolvedOrgId), resolvedOrgId);
 
     const diagnostics = [];
-    const diag = (name,r) => {
+    const diag = (name, r) => {
       diagnostics.push({
         name,
         ok: !!r?.ok,
@@ -9363,150 +9357,534 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
       });
     };
 
-    // ===============================
-    // FETCH CORE DATA
-    // ===============================
+    const asItems = (x) => {
+      if (Array.isArray(x)) return x;
+      if (Array.isArray(x?.items)) return x.items;
+      if (Array.isArray(x?.phoneNumbers)) return x.phoneNumbers;
+      if (Array.isArray(x?.trunks)) return x.trunks;
+      if (Array.isArray(x?.routeGroups)) return x.routeGroups;
+      if (Array.isArray(x?.routeLists)) return x.routeLists;
+      if (Array.isArray(x?.numbers)) return x.numbers;
+      if (Array.isArray(x?.locations)) return x.locations;
+      return [];
+    };
+
+    const first = (...vals) => {
+      for (const v of vals) {
+        if (v !== undefined && v !== null && v !== "") return v;
+      }
+      return null;
+    };
+
+    const upper = (v) => String(v || "").toUpperCase();
+    const lower = (v) => String(v || "").toLowerCase();
+
+    const getNumberLocationId = (n) =>
+      first(
+        n?.locationId,
+        n?.location?.id,
+        n?.siteId,
+        n?.callingLocationId
+      );
+
+    const getNumberLocationName = (n) =>
+      first(
+        n?.locationName,
+        n?.location?.name,
+        n?.siteName
+      );
+
+    const getTrunkLocationId = (t) =>
+      first(
+        t?.locationId,
+        t?.location?.id,
+        t?.siteId,
+        t?.callingLocationId
+      );
+
+    const getTrunkLocationName = (t) =>
+      first(
+        t?.locationName,
+        t?.location?.name,
+        t?.siteName
+      );
+
+    const getRouteGroupLocationIds = (rg) => {
+      const set = new Set();
+
+      const add = (v) => {
+        if (v !== undefined && v !== null && v !== "") set.add(String(v));
+      };
+
+      add(rg?.locationId);
+      add(rg?.location?.id);
+
+      for (const x of asItems(rg?.locations)) {
+        add(x?.id);
+        add(x?.locationId);
+        add(x?.location?.id);
+      }
+
+      for (const x of asItems(rg?.trunks)) {
+        add(x?.locationId);
+        add(x?.location?.id);
+      }
+
+      return [...set];
+    };
+
+    const getRouteListLocationIds = (rl) => {
+      const set = new Set();
+
+      const add = (v) => {
+        if (v !== undefined && v !== null && v !== "") set.add(String(v));
+      };
+
+      add(rl?.locationId);
+      add(rl?.location?.id);
+
+      for (const x of asItems(rl?.locations)) {
+        add(x?.id);
+        add(x?.locationId);
+        add(x?.location?.id);
+      }
+
+      for (const x of asItems(rl?.routeGroups)) {
+        add(x?.locationId);
+        add(x?.location?.id);
+      }
+
+      return [...set];
+    };
+
+    const normalizeDidRecord = (n) => {
+      const locationId = getNumberLocationId(n);
+      const locationName = getNumberLocationName(n);
+
+      const phoneNumber = first(
+        n?.phoneNumber,
+        n?.number,
+        n?.did,
+        n?.e164,
+        null
+      );
+
+      const ownerType = first(n?.owner?.type, n?.ownerType, null);
+      const ownerName =
+        [first(n?.owner?.firstName, ""), first(n?.owner?.lastName, "")]
+          .join(" ")
+          .trim() ||
+        first(n?.owner?.displayName, n?.owner?.name, null);
+
+      const state = upper(first(n?.state, n?.status, "UNKNOWN"));
+      const assigned = !lower(state).includes("unassign");
+
+      return {
+        ...n,
+        locationId,
+        locationName,
+        phoneNumber,
+        e164: phoneNumber,
+        ownerType,
+        ownerName,
+        assigned
+      };
+    };
+
+    const normalizeTrunkRecord = (t) => {
+      return {
+        ...t,
+        locationId: getTrunkLocationId(t),
+        locationName: getTrunkLocationName(t),
+        trunkName: first(t?.name, t?.displayName, t?.trunkName, t?.id, "Trunk"),
+        trunkType: first(t?.trunkType, t?.connectionType, t?.type, t?.pstnType, null),
+        utilization: Number.isFinite(Number(t?.utilization)) ? Number(t.utilization) : undefined
+      };
+    };
+
+    const readPstnType = (conn) => {
+      const raw = upper(
+        first(
+          conn?.pstnConnectionType,
+          conn?.connectionType,
+          conn?.type,
+          conn?.pstnType,
+          conn?.providerType
+        )
+      );
+
+      if (!raw) return "UNKNOWN";
+      if (raw.includes("NO_PSTN") || raw.includes("NONE")) return "NO_PSTN";
+      if (raw.includes("LOCAL") || raw.includes("GATEWAY") || raw.includes("PREMISE")) return "LOCAL_GATEWAY";
+      if (raw.includes("CLOUD") || raw.includes("CCP") || raw.includes("CLOUD_CONNECT")) return "CLOUD_CONNECT";
+      if (raw.includes("CISCO")) return "CISCO_PSTN";
+      return "UNKNOWN";
+    };
+
+    const readDisplayName = (conn) =>
+      first(
+        conn?.displayName,
+        conn?.provider?.displayName,
+        conn?.providerName,
+        conn?.name,
+        conn?.pstnProviderName,
+        null
+      );
+
+    const redSkyBadgeLocal = (orgStatus) => {
+      const s = upper(orgStatus);
+      if (s === "ENABLED") return "ENABLED";
+      if (s === "DISABLED") return "DISABLED";
+      return "UNKNOWN";
+    };
+
+    const computeCapacityScoreStrong = ({ totalTrunks, totalDids, locs }) => {
+      let score = 100;
+
+      const callingLocs = locs.filter((l) => l.callingEnabled);
+      const noPstnCalling = callingLocs.filter((l) => l.pstn?.option === "NO_PSTN").length;
+      const unknownPstnCalling = callingLocs.filter((l) => l.pstn?.option === "UNKNOWN").length;
+      const noRedundancy = callingLocs.filter((l) => l.redundancyScore === 0).length;
+      const singlePath = callingLocs.filter((l) => l.redundancyScore === 50).length;
+      const missingE911 = callingLocs.filter((l) => !l.emergencyConfigured).length;
+
+      if (callingLocs.length && totalTrunks === 0) score -= 35;
+      score -= Math.min(20, noPstnCalling * 8);
+      score -= Math.min(15, unknownPstnCalling * 4);
+      score -= Math.min(15, noRedundancy * 3);
+      score -= Math.min(10, singlePath * 1);
+      score -= Math.min(15, missingE911 * 3);
+
+      if (totalDids > 0) {
+        const unassigned = locs.reduce((a, l) => a + (l?.dids?.unassigned || 0), 0);
+        const ratio = unassigned / totalDids;
+        score -= Math.round(ratio * 10);
+      }
+
+      return Math.max(0, Math.min(100, Math.round(score)));
+    };
+
+    // -------------------------------------------------
+    // 1) ORG-LEVEL BASE CALLS
+    // -------------------------------------------------
+    let locRes = await safe("/telephony/config/locations");
+    diag("telephony/config/locations", locRes);
+
+    if (!locRes.ok) {
+      const fallbackLocRes = await safe("/locations");
+      diag("locations", fallbackLocRes);
+      if (fallbackLocRes.ok) locRes = fallbackLocRes;
+    }
 
     const [
-      locRes,
       numbersRes,
       trunksRes,
-      routeRes
+      routeGroupsRes,
+      routeListsRes,
+      routeListNumbersRes,
+      redSkyGlobalRes,
+      orgConnOptionsRes
     ] = await Promise.all([
-      safe("/telephony/config/locations"),
       safe("/telephony/config/numbers"),
       safe("/telephony/config/premisePstn/trunks"),
-      safe("/telephony/config/premisePstn/routeGroups")
+      safe("/telephony/config/premisePstn/routeGroups"),
+      safe("/telephony/config/premisePstn/routeLists"),
+      safe("/telephony/config/premisePstn/routeListNumbers"),
+      safe("/telephony/config/redSky/complianceStatus"),
+      safe("/telephony/pstn/connectionOptions")
     ]);
 
-    diag("telephony/config/locations",locRes);
-    diag("telephony/config/numbers",numbersRes);
-    diag("telephony/config/premisePstn/trunks",trunksRes);
-    diag("telephony/config/premisePstn/routeGroups",routeRes);
+    diag("telephony/config/numbers", numbersRes);
+    diag("telephony/config/premisePstn/trunks", trunksRes);
+    diag("telephony/config/premisePstn/routeGroups", routeGroupsRes);
+    diag("telephony/config/premisePstn/routeLists", routeListsRes);
+    diag("telephony/config/premisePstn/routeListNumbers", routeListNumbersRes);
+    diag("telephony/config/redSky/complianceStatus", redSkyGlobalRes);
+    diag("telephony/pstn/connectionOptions", orgConnOptionsRes);
 
-    let locationsRaw = locRes.ok
-      ? asArray(locRes.data?.items || locRes.data)
-      : [];
+    const numbersRaw = numbersRes.ok ? asItems(numbersRes.data) : [];
+    const trunksRaw = trunksRes.ok ? asItems(trunksRes.data) : [];
+    const routeGroupsRaw = routeGroupsRes.ok ? asItems(routeGroupsRes.data) : [];
+    const routeListsRaw = routeListsRes.ok ? asItems(routeListsRes.data) : [];
+    const routeListNumbersRaw = routeListNumbersRes.ok ? asItems(routeListNumbersRes.data) : [];
 
-    const numbersRaw = numbersRes.ok
-      ? asArray(numbersRes.data?.phoneNumbers || numbersRes.data?.items || numbersRes.data)
-      : [];
+    const normalizedNumbers = numbersRaw.map(normalizeDidRecord);
+    const normalizedTrunks = trunksRaw.map(normalizeTrunkRecord);
 
-    const trunksRaw = trunksRes.ok
-      ? asArray(trunksRes.data?.trunks || trunksRes.data?.items || trunksRes.data)
-      : [];
+    // -------------------------------------------------
+    // 2) LOCATIONS RAW + FALLBACK DERIVATION
+    // -------------------------------------------------
+    let locationsRaw = locRes.ok ? asItems(locRes.data) : [];
 
-    const routeGroupsRaw = routeRes.ok
-      ? asArray(routeRes.data?.routeGroups || routeRes.data?.items || routeRes.data)
-      : [];
-
-    // ===============================
-    // DERIVE LOCATIONS FROM NUMBERS
-    // ===============================
-
-    if (!locationsRaw.length && numbersRaw.length) {
-
-      const map = new Map();
-
-      for (const n of numbersRaw) {
-
-        const loc = n.location;
-        if (!loc?.id) continue;
-
-        if (!map.has(loc.id)) {
-          map.set(loc.id,{
-            id: loc.id,
-            name: loc.name || "Unknown Location",
+    if (!locationsRaw.length && normalizedNumbers.length) {
+      const byId = new Map();
+      for (const n of normalizedNumbers) {
+        if (!n.locationId) continue;
+        if (!byId.has(String(n.locationId))) {
+          byId.set(String(n.locationId), {
+            id: n.locationId,
+            name: n.locationName || "Unknown Location",
             callingEnabled: true
           });
         }
       }
-
-      locationsRaw = Array.from(map.values());
+      locationsRaw = [...byId.values()];
     }
 
-    // ===============================
-    // ENRICH LOCATIONS
-    // ===============================
+    const complianceLocations = asItems(redSkyGlobalRes?.data?.locationsStatus?.locations);
+    if (!locationsRaw.length && complianceLocations.length) {
+      const byId = new Map();
+      for (const l of complianceLocations) {
+        if (!l?.id) continue;
+        byId.set(String(l.id), {
+          id: l.id,
+          name: l.name || "Unknown Location",
+          callingEnabled: true
+        });
+      }
+      locationsRaw = [...byId.values()];
+    }
 
-    const enrichedLocations = [];
+    if (!locationsRaw.length) {
+      const payload = {
+        ok: true,
+        pstn: {
+          orgId: resolvedOrgId,
+          callingAvailable: false,
+          reason: "No PSTN/telephony locations could be derived for this org",
+          totals: {
+            trunks: normalizedTrunks.length,
+            didsTotal: normalizedNumbers.length,
+            locations: 0
+          },
+          locations: [],
+          trunks: normalizedTrunks,
+          numbers: normalizedNumbers,
+          routeGroups: routeGroupsRaw,
+          routeLists: routeListsRaw,
+          routeListNumbers: routeListNumbersRaw,
+          connectionOptions: orgConnOptionsRes.ok ? orgConnOptionsRes.data : null,
+          compliance: redSkyGlobalRes.ok ? redSkyGlobalRes.data : null,
+          redSky: {
+            orgStatusBadge: redSkyBadgeLocal(redSkyGlobalRes?.data?.orgStatus)
+          },
+          misconfigurations: [],
+          diagnostics,
+          scores: { pstnCapacityScore: 0 },
+          generatedAt: new Date().toISOString()
+        }
+      };
 
-    for (const loc of locationsRaw) {
+      await cachePutJson(cacheReq, payload, ttl);
+      return json({ ...payload, _cache: "MISS" }, 200);
+    }
 
-      const locId = loc.id;
+    // -------------------------------------------------
+    // 3) PER-LOCATION ENRICHMENT
+    // -------------------------------------------------
+    const CONCURRENCY = clampInt(url.searchParams.get("locConcurrency"), 4, 1, 10);
+
+    const enrichedLocations = await mapLimit(locationsRaw, CONCURRENCY, async (loc) => {
+      const locId = String(loc.id);
       const locIdEnc = encodeURIComponent(locId);
 
-      const conn = await safe(`/telephony/pstn/locations/${locIdEnc}/connection`);
-      diag(`telephony/pstn/locations/${locIdEnc}/connection`,conn);
+      const [
+        connRes,
+        connOptRes,
+        redSkyLocRes,
+        ecnRes
+      ] = await Promise.all([
+        safe(`/telephony/pstn/locations/${locIdEnc}/connection`),
+        safe(`/telephony/pstn/locations/${locIdEnc}/connectionOptions`),
+        safe(`/telephony/config/locations/${locIdEnc}/redSky/status`),
+        safe(`/telephony/config/locations/${locIdEnc}/emergencyCallNotification`)
+      ]);
 
-      const locNumbers = numbersRaw.filter(n =>
-        String(n.location?.id || n.locationId) === String(locId)
+      diag(`telephony/pstn/locations/${locIdEnc}/connection`, connRes);
+      diag(`telephony/pstn/locations/${locIdEnc}/connectionOptions`, connOptRes);
+      diag(`telephony/config/locations/${locIdEnc}/redSky/status`, redSkyLocRes);
+      diag(`telephony/config/locations/${locIdEnc}/emergencyCallNotification`, ecnRes);
+
+      const locNumbers = normalizedNumbers.filter((n) => String(n.locationId) === locId);
+      const locTrunks = normalizedTrunks.filter((t) => String(t.locationId) === locId);
+
+      const routeGroupsForLoc = routeGroupsRaw.filter((rg) =>
+        getRouteGroupLocationIds(rg).includes(locId)
       );
 
-      const locTrunks = trunksRaw.filter(t =>
-        String(t.locationId || t.location?.id) === String(locId)
+      const routeListsForLoc = routeListsRaw.filter((rl) =>
+        getRouteListLocationIds(rl).includes(locId)
       );
 
-      enrichedLocations.push({
+      const routeListNumbersForLoc = routeListNumbersRaw.filter((x) => {
+        const xLocId = first(
+          x?.locationId,
+          x?.location?.id,
+          x?.siteId
+        );
+        if (xLocId) return String(xLocId) === locId;
 
+        const routeListId = first(x?.routeListId, x?.routeList?.id);
+        if (!routeListId) return false;
+        return routeListsForLoc.some(
+          (rl) => String(first(rl?.id, rl?.routeListId)) === String(routeListId)
+        );
+      });
+
+      const pstnType = connRes.ok ? readPstnType(connRes.data) : "UNKNOWN";
+      const pstnDisplayName = connRes.ok ? readDisplayName(connRes.data) : null;
+
+      const locRedSkyRaw = redSkyLocRes.ok ? redSkyLocRes.data : null;
+      const locCompliance = upper(first(locRedSkyRaw?.complianceStatus, ""));
+      const globalLocState = upper(
+        first(
+          complianceLocations.find((x) => String(x?.id) === locId)?.state,
+          ""
+        )
+      );
+
+      const emergencyConfigured =
+        locCompliance === "COMPLIANT" ||
+        globalLocState === "COMPLIANT";
+
+      const didSample = locNumbers.slice(0, 50).map((n) => ({
+        phoneNumber: n.phoneNumber,
+        extension: n.extension || null,
+        ownerType: n.ownerType || null,
+        ownerName: n.ownerName || null,
+        assigned: !!n.assigned,
+        state: n.state || null
+      }));
+
+      const redundancyScore =
+        locTrunks.length >= 2 ? 100 :
+        locTrunks.length === 1 ? 50 :
+        (pstnType === "CLOUD_CONNECT" || pstnType === "CISCO_PSTN") ? 50 : 0;
+
+      return {
         id: locId,
-        name: loc.name || "Unknown Location",
-
-        callingEnabled: !!(
-          loc.callingEnabled ??
-          loc.enabled ??
-          true
-        ),
+        name: first(loc.name, loc.displayName, "Unknown Location"),
+        callingEnabled: !!first(loc.callingEnabled, loc.enabled, true),
 
         pstn: {
-          connection: conn.ok ? conn.data : null
+          option: pstnType,
+          displayName: pstnDisplayName,
+          connection: connRes.ok ? connRes.data : null,
+          connectionOptions: connOptRes.ok ? connOptRes.data : null
         },
 
         trunkCount: locTrunks.length,
+        routeGroupCount: routeGroupsForLoc.length,
+        routeListCount: routeListsForLoc.length,
 
         dids: {
           total: locNumbers.length,
-          unassigned: locNumbers.filter(n =>
-            String(n.status || "").toLowerCase().includes("unassign")
-          ).length
-        }
-      });
+          unassigned: locNumbers.filter((n) => !n.assigned).length,
+          sample: didSample
+        },
+
+        trunks: locTrunks.slice(0, 25),
+        routeGroups: routeGroupsForLoc.slice(0, 25),
+        routeLists: routeListsForLoc.slice(0, 25),
+        routeListNumbers: routeListNumbersForLoc.slice(0, 50),
+
+        redSky: {
+          orgStatusBadge: redSkyBadgeLocal(
+            first(locRedSkyRaw?.orgStatus, redSkyGlobalRes?.data?.orgStatus)
+          ),
+          complianceStatus: first(locRedSkyRaw?.complianceStatus, globalLocState, null),
+          adminExists: first(locRedSkyRaw?.adminExists, redSkyGlobalRes?.data?.adminExists, null),
+          companyId: first(locRedSkyRaw?.companyId, redSkyGlobalRes?.data?.companyId, null),
+          redskyOrgId: first(
+            locRedSkyRaw?.redskyOrgId,
+            redSkyGlobalRes?.data?.redSkyOrgId,
+            redSkyGlobalRes?.data?.redskyOrgId,
+            null
+          ),
+          raw: locRedSkyRaw
+        },
+
+        emergencyCallNotification: ecnRes.ok ? ecnRes.data : null,
+        emergencyConfigured,
+        redundancyScore
+      };
+    });
+
+    // -------------------------------------------------
+    // 4) MISCONFIGURATIONS / RISK
+    // -------------------------------------------------
+    const misconfigurations = [];
+
+    for (const l of enrichedLocations) {
+      if (l.callingEnabled && l.pstn?.option === "NO_PSTN") {
+        misconfigurations.push({
+          location: l.name,
+          issue: "Calling enabled but PSTN is No PSTN"
+        });
+      }
+
+      if (l.callingEnabled && l.trunkCount === 1) {
+        misconfigurations.push({
+          location: l.name,
+          issue: "Single trunk with no visible redundancy"
+        });
+      }
+
+      if (l.callingEnabled && !l.emergencyConfigured) {
+        misconfigurations.push({
+          location: l.name,
+          issue: "E911 / RedSky not compliant"
+        });
+      }
+
+      if (l.callingEnabled && l.pstn?.option === "UNKNOWN") {
+        misconfigurations.push({
+          location: l.name,
+          issue: "PSTN type could not be determined"
+        });
+      }
     }
 
-    // ===============================
-    // TOTALS
-    // ===============================
+    const orgRedSkyBadge = redSkyBadgeLocal(
+      first(
+        redSkyGlobalRes?.data?.orgStatus,
+        enrichedLocations.find((x) => x?.redSky?.orgStatusBadge === "ENABLED")?.redSky?.orgStatusBadge
+      )
+    );
 
-    const totals = {
-      locations: enrichedLocations.length,
-      trunks: trunksRaw.length,
-      didsTotal: numbersRaw.length
-    };
-
-    // ===============================
-    // CAPACITY SCORE
-    // ===============================
-
-    const pstnCapacityScore = computeCapacityScore(trunksRaw.length);
+    const pstnCapacityScore = computeCapacityScoreStrong({
+      totalTrunks: normalizedTrunks.length,
+      totalDids: normalizedNumbers.length,
+      locs: enrichedLocations
+    });
 
     const payload = {
-
       ok: true,
-
       pstn: {
-
         orgId: resolvedOrgId,
+        callingAvailable: true,
 
-        totals,
+        totals: {
+          trunks: normalizedTrunks.length,
+          didsTotal: normalizedNumbers.length,
+          locations: enrichedLocations.length
+        },
 
         locations: enrichedLocations,
-
-        trunks: trunksRaw,
-
-        numbers: numbersRaw,
-
+        trunks: normalizedTrunks,
+        numbers: normalizedNumbers,
         routeGroups: routeGroupsRaw,
+        routeLists: routeListsRaw,
+        routeListNumbers: routeListNumbersRaw,
 
+        connectionOptions: orgConnOptionsRes.ok ? orgConnOptionsRes.data : null,
+
+        compliance: redSkyGlobalRes.ok ? redSkyGlobalRes.data : null,
+        redSky: {
+          orgStatusBadge: orgRedSkyBadge
+        },
+
+        misconfigurations,
         diagnostics,
 
         scores: {
@@ -9517,18 +9895,17 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
       }
     };
 
-    await cachePutJson(cacheReq,payload,ttl);
-
-    return json({ ...payload, _cache:"MISS" },200);
-
+    await cachePutJson(cacheReq, payload, ttl);
+    return json({ ...payload, _cache: "MISS" }, 200);
   } catch (err) {
-
-    return json({
-      ok:false,
-      error:"pstn_internal_exception",
-      message:String(err?.message || err)
-    },500);
-
+    return json(
+      {
+        ok: false,
+        error: "pstn_internal_exception",
+        message: String(err?.message || err)
+      },
+      500
+    );
   }
 }
       /* -----------------------------
