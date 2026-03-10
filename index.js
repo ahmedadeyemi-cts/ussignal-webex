@@ -912,7 +912,42 @@ async function webexFetch(env, path, orgId = null, options = {}) {
     };
   }
 }
+async function resolveCallingInsightOrg(request, env, url, body = null) {
+  const user = getCurrentUser(request);
+  if (!user) {
+    return { ok: false, response: json({ ok:false, error:"access_required" }, 401) };
+  }
 
+  const session = await getSession(env, user.email);
+  if (!session) {
+    return { ok: false, response: json({ ok:false, error:"pin_required" }, 401) };
+  }
+
+  const requestedOrgId = normalizeOrgIdParam(
+    body?.orgId ||
+    url.searchParams.get("orgId") ||
+    null
+  );
+
+  let resolvedOrgId = null;
+
+  if (user.isAdmin || session.role === "admin") {
+    resolvedOrgId = requestedOrgId || session.orgId || null;
+  } else {
+    resolvedOrgId = session.orgId || null;
+  }
+
+  if (!resolvedOrgId) {
+    return { ok: false, response: json({ ok:false, error:"missing_orgId" }, 400) };
+  }
+
+  return {
+    ok: true,
+    user,
+    session,
+    orgId: resolvedOrgId
+  };
+}
 async function getCachedOrganizations(env) {
 
   const key = "org_list_cache";
