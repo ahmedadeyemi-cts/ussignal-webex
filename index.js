@@ -912,42 +912,7 @@ async function webexFetch(env, path, orgId = null, options = {}) {
     };
   }
 }
-async function resolveCallingInsightOrg(request, env, url, body = null) {
-  const user = getCurrentUser(request);
-  if (!user) {
-    return { ok: false, response: json({ ok:false, error:"access_required" }, 401) };
-  }
 
-  const session = await getSession(env, user.email);
-  if (!session) {
-    return { ok: false, response: json({ ok:false, error:"pin_required" }, 401) };
-  }
-
-  const requestedOrgId = normalizeOrgIdParam(
-    body?.orgId ||
-    url.searchParams.get("orgId") ||
-    null
-  );
-
-  let resolvedOrgId = null;
-
-  if (user.isAdmin || session.role === "admin") {
-    resolvedOrgId = requestedOrgId || session.orgId || null;
-  } else {
-    resolvedOrgId = session.orgId || null;
-  }
-
-  if (!resolvedOrgId) {
-    return { ok: false, response: json({ ok:false, error:"missing_orgId" }, 400) };
-  }
-
-  return {
-    ok: true,
-    user,
-    session,
-    orgId: resolvedOrgId
-  };
-}
 async function getCachedOrganizations(env) {
 
   const key = "org_list_cache";
@@ -4210,23 +4175,22 @@ if (
   /^\/api\/calling-insight\/reports\/[^\/]+$/.test(url.pathname)
 ) {
   const reportId = url.pathname.split("/")[4];
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  if (!orgId) return json({ error: "missing_orgId" }, 400);
 
-  const resolved = await resolveCallingInsightOrg(request, env, url);
-  if (!resolved.ok) return resolved.response;
-
-  await ensureDelegation(env, resolved.orgId);
+  await ensureDelegation(env, orgId);
 
   const r = await webexFetchSafe(
     env,
     `/reports/${encodeURIComponent(reportId)}`,
-    resolved.orgId
+    orgId
   );
 
-  if (!r.ok) return json({ ok:false, error: r.error, preview:r.preview || null }, 500);
+  if (!r.ok) return json({ error: r.error }, 500);
 
   const payload = r.data?.items?.[0] || r.data;
 
-  return json({ ok:true, orgId: resolved.orgId, ...payload });
+  return json(payload);
 }
 /* =====================================================
    API: Calling Insight - CSV Download Proxy + KV Store
@@ -4238,30 +4202,30 @@ if (
 ) {
   const parts = url.pathname.split("/");
   const reportId = parts[4];
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  if (!orgId) return json({ error: "missing_orgId" }, 400);
 
-  const resolved = await resolveCallingInsightOrg(request, env, url);
-  if (!resolved.ok) return resolved.response;
-
-  await ensureDelegation(env, resolved.orgId);
+  await ensureDelegation(env, orgId);
 
   const r = await webexFetchSafe(
     env,
     `/reports/${encodeURIComponent(reportId)}`,
-    resolved.orgId
+    orgId
   );
 
-  if (!r.ok) return json({ ok:false, error:"report_fetch_failed", preview:r.preview || null }, 500);
+  if (!r.ok) return json({ error: "report_fetch_failed" }, 500);
 
   const payload = r.data?.items?.[0] || r.data;
-  if (!payload.downloadURL) return json({ ok:false, error:"not_ready" }, 400);
+  if (!payload.downloadURL) return json({ error: "not_ready" }, 400);
 
-  const token = await getAccessToken(env);
+// const token = await getAccessTokenForOrg(env, orgId); // IMPORTANT FIX
+ const token = await getAccessToken(env);
   const csvRes = await fetch(payload.downloadURL, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
   if (!csvRes.ok) {
-    return json({ ok:false, error:"csv_fetch_failed" }, 500);
+    return json({ error: "csv_fetch_failed" }, 500);
   }
 
   const contentType = csvRes.headers.get("content-type") || "";
@@ -4275,40 +4239,45 @@ if (
       .find(name => name.toLowerCase().endsWith(".csv"));
 
     if (!csvFileName) {
-      return json({ ok:false, error:"csv_not_found_in_zip" }, 500);
+      return json({ error: "csv_not_found_in_zip" }, 500);
     }
 
     csvText = await zip.files[csvFileName].async("string");
+
   } else {
     csvText = await csvRes.text();
   }
 
+  // 🔵 Parse CSV
   const parsed = parseCsvToJson(csvText);
   const rows = parsed.rows || [];
+
+  // 🔵 Compute Quality Metrics
   const metrics = computeWorkerQualityMetrics(rows);
 
+  // 🔵 Persist full summary in KV
   try {
     const summaryPayload = {
       lastReportId: reportId,
       generatedAt: new Date().toISOString(),
       score: metrics.score,
-      metrics,
+      metrics: metrics,
       alerts: metrics.alerts,
       worst: metrics.worst
     };
 
     await env.CI_SUMMARY_KV.put(
-      `ci:summary:${resolved.orgId}`,
+      `ci:summary:${orgId}`,
       JSON.stringify(summaryPayload),
-      { expirationTtl: 60 * 60 * 24 * 30 }
+      { expirationTtl: 60 * 60 * 24 * 30 } // 30 days
     );
+
   } catch (e) {
     console.log("CI summary KV store failed:", e);
   }
 
   return json({
     ok: true,
-    orgId: resolved.orgId,
     reportId,
     rows: parsed.rows,
     columns: parsed.headers
@@ -4331,20 +4300,21 @@ if (
     headers: { "content-type": "application/json" }
   });
 }
-    if (
+     if (
   request.method === "GET" &&
   url.pathname === "/api/calling-insight/templates"
 ) {
-  const resolved = await resolveCallingInsightOrg(request, env, url);
-  if (!resolved.ok) return resolved.response;
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  if (!orgId) return json({ error: "missing_orgId" }, 400);
 
-  await ensureDelegation(env, resolved.orgId);
+  await ensureDelegation(env, orgId);
 
-  const r = await webexFetchSafe(env, "/report/templates", resolved.orgId);
-  if (!r.ok) return json({ ok:false, error: r.error, preview:r.preview || null }, 500);
+  const r = await webexFetchSafe(env, "/report/templates", orgId);
+  if (!r.ok) return json({ error: r.error }, 500);
 
-  return json({ ok:true, orgId: resolved.orgId, items: r.data?.items || [] });
+  return json(r.data);
 }
+   
 //API/STATUS
 // /api/status (GET) — maintenance-style with upstream fallback
 // /api/status (GET)
@@ -5834,20 +5804,37 @@ function extractResponsesJson(r){
 // GET — List reports (Calling Insights)
 // -------------------------------
 if (url.pathname === "/api/calling-insight/reports" && request.method === "GET") {
-  const resolved = await resolveCallingInsightOrg(request, env, url);
-  if (!resolved.ok) return resolved.response;
 
-  await ensureDelegation(env, resolved.orgId);
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
 
+  const session = await getSession(env, user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  let resolvedOrgId;
+
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ ok:false, error:"missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) {
+      return json({ ok:false, error:"pin_required" }, 401);
+    }
+    resolvedOrgId = session.orgId;
+  }
+
+  // 🔥 FIX IS HERE — callingInsights instead of reports
   const r = await webexFetchSafe(
     env,
     "/callingInsights/reports",
-    resolved.orgId
+    resolvedOrgId
   );
 
   return json({
     ok: r.ok,
-    orgId: resolved.orgId,
+    orgId: resolvedOrgId,
     reports: r.data?.items || [],
     numberOfReports: r.data?.numberOfReports || 0,
     preview: r.preview || null,
@@ -5861,60 +5848,53 @@ if (url.pathname === "/api/calling-insight/reports" && request.method === "GET")
 // -------------------------------
 // POST — Create Calling Insights report
 // -------------------------------
-if (url.pathname === "/api/calling-insight/run" && request.method === "POST") {
-  let body = {};
-  try { body = await request.json(); } catch {}
+if (url.pathname === "/api/calling-insight/reports" && request.method === "POST") {
 
-  const resolved = await resolveCallingInsightOrg(request, env, url, body);
-  if (!resolved.ok) return resolved.response;
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
 
-  const resolvedOrgId = resolved.orgId;
+  const session = await getSession(env, user.email);
+  const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
-  const title = String(body.title || "").trim();
-  const today = new Date();
-  today.setDate(today.getDate() - 1);
+  let resolvedOrgId;
 
-  const maxEndDate = today.toISOString().slice(0,10);
-
-  let startDate = String(body.startDate || "").trim();
-  let endDate = String(body.endDate || "").trim();
-
-  if (endDate > maxEndDate) {
-    endDate = maxEndDate;
+  if (user.isAdmin) {
+    if (!requestedOrgId) {
+      return json({ ok:false, error:"missing_orgId" }, 400);
+    }
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) {
+      return json({ ok:false, error:"pin_required" }, 401);
+    }
+    resolvedOrgId = session.orgId;
   }
 
+  const body = await request.json();
+  const { title, startDate, endDate } = body;
+
   if (!title || !startDate || !endDate) {
-    return json({ ok:false, error:"missing_title_or_dates" }, 400);
+    return json({ ok:false, error:"missing_parameters" }, 400);
   }
 
   await ensureDelegation(env, resolvedOrgId);
 
+  // 1️⃣ Get templates
   const tplRes = await webexFetchSafe(env, "/report/templates", resolvedOrgId);
   if (!tplRes.ok) {
-    return json({
-      ok:false,
-      error:"template_fetch_failed",
-      preview: tplRes.preview || null
-    }, 502);
+    return json({ ok:false, error:"template_fetch_failed" }, 502);
   }
 
   const templates = tplRes.data?.items || [];
-  const template = templates.find(t => String(t.title || "").trim() === title);
+  const template = templates.find(t => t.title === title);
 
   if (!template) {
-    return json({
-      ok:false,
-      error:"template_not_found",
-      titleRequested: title,
-      templateTitles: templates.slice(0, 50).map(t => t.title).filter(Boolean)
-    }, 404);
+    return json({ ok:false, error:"template_not_found" }, 404);
   }
 
-  const templateId = template.id || template.Id || template.templateId || template.templateID;
-  if (!templateId) {
-    return json({ ok:false, error:"template_id_missing" }, 500);
-  }
+  const templateId = template.Id || template.id;
 
+  // 2️⃣ Create report
   const createRes = await webexFetchSafe(
     env,
     "/reports",
@@ -5933,34 +5913,36 @@ if (url.pathname === "/api/calling-insight/run" && request.method === "POST") {
     return json({
       ok:false,
       error:"report_create_failed",
-      status: createRes.status || 502,
-      preview: createRes.preview || null
+      preview:createRes.preview || null
     }, 502);
   }
 
   const raw = createRes.data;
-  const report = raw?.items?.[0] || raw?.items || raw;
+  const report =
+    raw?.items?.[0] ||
+    raw?.items ||
+    raw;
 
   const id =
-    report?.id ||
     report?.Id ||
+    report?.id ||
     report?.reportId ||
-    report?.reportID ||
     null;
 
   if (!id) {
     return json({
       ok:false,
-      error:"report_id_missing_in_response",
-      responsePreview: JSON.stringify(raw || {}).slice(0, 500)
+      error:"report_id_missing",
+      preview:JSON.stringify(raw).slice(0,300)
     }, 502);
   }
 
+  // 🔥 THIS LINE FIXES YOUR UI
   return json({
-    ok: true,
-    orgId: resolvedOrgId,
-    id,
-    report
+    ok:true,
+    id,            // <-- UI needs this
+    report,
+    orgId: resolvedOrgId
   }, 200);
 }
 
@@ -5971,33 +5953,47 @@ if (url.pathname === "/api/calling-insight/run" && request.method === "POST") {
 // Returns: { ok:true, id, report }
 // -----------------------------------
 if (url.pathname === "/api/calling-insight/run" && request.method === "POST") {
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"access_required" }, 401);
+
+  const session = await getSession(env, user.email);
+
   let body = {};
   try { body = await request.json(); } catch {}
+  const requestedOrgId =
+    normalizeOrgIdParam(body.orgId) ||
+    normalizeOrgIdParam(url.searchParams.get("orgId"));
 
-  const resolved = await resolveCallingInsightOrg(request, env, url, body);
-  if (!resolved.ok) return resolved.response;
-
-  const resolvedOrgId = resolved.orgId;
-
-  const title = String(body.title || "").trim();
-  const today = new Date();
-  today.setDate(today.getDate() - 1);
-
-  const maxEndDate = today.toISOString().slice(0,10);
-
-  let startDate = String(body.startDate || "").trim();
-  let endDate = String(body.endDate || "").trim();
-
-  if (endDate > maxEndDate) {
-    endDate = maxEndDate;
+  // Resolve orgId based on role
+  let resolvedOrgId = null;
+  if (user.isAdmin) {
+    if (!requestedOrgId) return json({ ok:false, error:"missing_orgId" }, 400);
+    resolvedOrgId = requestedOrgId;
+  } else {
+    if (!session?.orgId) return json({ ok:false, error:"pin_required" }, 401);
+    resolvedOrgId = session.orgId;
   }
 
+  const title = String(body.title || "").trim();
+const today = new Date();
+today.setDate(today.getDate() - 1); // yesterday
+
+const maxEndDate = today.toISOString().slice(0,10);
+
+let startDate = String(body.startDate || "").trim();
+let endDate = String(body.endDate || "").trim();
+
+if (endDate > maxEndDate) {
+  endDate = maxEndDate;
+}
   if (!title || !startDate || !endDate) {
     return json({ ok:false, error:"missing_title_or_dates" }, 400);
   }
 
+  // Make sure delegation is set for this tenant (safe no-op if already OK)
   await ensureDelegation(env, resolvedOrgId);
 
+  // 1) Find the report template by title
   const tplRes = await webexFetchSafe(env, "/report/templates", resolvedOrgId);
   if (!tplRes.ok) {
     return json({
@@ -6009,7 +6005,6 @@ if (url.pathname === "/api/calling-insight/run" && request.method === "POST") {
 
   const templates = tplRes.data?.items || [];
   const template = templates.find(t => String(t.title || "").trim() === title);
-
   if (!template) {
     return json({
       ok:false,
@@ -6024,6 +6019,7 @@ if (url.pathname === "/api/calling-insight/run" && request.method === "POST") {
     return json({ ok:false, error:"template_id_missing" }, 500);
   }
 
+  // 2) Create the report
   const createRes = await webexFetchSafe(
     env,
     "/reports",
@@ -6031,9 +6027,9 @@ if (url.pathname === "/api/calling-insight/run" && request.method === "POST") {
     {
       method: "POST",
       body: JSON.stringify({
-        templateId,
-        startDate,
-        endDate
+        templateId,     // <-- THIS is what Reports API expects
+        startDate,      // YYYY-MM-DD
+        endDate         // YYYY-MM-DD
       })
     }
   );
@@ -6047,8 +6043,12 @@ if (url.pathname === "/api/calling-insight/run" && request.method === "POST") {
     }, 502);
   }
 
+  // Webex responses vary: sometimes object, sometimes {items:[...]}, sometimes {items:{...}}
   const raw = createRes.data;
-  const report = raw?.items?.[0] || raw?.items || raw;
+  const report =
+    raw?.items?.[0] ||
+    raw?.items ||
+    raw;
 
   const id =
     report?.id ||
