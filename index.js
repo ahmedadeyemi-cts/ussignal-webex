@@ -9320,37 +9320,41 @@ if (
 }
 
 // =====================================================
-// FULL PSTN (detailed) — fixed telephony locations path
+// FULL PSTN (HTML-Compatible Version)
 // =====================================================
 if (url.pathname === "/api/pstn" && request.method === "GET") {
   try {
+
     const user = getCurrentUser(request);
-    if (!user) return json({ ok: false, error: "access_required" }, 401);
+    if (!user) return json({ ok:false, error:"access_required" },401);
 
     const session = await getSession(env, user.email);
     const requestedOrgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
 
     let resolvedOrgId;
+
     if (user.isAdmin) {
-      if (!requestedOrgId) return json({ ok: false, error: "missing_orgId" }, 400);
+      if (!requestedOrgId) return json({ ok:false, error:"missing_orgId" },400);
       resolvedOrgId = requestedOrgId;
     } else {
-      if (!session?.orgId) return json({ ok: false, error: "pin_required" }, 401);
+      if (!session?.orgId) return json({ ok:false, error:"pin_required" },401);
       resolvedOrgId = session.orgId;
     }
 
-    const ttl = clampInt(url.searchParams.get("ttl"), 180, 60, 900);
-    const cacheReq = pstnCacheReq(request, `pstn_full:v5:${resolvedOrgId}`);
+    const ttl = clampInt(url.searchParams.get("ttl"),180,60,900);
 
+    const cacheReq = pstnCacheReq(request, `pstn_full:v6:${resolvedOrgId}`);
     const cached = await cacheGetJson(cacheReq);
-    if (cached) return json({ ...cached, _cache: "HIT" }, 200);
+    if (cached) return json({ ...cached, _cache:"HIT" },200);
 
+    // MUST RUN FIRST
     await ensureDelegation(env, resolvedOrgId);
 
-    const safe = (path) => webexFetchSafe(env, withOrgQuery(path, resolvedOrgId), resolvedOrgId);
+    const safe = (path) =>
+      webexFetchSafe(env, withOrgQuery(path, resolvedOrgId), resolvedOrgId);
 
     const diagnostics = [];
-    const diag = (name, r) => {
+    const diag = (name,r) => {
       diagnostics.push({
         name,
         ok: !!r?.ok,
@@ -9359,68 +9363,30 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
       });
     };
 
-    // -------------------------------
-    // 1) LOCATIONS — correct endpoint first
-    // -------------------------------
-    let locRes = await safe("/telephony/config/locations");
-    diag("telephony/config/locations", locRes);
+    // ===============================
+    // FETCH CORE DATA
+    // ===============================
 
-    // Fallback for older / alternate org behavior
-    if (!locRes.ok) {
-      const legacyLocRes = await safe("/locations");
-      diag("locations", legacyLocRes);
-
-      if (legacyLocRes.ok) {
-        locRes = legacyLocRes;
-      }
-    }
-
-    if (!locRes.ok) {
-      const payload = {
-        ok: true,
-        pstn: {
-          orgId: resolvedOrgId,
-          callingAvailable: false,
-          reason: "Locations API not accessible for this org",
-          totals: { trunks: 0, didsTotal: 0, locations: 0 },
-          locations: [],
-          trunks: [],
-          numbers: [],
-          routeGroups: [],
-          connectionOptions: null,
-          compliance: null,
-          redSky: { orgStatusBadge: "UNKNOWN" },
-          misconfigurations: [],
-          diagnostics,
-          scores: { pstnCapacityScore: 0 },
-          generatedAt: new Date().toISOString()
-        }
-      };
-
-      await cachePutJson(cacheReq, payload, ttl);
-      return json({ ...payload, _cache: "MISS" }, 200);
-    }
-
-    const locationsRaw = Array.isArray(locRes.data?.items)
-      ? locRes.data.items
-      : Array.isArray(locRes.data)
-        ? locRes.data
-        : [];
-
-    // -------------------------------
-    // 2) ORG-LEVEL PSTN / CALLING DATA
-    // -------------------------------
-    const [numbersRes, trunksRes, routeRes, redskyGlobal] = await Promise.all([
+    const [
+      locRes,
+      numbersRes,
+      trunksRes,
+      routeRes
+    ] = await Promise.all([
+      safe("/telephony/config/locations"),
       safe("/telephony/config/numbers"),
       safe("/telephony/config/premisePstn/trunks"),
-      safe("/telephony/config/premisePstn/routeGroups"),
-      safe("/telephony/config/redSky/complianceStatus")
+      safe("/telephony/config/premisePstn/routeGroups")
     ]);
 
-    diag("telephony/config/numbers", numbersRes);
-    diag("telephony/config/premisePstn/trunks", trunksRes);
-    diag("telephony/config/premisePstn/routeGroups", routeRes);
-    diag("telephony/config/redSky/complianceStatus", redskyGlobal);
+    diag("telephony/config/locations",locRes);
+    diag("telephony/config/numbers",numbersRes);
+    diag("telephony/config/premisePstn/trunks",trunksRes);
+    diag("telephony/config/premisePstn/routeGroups",routeRes);
+
+    let locationsRaw = locRes.ok
+      ? asArray(locRes.data?.items || locRes.data)
+      : [];
 
     const numbersRaw = numbersRes.ok
       ? asArray(numbersRes.data?.phoneNumbers || numbersRes.data?.items || numbersRes.data)
@@ -9434,54 +9400,58 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
       ? asArray(routeRes.data?.routeGroups || routeRes.data?.items || routeRes.data)
       : [];
 
-    const totalTrunks = trunksRaw.length;
-    const totalDids = numbersRaw.length;
+    // ===============================
+    // DERIVE LOCATIONS FROM NUMBERS
+    // ===============================
 
-    // -------------------------------
-    // 3) ENRICH LOCATIONS
-    // -------------------------------
-    const CONCURRENCY = clampInt(url.searchParams.get("locConcurrency"), 4, 1, 10);
+    if (!locationsRaw.length && numbersRaw.length) {
 
-    const enrichedLocations = await mapLimit(locationsRaw, CONCURRENCY, async (loc) => {
+      const map = new Map();
+
+      for (const n of numbersRaw) {
+
+        const loc = n.location;
+        if (!loc?.id) continue;
+
+        if (!map.has(loc.id)) {
+          map.set(loc.id,{
+            id: loc.id,
+            name: loc.name || "Unknown Location",
+            callingEnabled: true
+          });
+        }
+      }
+
+      locationsRaw = Array.from(map.values());
+    }
+
+    // ===============================
+    // ENRICH LOCATIONS
+    // ===============================
+
+    const enrichedLocations = [];
+
+    for (const loc of locationsRaw) {
+
       const locId = loc.id;
       const locIdEnc = encodeURIComponent(locId);
 
-      const connPath = `/telephony/pstn/locations/${locIdEnc}/connection`;
-      const conn = await safe(connPath);
-      diag(`telephony/pstn/locations/${locIdEnc}/connection`, conn);
+      const conn = await safe(`/telephony/pstn/locations/${locIdEnc}/connection`);
+      diag(`telephony/pstn/locations/${locIdEnc}/connection`,conn);
 
-      const connOptPath = `/telephony/pstn/locations/${locIdEnc}/connectionOptions`;
-      const connOptions = await safe(connOptPath);
-      diag(`telephony/pstn/locations/${locIdEnc}/connectionOptions`, connOptions);
+      const locNumbers = numbersRaw.filter(n =>
+        String(n.location?.id || n.locationId) === String(locId)
+      );
 
-      const redskyPath = `/telephony/config/locations/${locIdEnc}/redSky/status`;
-      const redskyStatus = await safe(redskyPath);
-      diag(`telephony/config/locations/${locIdEnc}/redSky/status`, redskyStatus);
+      const locTrunks = trunksRaw.filter(t =>
+        String(t.locationId || t.location?.id) === String(locId)
+      );
 
-      const ecnPath = `/telephony/config/locations/${locIdEnc}/emergencyCallNotification`;
-      const emergencyNotif = await safe(ecnPath);
-      diag(`telephony/config/locations/${locIdEnc}/emergencyCallNotification`, emergencyNotif);
+      enrichedLocations.push({
 
-      const locNumbers = numbersRaw.filter((n) => String(getLocId(n)) === String(locId));
-      const locTrunks = trunksRaw.filter((t) => String(getLocId(t)) === String(locId));
-
-      const trunkCount = locTrunks.length;
-      const didTotal = locNumbers.length;
-      const didUnassigned = locNumbers.filter(isUnassignedNumber).length;
-
-      const pstnType = conn.ok ? normalizePstnType(conn.data) : "UNKNOWN";
-      const pstnDisplayName = conn.ok ? readDisplayNameFromConn(conn.data) : null;
-
-      const rsOrgStatus = redskyStatus.ok ? redSkyBadge(redskyStatus.data?.orgStatus) : "UNKNOWN";
-      const rsCompliance = redskyStatus.ok
-        ? String(redskyStatus.data?.complianceStatus || "").toUpperCase()
-        : "";
-
-      const emergencyConfigured = rsCompliance === "COMPLIANT";
-
-      return {
         id: locId,
         name: loc.name || "Unknown Location",
+
         callingEnabled: !!(
           loc.callingEnabled ??
           loc.enabled ??
@@ -9489,114 +9459,76 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
         ),
 
         pstn: {
-          option: pstnType,
-          displayName: pstnDisplayName,
-          connection: conn.ok ? conn.data : null,
-          connectionOptions: connOptions.ok ? connOptions.data : null
+          connection: conn.ok ? conn.data : null
         },
 
-        trunkCount,
+        trunkCount: locTrunks.length,
+
         dids: {
-          total: didTotal,
-          unassigned: didUnassigned
-        },
-
-        redSky: {
-          orgStatusBadge: rsOrgStatus,
-          complianceStatus: redskyStatus.ok ? redskyStatus.data?.complianceStatus : null,
-          adminExists: redskyStatus.ok ? redskyStatus.data?.adminExists : null,
-          companyId: redskyStatus.ok ? redskyStatus.data?.companyId : null,
-          redskyOrgId: redskyStatus.ok ? redskyStatus.data?.redskyOrgId : null,
-          raw: redskyStatus.ok ? redskyStatus.data : null
-        },
-
-        emergencyCallNotification: emergencyNotif.ok ? emergencyNotif.data : null,
-        emergencyConfigured
-      };
-    });
-
-    // -------------------------------
-    // 4) ORG-LEVEL CONNECTION OPTIONS
-    // -------------------------------
-    const orgConnOptionsRes = await safe("/telephony/pstn/connectionOptions");
-    diag("telephony/pstn/connectionOptions", orgConnOptionsRes);
-
-    // -------------------------------
-    // 5) MISCONFIG / RISK
-    // -------------------------------
-    const misconfigurations = [];
-
-    for (const l of enrichedLocations) {
-      if (l?.pstn?.option === "NO_PSTN") {
-        misconfigurations.push({ location: l.name, issue: "No PSTN configured" });
-      }
-
-      if (l.trunkCount === 1) {
-        misconfigurations.push({ location: l.name, issue: "Single trunk no redundancy" });
-      }
-
-      if (!l.emergencyConfigured) {
-        misconfigurations.push({ location: l.name, issue: "E911 not compliant" });
-      }
+          total: locNumbers.length,
+          unassigned: locNumbers.filter(n =>
+            String(n.status || "").toLowerCase().includes("unassign")
+          ).length
+        }
+      });
     }
 
-    const orgRedSkyBadge = (() => {
-      const anyEnabled = enrichedLocations.some((l) => l?.redSky?.orgStatusBadge === "ENABLED");
-      if (anyEnabled) return "ENABLED";
+    // ===============================
+    // TOTALS
+    // ===============================
 
-      const anyDisabled = enrichedLocations.some((l) => l?.redSky?.orgStatusBadge === "DISABLED");
-      if (anyDisabled) return "DISABLED";
+    const totals = {
+      locations: enrichedLocations.length,
+      trunks: trunksRaw.length,
+      didsTotal: numbersRaw.length
+    };
 
-      return "UNKNOWN";
-    })();
+    // ===============================
+    // CAPACITY SCORE
+    // ===============================
+
+    const pstnCapacityScore = computeCapacityScore(trunksRaw.length);
 
     const payload = {
-      ok: true,
-      pstn: {
-        orgId: resolvedOrgId,
-        callingAvailable: true,
 
-        totals: {
-          trunks: totalTrunks,
-          didsTotal: totalDids,
-          locations: enrichedLocations.length
-        },
+      ok: true,
+
+      pstn: {
+
+        orgId: resolvedOrgId,
+
+        totals,
 
         locations: enrichedLocations,
+
         trunks: trunksRaw,
+
         numbers: numbersRaw,
+
         routeGroups: routeGroupsRaw,
 
-        connectionOptions: orgConnOptionsRes.ok ? orgConnOptionsRes.data : null,
-
-        compliance: redskyGlobal.ok ? redskyGlobal.data : null,
-        redSky: {
-          orgStatusBadge: orgRedSkyBadge
-        },
-
-        misconfigurations,
         diagnostics,
 
         scores: {
-          pstnCapacityScore: computeCapacityScore(totalTrunks)
+          pstnCapacityScore
         },
 
         generatedAt: new Date().toISOString()
       }
     };
 
-    await cachePutJson(cacheReq, payload, ttl);
-    return json({ ...payload, _cache: "MISS" }, 200);
+    await cachePutJson(cacheReq,payload,ttl);
+
+    return json({ ...payload, _cache:"MISS" },200);
 
   } catch (err) {
-    return json(
-      {
-        ok: false,
-        error: "pstn_internal_exception",
-        message: String(err?.message || err)
-      },
-      500
-    );
+
+    return json({
+      ok:false,
+      error:"pstn_internal_exception",
+      message:String(err?.message || err)
+    },500);
+
   }
 }
       /* -----------------------------
