@@ -841,10 +841,18 @@ async function api(path, opts){
     return { ok:false, status:0, data:{ error:e?.message || String(e) } };
   }
 }
-function buildPath(base){
+/*function buildPath(base){
   if(SELECTED_ORG_ID){
     const glue = base.includes("?") ? "&" : "?";
     return `${base}${glue}orgId=${encodeURIComponent(SELECTED_ORG_ID)}`;
+  }
+  return base;
+} */
+  function buildPath(base){
+  const org = SELECTED_ORG_ID || ME?.orgId;
+  if(org){
+    const glue = base.includes("?") ? "&" : "?";
+    return `${base}${glue}orgId=${encodeURIComponent(org)}`;
   }
   return base;
 }
@@ -2389,12 +2397,9 @@ async function loadMe(){
   }
 
 //SELECTED_ORG_ID = ME.orgId || null;
-  if (ME.role !== "admin" && !SELECTED_ORG_ID) {
-  pushAlert({
-    severity:"bad",
-    title:"Missing tenant context",
-    body:"Customer session did not include orgId, so reports cannot run."
-  });
+  // Customers automatically use their tenant
+if(ME.role !== "admin"){
+  SELECTED_ORG_ID = ME.orgId || null;
 }
 
   $("welcomeLine").textContent = ME.email || "—";
