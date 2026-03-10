@@ -9319,6 +9319,15 @@ if (
   }
 }
 
+// =====================================================
+// FULL PSTN (advanced / Control Hub+ style)
+// - Strong location recovery
+// - Numbers / trunks / gateways / route groups / route lists / dial plans
+// - RedSky org + per-location
+// - DID inventory per location
+// - gateway health / provider distribution / topology data
+// - Keeps backward compatibility with your current pstn.html
+// =====================================================
 if (url.pathname === "/api/pstn" && request.method === "GET") {
   try {
     const user = getCurrentUser(request);
@@ -9337,15 +9346,21 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     }
 
     const ttl = clampInt(url.searchParams.get("ttl"), 180, 60, 900);
-    const cacheReq = pstnCacheReq(request, `pstn_full:v6:${resolvedOrgId}`);
+    const locConcurrency = clampInt(url.searchParams.get("locConcurrency"), 4, 1, 10);
+    const cacheReq = pstnCacheReq(request, `pstn_full:v10:${resolvedOrgId}`);
 
     const cached = await cacheGetJson(cacheReq);
     if (cached) return json({ ...cached, _cache: "HIT" }, 200);
 
     await ensureDelegation(env, resolvedOrgId);
 
+    // -------------------------------------------------
+    // helpers
+    // -------------------------------------------------
     const safe = (path) =>
       webexFetchSafe(env, withOrgQuery(path, resolvedOrgId), resolvedOrgId);
+
+    const asArr = (v) => Array.isArray(v) ? v : (v ? [v] : []);
 
     const diagnostics = [];
     const diag = (name, r) => {
@@ -9357,19 +9372,16 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
       });
     };
 
-    const asItems = (x) => {
-      if (Array.isArray(x)) return x;
-      if (Array.isArray(x?.items)) return x.items;
-      if (Array.isArray(x?.phoneNumbers)) return x.phoneNumbers;
-      if (Array.isArray(x?.trunks)) return x.trunks;
-      if (Array.isArray(x?.routeGroups)) return x.routeGroups;
-      if (Array.isArray(x?.routeLists)) return x.routeLists;
-      if (Array.isArray(x?.numbers)) return x.numbers;
-      if (Array.isArray(x?.locations)) return x.locations;
-      return [];
+    const firstOk = async (pairs) => {
+      for (const pair of pairs) {
+        const r = await safe(pair.path);
+        diag(pair.name || pair.path.replace(/^\//, ""), r);
+        if (r.ok) return r;
+      }
+      return null;
     };
 
-    const first = (...vals) => {
+    const pick = (...vals) => {
       for (const v of vals) {
         if (v !== undefined && v !== null && v !== "") return v;
       }
@@ -9379,516 +9391,1095 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     const upper = (v) => String(v || "").toUpperCase();
     const lower = (v) => String(v || "").toLowerCase();
 
-    const getNumberLocationId = (n) =>
-      first(
-        n?.locationId,
-        n?.location?.id,
-        n?.siteId,
-        n?.callingLocationId
-      );
-
-    const getNumberLocationName = (n) =>
-      first(
-        n?.locationName,
-        n?.location?.name,
-        n?.siteName
-      );
-
-    const getTrunkLocationId = (t) =>
-      first(
-        t?.locationId,
-        t?.location?.id,
-        t?.siteId,
-        t?.callingLocationId
-      );
-
-    const getTrunkLocationName = (t) =>
-      first(
-        t?.locationName,
-        t?.location?.name,
-        t?.siteName
-      );
-
-    const getRouteGroupLocationIds = (rg) => {
-      const set = new Set();
-
-      const add = (v) => {
-        if (v !== undefined && v !== null && v !== "") set.add(String(v));
-      };
-
-      add(rg?.locationId);
-      add(rg?.location?.id);
-
-      for (const x of asItems(rg?.locations)) {
-        add(x?.id);
-        add(x?.locationId);
-        add(x?.location?.id);
-      }
-
-      for (const x of asItems(rg?.trunks)) {
-        add(x?.locationId);
-        add(x?.location?.id);
-      }
-
-      return [...set];
+    const safeNum = (v) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
     };
 
-    const getRouteListLocationIds = (rl) => {
-      const set = new Set();
-
-      const add = (v) => {
-        if (v !== undefined && v !== null && v !== "") set.add(String(v));
-      };
-
-      add(rl?.locationId);
-      add(rl?.location?.id);
-
-      for (const x of asItems(rl?.locations)) {
-        add(x?.id);
-        add(x?.locationId);
-        add(x?.location?.id);
+    const uniqBy = (arr, keyFn) => {
+      const out = [];
+      const seen = new Set();
+      for (const x of arr || []) {
+        const k = keyFn(x);
+        if (k == null || seen.has(k)) continue;
+        seen.add(k);
+        out.push(x);
       }
-
-      for (const x of asItems(rl?.routeGroups)) {
-        add(x?.locationId);
-        add(x?.location?.id);
-      }
-
-      return [...set];
+      return out;
     };
 
-    const normalizeDidRecord = (n) => {
-      const locationId = getNumberLocationId(n);
-      const locationName = getNumberLocationName(n);
-
-      const phoneNumber = first(
-        n?.phoneNumber,
-        n?.number,
-        n?.did,
-        n?.e164,
-        null
+    const getLocId = (obj) =>
+      pick(
+        obj?.locationId,
+        obj?.location?.id,
+        obj?.siteId,
+        obj?.callingLocationId,
+        obj?.locationIdOrName,
+        obj?.orgLocationId
       );
 
-      const ownerType = first(n?.owner?.type, n?.ownerType, null);
-      const ownerName =
-        [first(n?.owner?.firstName, ""), first(n?.owner?.lastName, "")]
-          .join(" ")
-          .trim() ||
-        first(n?.owner?.displayName, n?.owner?.name, null);
+    const getLocName = (obj) =>
+      pick(
+        obj?.locationName,
+        obj?.location?.name,
+        obj?.name
+      );
 
-      const state = upper(first(n?.state, n?.status, "UNKNOWN"));
-      const assigned = !lower(state).includes("unassign");
+    const readDisplayNameFromConn = (conn) =>
+      pick(
+        conn?.displayName,
+        conn?.provider?.displayName,
+        conn?.providerName,
+        conn?.pstnProviderName,
+        conn?.premisePstnProvider?.displayName,
+        conn?.trunk?.name
+      );
 
-      return {
-        ...n,
-        locationId,
-        locationName,
-        phoneNumber,
-        e164: phoneNumber,
-        ownerType,
-        ownerName,
-        assigned
-      };
-    };
-
-    const normalizeTrunkRecord = (t) => {
-      return {
-        ...t,
-        locationId: getTrunkLocationId(t),
-        locationName: getTrunkLocationName(t),
-        trunkName: first(t?.name, t?.displayName, t?.trunkName, t?.id, "Trunk"),
-        trunkType: first(t?.trunkType, t?.connectionType, t?.type, t?.pstnType, null),
-        utilization: Number.isFinite(Number(t?.utilization)) ? Number(t.utilization) : undefined
-      };
-    };
-
-    const readPstnType = (conn) => {
-      const raw = upper(
-        first(
+    const normalizePstnType = (conn) => {
+      const t = upper(
+        pick(
           conn?.pstnConnectionType,
           conn?.connectionType,
           conn?.type,
           conn?.pstnType,
-          conn?.providerType
+          conn?.providerType,
+          conn?.option
         )
       );
 
-      if (!raw) return "UNKNOWN";
-      if (raw.includes("NO_PSTN") || raw.includes("NONE")) return "NO_PSTN";
-      if (raw.includes("LOCAL") || raw.includes("GATEWAY") || raw.includes("PREMISE")) return "LOCAL_GATEWAY";
-      if (raw.includes("CLOUD") || raw.includes("CCP") || raw.includes("CLOUD_CONNECT")) return "CLOUD_CONNECT";
-      if (raw.includes("CISCO")) return "CISCO_PSTN";
+      if (!t) return "UNKNOWN";
+      if (t.includes("NO_PSTN") || t.includes("NONE")) return "NO_PSTN";
+      if (t.includes("LOCAL") || t.includes("GATEWAY") || t.includes("PREMISE")) return "LOCAL_GATEWAY";
+      if (t.includes("CLOUD") || t.includes("CCP") || t.includes("CLOUD_CONNECT")) return "CLOUD_CONNECT";
+      if (t.includes("CISCO") || t.includes("PROVIDER")) return "CISCO_PSTN";
       return "UNKNOWN";
     };
 
-    const readDisplayName = (conn) =>
-      first(
-        conn?.displayName,
-        conn?.provider?.displayName,
-        conn?.providerName,
-        conn?.name,
-        conn?.pstnProviderName,
-        null
+    const redSkyBadge = (v) => {
+      const s = upper(v);
+      if (!s) return "UNKNOWN";
+      if (s.includes("ENABLE")) return "ENABLED";
+      if (s.includes("DISABLE")) return "DISABLED";
+      return s;
+    };
+
+    const isUnassignedNumber = (n) => {
+      const state = lower(pick(n?.state, n?.status));
+      const ownerType = upper(n?.owner?.type);
+      const ownerId = pick(n?.owner?.id, n?.ownerId);
+      return (
+        state.includes("unassign") ||
+        state.includes("available") ||
+        state.includes("inactive") ||
+        (!ownerId && !ownerType)
       );
-
-    const redSkyBadgeLocal = (orgStatus) => {
-      const s = upper(orgStatus);
-      if (s === "ENABLED") return "ENABLED";
-      if (s === "DISABLED") return "DISABLED";
-      return "UNKNOWN";
     };
 
-    const computeCapacityScoreStrong = ({ totalTrunks, totalDids, locs }) => {
-      let score = 100;
+    const computeTrunkUtilization = (trunk) => {
+      const pct = safeNum(trunk?.utilization);
+      if (pct != null) return { ok: true, pct: Math.max(0, Math.min(100, pct)) };
 
-      const callingLocs = locs.filter((l) => l.callingEnabled);
-      const noPstnCalling = callingLocs.filter((l) => l.pstn?.option === "NO_PSTN").length;
-      const unknownPstnCalling = callingLocs.filter((l) => l.pstn?.option === "UNKNOWN").length;
-      const noRedundancy = callingLocs.filter((l) => l.redundancyScore === 0).length;
-      const singlePath = callingLocs.filter((l) => l.redundancyScore === 50).length;
-      const missingE911 = callingLocs.filter((l) => !l.emergencyConfigured).length;
+      const cap =
+        safeNum(trunk?.maxCapacity) ??
+        safeNum(trunk?.capacity) ??
+        safeNum(trunk?.callCapacity) ??
+        safeNum(trunk?.maxCalls) ??
+        safeNum(trunk?.channels);
 
-      if (callingLocs.length && totalTrunks === 0) score -= 35;
-      score -= Math.min(20, noPstnCalling * 8);
-      score -= Math.min(15, unknownPstnCalling * 4);
-      score -= Math.min(15, noRedundancy * 3);
-      score -= Math.min(10, singlePath * 1);
-      score -= Math.min(15, missingE911 * 3);
+      const use =
+        safeNum(trunk?.currentUsage) ??
+        safeNum(trunk?.usage) ??
+        safeNum(trunk?.activeCalls) ??
+        safeNum(trunk?.concurrentCalls) ??
+        safeNum(trunk?.usedChannels);
 
-      if (totalDids > 0) {
-        const unassigned = locs.reduce((a, l) => a + (l?.dids?.unassigned || 0), 0);
-        const ratio = unassigned / totalDids;
-        score -= Math.round(ratio * 10);
+      if (cap != null && cap > 0 && use != null && use >= 0) {
+        return { ok: true, pct: Math.max(0, Math.min(100, (use / cap) * 100)), cap, use };
       }
 
-      return Math.max(0, Math.min(100, Math.round(score)));
+      return { ok: false, pct: null };
     };
 
-    // -------------------------------------------------
-    // 1) ORG-LEVEL BASE CALLS
-    // -------------------------------------------------
-    let locRes = await safe("/telephony/config/locations");
-    diag("telephony/config/locations", locRes);
+    const scoreSeverity = (score) => {
+      if (score < 70) return "CRITICAL";
+      if (score < 85) return "DEGRADED";
+      return "HEALTHY";
+    };
 
-    if (!locRes.ok) {
-      const fallbackLocRes = await safe("/locations");
-      diag("locations", fallbackLocRes);
-      if (fallbackLocRes.ok) locRes = fallbackLocRes;
+    const inferGatewayHealth = (g) => {
+      const status = upper(
+        pick(
+          g?.status,
+          g?.connectionStatus,
+          g?.gatewayStatus,
+          g?.health,
+          g?.registrationStatus
+        )
+      );
+      if (!status) return "UNKNOWN";
+      if (status.includes("ONLINE") || status.includes("ACTIVE") || status.includes("REGISTERED") || status.includes("UP")) return "HEALTHY";
+      if (status.includes("WARN") || status.includes("DEGRADED")) return "DEGRADED";
+      if (status.includes("DOWN") || status.includes("OFFLINE") || status.includes("FAIL")) return "DOWN";
+      return status;
+    };
+
+    const inferProviderType = (p) => {
+      const t = upper(
+        pick(
+          p?.type,
+          p?.providerType,
+          p?.pstnType,
+          p?.connectionType,
+          p?.category
+        )
+      );
+      if (!t) return "UNKNOWN";
+      if (t.includes("CLOUD")) return "CLOUD_CONNECT";
+      if (t.includes("CISCO")) return "CISCO_PSTN";
+      if (t.includes("LOCAL") || t.includes("GATEWAY") || t.includes("PREMISE")) return "LOCAL_GATEWAY";
+      return t;
+    };
+
+    const groupCount = (items, keyFn) => {
+      const map = {};
+      for (const i of items || []) {
+        const k = keyFn(i);
+        if (!k) continue;
+        map[k] = (map[k] || 0) + 1;
+      }
+      return map;
+    };
+
+    async function mapLimit(items, limit, fn) {
+      const out = new Array(items.length);
+      let index = 0;
+
+      async function worker() {
+        while (true) {
+          const i = index++;
+          if (i >= items.length) return;
+          out[i] = await fn(items[i], i);
+        }
+      }
+
+      const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length || 1)) }, () => worker());
+      await Promise.all(workers);
+      return out;
     }
 
+    // -------------------------------------------------
+    // 1) ORG-LEVEL FETCHES
+    // -------------------------------------------------
     const [
+      telephonyLocRes,
+      legacyLocRes,
       numbersRes,
       trunksRes,
       routeGroupsRes,
       routeListsRes,
-      routeListNumbersRes,
-      redSkyGlobalRes,
+      routeListsAltRes,
+      gatewaysRes,
+      providersRes,
+      providersAltRes,
+      redskyGlobalRes,
+      dialPlansRes,
+      numberBlocksRes,
       orgConnOptionsRes
     ] = await Promise.all([
+      safe("/telephony/config/locations"),
+      safe("/locations"),
       safe("/telephony/config/numbers"),
       safe("/telephony/config/premisePstn/trunks"),
       safe("/telephony/config/premisePstn/routeGroups"),
       safe("/telephony/config/premisePstn/routeLists"),
-      safe("/telephony/config/premisePstn/routeListNumbers"),
+      safe("/telephony/config/premisePstn/routeListNumbers"), // often 404, keep diagnostic
+      safe("/telephony/config/premisePstn/gateways"),
+      safe("/telephony/config/pstn/providers"),
+      safe("/telephony/pstn/providers"),
       safe("/telephony/config/redSky/complianceStatus"),
+      safe("/telephony/config/dialPlans"),
+      safe("/telephony/config/numberManagement/numberBlocks"),
       safe("/telephony/pstn/connectionOptions")
     ]);
 
+    diag("telephony/config/locations", telephonyLocRes);
+    diag("locations", legacyLocRes);
     diag("telephony/config/numbers", numbersRes);
     diag("telephony/config/premisePstn/trunks", trunksRes);
     diag("telephony/config/premisePstn/routeGroups", routeGroupsRes);
     diag("telephony/config/premisePstn/routeLists", routeListsRes);
-    diag("telephony/config/premisePstn/routeListNumbers", routeListNumbersRes);
-    diag("telephony/config/redSky/complianceStatus", redSkyGlobalRes);
+    diag("telephony/config/premisePstn/routeListNumbers", routeListsAltRes);
+    diag("telephony/config/premisePstn/gateways", gatewaysRes);
+    diag("telephony/config/pstn/providers", providersRes);
+    diag("telephony/pstn/providers", providersAltRes);
+    diag("telephony/config/redSky/complianceStatus", redskyGlobalRes);
+    diag("telephony/config/dialPlans", dialPlansRes);
+    diag("telephony/config/numberManagement/numberBlocks", numberBlocksRes);
     diag("telephony/pstn/connectionOptions", orgConnOptionsRes);
 
-    const numbersRaw = numbersRes.ok ? asItems(numbersRes.data) : [];
-    const trunksRaw = trunksRes.ok ? asItems(trunksRes.data) : [];
-    const routeGroupsRaw = routeGroupsRes.ok ? asItems(routeGroupsRes.data) : [];
-    const routeListsRaw = routeListsRes.ok ? asItems(routeListsRes.data) : [];
-    const routeListNumbersRaw = routeListNumbersRes.ok ? asItems(routeListNumbersRes.data) : [];
+    const locationsPrimary =
+      telephonyLocRes.ok
+        ? asArr(telephonyLocRes.data?.items || telephonyLocRes.data)
+        : [];
 
-    const normalizedNumbers = numbersRaw.map(normalizeDidRecord);
-    const normalizedTrunks = trunksRaw.map(normalizeTrunkRecord);
+    const locationsLegacy =
+      legacyLocRes.ok
+        ? asArr(legacyLocRes.data?.items || legacyLocRes.data)
+        : [];
+
+    const numbersRaw =
+      numbersRes.ok
+        ? asArr(numbersRes.data?.phoneNumbers || numbersRes.data?.items || numbersRes.data)
+        : [];
+
+    const trunksRaw =
+      trunksRes.ok
+        ? asArr(trunksRes.data?.trunks || trunksRes.data?.items || trunksRes.data)
+        : [];
+
+    const routeGroupsRaw =
+      routeGroupsRes.ok
+        ? asArr(routeGroupsRes.data?.routeGroups || routeGroupsRes.data?.items || routeGroupsRes.data)
+        : [];
+
+    const routeListsRaw =
+      routeListsRes.ok
+        ? asArr(routeListsRes.data?.routeLists || routeListsRes.data?.items || routeListsRes.data)
+        : [];
+
+    const gatewaysRaw =
+      gatewaysRes.ok
+        ? asArr(gatewaysRes.data?.gateways || gatewaysRes.data?.items || gatewaysRes.data)
+        : [];
+
+    const providersRaw =
+      providersRes.ok
+        ? asArr(providersRes.data?.providers || providersRes.data?.items || providersRes.data)
+        : (providersAltRes.ok
+            ? asArr(providersAltRes.data?.providers || providersAltRes.data?.items || providersAltRes.data)
+            : []);
+
+    const dialPlansRaw =
+      dialPlansRes.ok
+        ? asArr(dialPlansRes.data?.dialPlans || dialPlansRes.data?.items || dialPlansRes.data)
+        : [];
+
+    const numberBlocksRaw =
+      numberBlocksRes.ok
+        ? asArr(numberBlocksRes.data?.numberBlocks || numberBlocksRes.data?.items || numberBlocksRes.data)
+        : [];
 
     // -------------------------------------------------
-    // 2) LOCATIONS RAW + FALLBACK DERIVATION
+    // 2) BUILD BEST-EFFORT LOCATION SEED LIST
     // -------------------------------------------------
-    let locationsRaw = locRes.ok ? asItems(locRes.data) : [];
+    const seedLocations = [];
 
-    if (!locationsRaw.length && normalizedNumbers.length) {
-      const byId = new Map();
-      for (const n of normalizedNumbers) {
-        if (!n.locationId) continue;
-        if (!byId.has(String(n.locationId))) {
-          byId.set(String(n.locationId), {
-            id: n.locationId,
-            name: n.locationName || "Unknown Location",
-            callingEnabled: true
-          });
-        }
-      }
-      locationsRaw = [...byId.values()];
+    for (const l of locationsPrimary) {
+      const id = pick(l?.id, l?.locationId);
+      if (!id) continue;
+      seedLocations.push({
+        id,
+        name: pick(l?.name, l?.displayName, l?.locationName) || "Unknown Location",
+        source: "telephony/config/locations",
+        raw: l,
+        callingEnabled: pick(l?.callingEnabled, l?.enabled, true)
+      });
     }
 
-    const complianceLocations = asItems(redSkyGlobalRes?.data?.locationsStatus?.locations);
-    if (!locationsRaw.length && complianceLocations.length) {
-      const byId = new Map();
-      for (const l of complianceLocations) {
-        if (!l?.id) continue;
-        byId.set(String(l.id), {
-          id: l.id,
-          name: l.name || "Unknown Location",
-          callingEnabled: true
-        });
-      }
-      locationsRaw = [...byId.values()];
+    for (const l of locationsLegacy) {
+      const id = pick(l?.id, l?.locationId);
+      if (!id) continue;
+      seedLocations.push({
+        id,
+        name: pick(l?.name, l?.displayName, l?.locationName) || "Unknown Location",
+        source: "locations",
+        raw: l,
+        callingEnabled: pick(l?.callingEnabled, l?.enabled, true)
+      });
     }
 
-    if (!locationsRaw.length) {
-      const payload = {
-        ok: true,
-        pstn: {
-          orgId: resolvedOrgId,
-          callingAvailable: false,
-          reason: "No PSTN/telephony locations could be derived for this org",
-          totals: {
-            trunks: normalizedTrunks.length,
-            didsTotal: normalizedNumbers.length,
-            locations: 0
-          },
-          locations: [],
-          trunks: normalizedTrunks,
-          numbers: normalizedNumbers,
-          routeGroups: routeGroupsRaw,
-          routeLists: routeListsRaw,
-          routeListNumbers: routeListNumbersRaw,
-          connectionOptions: orgConnOptionsRes.ok ? orgConnOptionsRes.data : null,
-          compliance: redSkyGlobalRes.ok ? redSkyGlobalRes.data : null,
-          redSky: {
-            orgStatusBadge: redSkyBadgeLocal(redSkyGlobalRes?.data?.orgStatus)
-          },
-          misconfigurations: [],
-          diagnostics,
-          scores: { pstnCapacityScore: 0 },
-          generatedAt: new Date().toISOString()
-        }
+    // derive from RedSky global
+    const redskyLocs = asArr(redskyGlobalRes.data?.locationsStatus?.locations);
+    for (const l of redskyLocs) {
+      const id = pick(l?.id, l?.locationId);
+      if (!id) continue;
+      seedLocations.push({
+        id,
+        name: pick(l?.name, l?.locationName) || "Unknown Location",
+        source: "redsky/global",
+        raw: l,
+        callingEnabled: true
+      });
+    }
+
+    // derive from numbers
+    for (const n of numbersRaw) {
+      const id = getLocId(n);
+      if (!id) continue;
+      seedLocations.push({
+        id,
+        name: getLocName(n) || "Unknown Location",
+        source: "numbers",
+        raw: n,
+        callingEnabled: true
+      });
+    }
+
+    // derive from trunks
+    for (const t of trunksRaw) {
+      const id = getLocId(t);
+      if (!id) continue;
+      seedLocations.push({
+        id,
+        name: getLocName(t) || "Unknown Location",
+        source: "trunks",
+        raw: t,
+        callingEnabled: true
+      });
+    }
+
+    // derive from gateways
+    for (const g of gatewaysRaw) {
+      const id = getLocId(g);
+      if (!id) continue;
+      seedLocations.push({
+        id,
+        name: getLocName(g) || "Unknown Location",
+        source: "gateways",
+        raw: g,
+        callingEnabled: true
+      });
+    }
+
+    const locationSeeds = uniqBy(seedLocations, (x) => x.id).map((x) => {
+      const betterName =
+        pick(
+          x?.name,
+          locationsPrimary.find((l) => String(pick(l?.id, l?.locationId)) === String(x.id))?.name,
+          locationsLegacy.find((l) => String(pick(l?.id, l?.locationId)) === String(x.id))?.name
+        ) || "Unknown Location";
+
+      const primary = locationsPrimary.find((l) => String(pick(l?.id, l?.locationId)) === String(x.id));
+      const legacy = locationsLegacy.find((l) => String(pick(l?.id, l?.locationId)) === String(x.id));
+
+      return {
+        id: x.id,
+        name: betterName,
+        callingEnabled: !!pick(primary?.callingEnabled, legacy?.callingEnabled, x?.callingEnabled, true),
+        source: x.source,
+        raw: pick(primary, legacy, x.raw)
       };
+    });
 
-      await cachePutJson(cacheReq, payload, ttl);
-      return json({ ...payload, _cache: "MISS" }, 200);
+    // -------------------------------------------------
+    // 3) INDEX ORG DATA FOR LOCATION ENRICHMENT
+    // -------------------------------------------------
+    const numbersByLoc = new Map();
+    const trunksByLoc = new Map();
+    const gatewaysByLoc = new Map();
+    const routeGroupsById = new Map();
+    const routeListsById = new Map();
+
+    for (const rg of routeGroupsRaw) {
+      const rgId = pick(rg?.id, rg?.routeGroupId);
+      if (rgId) routeGroupsById.set(String(rgId), rg);
+    }
+
+    for (const rl of routeListsRaw) {
+      const rlId = pick(rl?.id, rl?.routeListId);
+      if (rlId) routeListsById.set(String(rlId), rl);
+    }
+
+    for (const n of numbersRaw) {
+      const locId = getLocId(n);
+      if (!locId) continue;
+      const arr = numbersByLoc.get(String(locId)) || [];
+      arr.push(n);
+      numbersByLoc.set(String(locId), arr);
+    }
+
+    for (const t of trunksRaw) {
+      const locId = getLocId(t);
+      if (!locId) continue;
+      const arr = trunksByLoc.get(String(locId)) || [];
+      arr.push(t);
+      trunksByLoc.set(String(locId), arr);
+    }
+
+    for (const g of gatewaysRaw) {
+      const locId = getLocId(g);
+      if (!locId) continue;
+      const arr = gatewaysByLoc.get(String(locId)) || [];
+      arr.push(g);
+      gatewaysByLoc.set(String(locId), arr);
+    }
+
+    // route groups may not have locationId, infer from trunkIds
+    const routeGroupUsageByLoc = new Map();
+    for (const rg of routeGroupsRaw) {
+      const trunkIds = asArr(rg?.trunks || rg?.trunkIds || rg?.members).map((x) =>
+        typeof x === "string" ? x : pick(x?.id, x?.trunkId)
+      ).filter(Boolean);
+
+      const locSet = new Set();
+      for (const trunkId of trunkIds) {
+        const trunk = trunksRaw.find((t) => String(pick(t?.id, t?.trunkId)) === String(trunkId));
+        const locId = trunk ? getLocId(trunk) : null;
+        if (locId) locSet.add(String(locId));
+      }
+
+      for (const locId of locSet) {
+        const arr = routeGroupUsageByLoc.get(String(locId)) || [];
+        arr.push(rg);
+        routeGroupUsageByLoc.set(String(locId), arr);
+      }
+    }
+
+    const routeListUsageByLoc = new Map();
+    for (const rl of routeListsRaw) {
+      const rgIds = asArr(rl?.routeGroups || rl?.routeGroupIds || rl?.routeGroupsInfo).map((x) =>
+        typeof x === "string" ? x : pick(x?.id, x?.routeGroupId)
+      ).filter(Boolean);
+
+      const locSet = new Set();
+      for (const rgId of rgIds) {
+        const rg = routeGroupsById.get(String(rgId));
+        if (!rg) continue;
+
+        const trunkIds = asArr(rg?.trunks || rg?.trunkIds || rg?.members).map((x) =>
+          typeof x === "string" ? x : pick(x?.id, x?.trunkId)
+        ).filter(Boolean);
+
+        for (const trunkId of trunkIds) {
+          const trunk = trunksRaw.find((t) => String(pick(t?.id, t?.trunkId)) === String(trunkId));
+          const locId = trunk ? getLocId(trunk) : null;
+          if (locId) locSet.add(String(locId));
+        }
+      }
+
+      for (const locId of locSet) {
+        const arr = routeListUsageByLoc.get(String(locId)) || [];
+        arr.push(rl);
+        routeListUsageByLoc.set(String(locId), arr);
+      }
+    }
+
+    // number block allocation by location if present
+    const numberBlocksByLoc = new Map();
+    for (const nb of numberBlocksRaw) {
+      const locId = getLocId(nb);
+      if (!locId) continue;
+      const arr = numberBlocksByLoc.get(String(locId)) || [];
+      arr.push(nb);
+      numberBlocksByLoc.set(String(locId), arr);
     }
 
     // -------------------------------------------------
-    // 3) PER-LOCATION ENRICHMENT
+    // 4) LOCATION-LEVEL ENRICHMENT
     // -------------------------------------------------
-    const CONCURRENCY = clampInt(url.searchParams.get("locConcurrency"), 4, 1, 10);
-
-    const enrichedLocations = await mapLimit(locationsRaw, CONCURRENCY, async (loc) => {
-      const locId = String(loc.id);
+    const enrichedLocations = await mapLimit(locationSeeds, locConcurrency, async (seed) => {
+      const locId = seed.id;
       const locIdEnc = encodeURIComponent(locId);
 
       const [
         connRes,
-        connOptRes,
-        redSkyLocRes,
-        ecnRes
+        connOptionsRes,
+        redskyLocRes,
+        ecnRes,
+        ecbnRes,
+        locConfigRes
       ] = await Promise.all([
         safe(`/telephony/pstn/locations/${locIdEnc}/connection`),
         safe(`/telephony/pstn/locations/${locIdEnc}/connectionOptions`),
         safe(`/telephony/config/locations/${locIdEnc}/redSky/status`),
-        safe(`/telephony/config/locations/${locIdEnc}/emergencyCallNotification`)
+        safe(`/telephony/config/locations/${locIdEnc}/emergencyCallNotification`),
+        safe(`/telephony/config/locations/${locIdEnc}/emergencyCallbackNumber`),
+        safe(`/telephony/config/locations/${locIdEnc}`)
       ]);
 
       diag(`telephony/pstn/locations/${locIdEnc}/connection`, connRes);
-      diag(`telephony/pstn/locations/${locIdEnc}/connectionOptions`, connOptRes);
-      diag(`telephony/config/locations/${locIdEnc}/redSky/status`, redSkyLocRes);
+      diag(`telephony/pstn/locations/${locIdEnc}/connectionOptions`, connOptionsRes);
+      diag(`telephony/config/locations/${locIdEnc}/redSky/status`, redskyLocRes);
       diag(`telephony/config/locations/${locIdEnc}/emergencyCallNotification`, ecnRes);
+      diag(`telephony/config/locations/${locIdEnc}/emergencyCallbackNumber`, ecbnRes);
+      diag(`telephony/config/locations/${locIdEnc}`, locConfigRes);
 
-      const locNumbers = normalizedNumbers.filter((n) => String(n.locationId) === locId);
-      const locTrunks = normalizedTrunks.filter((t) => String(t.locationId) === locId);
+      const locNumbers = numbersByLoc.get(String(locId)) || [];
+      const locTrunks = trunksByLoc.get(String(locId)) || [];
+      const locGateways = gatewaysByLoc.get(String(locId)) || [];
+      const locRouteGroups = routeGroupUsageByLoc.get(String(locId)) || [];
+      const locRouteLists = routeListUsageByLoc.get(String(locId)) || [];
+      const locNumberBlocks = numberBlocksByLoc.get(String(locId)) || [];
 
-      const routeGroupsForLoc = routeGroupsRaw.filter((rg) =>
-        getRouteGroupLocationIds(rg).includes(locId)
+      const didTotal = locNumbers.length;
+      const didUnassigned = locNumbers.filter(isUnassignedNumber).length;
+      const didAssigned = Math.max(0, didTotal - didUnassigned);
+
+      const pstnType = connRes.ok ? normalizePstnType(connRes.data) : "UNKNOWN";
+      const pstnDisplayName = connRes.ok ? readDisplayNameFromConn(connRes.data) : null;
+
+      const locProviders = uniqBy(
+        [
+          ...(providersRaw || []),
+          ...(connRes.ok && connRes.data ? [connRes.data] : [])
+        ].filter(Boolean),
+        (p) => pick(p?.id, p?.providerId, p?.name, p?.displayName, p?.providerName)
       );
 
-      const routeListsForLoc = routeListsRaw.filter((rl) =>
-        getRouteListLocationIds(rl).includes(locId)
-      );
+      const gatewayHealthSummary = (() => {
+        const total = locGateways.length;
+        const healthy = locGateways.filter((g) => inferGatewayHealth(g) === "HEALTHY").length;
+        const degraded = locGateways.filter((g) => inferGatewayHealth(g) === "DEGRADED").length;
+        const down = locGateways.filter((g) => inferGatewayHealth(g) === "DOWN").length;
+        return { total, healthy, degraded, down };
+      })();
 
-      const routeListNumbersForLoc = routeListNumbersRaw.filter((x) => {
-        const xLocId = first(
-          x?.locationId,
-          x?.location?.id,
-          x?.siteId
-        );
-        if (xLocId) return String(xLocId) === locId;
+      // RedSky / E911
+      const rsOrgStatusBadge = redskyLocRes.ok
+        ? redSkyBadge(redskyLocRes.data?.orgStatus)
+        : redSkyBadge(redskyGlobalRes.data?.orgStatus);
 
-        const routeListId = first(x?.routeListId, x?.routeList?.id);
-        if (!routeListId) return false;
-        return routeListsForLoc.some(
-          (rl) => String(first(rl?.id, rl?.routeListId)) === String(routeListId)
-        );
-      });
+      const rsCompliance =
+        upper(
+          pick(
+            redskyLocRes.data?.complianceStatus,
+            redskyGlobalRes.data?.complianceStatus
+          )
+        ) || null;
 
-      const pstnType = connRes.ok ? readPstnType(connRes.data) : "UNKNOWN";
-      const pstnDisplayName = connRes.ok ? readDisplayName(connRes.data) : null;
-
-      const locRedSkyRaw = redSkyLocRes.ok ? redSkyLocRes.data : null;
-      const locCompliance = upper(first(locRedSkyRaw?.complianceStatus, ""));
-      const globalLocState = upper(
-        first(
-          complianceLocations.find((x) => String(x?.id) === locId)?.state,
-          ""
-        )
-      );
+      const redskyLocationState =
+        upper(
+          redskyLocRes.data?.locationsStatus?.state ||
+          redskyGlobalRes.data?.locationsStatus?.locations?.find((x) => String(x?.id) === String(locId))?.state
+        ) || null;
 
       const emergencyConfigured =
-        locCompliance === "COMPLIANT" ||
-        globalLocState === "COMPLIANT";
+        rsCompliance === "COMPLIANT" ||
+        redskyLocationState === "COMPLIANT" ||
+        !!ecbnRes.ok ||
+        !!pick(
+          connRes.data?.emergencyCallbackNumber,
+          connRes.data?.emergencyAddressId,
+          connRes.data?.emergencyLocationId,
+          ecbnRes.data?.phoneNumber,
+          ecbnRes.data?.selected,
+          ecnRes.data?.emailAddress
+        );
 
-      const didSample = locNumbers.slice(0, 50).map((n) => ({
-        phoneNumber: n.phoneNumber,
-        extension: n.extension || null,
-        ownerType: n.ownerType || null,
-        ownerName: n.ownerName || null,
-        assigned: !!n.assigned,
-        state: n.state || null
-      }));
+      // Route / topology
+      const topologyPath = [
+        {
+          layer: "location",
+          id: locId,
+          name: seed.name
+        },
+        {
+          layer: "pstn",
+          type: pstnType,
+          displayName: pstnDisplayName || pstnType
+        },
+        ...(locGateways.length ? locGateways.map((g) => ({
+          layer: "gateway",
+          id: pick(g?.id, g?.gatewayId),
+          name: pick(g?.name, g?.displayName, g?.gatewayName, "Gateway"),
+          health: inferGatewayHealth(g)
+        })) : []),
+        ...(locTrunks.length ? locTrunks.map((t) => ({
+          layer: "trunk",
+          id: pick(t?.id, t?.trunkId),
+          name: pick(t?.name, t?.displayName, t?.trunkName, "Trunk"),
+          utilization: computeTrunkUtilization(t).pct
+        })) : []),
+        ...(locRouteGroups.length ? locRouteGroups.map((rg) => ({
+          layer: "routeGroup",
+          id: pick(rg?.id, rg?.routeGroupId),
+          name: pick(rg?.name, rg?.routeGroupName, "Route Group")
+        })) : []),
+        ...(locRouteLists.length ? locRouteLists.map((rl) => ({
+          layer: "routeList",
+          id: pick(rl?.id, rl?.routeListId),
+          name: pick(rl?.name, rl?.routeListName, "Route List")
+        })) : [])
+      ];
 
-      const redundancyScore =
-        locTrunks.length >= 2 ? 100 :
-        locTrunks.length === 1 ? 50 :
-        (pstnType === "CLOUD_CONNECT" || pstnType === "CISCO_PSTN") ? 50 : 0;
+      // Redundancy scoring
+      let redundancyScore = 0;
+      if (locTrunks.length >= 2) redundancyScore += 50;
+      else if (locTrunks.length === 1) redundancyScore += 20;
+
+      if (locGateways.length >= 2) redundancyScore += 30;
+      else if (locGateways.length === 1) redundancyScore += 10;
+
+      if (locRouteGroups.length >= 1) redundancyScore += 10;
+      if (locRouteLists.length >= 1) redundancyScore += 10;
+
+      redundancyScore = Math.max(0, Math.min(100, redundancyScore));
+
+      // DID capacity
+      const blockCapacity = locNumberBlocks.reduce((sum, b) => {
+        return sum + (
+          safeNum(b?.size) ??
+          safeNum(b?.quantity) ??
+          safeNum(b?.count) ??
+          0
+        );
+      }, 0);
+
+      const didCapacityPct = blockCapacity > 0
+        ? Math.round((didAssigned / blockCapacity) * 100)
+        : null;
+
+      // Capacity risk
+      let capacityRisk = "GREEN";
+      if (seed.callingEnabled && didTotal > 0 && didUnassigned === 0) capacityRisk = "AMBER";
+      if (seed.callingEnabled && locTrunks.length === 0 && pstnType !== "NO_PSTN") capacityRisk = "RED";
+      if (didCapacityPct != null && didCapacityPct >= 90) capacityRisk = "RED";
+      else if (didCapacityPct != null && didCapacityPct >= 75 && capacityRisk !== "RED") capacityRisk = "AMBER";
+
+      // Blast radius
+      let blastRadius = 0;
+      if (seed.callingEnabled) {
+        if (redundancyScore >= 80) blastRadius = 20;
+        else if (redundancyScore >= 50) blastRadius = 55;
+        else blastRadius = 90;
+      }
+
+      // Provider distribution at location
+      const providerDistribution = groupCount(locProviders, (p) =>
+        pick(p?.displayName, p?.name, p?.providerName, inferProviderType(p))
+      );
+
+      const routeWarnings = [];
+      const routeFailures = [];
+
+      if (seed.callingEnabled && pstnType !== "NO_PSTN" && locTrunks.length === 0 && locRouteGroups.length === 0 && locRouteLists.length === 0) {
+        routeFailures.push("Calling enabled but no trunk, route group, or route list linkage is visible.");
+      }
+
+      if (seed.callingEnabled && !emergencyConfigured) {
+        routeWarnings.push("E911 appears missing or could not be fully confirmed.");
+      }
+
+      if (pstnType === "UNKNOWN" && seed.callingEnabled) {
+        routeWarnings.push("PSTN type is unknown. Endpoint may be unsupported or permissions may be limited.");
+      }
+
+      if (locGateways.length && gatewayHealthSummary.down > 0) {
+        routeWarnings.push("One or more gateways appear down.");
+      }
 
       return {
         id: locId,
-        name: first(loc.name, loc.displayName, "Unknown Location"),
-        callingEnabled: !!first(loc.callingEnabled, loc.enabled, true),
+        name: seed.name,
+        callingEnabled: !!seed.callingEnabled,
+
+        // current frontend compatibility
+        trunkCount: locTrunks.length,
+        dids: {
+          total: didTotal,
+          assigned: didAssigned,
+          unassigned: didUnassigned,
+          sample: locNumbers.slice(0, 50).map((n) => ({
+            phoneNumber: pick(n?.phoneNumber, n?.number, n?.did, n?.e164),
+            extension: pick(n?.extension, n?.esn),
+            state: pick(n?.state, n?.status),
+            ownerType: n?.owner?.type || null,
+            ownerName: [n?.owner?.firstName, n?.owner?.lastName].filter(Boolean).join(" ").trim() || null,
+            mainNumber: !!n?.mainNumber
+          }))
+        },
+
+        redundancyScore,
+        capacityRisk,
+        blastRadius,
 
         pstn: {
           option: pstnType,
           displayName: pstnDisplayName,
           connection: connRes.ok ? connRes.data : null,
-          connectionOptions: connOptRes.ok ? connOptRes.data : null
+          connectionOptions: connOptionsRes.ok ? connOptionsRes.data : null
         },
 
-        trunkCount: locTrunks.length,
-        routeGroupCount: routeGroupsForLoc.length,
-        routeListCount: routeListsForLoc.length,
-
-        dids: {
-          total: locNumbers.length,
-          unassigned: locNumbers.filter((n) => !n.assigned).length,
-          sample: didSample
-        },
-
-        trunks: locTrunks.slice(0, 25),
-        routeGroups: routeGroupsForLoc.slice(0, 25),
-        routeLists: routeListsForLoc.slice(0, 25),
-        routeListNumbers: routeListNumbersForLoc.slice(0, 50),
+        // current frontend expects pstnConnection
+        pstnConnection: connRes.ok ? connRes.data : null,
 
         redSky: {
-          orgStatusBadge: redSkyBadgeLocal(
-            first(locRedSkyRaw?.orgStatus, redSkyGlobalRes?.data?.orgStatus)
-          ),
-          complianceStatus: first(locRedSkyRaw?.complianceStatus, globalLocState, null),
-          adminExists: first(locRedSkyRaw?.adminExists, redSkyGlobalRes?.data?.adminExists, null),
-          companyId: first(locRedSkyRaw?.companyId, redSkyGlobalRes?.data?.companyId, null),
-          redskyOrgId: first(
-            locRedSkyRaw?.redskyOrgId,
-            redSkyGlobalRes?.data?.redSkyOrgId,
-            redSkyGlobalRes?.data?.redskyOrgId,
-            null
-          ),
-          raw: locRedSkyRaw
+          orgStatusBadge: rsOrgStatusBadge,
+          complianceStatus: rsCompliance,
+          locationState: redskyLocationState,
+          adminExists: pick(redskyLocRes.data?.adminExists, redskyGlobalRes.data?.adminExists),
+          companyId: pick(redskyLocRes.data?.companyId, redskyGlobalRes.data?.companyId),
+          redskyOrgId: pick(redskyLocRes.data?.redskyOrgId, redskyGlobalRes.data?.redSkyOrgId, redskyGlobalRes.data?.redskyOrgId),
+          raw: redskyLocRes.ok ? redskyLocRes.data : null
         },
 
         emergencyCallNotification: ecnRes.ok ? ecnRes.data : null,
+        emergencyCallbackNumber: ecbnRes.ok ? ecbnRes.data : null,
         emergencyConfigured,
-        redundancyScore
+
+        gateways: {
+          count: locGateways.length,
+          health: gatewayHealthSummary,
+          items: locGateways.map((g) => ({
+            id: pick(g?.id, g?.gatewayId),
+            name: pick(g?.name, g?.displayName, g?.gatewayName, "Gateway"),
+            status: pick(g?.status, g?.connectionStatus, g?.gatewayStatus, g?.health, g?.registrationStatus),
+            health: inferGatewayHealth(g),
+            trunkId: pick(g?.trunkId, g?.trunk?.id),
+            ip: pick(g?.ipAddress, g?.host, g?.fqdn),
+            model: pick(g?.model, g?.deviceModel),
+            raw: g
+          }))
+        },
+
+        trunks: {
+          count: locTrunks.length,
+          items: locTrunks.map((t) => {
+            const util = computeTrunkUtilization(t);
+            return {
+              id: pick(t?.id, t?.trunkId),
+              name: pick(t?.name, t?.displayName, t?.trunkName, "Trunk"),
+              status: pick(t?.status, t?.connectionStatus, t?.state),
+              gatewayId: pick(t?.gatewayId, t?.gateway?.id),
+              routeGroupId: pick(t?.routeGroupId, t?.routeGroup?.id),
+              utilization: util.ok ? util.pct : null,
+              raw: t
+            };
+          })
+        },
+
+        routeGroups: {
+          count: locRouteGroups.length,
+          items: locRouteGroups.map((rg) => ({
+            id: pick(rg?.id, rg?.routeGroupId),
+            name: pick(rg?.name, rg?.routeGroupName, "Route Group"),
+            trunkIds: asArr(rg?.trunks || rg?.trunkIds || rg?.members).map((x) =>
+              typeof x === "string" ? x : pick(x?.id, x?.trunkId)
+            ).filter(Boolean),
+            raw: rg
+          }))
+        },
+
+        routeLists: {
+          count: locRouteLists.length,
+          items: locRouteLists.map((rl) => ({
+            id: pick(rl?.id, rl?.routeListId),
+            name: pick(rl?.name, rl?.routeListName, "Route List"),
+            routeGroupIds: asArr(rl?.routeGroups || rl?.routeGroupIds || rl?.routeGroupsInfo).map((x) =>
+              typeof x === "string" ? x : pick(x?.id, x?.routeGroupId)
+            ).filter(Boolean),
+            raw: rl
+          }))
+        },
+
+        numberBlocks: {
+          count: locNumberBlocks.length,
+          capacity: blockCapacity,
+          utilizationPct: didCapacityPct,
+          items: locNumberBlocks
+        },
+
+        providers: {
+          distribution: providerDistribution,
+          items: locProviders.map((p) => ({
+            id: pick(p?.id, p?.providerId),
+            name: pick(p?.displayName, p?.name, p?.providerName),
+            type: inferProviderType(p),
+            raw: p
+          }))
+        },
+
+        routing: {
+          steps: [
+            { kind: "LOCATION", label: seed.name },
+            { kind: "PSTN_TYPE", label: pstnType },
+            ...(locGateways.length ? [{ kind: "GATEWAY", label: `${locGateways.length} gateway(s)` }] : []),
+            ...(locTrunks.length ? [{ kind: "TRUNK", label: `${locTrunks.length} trunk(s)` }] : [{ kind: "TRUNK", label: "No trunks linked" }]),
+            ...(locRouteGroups.length ? [{ kind: "ROUTE_GROUP", label: `${locRouteGroups.length} route group(s)` }] : []),
+            ...(locRouteLists.length ? [{ kind: "ROUTE_LIST", label: `${locRouteLists.length} route list(s)` }] : []),
+            { kind: "E911", label: emergencyConfigured ? "E911 OK" : "E911 Missing" }
+          ],
+          warnings: routeWarnings,
+          failures: routeFailures,
+          topologyPath
+        },
+
+        didInventory: {
+          total: didTotal,
+          assigned: didAssigned,
+          unassigned: didUnassigned,
+          mainNumbers: locNumbers.filter((n) => !!n?.mainNumber).map((n) => pick(n?.phoneNumber, n?.number, n?.did, n?.e164)).filter(Boolean),
+          byOwnerType: groupCount(locNumbers, (n) => upper(n?.owner?.type || "UNASSIGNED")),
+          full: locNumbers
+        },
+
+        source: seed.source,
+        raw: {
+          location: seed.raw,
+          config: locConfigRes.ok ? locConfigRes.data : null
+        }
       };
     });
 
     // -------------------------------------------------
-    // 4) MISCONFIGURATIONS / RISK
+    // 5) ORG-LEVEL SUMMARIES
     // -------------------------------------------------
+    const totalTrunks = trunksRaw.length;
+    const totalDids = numbersRaw.length;
+    const totalUnassigned = numbersRaw.filter(isUnassignedNumber).length;
+    const totalGateways = gatewaysRaw.length;
+
+    const providerDistribution = groupCount(providersRaw, (p) =>
+      pick(p?.displayName, p?.name, p?.providerName, inferProviderType(p))
+    );
+
+    const gatewayHealth = {
+      total: totalGateways,
+      healthy: gatewaysRaw.filter((g) => inferGatewayHealth(g) === "HEALTHY").length,
+      degraded: gatewaysRaw.filter((g) => inferGatewayHealth(g) === "DEGRADED").length,
+      down: gatewaysRaw.filter((g) => inferGatewayHealth(g) === "DOWN").length,
+      unknown: gatewaysRaw.filter((g) => inferGatewayHealth(g) === "UNKNOWN").length
+    };
+
+    const didCapacity = {
+      totalNumbers: totalDids,
+      assigned: Math.max(0, totalDids - totalUnassigned),
+      unassigned: totalUnassigned,
+      blockCapacity: numberBlocksRaw.reduce((sum, b) => {
+        return sum + (
+          safeNum(b?.size) ??
+          safeNum(b?.quantity) ??
+          safeNum(b?.count) ??
+          0
+        );
+      }, 0)
+    };
+    didCapacity.utilizationPct = didCapacity.blockCapacity > 0
+      ? Math.round((didCapacity.assigned / didCapacity.blockCapacity) * 100)
+      : null;
+
+    const redSkyOrgStatusBadge = (() => {
+      const globalBadge = redSkyBadge(redskyGlobalRes.data?.orgStatus);
+      if (globalBadge !== "UNKNOWN") return globalBadge;
+
+      const anyEnabled = enrichedLocations.some((l) => l?.redSky?.orgStatusBadge === "ENABLED");
+      if (anyEnabled) return "ENABLED";
+
+      const anyDisabled = enrichedLocations.some((l) => l?.redSky?.orgStatusBadge === "DISABLED");
+      if (anyDisabled) return "DISABLED";
+
+      return "UNKNOWN";
+    })();
+
+    const topology = {
+      orgId: resolvedOrgId,
+      nodes: [
+        { id: "ORG", type: "ORG", label: "Customer Org" },
+        ...uniqBy(enrichedLocations.map((l) => ({
+          id: `LOC:${l.id}`,
+          type: "LOCATION",
+          label: l.name,
+          locationId: l.id
+        })), (x) => x.id),
+        ...uniqBy(gatewaysRaw.map((g) => ({
+          id: `GW:${pick(g?.id, g?.gatewayId)}`,
+          type: "GATEWAY",
+          label: pick(g?.name, g?.displayName, g?.gatewayName, "Gateway"),
+          gatewayId: pick(g?.id, g?.gatewayId)
+        })), (x) => x.id),
+        ...uniqBy(trunksRaw.map((t) => ({
+          id: `TRUNK:${pick(t?.id, t?.trunkId)}`,
+          type: "TRUNK",
+          label: pick(t?.name, t?.displayName, t?.trunkName, "Trunk"),
+          trunkId: pick(t?.id, t?.trunkId)
+        })), (x) => x.id),
+        ...uniqBy(routeGroupsRaw.map((rg) => ({
+          id: `RG:${pick(rg?.id, rg?.routeGroupId)}`,
+          type: "ROUTE_GROUP",
+          label: pick(rg?.name, rg?.routeGroupName, "Route Group"),
+          routeGroupId: pick(rg?.id, rg?.routeGroupId)
+        })), (x) => x.id),
+        ...uniqBy(routeListsRaw.map((rl) => ({
+          id: `RL:${pick(rl?.id, rl?.routeListId)}`,
+          type: "ROUTE_LIST",
+          label: pick(rl?.name, rl?.routeListName, "Route List"),
+          routeListId: pick(rl?.id, rl?.routeListId)
+        })), (x) => x.id)
+      ],
+      edges: [
+        ...enrichedLocations.map((l) => ({
+          from: "ORG",
+          to: `LOC:${l.id}`,
+          type: "HAS_LOCATION"
+        })),
+        ...gatewaysRaw
+          .map((g) => {
+            const locId = getLocId(g);
+            const gwId = pick(g?.id, g?.gatewayId);
+            if (!locId || !gwId) return null;
+            return { from: `LOC:${locId}`, to: `GW:${gwId}`, type: "HAS_GATEWAY" };
+          })
+          .filter(Boolean),
+        ...trunksRaw
+          .map((t) => {
+            const locId = getLocId(t);
+            const trunkId = pick(t?.id, t?.trunkId);
+            if (!locId || !trunkId) return null;
+            return { from: `LOC:${locId}`, to: `TRUNK:${trunkId}`, type: "HAS_TRUNK" };
+          })
+          .filter(Boolean)
+      ]
+    };
+
+    const trunkRedundancyHeatmap = enrichedLocations.map((l) => ({
+      locationId: l.id,
+      locationName: l.name,
+      redundancyScore: l.redundancyScore,
+      trunkCount: l.trunks.count,
+      gatewayCount: l.gateways.count,
+      routeGroupCount: l.routeGroups.count,
+      routeListCount: l.routeLists.count,
+      severity:
+        l.redundancyScore >= 80 ? "LOW" :
+        l.redundancyScore >= 50 ? "MEDIUM" :
+        "HIGH"
+    }));
+
+    const didCapacityExhaustion = enrichedLocations.map((l) => ({
+      locationId: l.id,
+      locationName: l.name,
+      totalDids: l.didInventory.total,
+      assigned: l.didInventory.assigned,
+      unassigned: l.didInventory.unassigned,
+      blockCapacity: l.numberBlocks.capacity,
+      utilizationPct: l.numberBlocks.utilizationPct,
+      severity:
+        l.numberBlocks.utilizationPct == null ? "UNKNOWN" :
+        l.numberBlocks.utilizationPct >= 90 ? "CRITICAL" :
+        l.numberBlocks.utilizationPct >= 75 ? "WARN" :
+        "HEALTHY"
+    }));
+
+    const e911ByLocation = enrichedLocations.map((l) => ({
+      locationId: l.id,
+      locationName: l.name,
+      emergencyConfigured: l.emergencyConfigured,
+      complianceStatus: l.redSky.complianceStatus,
+      locationState: l.redSky.locationState,
+      orgStatusBadge: l.redSky.orgStatusBadge,
+      emergencyCallbackNumber: l.emergencyCallbackNumber || null
+    }));
+
     const misconfigurations = [];
 
     for (const l of enrichedLocations) {
-      if (l.callingEnabled && l.pstn?.option === "NO_PSTN") {
-        misconfigurations.push({
-          location: l.name,
-          issue: "Calling enabled but PSTN is No PSTN"
-        });
+      if (l.pstn?.option === "NO_PSTN" && l.callingEnabled) {
+        misconfigurations.push({ location: l.name, severity: "FAIL", issue: "Calling enabled but PSTN type is No PSTN." });
       }
-
-      if (l.callingEnabled && l.trunkCount === 1) {
-        misconfigurations.push({
-          location: l.name,
-          issue: "Single trunk with no visible redundancy"
-        });
+      if (l.trunks.count === 1) {
+        misconfigurations.push({ location: l.name, severity: "WARN", issue: "Single trunk only. Redundancy appears limited." });
       }
-
       if (l.callingEnabled && !l.emergencyConfigured) {
-        misconfigurations.push({
-          location: l.name,
-          issue: "E911 / RedSky not compliant"
-        });
+        misconfigurations.push({ location: l.name, severity: "WARN", issue: "E911 / RedSky not fully compliant." });
       }
-
-      if (l.callingEnabled && l.pstn?.option === "UNKNOWN") {
-        misconfigurations.push({
-          location: l.name,
-          issue: "PSTN type could not be determined"
-        });
+      if (l.callingEnabled && l.trunks.count === 0 && l.routeGroups.count === 0 && l.routeLists.count === 0 && l.pstn.option !== "NO_PSTN") {
+        misconfigurations.push({ location: l.name, severity: "FAIL", issue: "No visible PSTN routing objects for a calling-enabled location." });
+      }
+      if (l.gateways.health.down > 0) {
+        misconfigurations.push({ location: l.name, severity: "WARN", issue: "Gateway health indicates one or more down gateways." });
       }
     }
 
-    const orgRedSkyBadge = redSkyBadgeLocal(
-      first(
-        redSkyGlobalRes?.data?.orgStatus,
-        enrichedLocations.find((x) => x?.redSky?.orgStatusBadge === "ENABLED")?.redSky?.orgStatusBadge
-      )
-    );
+    // org posture score
+    let postureScore = 100;
 
-    const pstnCapacityScore = computeCapacityScoreStrong({
-      totalTrunks: normalizedTrunks.length,
-      totalDids: normalizedNumbers.length,
-      locs: enrichedLocations
-    });
+    if (enrichedLocations.length === 0) postureScore -= 40;
+    if (totalTrunks === 0 && enrichedLocations.some((l) => l.callingEnabled)) postureScore -= 25;
+    if (gatewayHealth.down > 0) postureScore -= Math.min(20, gatewayHealth.down * 5);
+    if (didCapacity.utilizationPct != null && didCapacity.utilizationPct >= 90) postureScore -= 15;
+    else if (didCapacity.utilizationPct != null && didCapacity.utilizationPct >= 75) postureScore -= 8;
+
+    const e911MissingCount = enrichedLocations.filter((l) => l.callingEnabled && !l.emergencyConfigured).length;
+    postureScore -= Math.min(20, e911MissingCount * 3);
+
+    const lowRedundancyCount = enrichedLocations.filter((l) => l.callingEnabled && l.redundancyScore < 50).length;
+    postureScore -= Math.min(20, lowRedundancyCount * 2);
+
+    postureScore = Math.max(0, Math.min(100, Math.round(postureScore)));
+
+    const orgSummary = {
+      postureScore,
+      posture: scoreSeverity(postureScore),
+      totalLocations: enrichedLocations.length,
+      callingEnabledLocations: enrichedLocations.filter((l) => l.callingEnabled).length,
+      totalTrunks,
+      totalGateways,
+      totalDids,
+      unassignedDids: totalUnassigned,
+      providerDistribution,
+      gatewayHealth,
+      routeGroups: routeGroupsRaw.length,
+      routeLists: routeListsRaw.length,
+      dialPlans: dialPlansRaw.length,
+      e911MissingCount,
+      lowRedundancyCount
+    };
 
     const payload = {
       ok: true,
       pstn: {
         orgId: resolvedOrgId,
-        callingAvailable: true,
+        callingAvailable: enrichedLocations.length > 0 || totalDids > 0 || totalTrunks > 0,
 
         totals: {
-          trunks: normalizedTrunks.length,
-          didsTotal: normalizedNumbers.length,
-          locations: enrichedLocations.length
+          trunks: totalTrunks,
+          didsTotal: totalDids,
+          didsAssigned: Math.max(0, totalDids - totalUnassigned),
+          didsUnassigned: totalUnassigned,
+          locations: enrichedLocations.length,
+          gateways: totalGateways,
+          routeGroups: routeGroupsRaw.length,
+          routeLists: routeListsRaw.length,
+          dialPlans: dialPlansRaw.length,
+          providers: providersRaw.length,
+          numberBlocks: numberBlocksRaw.length
         },
 
+        // current frontend compatibility
         locations: enrichedLocations,
-        trunks: normalizedTrunks,
-        numbers: normalizedNumbers,
+        trunks: trunksRaw,
+        numbers: numbersRaw,
         routeGroups: routeGroupsRaw,
+
+        // expanded org visibility
         routeLists: routeListsRaw,
-        routeListNumbers: routeListNumbersRaw,
+        gateways: gatewaysRaw,
+        providers: providersRaw,
+        dialPlans: dialPlansRaw,
+        numberBlocks: numberBlocksRaw,
 
         connectionOptions: orgConnOptionsRes.ok ? orgConnOptionsRes.data : null,
 
-        compliance: redSkyGlobalRes.ok ? redSkyGlobalRes.data : null,
+        compliance: redskyGlobalRes.ok ? redskyGlobalRes.data : null,
         redSky: {
-          orgStatusBadge: orgRedSkyBadge
+          orgStatusBadge: redSkyOrgStatusBadge
         },
+
+        orgSummary,
+        topology,
+        trunkRedundancyHeatmap,
+        didCapacityExhaustion,
+        e911ByLocation,
+        gatewayHealth,
+        providerDistribution,
+        didCapacity,
 
         misconfigurations,
         diagnostics,
 
         scores: {
-          pstnCapacityScore
+          pstnCapacityScore: postureScore,
+          posture: scoreSeverity(postureScore)
         },
 
         generatedAt: new Date().toISOString()
@@ -9897,6 +10488,7 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
 
     await cachePutJson(cacheReq, payload, ttl);
     return json({ ...payload, _cache: "MISS" }, 200);
+
   } catch (err) {
     return json(
       {
