@@ -573,18 +573,25 @@ function scopeModeForPath(path) {
      APIs that REQUIRE header
      ------------------------- */
 
-  if (
-    p.startsWith("/devices") ||
-    p.startsWith("/licenses") ||
-    p.startsWith("/numbers") ||
-    p.startsWith("/locations") ||
-    p.startsWith("/workspaces") ||
-    p.startsWith("/telephony") ||
-    p.startsWith("/people") ||
-    p.startsWith("/organizations")
-  ) {
-    return "header";
-  }
+ // APIs that require orgId query parameter
+if (
+  p.startsWith("/devices") ||
+  p.startsWith("/licenses") ||
+  p.startsWith("/numbers") ||
+  p.startsWith("/locations") ||
+  p.startsWith("/workspaces") ||
+  p.startsWith("/telephony") ||
+  p.startsWith("/people")
+) {
+  return "query";
+}
+
+// APIs that require header
+if (
+  p.startsWith("/organizations")
+) {
+  return "header";
+}
 
   /* -------------------------
      Webex Analytics APIs
