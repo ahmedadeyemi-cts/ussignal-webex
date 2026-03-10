@@ -4332,19 +4332,44 @@ if (
     headers: { "content-type": "application/json" }
   });
 }
-    if (
+   if (
   request.method === "GET" &&
   url.pathname === "/api/calling-insight/templates"
 ) {
-  const resolved = await resolveCallingInsightOrg(request, env, url);
-  if (!resolved.ok) return resolved.response;
 
-  await ensureDelegation(env, resolved.orgId);
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"auth_required" }, 401);
 
-  const r = await webexFetchSafe(env, "/report/templates", resolved.orgId);
-  if (!r.ok) return json({ ok:false, error: r.error, preview:r.preview || null }, 500);
+  const session = await getSession(env, user.email);
+  if (!session) return json({ ok:false, error:"pin_required" }, 401);
 
-  return json({ ok:true, orgId: resolved.orgId, items: r.data?.items || [] });
+  const requestedOrgId = url.searchParams.get("orgId");
+
+  const orgId = user.isAdmin
+    ? (requestedOrgId || session.orgId)
+    : session.orgId;
+
+  if (!orgId) {
+    return json({ ok:false, error:"missing_orgId" }, 400);
+  }
+
+  await ensureDelegation(env, orgId);
+
+  const r = await webexFetchSafe(env, "/report/templates", orgId);
+
+  if (!r.ok) {
+    return json({
+      ok:false,
+      error: r.error,
+      preview: r.preview || null
+    }, 500);
+  }
+
+  return json({
+    ok:true,
+    orgId,
+    items: r.data?.items || []
+  });
 }
    
 //API/STATUS
@@ -5836,25 +5861,41 @@ function extractResponsesJson(r){
 // GET — List reports (Calling Insights)
 // -------------------------------
 if (url.pathname === "/api/calling-insight/reports" && request.method === "GET") {
-  const resolved = await resolveCallingInsightOrg(request, env, url);
-  if (!resolved.ok) return resolved.response;
 
-  await ensureDelegation(env, resolved.orgId);
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok:false, error:"auth_required" }, 401);
+
+  const session = await getSession(env, user.email);
+  if (!session) return json({ ok:false, error:"pin_required" }, 401);
+
+  const requestedOrgId = url.searchParams.get("orgId");
+
+  // Admin can request any tenant
+  // Customer always uses their own tenant
+  const orgId = user.isAdmin
+    ? (requestedOrgId || session.orgId)
+    : session.orgId;
+
+  if (!orgId) {
+    return json({ ok:false, error:"missing_orgId" }, 400);
+  }
+
+  await ensureDelegation(env, orgId);
 
   const r = await webexFetchSafe(
     env,
     "/callingInsights/reports",
-    resolved.orgId
+    orgId
   );
 
   return json({
     ok: r.ok,
-    orgId: resolved.orgId,
+    orgId,
     reports: r.data?.items || [],
     numberOfReports: r.data?.numberOfReports || 0,
     preview: r.preview || null,
     error: r.error || null
-  }, 200);
+  });
 }
 // -------------------------------
 // POST — Intelligent Report Create
