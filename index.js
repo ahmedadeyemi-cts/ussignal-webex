@@ -73,8 +73,49 @@ function looksLikeWebexOrgId(s) {
   return v.startsWith("Y2lzY29zcGFyazov"); // Webex orgId base64-ish prefix
 }
 async function ensureDelegation(env, orgId) {
-  // Delegation disabled — no-op
-  return true;
+
+  const key = `delegation:${orgId}`;
+  const cached = await env.WEBEX.get(key);
+
+  if (cached) return;
+
+  let token = await getAccessToken(env);
+
+  const url = `https://webexapis.com/v1/organizations/${orgId}`;
+
+  let res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json"
+    }
+  });
+
+  // retry once on token expiration
+  if (res.status === 401) {
+
+    console.log("Delegation token expired — refreshing");
+
+    await env.WEBEX.delete("access_token");
+
+    token = await getAccessToken(env);
+
+    res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json"
+      }
+    });
+  }
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.log("Delegation activation failed:", text);
+    throw new Error("delegation_failed");
+  }
+
+  await env.WEBEX.put(key, "1", { expirationTtl: 86400 });
+
+  console.log("Delegation activated for org:", orgId);
 }
 function isUnassignedNumber(n){
   const s = String(n?.status || n?.state || "").toLowerCase();
@@ -2709,6 +2750,7 @@ async function buildPstnDeep(env, orgId) {
   };
 }
 async function prewarmAllTenants(env) {
+
   const orgs = await webexFetch(env, "/organizations");
 
   if (!orgs.ok) return;
@@ -2717,7 +2759,7 @@ async function prewarmAllTenants(env) {
 
   await mapLimit(items, 5, async (o) => {
     try {
-      await warmDelegation(env, o.id);
+      await ensureDelegation(env, o.id);
     } catch {}
   });
 
@@ -9584,6 +9626,8 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
 async scheduled(event, env, ctx) {
   ctx.waitUntil((async () => {
    ctx.waitUntil(runTelemetryCycle(env));
+   console.log("Running delegation prewarm");
+    ctx.waitUntil(prewarmAllTenants(env));
    ctx.waitUntil(runDailyPartnerReports(env, ctx, { fanout: 6 }));
     try {
 
