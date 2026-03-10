@@ -9320,11 +9320,7 @@ if (
 }
 
 // =====================================================
-// 2) FULL PSTN (detailed) — hardened + caching + clean fan-out
-// Adds requested enhancements:
-//   ✅ connectionOptions endpoint
-//   ✅ displayName from PSTN connection
-//   ✅ RedSky orgStatus badge (per location + org)
+// FULL PSTN (detailed) — fixed telephony locations path
 // =====================================================
 if (url.pathname === "/api/pstn" && request.method === "GET") {
   try {
@@ -9343,29 +9339,41 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
       resolvedOrgId = session.orgId;
     }
 
-    // Cache controls (full PSTN is heavier; default TTL 180)
     const ttl = clampInt(url.searchParams.get("ttl"), 180, 60, 900);
-    const cacheReq = pstnCacheReq(request, `pstn_full:v4:${resolvedOrgId}`);
+    const cacheReq = pstnCacheReq(request, `pstn_full:v5:${resolvedOrgId}`);
 
     const cached = await cacheGetJson(cacheReq);
     if (cached) return json({ ...cached, _cache: "HIT" }, 200);
 
-    // Safe Webex wrapper (forces orgId query formatting like your Postman examples)
+    await ensureDelegation(env, resolvedOrgId);
+
     const safe = (path) => webexFetchSafe(env, withOrgQuery(path, resolvedOrgId), resolvedOrgId);
 
     const diagnostics = [];
-    const diag = (name, r) =>
+    const diag = (name, r) => {
       diagnostics.push({
         name,
         ok: !!r?.ok,
-        status: r?.status ?? null
+        status: r?.status ?? null,
+        preview: r?.ok ? null : (r?.preview || r?.error || null)
       });
+    };
 
     // -------------------------------
-    // 1) Locations (Postman-style)
+    // 1) LOCATIONS — correct endpoint first
     // -------------------------------
-    const locRes = await safe("/locations");
-    diag("locations", locRes);
+    let locRes = await safe("/telephony/config/locations");
+    diag("telephony/config/locations", locRes);
+
+    // Fallback for older / alternate org behavior
+    if (!locRes.ok) {
+      const legacyLocRes = await safe("/locations");
+      diag("locations", legacyLocRes);
+
+      if (legacyLocRes.ok) {
+        locRes = legacyLocRes;
+      }
+    }
 
     if (!locRes.ok) {
       const payload = {
@@ -9393,10 +9401,14 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
       return json({ ...payload, _cache: "MISS" }, 200);
     }
 
-    const locationsRaw = Array.isArray(locRes.data?.items) ? locRes.data.items : [];
+    const locationsRaw = Array.isArray(locRes.data?.items)
+      ? locRes.data.items
+      : Array.isArray(locRes.data)
+        ? locRes.data
+        : [];
 
     // -------------------------------
-    // 2) Optional org-level endpoints
+    // 2) ORG-LEVEL PSTN / CALLING DATA
     // -------------------------------
     const [numbersRes, trunksRes, routeRes, redskyGlobal] = await Promise.all([
       safe("/telephony/config/numbers"),
@@ -9410,20 +9422,23 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
     diag("telephony/config/premisePstn/routeGroups", routeRes);
     diag("telephony/config/redSky/complianceStatus", redskyGlobal);
 
-    const numbersRaw = numbersRes.ok ? asArray(numbersRes.data?.phoneNumbers || numbersRes.data?.items) : [];
-    const trunksRaw = trunksRes.ok ? asArray(trunksRes.data?.trunks || trunksRes.data?.items) : [];
-    const routeGroupsRaw = routeRes.ok ? asArray(routeRes.data?.routeGroups || routeRes.data?.items) : [];
+    const numbersRaw = numbersRes.ok
+      ? asArray(numbersRes.data?.phoneNumbers || numbersRes.data?.items || numbersRes.data)
+      : [];
+
+    const trunksRaw = trunksRes.ok
+      ? asArray(trunksRes.data?.trunks || trunksRes.data?.items || trunksRes.data)
+      : [];
+
+    const routeGroupsRaw = routeRes.ok
+      ? asArray(routeRes.data?.routeGroups || routeRes.data?.items || routeRes.data)
+      : [];
 
     const totalTrunks = trunksRaw.length;
     const totalDids = numbersRaw.length;
 
     // -------------------------------
-    // 3) Enrich Locations (clean + controlled fan-out)
-    //    Includes:
-    //      - PSTN Connection (with displayName)
-    //      - PSTN Connection Options
-    //      - RedSky status (orgStatus badge + compliance)
-    //      - Emergency call notification config
+    // 3) ENRICH LOCATIONS
     // -------------------------------
     const CONCURRENCY = clampInt(url.searchParams.get("locConcurrency"), 4, 1, 10);
 
@@ -9431,22 +9446,18 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
       const locId = loc.id;
       const locIdEnc = encodeURIComponent(locId);
 
-      // Postman format requires orgId query on these endpoints
       const connPath = `/telephony/pstn/locations/${locIdEnc}/connection`;
       const conn = await safe(connPath);
       diag(`telephony/pstn/locations/${locIdEnc}/connection`, conn);
 
-      // Requested: connectionOptions endpoint (tolerate 404/403)
       const connOptPath = `/telephony/pstn/locations/${locIdEnc}/connectionOptions`;
       const connOptions = await safe(connOptPath);
       diag(`telephony/pstn/locations/${locIdEnc}/connectionOptions`, connOptions);
 
-      // RedSky per-location status (your working Postman example)
       const redskyPath = `/telephony/config/locations/${locIdEnc}/redSky/status`;
       const redskyStatus = await safe(redskyPath);
       diag(`telephony/config/locations/${locIdEnc}/redSky/status`, redskyStatus);
 
-      // Emergency call notification config (tolerate 404/403)
       const ecnPath = `/telephony/config/locations/${locIdEnc}/emergencyCallNotification`;
       const emergencyNotif = await safe(ecnPath);
       diag(`telephony/config/locations/${locIdEnc}/emergencyCallNotification`, emergencyNotif);
@@ -9461,21 +9472,22 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
       const pstnType = conn.ok ? normalizePstnType(conn.data) : "UNKNOWN";
       const pstnDisplayName = conn.ok ? readDisplayNameFromConn(conn.data) : null;
 
-      // Requested: RedSky orgStatus badge (from per-location status if present)
       const rsOrgStatus = redskyStatus.ok ? redSkyBadge(redskyStatus.data?.orgStatus) : "UNKNOWN";
+      const rsCompliance = redskyStatus.ok
+        ? String(redskyStatus.data?.complianceStatus || "").toUpperCase()
+        : "";
 
-      const rsCompliance =
-        redskyStatus.ok ? String(redskyStatus.data?.complianceStatus || "").toUpperCase() : "";
-
-      // Existing behavior: treat COMPLIANT as "configured"
       const emergencyConfigured = rsCompliance === "COMPLIANT";
 
       return {
         id: locId,
         name: loc.name || "Unknown Location",
-        callingEnabled: true,
+        callingEnabled: !!(
+          loc.callingEnabled ??
+          loc.enabled ??
+          true
+        ),
 
-        // PSTN
         pstn: {
           option: pstnType,
           displayName: pstnDisplayName,
@@ -9483,14 +9495,12 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
           connectionOptions: connOptions.ok ? connOptions.data : null
         },
 
-        // Counts
         trunkCount,
         dids: {
           total: didTotal,
           unassigned: didUnassigned
         },
 
-        // E911 / RedSky
         redSky: {
           orgStatusBadge: rsOrgStatus,
           complianceStatus: redskyStatus.ok ? redskyStatus.data?.complianceStatus : null,
@@ -9500,22 +9510,19 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
           raw: redskyStatus.ok ? redskyStatus.data : null
         },
 
-        // Emergency Call Notification
         emergencyCallNotification: emergencyNotif.ok ? emergencyNotif.data : null,
-
         emergencyConfigured
       };
     });
 
     // -------------------------------
-    // 4) Org-level connection options (optional)
-    //     (If unsupported, safe() will just capture diagnostics)
+    // 4) ORG-LEVEL CONNECTION OPTIONS
     // -------------------------------
     const orgConnOptionsRes = await safe("/telephony/pstn/connectionOptions");
     diag("telephony/pstn/connectionOptions", orgConnOptionsRes);
 
     // -------------------------------
-    // 5) Risk detection (keeps your original intent)
+    // 5) MISCONFIG / RISK
     // -------------------------------
     const misconfigurations = [];
 
@@ -9533,16 +9540,13 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
       }
     }
 
-    // Requested: RedSky orgStatus badge (org-level best-effort)
-    // If global complianceStatus is available, we still may not have orgStatus here,
-    // so we primarily use per-location badges; org badge is derived best-effort.
     const orgRedSkyBadge = (() => {
-      // Prefer any per-location badge that is ENABLED
       const anyEnabled = enrichedLocations.some((l) => l?.redSky?.orgStatusBadge === "ENABLED");
       if (anyEnabled) return "ENABLED";
-      // Otherwise unknown/disabled best-effort
+
       const anyDisabled = enrichedLocations.some((l) => l?.redSky?.orgStatusBadge === "DISABLED");
       if (anyDisabled) return "DISABLED";
+
       return "UNKNOWN";
     })();
 
@@ -9559,16 +9563,12 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
         },
 
         locations: enrichedLocations,
-
-        // Raw lists (keeps your original output shape)
         trunks: trunksRaw,
         numbers: numbersRaw,
         routeGroups: routeGroupsRaw,
 
-        // Requested additions
         connectionOptions: orgConnOptionsRes.ok ? orgConnOptionsRes.data : null,
 
-        // Compliance
         compliance: redskyGlobal.ok ? redskyGlobal.data : null,
         redSky: {
           orgStatusBadge: orgRedSkyBadge
@@ -9587,6 +9587,7 @@ if (url.pathname === "/api/pstn" && request.method === "GET") {
 
     await cachePutJson(cacheReq, payload, ttl);
     return json({ ...payload, _cache: "MISS" }, 200);
+
   } catch (err) {
     return json(
       {
