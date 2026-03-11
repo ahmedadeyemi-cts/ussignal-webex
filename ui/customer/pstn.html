@@ -1315,7 +1315,7 @@ function setRAG(score){
 ========================= */
 function buildLocationSelect(model){
   const sel = $("locationSelect");
-  const locs = model.locations || [];
+  const locs = (model.locations || []).filter(l => l.pstnType !== "NO_PSTN");
   sel.innerHTML = "";
   const optAll = document.createElement("option");
   optAll.value = "ALL";
