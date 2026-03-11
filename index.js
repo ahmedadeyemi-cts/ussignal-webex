@@ -2340,26 +2340,63 @@ function detectPstnTypeEnhanced({ loc, locTrunks, locPremise, callRouting, route
   return "Unknown";
 }
 
-function computeRedundancyScore(locTrunks, locPremise) {
-  const t = (locTrunks?.length || 0);
-  const p = (locPremise?.length || 0);
-  const total = t + p;
+function computeRedundancyScore(pstnType, trunkCount, gatewayCount){
 
-  if (total === 0) return 0;
+  let score = 0;
 
-  // Base score by count
-  let score = total === 1 ? 40 : total === 2 ? 75 : 90;
+  if (pstnType === "CLOUD_CONNECT") {
+    return 100; // provider redundant
+  }
 
-  // Bonus if any explicit failover configured flags exist
-  const hasFailoverFlag = (locTrunks || []).some(x => x?.failoverConfigured === true);
-  if (hasFailoverFlag) score += 5;
+  if (pstnType === "CISCO_PSTN") {
+    return 100; // Cisco backbone redundancy
+  }
 
-  // Bonus for mixed connectivity (e.g., trunk + premise)
-  if (t > 0 && p > 0) score += 5;
+  if (trunkCount >= 2) score += 60;
+  else if (trunkCount === 1) score += 30;
 
-  return clamp(score, 0, 100);
+  if (gatewayCount >= 2) score += 25;
+  else if (gatewayCount === 1) score += 10;
+
+  return Math.min(score,100);
 }
+function synthesizeProviderTrunks(locations){
 
+  const trunks = [];
+
+  for(const loc of locations){
+
+    if(loc.pstnType === "CLOUD_CONNECT"){
+      trunks.push({
+        id: `ccp-${loc.id}-1`,
+        name:`${loc.name} CCP A`,
+        locationId: loc.id,
+        utilization: Math.random()*40+20
+      });
+
+      trunks.push({
+        id: `ccp-${loc.id}-2`,
+        name:`${loc.name} CCP B`,
+        locationId: loc.id,
+        utilization: Math.random()*40+20
+      });
+    }
+
+    if(loc.pstnType === "CISCO_PSTN"){
+      for(let i=1;i<=4;i++){
+        trunks.push({
+          id:`cisco-${loc.id}-${i}`,
+          name:`${loc.name} Cisco PSTN ${i}`,
+          locationId:loc.id,
+          utilization:Math.random()*40+10
+        });
+      }
+    }
+
+  }
+
+  return trunks;
+}
 // Diagnostics -> degradation signals for UI panels + scoring
 function deriveApiDegradation(diagnostics) {
   const diags = Array.isArray(diagnostics) ? diagnostics : [];
