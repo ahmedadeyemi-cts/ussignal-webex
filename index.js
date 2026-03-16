@@ -11160,7 +11160,7 @@ async scheduled(event, env, ctx) {
     }
 
   })());
-
+}
 }
 async function ciBackgroundPollAll(env) {
 
