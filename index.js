@@ -221,6 +221,59 @@ async function resolveOrgIdForAdmin(env, key) {
 
   return null;
 }
+async function discoverNewTenants(env, orgs) {
+
+  for (const org of orgs) {
+
+    const existing = await env.ORG_MAP_KV.get(`org:${org.id}`);
+
+    if (!existing) {
+
+      console.log("New Webex tenant discovered:", org.displayName);
+
+      const tenantRecord = {
+        orgId: org.id,
+        name: org.displayName,
+        discoveredAt: new Date().toISOString(),
+        telemetryEnabled: true
+      };
+
+      await env.ORG_MAP_KV.put(
+        `org:${org.id}`,
+        JSON.stringify(tenantRecord)
+      );
+
+      // initialize telemetry cache
+      await env.WEBEX.put(
+        `health:${org.id}`,
+        JSON.stringify({ initialized: true })
+      );
+
+      await env.WEBEX.put(
+        `quality:${org.id}`,
+        JSON.stringify({ initialized: true })
+      );
+
+      try {
+        await warmDelegation(env, org.id);
+      } catch {
+        console.log("Delegation warm failed:", org.id);
+      }
+
+      try {
+
+        const health = await computeTenantHealth(env, org.id);
+        await storeHealth(env, health);
+
+        const pstn = await buildPstnDeep(env, org.id);
+        await storePstnSnapshot(env, org.id, pstn);
+
+      } catch {
+        console.log("Initial telemetry failed:", org.id);
+      }
+    }
+  }
+}
 async function runCachedCallReports(env) {
 
   const orgResult = await webexFetch(env, "/organizations");
@@ -10874,6 +10927,7 @@ async scheduled(event, env, ctx) {
       if (!orgResult.ok) return;
 
       const orgs = orgResult.data.items || [];
+     await discoverNewTenants(env, orgs);
      // 🔵 Delegation prewarm (safe, lightweight)
    await mapLimit(orgs, 5, async (org) => {
    await runTelemetryCycle(env);
