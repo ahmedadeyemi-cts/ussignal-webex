@@ -48,7 +48,44 @@ const ANALYTICS_BASE_DEFAULT = "https://analytics-calling.webexapis.com/v1";
 function webexBase(env) {
   return (env.WEBEX_API_BASE || WEBEX_API_BASE_DEFAULT).replace(/\/+$/, "");
 }
+async function sendAdminNotification(env, subject, html) {
 
+  if (!env.BREVO_API_KEY || !env.BREVO_SENDER_EMAIL) {
+    console.log("Email not configured");
+    return;
+  }
+
+  const recipients = (env.ADMIN_EMAILS || "")
+    .split(",")
+    .map(e => e.trim())
+    .filter(Boolean);
+
+  if (!recipients.length) return;
+
+  const payload = {
+    sender: {
+      name: "US Signal Webex Portal",
+      email: env.BREVO_SENDER_EMAIL
+    },
+    to: recipients.map(email => ({ email })),
+    subject,
+    htmlContent: html
+  };
+
+  const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "api-key": env.BREVO_API_KEY
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    console.error("Brevo email failed:", text);
+  }
+}
 function analyticsBase(env) {
   return (env.WEBEX_ANALYTICS_BASE || ANALYTICS_BASE_DEFAULT).replace(/\/+$/, "");
 }
@@ -10927,108 +10964,153 @@ async scheduled(event, env, ctx) {
       if (!orgResult.ok) return;
 
       const orgs = orgResult.data.items || [];
-     await discoverNewTenants(env, orgs);
-     // 🔵 Delegation prewarm (safe, lightweight)
-   await mapLimit(orgs, 5, async (org) => {
-   await runTelemetryCycle(env);
-   try {
-    await warmDelegation(env, org.id);
-  } catch (e) {
-    console.log("Delegation warm failed for:", org.id);
-  }
-});
-     ctx.waitUntil(ciBackgroundPollAll(env));
-     ctx.waitUntil(runCachedCallReports(env));
-      const CONCURRENCY = 5;
-      await ciAutoRefreshAllTenants(env);
-     // 🔵 MEDIA QUALITY AUTO-RUN (4 hour throttle)
-const FOUR_HOURS = 60 * 60 * 4;
+     if (event.cron === "0 6 * * *") {
 
-await mapLimit(orgs, 3, async (org) => {
-  try {
+  // Send email confirming API success
+  await sendAdminNotification(
+    env,
+    "Webex Org Discovery Successful",
+    `
+    <h3>Webex Organization API Successful</h3>
+    <p>The Webex API call to <code>/organizations</code> completed successfully.</p>
 
-    const last = await env.WEBEX.get(`media:lastRun:${org.id}`);
-    const now = Date.now();
+    <p><strong>Total Organizations Detected:</strong> ${orgs.length}</p>
 
-    if (last && now - Number(last) < FOUR_HOURS * 1000) {
-      return; // skip if not due
+    <table border="1" cellpadding="6" cellspacing="0">
+      <tr>
+        <th>Org Name</th>
+        <th>Org ID</th>
+      </tr>
+      ${orgs.map(o => `
+        <tr>
+          <td>${o.displayName || "Unknown"}</td>
+          <td>${o.id}</td>
+        </tr>
+      `).join("")}
+    </table>
+
+    <p>Timestamp: ${new Date().toISOString()}</p>
+    `
+  );
+
+  await discoverNewTenants(env, orgs);
+
+  await mapLimit(orgs, 5, async (org) => {
+    await runTelemetryCycle(env);
+    try {
+      await warmDelegation(env, org.id);
+    } catch {
+      console.log("Delegation warm failed:", org.id);
+    }
+  });
+
+  ctx.waitUntil(ciBackgroundPollAll(env));
+  ctx.waitUntil(runCachedCallReports(env));
+
+  const CONCURRENCY = 5;
+
+  await ciAutoRefreshAllTenants(env);
+
+  // MEDIA QUALITY REPORT
+  const FOUR_HOURS = 60 * 60 * 4;
+
+  await mapLimit(orgs, 3, async (org) => {
+
+    try {
+
+      const last = await env.WEBEX.get(`media:lastRun:${org.id}`);
+      const now = Date.now();
+
+      if (last && now - Number(last) < FOUR_HOURS * 1000) return;
+
+      const tplRes = await webexFetchSafe(env, "/report/templates", org.id);
+      if (!tplRes.ok) return;
+
+      const template = tplRes.data.items.find(
+        t => t.title === "Calling Media Quality Report"
+      );
+
+      if (!template) return;
+
+      const token = await getAccessToken(env);
+
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - 7);
+
+      await fetch(
+        `https://webexapis.com/v1/reports?orgId=${encodeURIComponent(org.id)}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            templateId: template.Id,
+            startDate: start.toISOString().slice(0,10),
+            endDate: end.toISOString().slice(0,10)
+          })
+        }
+      );
+
+      await env.WEBEX.put(`media:lastRun:${org.id}`, String(now));
+
+    } catch {
+      console.log("Media auto-run failed:", org.id);
     }
 
-    const tplRes = await webexFetchSafe(env, "/report/templates", org.id);
-    if (!tplRes.ok) return;
+  });
 
-    const template = tplRes.data.items.find(t =>
-      t.title === "Calling Media Quality Report"
+  await mapLimit(orgs, CONCURRENCY, async (org) => {
+
+    const health = await computeTenantHealth(env, org.id);
+    await storeHealth(env, health);
+
+    const quality = await computeCallQuality(env, org.id);
+
+    await env.WEBEX.put(
+      `quality:${org.id}`,
+      JSON.stringify(quality),
+      { expirationTtl: 60 * 30 }
     );
-    if (!template) return;
 
-    const token = await getAccessToken(env);
-  // const token = await getAccessTokenForOrg(env, org.id);
+    const pstn = await buildPstnDeep(env, org.id);
+    await storePstnSnapshot(env, org.id, pstn);
 
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 7);
-
-   // await fetch("https://webexapis.com/v1/reports", {
-   await fetch(`https://webexapis.com/v1/reports?orgId=${encodeURIComponent(org.id)}`, {
-
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        templateId: template.Id,
-        startDate: start.toISOString().slice(0,10),
-        endDate: end.toISOString().slice(0,10)
-      })
+    await appendPstnTrend(env, org.id, {
+      day: new Date().toISOString().slice(0, 10),
+      score: pstn?.scores?.pstnObservabilityScore ??
+             pstn?.scores?.pstnReliabilityScore ?? null,
+      reliability: pstn?.scores?.pstnReliabilityScore ?? null,
+      capacity: pstn?.scores?.pstnCapacityScore ?? null,
+      redundancy: pstn?.scores?.pstnRedundancyScore ?? null,
+      totalDids: pstn?.totals?.didsTotal ?? null,
+      assignedDids: pstn?.totals?.didsAssigned ?? null
     });
 
-    await env.WEBEX.put(`media:lastRun:${org.id}`, String(now));
+  });
 
-  } catch(e){
-    console.log("Media auto-run failed:", org.id);
+  try {
+
+    const globalPayload = await computeGlobalSummary(env);
+    await putGlobalSummarySnapshot(env, globalPayload);
+
+    console.log("Global summary snapshot rebuilt via cron");
+
+  } catch (e) {
+
+    console.error("Global summary rebuild failed:", e);
+
   }
-});
-     
-      await mapLimit(orgs, CONCURRENCY, async (org) => {
 
-        const health = await computeTenantHealth(env, org.id);
-        await storeHealth(env, health);
+  console.log("Health + Quality + PSTN snapshots updated");
 
-        const quality = await computeCallQuality(env, org.id);
-        await env.WEBEX.put(
-          `quality:${org.id}`,
-          JSON.stringify(quality),
-          { expirationTtl: 60 * 30 }
-        );
+} // ✅ CLOSE THE 6AM CRON BLOCK
 
-         
-        const pstn = await buildPstnDeep(env, org.id);
-        await storePstnSnapshot(env, org.id, pstn);
 
-        await appendPstnTrend(env, org.id, {
-          day: new Date().toISOString().slice(0, 10),
-          score: pstn?.scores?.pstnObservabilityScore ?? pstn?.scores?.pstnReliabilityScore ?? null,
-          reliability: pstn?.scores?.pstnReliabilityScore ?? null,
-          capacity: pstn?.scores?.pstnCapacityScore ?? null,
-          redundancy: pstn?.scores?.pstnRedundancyScore ?? null,
-          totalDids: pstn?.totals?.didsTotal ?? null,
-          assignedDids: pstn?.totals?.didsAssigned ?? null
-        });
 
-      });
-      // Global snapshot once per cron run
-      try {
-        const globalPayload = await computeGlobalSummary(env);
-        await putGlobalSummarySnapshot(env, globalPayload);
-        console.log("Global summary snapshot rebuilt via cron");
-      } catch (e) {
-        console.error("Global summary rebuild failed:", e);
-      }
-
-      console.log("Health + Quality + PSTN snapshots updated");
-     // 🔵 Nightly AI summary (2AM UTC)
+// 🔵 2AM AI SUMMARY
 if (event.cron === "0 2 * * *") {
 
   for (const org of orgs) {
@@ -11040,8 +11122,10 @@ if (event.cron === "0 2 * * *") {
     const values = [];
 
     for (const key of rollups.keys) {
+
       const data = await env.WEBEX.get(key.name, "json");
       if (data) values.push(data);
+
     }
 
     const aiSummary = generateAiSummary(values);
@@ -11050,18 +11134,12 @@ if (event.cron === "0 2 * * *") {
       `media:ai:${org.id}`,
       JSON.stringify(aiSummary)
     );
+
   }
 
   console.log("Nightly AI summaries computed");
-}
 
-    } catch (err) {
-      console.error("Scheduled task failed:", err);
-     
-    }
-  })());
 }
- }; // 🔥 CLOSE EXPORT OBJECT HERE
 async function ciBackgroundPollAll(env) {
 
   const orgRes = await webexFetchSafe(env, "/organizations", null);
