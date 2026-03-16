@@ -43,5 +43,10 @@
     "WEBEX_API_BASE_DEFAULT": "https://webexapis.com/v1",
     "SUPPORT_EMAIL": "DLD-customercare@ussignal.com",
     "PORTAL_ENV": "production"
+  },
+"triggers": {
+    "crons": [
+      "0 6 * * *"
+    ]
   }
 }
