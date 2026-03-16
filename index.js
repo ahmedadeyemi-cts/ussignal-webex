@@ -10860,11 +10860,14 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
     }
   },
 async scheduled(event, env, ctx) {
+ console.log("Cron fired:", event.cron, new Date().toISOString());
   ctx.waitUntil((async () => {
-   ctx.waitUntil(runTelemetryCycle(env));
-   console.log("Running delegation prewarm");
-    ctx.waitUntil(prewarmAllTenants(env));
-   ctx.waitUntil(runDailyPartnerReports(env, ctx, { fanout: 6 }));
+
+   console.log("Running scheduled automation cycle");
+
+   await runTelemetryCycle(env);
+   await prewarmAllTenants(env);
+   await runDailyPartnerReports(env, ctx, { fanout: 6 });
     try {
 
       const orgResult = await webexFetch(env, "/organizations");
