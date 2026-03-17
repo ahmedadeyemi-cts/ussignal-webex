@@ -49,10 +49,12 @@ function webexBase(env) {
   return (env.WEBEX_API_BASE || WEBEX_API_BASE_DEFAULT).replace(/\/+$/, "");
 }
 async function sendAdminNotification(env, subject, html) {
-
   if (!env.BREVO_API_KEY || !env.BREVO_SENDER_EMAIL) {
-    console.log("Email not configured");
-    return;
+    console.log("Email not configured", {
+      hasApiKey: !!env.BREVO_API_KEY,
+      hasSender: !!env.BREVO_SENDER_EMAIL
+    });
+    return { ok: false, reason: "not_configured" };
   }
 
   const recipients = (env.ADMIN_EMAILS || "")
@@ -60,7 +62,10 @@ async function sendAdminNotification(env, subject, html) {
     .map(e => e.trim())
     .filter(Boolean);
 
-  if (!recipients.length) return;
+  if (!recipients.length) {
+    console.log("Email not configured: no recipients");
+    return { ok: false, reason: "no_recipients" };
+  }
 
   const payload = {
     sender: {
@@ -72,18 +77,40 @@ async function sendAdminNotification(env, subject, html) {
     htmlContent: html
   };
 
-  const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "api-key": env.BREVO_API_KEY
-    },
-    body: JSON.stringify(payload)
+  console.log("Attempting Brevo email send", {
+    subject,
+    recipients,
+    sender: env.BREVO_SENDER_EMAIL
   });
 
-  if (!resp.ok) {
+  try {
+    const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "api-key": env.BREVO_API_KEY
+      },
+      body: JSON.stringify(payload)
+    });
+
     const text = await resp.text();
-    console.error("Brevo email failed:", text);
+
+    console.log("Brevo response", {
+      status: resp.status,
+      ok: resp.ok,
+      body: text
+    });
+
+    if (!resp.ok) {
+      console.error("Brevo email failed:", resp.status, text);
+      return { ok: false, status: resp.status, body: text };
+    }
+
+    console.log("Brevo email sent successfully");
+    return { ok: true, status: resp.status, body: text };
+  } catch (err) {
+    console.error("Brevo fetch error:", err);
+    return { ok: false, reason: "fetch_error", error: String(err) };
   }
 }
 function analyticsBase(env) {
@@ -10952,7 +10979,13 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
 async scheduled(event, env, ctx) {
 
   console.log("Cron fired:", event.cron, new Date().toISOString());
-
+   await env.WEBEX.put(
+  "cron:lastRun",
+  JSON.stringify({
+    cron: event.cron,
+    timestamp: new Date().toISOString()
+  })
+);
   ctx.waitUntil((async () => {
 
     console.log("Running scheduled automation cycle");
@@ -10976,34 +11009,45 @@ async scheduled(event, env, ctx) {
       // --------------------------------------------------
       // 06:00 CRON – MAIN TELEMETRY PIPELINE
       // --------------------------------------------------
-      if (event.cron === "0 6 * * *") {
+      if (event.cron === "0 18 * * *") {
 
-        // Email confirmation
-        await sendAdminNotification(
-          env,
-          "Webex Org Discovery Successful",
-          `
-          <h3>Webex Organization API Successful</h3>
-          <p>The Webex API call to <code>/organizations</code> completed successfully.</p>
+      // Email confirmation + tracking
+const emailResult = await sendAdminNotification(
+  env,
+  "Webex Org Discovery Successful",
+  `
+  <h3>Webex Organization API Successful</h3>
+  <p>The Webex API call to <code>/organizations</code> completed successfully.</p>
 
-          <p><strong>Total Organizations Detected:</strong> ${orgs.length}</p>
+  <p><strong>Total Organizations Detected:</strong> ${orgs.length}</p>
 
-          <table border="1" cellpadding="6" cellspacing="0">
-            <tr>
-              <th>Org Name</th>
-              <th>Org ID</th>
-            </tr>
-            ${orgs.map(o => `
-              <tr>
-                <td>${o.displayName || "Unknown"}</td>
-                <td>${o.id}</td>
-              </tr>
-            `).join("")}
-          </table>
+  <table border="1" cellpadding="6" cellspacing="0">
+    <tr>
+      <th>Org Name</th>
+      <th>Org ID</th>
+    </tr>
+    ${orgs.map(o => `
+      <tr>
+        <td>${o.displayName || "Unknown"}</td>
+        <td>${o.id}</td>
+      </tr>
+    `).join("")}
+  </table>
 
-          <p>Timestamp: ${new Date().toISOString()}</p>
-          `
-        );
+  <p>Timestamp: ${new Date().toISOString()}</p>
+  `
+);
+
+// Persist result so you can verify execution
+await env.WEBEX.put(
+  "cron:lastEmailAttempt",
+  JSON.stringify({
+    cron: event.cron,
+    timestamp: new Date().toISOString(),
+    orgCount: orgs.length,
+    emailResult
+  })
+);
 
         // Detect new tenants
         await discoverNewTenants(env, orgs);
