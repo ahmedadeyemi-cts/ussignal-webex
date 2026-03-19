@@ -245,31 +245,61 @@ async function pollPartnerReports(env) {
     // 🔥 IF READY → DOWNLOAD
     if (data.status === "completed" && data.downloadUrl) {
 
-      console.log("Downloading report:", record.reportId);
+  console.log("Downloading report:", record.reportId);
 
-      const fileRes = await fetch(data.downloadUrl);
-const contentType = fileRes.headers.get("content-type");
+  const fileRes = await fetch(data.downloadUrl);
+  const contentType = fileRes.headers.get("content-type");
 
-let csvText;
+  let csvText;
 
-if (contentType.includes("zip")) {
+  if (contentType && contentType.includes("zip")) {
 
-  const buffer = await fileRes.arrayBuffer();
-  csvText = await extractCSVFromZip(buffer);
+    const buffer = await fileRes.arrayBuffer();
+    csvText = await extractCSVFromZip(buffer);
 
-} else {
+  } else {
 
-  csvText = await fileRes.text();
+    csvText = await fileRes.text();
+
+  }
+
+  // 🔴 LOOP THROUGH ALL ORGS AND STORE INDIVIDUAL DATASETS
+  for (const org of orgs) {
+
+    const filtered = parseAndFilterCSV(csvText, org.id);
+
+    if (!filtered.length) continue;
+
+    // Store full dataset per org
+    await env.WEBEX.put(
+      `cdr:org:${org.id}`,
+      JSON.stringify(filtered),
+      { expirationTtl: 60 * 60 * 24 }
+    );
+
+    // 🔥 Build summary
+    const summary = {
+      totalCalls: filtered.length,
+      totalDuration: filtered.reduce(
+        (a, r) => a + Number(r.duration || 0),
+        0
+      ),
+      failedCalls: filtered.filter(
+        r => r.callResult !== "success"
+      ).length
+    };
+
+    await env.WEBEX.put(
+      `cdr:summary:${org.id}`,
+      JSON.stringify(summary),
+      { expirationTtl: 60 * 60 * 24 }
+    );
+
+  }
+
+  console.log("CDR processed and stored per org");
 
 }
-
-      await env.WEBEX.put(
-        `cdr:data:${record.reportId}`,
-        csvText,
-        { expirationTtl: 60 * 60 * 24 * 7 } // 7 days
-      );
-
-    }
   }
 }
 async function storeHealth(env, health) {
