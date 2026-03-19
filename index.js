@@ -49,12 +49,10 @@ function webexBase(env) {
   return (env.WEBEX_API_BASE || WEBEX_API_BASE_DEFAULT).replace(/\/+$/, "");
 }
 async function sendAdminNotification(env, subject, html) {
+
   if (!env.BREVO_API_KEY || !env.BREVO_SENDER_EMAIL) {
-    console.log("Email not configured", {
-      hasApiKey: !!env.BREVO_API_KEY,
-      hasSender: !!env.BREVO_SENDER_EMAIL
-    });
-    return { ok: false, reason: "not_configured" };
+    console.log("Email not configured");
+    return;
   }
 
   const recipients = (env.ADMIN_EMAILS || "")
@@ -62,10 +60,7 @@ async function sendAdminNotification(env, subject, html) {
     .map(e => e.trim())
     .filter(Boolean);
 
-  if (!recipients.length) {
-    console.log("Email not configured: no recipients");
-    return { ok: false, reason: "no_recipients" };
-  }
+  if (!recipients.length) return;
 
   const payload = {
     sender: {
@@ -77,40 +72,18 @@ async function sendAdminNotification(env, subject, html) {
     htmlContent: html
   };
 
-  console.log("Attempting Brevo email send", {
-    subject,
-    recipients,
-    sender: env.BREVO_SENDER_EMAIL
+  const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "api-key": env.BREVO_API_KEY
+    },
+    body: JSON.stringify(payload)
   });
 
-  try {
-    const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "api-key": env.BREVO_API_KEY
-      },
-      body: JSON.stringify(payload)
-    });
-
+  if (!resp.ok) {
     const text = await resp.text();
-
-    console.log("Brevo response", {
-      status: resp.status,
-      ok: resp.ok,
-      body: text
-    });
-
-    if (!resp.ok) {
-      console.error("Brevo email failed:", resp.status, text);
-      return { ok: false, status: resp.status, body: text };
-    }
-
-    console.log("Brevo email sent successfully");
-    return { ok: true, status: resp.status, body: text };
-  } catch (err) {
-    console.error("Brevo fetch error:", err);
-    return { ok: false, reason: "fetch_error", error: String(err) };
+    console.error("Brevo email failed:", text);
   }
 }
 function analyticsBase(env) {
@@ -1499,163 +1472,6 @@ async function createWebexReport(env, orgId, reportType, params = {}) {
 
   return { ok:true, data };
 }
-async function createPartnerReport(env) {
-  const token = await getAccessToken(env);
-
-  const end = new Date();
-  const start = new Date();
-  start.setDate(end.getDate() - 2);
-
-  const res = await fetch("https://webexapis.com/v1/partner/reports", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      templateId: 10010,
-      startDate: start.toISOString().slice(0,10),
-      endDate: end.toISOString().slice(0,10),
-      regionId: "US"
-    })
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    console.error("Report creation failed", data);
-    return null;
-  }
-
-  // store reportId
-  await env.WEBEX.put(
-    `cdr:report:${data.reportId}`,
-    JSON.stringify({
-      reportId: data.reportId,
-      status: "created",
-      created: new Date().toISOString()
-    })
-  );
-
-  return data.reportId;
-}
-
-async function extractCSVFromZip(zipBuffer) {
-
-  const zip = await JSZip.loadAsync(zipBuffer);
-
-  const files = Object.keys(zip.files);
-
-  // Find first CSV file
-  const csvFile = files.find(f => f.endsWith(".csv"));
-
-  if (!csvFile) {
-    throw new Error("No CSV found in ZIP");
-  }
-
-  const content = await zip.files[csvFile].async("string");
-
-  return content;
-}
-
-async function pollPartnerReports(env, orgs) {
-
-  const list = await env.WEBEX.list({ prefix: "cdr:report:" });
-
-  const token = await getAccessToken(env);
-
-  for (const key of list.keys) {
-
-    const record = await env.WEBEX.get(key.name, "json");
-    if (!record) continue;
-
-    if (record.status === "completed") continue;
-
-    const res = await fetch(
-      `https://webexapis.com/v1/partner/reports/${record.reportId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      console.log("Poll failed", record.reportId);
-      continue;
-    }
-
-    // 🔥 UPDATE STATUS
-    await env.WEBEX.put(
-      key.name,
-      JSON.stringify({
-        ...record,
-        status: data.status,
-        downloadUrl: data.downloadUrl || null,
-        updated: new Date().toISOString()
-      })
-    );
-
-    // 🔥 IF READY → DOWNLOAD
-   if (data.status === "completed" && data.downloadUrl) {
-
-  console.log("Downloading report:", record.reportId);
-
-  const fileRes = await fetch(data.downloadUrl);
-  const contentType = fileRes.headers.get("content-type");
-
-  let csvText;
-
-  if (contentType && contentType.includes("zip")) {
-
-    const buffer = await fileRes.arrayBuffer();
-    csvText = await extractCSVFromZip(buffer);
-
-  } else {
-
-    csvText = await fileRes.text();
-
-  }
-
-  // 🔴 LOOP THROUGH ALL ORGS AND STORE INDIVIDUAL DATASETS
-  for (const org of orgs) {
-
-    const filtered = parseAndFilterCSV(csvText, org.id);
-
-    if (!filtered.length) continue;
-
-    // Store full dataset per org
-    await env.WEBEX.put(
-      `cdr:org:${org.id}`,
-      JSON.stringify(filtered),
-      { expirationTtl: 60 * 60 * 24 }
-    );
-
-    // 🔥 Build summary
-    const summary = {
-      totalCalls: filtered.length,
-      totalDuration: filtered.reduce(
-        (a, r) => a + Number(r.duration || 0),
-        0
-      ),
-      failedCalls: filtered.filter(
-        r => r.callResult !== "success"
-      ).length
-    };
-
-    await env.WEBEX.put(
-      `cdr:summary:${org.id}`,
-      JSON.stringify(summary),
-      { expirationTtl: 60 * 60 * 24 }
-    );
-
-  }
-
-  console.log("CDR processed and stored per org");
-
-}
 
 // Get report status
 async function getWebexReport(env, orgId, reportId) {
@@ -2544,7 +2360,6 @@ async function computeTenantHealth(env, orgId) {
   };
 
 }
-
 async function computeCallQuality(env, orgId) {
 
   const result = await webexFetch(
@@ -3486,32 +3301,6 @@ async function runDailyPartnerReports(env, ctx, { fanout = 6 } = {}) {
   await env.WEBEX.delete(lockKey);
   return { ok:true, snapshot };
 }
-   function parseAndFilterCSV(csvText, targetOrgId) {
-
-  const [header, ...rows] = csvText.split("\n").filter(Boolean);
-  const keys = header.split(",");
-
-  const orgIndex = keys.findIndex(k =>
-    k.toLowerCase().includes("org")
-  );
-
-  if (orgIndex === -1) {
-    console.log("No org column found in CSV");
-    return [];
-  }
-
-  return rows.map(row => {
-
-    const values = row.split(",");
-    const obj = Object.fromEntries(keys.map((k, i) => [k, values[i]]));
-
-    return obj;
-
-  }).filter(row => row[keys[orgIndex]] === targetOrgId);
-
-}
-  }
-}
 export default {
   async fetch(request, env, ctx) {
     try {
@@ -3880,23 +3669,6 @@ if (url.pathname === "/admin/observability") {
   return json({
     summary,
     items: results
-  });
-}
-     if (url.pathname === "/api/org-hydration") {
-
-  const list = await env.WEBEX.list({ prefix: "org:hydration:" });
-
-  const items = [];
-
-  for (const key of list.keys) {
-    const data = await env.WEBEX.get(key.name, "json");
-    if (data) items.push(data);
-  }
-
-  return json({
-    ok: true,
-    count: items.length,
-    items
   });
 }
      if (url.pathname === "/api/admin/run-telemetry") {
@@ -11177,18 +10949,9 @@ if (url.pathname === "/api/debug/brevo" && request.method === "GET") {
       return json({ error: "internal_error", message: e.message }, 500);
     }
   },
-
 async scheduled(event, env, ctx) {
 
   console.log("Cron fired:", event.cron, new Date().toISOString());
-
-  await env.WEBEX.put(
-    "cron:lastRun",
-    JSON.stringify({
-      cron: event.cron,
-      timestamp: new Date().toISOString()
-    })
-  );
 
   ctx.waitUntil((async () => {
 
@@ -11196,16 +10959,12 @@ async scheduled(event, env, ctx) {
 
     try {
 
-      // --------------------------------------------------
-      // CORE AUTOMATION (ALWAYS RUNS)
-      // --------------------------------------------------
+      // Core automation that always runs
       await runTelemetryCycle(env);
       await prewarmAllTenants(env);
       await runDailyPartnerReports(env, ctx, { fanout: 6 });
 
-      // --------------------------------------------------
-      // FETCH ORGS (REQUIRED FIRST)
-      // --------------------------------------------------
+      // Fetch org list once
       const orgResult = await webexFetch(env, "/organizations");
       if (!orgResult.ok) {
         console.error("Failed to fetch organizations");
@@ -11215,141 +10974,41 @@ async scheduled(event, env, ctx) {
       const orgs = orgResult.data.items || [];
 
       // --------------------------------------------------
-      // CDR REPORT PIPELINE (SAFE NOW)
+      // 06:00 CRON – MAIN TELEMETRY PIPELINE
       // --------------------------------------------------
-      await createPartnerReport(env);
-      await pollPartnerReports(env, orgs);
+      if (event.cron === "0 6 * * *") {
 
-      // --------------------------------------------------
-      // 🟡 MAIN CRON (9AM PST = 18 UTC)
-      // --------------------------------------------------
-      if (event.cron === "0 18 * * *") {
-
-        // ==========================================
-        // 🔴 ORG HYDRATION (RETRY + TRACKING)
-        // ==========================================
-        await mapLimit(orgs, 5, async (org) => {
-
-          const MAX_RETRIES = 3;
-
-          for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-
-            try {
-
-              const res = await webexFetchSafe(env, `/organizations/${org.id}`, org.id);
-
-              if (res.ok) {
-
-                console.log(`Org hydrated (${attempt}):`, org.id);
-
-                await env.WEBEX.put(
-                  `org:hydration:${org.id}`,
-                  JSON.stringify({
-                    orgId: org.id,
-                    name: org.displayName || null,
-                    lastHydrated: new Date().toISOString(),
-                    status: "success",
-                    attempts: attempt
-                  })
-                );
-
-                return;
-              }
-
-            } catch (e) {
-              console.log(`Retry ${attempt} failed:`, org.id);
-            }
-
-            await new Promise(r => setTimeout(r, 500 * attempt));
-          }
-
-          // FINAL FAILURE
-          console.log("Org hydration FAILED:", org.id);
-
-          await env.WEBEX.put(
-            `org:hydration:${org.id}`,
-            JSON.stringify({
-              orgId: org.id,
-              name: org.displayName || null,
-              lastHydrated: new Date().toISOString(),
-              status: "failed",
-              attempts: MAX_RETRIES
-            })
-          );
-
-        });
-
-        // ==========================================
-        // 🔍 STALE / NEVER HYDRATED DETECTION
-        // ==========================================
-        const stale = [];
-
-        for (const org of orgs) {
-
-          const data = await env.WEBEX.get(`org:hydration:${org.id}`, "json");
-
-          if (!data?.lastHydrated) {
-            stale.push({ org, reason: "never hydrated" });
-            continue;
-          }
-
-          const age = Date.now() - new Date(data.lastHydrated).getTime();
-
-          if (age > 24 * 60 * 60 * 1000) {
-            stale.push({ org, reason: "stale >24h" });
-          }
-        }
-
-        // ==========================================
-        // 📧 SUCCESS EMAIL
-        // ==========================================
-        const emailResult = await sendAdminNotification(
+        // Email confirmation
+        await sendAdminNotification(
           env,
           "Webex Org Discovery Successful",
           `
           <h3>Webex Organization API Successful</h3>
-          <p><strong>Total Organizations:</strong> ${orgs.length}</p>
+          <p>The Webex API call to <code>/organizations</code> completed successfully.</p>
+
+          <p><strong>Total Organizations Detected:</strong> ${orgs.length}</p>
+
+          <table border="1" cellpadding="6" cellspacing="0">
+            <tr>
+              <th>Org Name</th>
+              <th>Org ID</th>
+            </tr>
+            ${orgs.map(o => `
+              <tr>
+                <td>${o.displayName || "Unknown"}</td>
+                <td>${o.id}</td>
+              </tr>
+            `).join("")}
+          </table>
+
           <p>Timestamp: ${new Date().toISOString()}</p>
           `
         );
 
-        await env.WEBEX.put(
-          "cron:lastEmailAttempt",
-          JSON.stringify({
-            cron: event.cron,
-            timestamp: new Date().toISOString(),
-            orgCount: orgs.length,
-            emailResult
-          })
-        );
-
-        // ==========================================
-        // ⚠️ ALERT IF ISSUES
-        // ==========================================
-        if (stale.length) {
-
-          await sendAdminNotification(
-            env,
-            "⚠️ Webex Hydration Alert",
-            `
-            <h3>Hydration Issues Detected</h3>
-            <p>${stale.length} org(s) require attention</p>
-
-            <ul>
-              ${stale.map(s => `
-                <li>${s.org.displayName || s.org.id} — ${s.reason}</li>
-              `).join("")}
-            </ul>
-            `
-          );
-
-        }
-
-        // ==========================================
-        // 🔄 EXISTING PIPELINE (UNCHANGED)
-        // ==========================================
+        // Detect new tenants
         await discoverNewTenants(env, orgs);
 
+        // Delegation warm
         await mapLimit(orgs, 5, async (org) => {
           try {
             await warmDelegation(env, org.id);
@@ -11366,9 +11025,7 @@ async scheduled(event, env, ctx) {
         const CONCURRENCY = 5;
         const FOUR_HOURS = 60 * 60 * 4;
 
-        // ==========================================
-        // 📊 MEDIA REPORTS
-        // ==========================================
+        // Media quality report
         await mapLimit(orgs, 3, async (org) => {
 
           try {
@@ -11417,9 +11074,7 @@ async scheduled(event, env, ctx) {
 
         });
 
-        // ==========================================
-        // 📈 TENANT METRICS
-        // ==========================================
+        // Tenant telemetry processing
         await mapLimit(orgs, CONCURRENCY, async (org) => {
 
           const health = await computeTenantHealth(env, org.id);
@@ -11449,24 +11104,26 @@ async scheduled(event, env, ctx) {
 
         });
 
-        // ==========================================
-        // 🌍 GLOBAL SNAPSHOT
-        // ==========================================
+        // Global summary snapshot
         try {
 
           const globalPayload = await computeGlobalSummary(env);
           await putGlobalSummarySnapshot(env, globalPayload);
 
-          console.log("Global summary snapshot rebuilt");
+          console.log("Global summary snapshot rebuilt via cron");
 
         } catch (e) {
+
           console.error("Global summary rebuild failed:", e);
+
         }
+
+        console.log("Health + Quality + PSTN snapshots updated");
 
       }
 
       // --------------------------------------------------
-      // 🌙 02:00 CRON – AI MEDIA
+      // 02:00 CRON – AI MEDIA SUMMARIES
       // --------------------------------------------------
       if (event.cron === "0 2 * * *") {
 
@@ -11497,12 +11154,14 @@ async scheduled(event, env, ctx) {
       }
 
     } catch (err) {
+
       console.error("Scheduled task failed:", err);
+
     }
 
   })());
 }
- };
+}
 async function ciBackgroundPollAll(env) {
 
   const orgRes = await webexFetchSafe(env, "/organizations", null);
