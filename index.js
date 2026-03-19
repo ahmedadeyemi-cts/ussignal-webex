@@ -202,7 +202,7 @@ async function createPartnerReport(env) {
 
   return data.reportId;
 }
-async function pollPartnerReports(env) {
+async function pollPartnerReports(env, orgs)
 
   const list = await env.WEBEX.list({ prefix: "cdr:report:" });
 
