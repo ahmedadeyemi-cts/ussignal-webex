@@ -3510,6 +3510,8 @@ async function runDailyPartnerReports(env, ctx, { fanout = 6 } = {}) {
   }).filter(row => row[keys[orgIndex]] === targetOrgId);
 
 }
+  }
+}
 export default {
   async fetch(request, env, ctx) {
     try {
@@ -5974,7 +5976,7 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
   }
 
   return json({ status: "sent", to: toEmail });
-
+}
      async function ciGetReportState(env, orgId, reportType) {
   const key = `ci:state:${orgId}:${reportType}`;
   const raw = await env.WEBEX.get(key);
