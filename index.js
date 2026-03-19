@@ -11484,8 +11484,7 @@ async scheduled(event, env, ctx) {
 
   })());
 }
-
-}
+ };  // ✅ ONLY ONE closing brace + semicolon
 async function ciBackgroundPollAll(env) {
 
   const orgRes = await webexFetchSafe(env, "/organizations", null);
