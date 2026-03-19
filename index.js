@@ -162,6 +162,103 @@ function isUnassignedNumber(n){
   if (!n?.owner && !n?.personId && !n?.workspaceId && !n?.virtualLineId) return true;
   return false;
 }
+async function createPartnerReport(env) {
+  const token = await getAccessToken(env);
+
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 2);
+
+  const res = await fetch("https://webexapis.com/v1/partner/reports", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      templateId: 10010,
+      startDate: start.toISOString().slice(0,10),
+      endDate: end.toISOString().slice(0,10),
+      regionId: "US"
+    })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    console.error("Report creation failed", data);
+    return null;
+  }
+
+  // store reportId
+  await env.WEBEX.put(
+    `cdr:report:${data.reportId}`,
+    JSON.stringify({
+      reportId: data.reportId,
+      status: "created",
+      created: new Date().toISOString()
+    })
+  );
+
+  return data.reportId;
+}
+async function pollPartnerReports(env) {
+
+  const list = await env.WEBEX.list({ prefix: "cdr:report:" });
+
+  const token = await getAccessToken(env);
+
+  for (const key of list.keys) {
+
+    const record = await env.WEBEX.get(key.name, "json");
+    if (!record) continue;
+
+    if (record.status === "completed") continue;
+
+    const res = await fetch(
+      `https://webexapis.com/v1/partner/reports/${record.reportId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.log("Poll failed", record.reportId);
+      continue;
+    }
+
+    // 🔥 UPDATE STATUS
+    await env.WEBEX.put(
+      key.name,
+      JSON.stringify({
+        ...record,
+        status: data.status,
+        downloadUrl: data.downloadUrl || null,
+        updated: new Date().toISOString()
+      })
+    );
+
+    // 🔥 IF READY → DOWNLOAD
+    if (data.status === "completed" && data.downloadUrl) {
+
+      console.log("Downloading report:", record.reportId);
+
+      const csvRes = await fetch(data.downloadUrl);
+      const csvText = await csvRes.text();
+
+      await env.WEBEX.put(
+        `cdr:data:${record.reportId}`,
+        csvText,
+        { expirationTtl: 60 * 60 * 24 * 7 } // 7 days
+      );
+
+    }
+  }
+}
 async function storeHealth(env, health) {
   await env.WEBEX.put(
     `health:${health.orgId}`,
