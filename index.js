@@ -3510,6 +3510,8 @@ async function runDailyPartnerReports(env, ctx, { fanout = 6 } = {}) {
   }).filter(row => row[keys[orgIndex]] === targetOrgId);
 
 }
+  }
+}
 export default {
   async fetch(request, env, ctx) {
     try {
