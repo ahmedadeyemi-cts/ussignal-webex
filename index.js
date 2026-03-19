@@ -3518,6 +3518,23 @@ if (path === "/api/admin/delegation-health") {
     results
   });
 }
+     if (url.pathname === "/api/org-hydration") {
+
+  const list = await env.WEBEX.list({ prefix: "org:hydration:" });
+
+  const items = [];
+
+  for (const key of list.keys) {
+    const data = await env.WEBEX.get(key.name, "json");
+    if (data) items.push(data);
+  }
+
+  return json({
+    ok: true,
+    count: items.length,
+    items
+  });
+}
       /* -----------------------------
    PIN UI
 ----------------------------- */
