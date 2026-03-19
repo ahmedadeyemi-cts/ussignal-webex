@@ -2544,30 +2544,7 @@ async function computeTenantHealth(env, orgId) {
   };
 
 }
-function parseAndFilterCSV(csvText, targetOrgId) {
 
-  const [header, ...rows] = csvText.split("\n").filter(Boolean);
-  const keys = header.split(",");
-
-  const orgIndex = keys.findIndex(k =>
-    k.toLowerCase().includes("org")
-  );
-
-  if (orgIndex === -1) {
-    console.log("No org column found in CSV");
-    return [];
-  }
-
-  return rows.map(row => {
-
-    const values = row.split(",");
-    const obj = Object.fromEntries(keys.map((k, i) => [k, values[i]]));
-
-    return obj;
-
-  }).filter(row => row[keys[orgIndex]] === targetOrgId);
-
-}
 
 async function computeCallQuality(env, orgId) {
 
