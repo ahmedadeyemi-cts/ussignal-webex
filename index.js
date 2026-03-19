@@ -247,8 +247,21 @@ async function pollPartnerReports(env) {
 
       console.log("Downloading report:", record.reportId);
 
-      const csvRes = await fetch(data.downloadUrl);
-      const csvText = await csvRes.text();
+      const fileRes = await fetch(data.downloadUrl);
+const contentType = fileRes.headers.get("content-type");
+
+let csvText;
+
+if (contentType.includes("zip")) {
+
+  const buffer = await fileRes.arrayBuffer();
+  csvText = await extractCSVFromZip(buffer);
+
+} else {
+
+  csvText = await fileRes.text();
+
+}
 
       await env.WEBEX.put(
         `cdr:data:${record.reportId}`,
