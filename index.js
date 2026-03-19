@@ -523,6 +523,11 @@ function parseAndFilterCSV(csvText, targetOrgId) {
     k.toLowerCase().includes("org")
   );
 
+  if (orgIndex === -1) {
+    console.log("No org column found in CSV");
+    return [];
+  }
+
   return rows.map(row => {
 
     const values = row.split(",");
@@ -530,11 +535,7 @@ function parseAndFilterCSV(csvText, targetOrgId) {
 
     return obj;
 
-  }).filter(row => {
-
-    return row[keys[orgIndex]] === targetOrgId;
-
-  });
+  }).filter(row => row[keys[orgIndex]] === targetOrgId);
 
 }
 function parseCsv(text) {
