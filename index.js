@@ -11194,14 +11194,16 @@ async scheduled(event, env, ctx) {
 
     try {
 
-      // Core automation (always runs)
-      await createPartnerReport(env);
-      await pollPartnerReports(env, orgs);
+      // --------------------------------------------------
+      // CORE AUTOMATION (ALWAYS RUNS)
+      // --------------------------------------------------
       await runTelemetryCycle(env);
       await prewarmAllTenants(env);
       await runDailyPartnerReports(env, ctx, { fanout: 6 });
 
-      // Fetch orgs
+      // --------------------------------------------------
+      // FETCH ORGS (REQUIRED FIRST)
+      // --------------------------------------------------
       const orgResult = await webexFetch(env, "/organizations");
       if (!orgResult.ok) {
         console.error("Failed to fetch organizations");
@@ -11211,13 +11213,19 @@ async scheduled(event, env, ctx) {
       const orgs = orgResult.data.items || [];
 
       // --------------------------------------------------
-      // 🔵 MAIN CRON (9AM LOCAL = 18 UTC)
+      // CDR REPORT PIPELINE (SAFE NOW)
+      // --------------------------------------------------
+      await createPartnerReport(env);
+      await pollPartnerReports(env, orgs);
+
+      // --------------------------------------------------
+      // 🟡 MAIN CRON (9AM PST = 18 UTC)
       // --------------------------------------------------
       if (event.cron === "0 18 * * *") {
 
-        // --------------------------------------------
-        // 🔴 ORG HYDRATION WITH RETRY + TRACKING
-        // --------------------------------------------
+        // ==========================================
+        // 🔴 ORG HYDRATION (RETRY + TRACKING)
+        // ==========================================
         await mapLimit(orgs, 5, async (org) => {
 
           const MAX_RETRIES = 3;
@@ -11253,7 +11261,7 @@ async scheduled(event, env, ctx) {
             await new Promise(r => setTimeout(r, 500 * attempt));
           }
 
-          // final failure
+          // FINAL FAILURE
           console.log("Org hydration FAILED:", org.id);
 
           await env.WEBEX.put(
@@ -11269,9 +11277,9 @@ async scheduled(event, env, ctx) {
 
         });
 
-        // --------------------------------------------
-        // 🔍 STALE + MISSING DETECTION
-        // --------------------------------------------
+        // ==========================================
+        // 🔍 STALE / NEVER HYDRATED DETECTION
+        // ==========================================
         const stale = [];
 
         for (const org of orgs) {
@@ -11290,15 +11298,15 @@ async scheduled(event, env, ctx) {
           }
         }
 
-        // --------------------------------------------
-        // 📧 EMAIL SUCCESS + ALERT
-        // --------------------------------------------
+        // ==========================================
+        // 📧 SUCCESS EMAIL
+        // ==========================================
         const emailResult = await sendAdminNotification(
           env,
           "Webex Org Discovery Successful",
           `
           <h3>Webex Organization API Successful</h3>
-          <p>Total Orgs: ${orgs.length}</p>
+          <p><strong>Total Organizations:</strong> ${orgs.length}</p>
           <p>Timestamp: ${new Date().toISOString()}</p>
           `
         );
@@ -11313,7 +11321,9 @@ async scheduled(event, env, ctx) {
           })
         );
 
-        // Alert only if issues found
+        // ==========================================
+        // ⚠️ ALERT IF ISSUES
+        // ==========================================
         if (stale.length) {
 
           await sendAdminNotification(
@@ -11321,7 +11331,7 @@ async scheduled(event, env, ctx) {
             "⚠️ Webex Hydration Alert",
             `
             <h3>Hydration Issues Detected</h3>
-            <p>${stale.length} org(s) need attention</p>
+            <p>${stale.length} org(s) require attention</p>
 
             <ul>
               ${stale.map(s => `
@@ -11333,9 +11343,9 @@ async scheduled(event, env, ctx) {
 
         }
 
-        // --------------------------------------------
+        // ==========================================
         // 🔄 EXISTING PIPELINE (UNCHANGED)
-        // --------------------------------------------
+        // ==========================================
         await discoverNewTenants(env, orgs);
 
         await mapLimit(orgs, 5, async (org) => {
@@ -11354,7 +11364,9 @@ async scheduled(event, env, ctx) {
         const CONCURRENCY = 5;
         const FOUR_HOURS = 60 * 60 * 4;
 
-        // Media reports
+        // ==========================================
+        // 📊 MEDIA REPORTS
+        // ==========================================
         await mapLimit(orgs, 3, async (org) => {
 
           try {
@@ -11403,7 +11415,9 @@ async scheduled(event, env, ctx) {
 
         });
 
-        // Tenant metrics
+        // ==========================================
+        // 📈 TENANT METRICS
+        // ==========================================
         await mapLimit(orgs, CONCURRENCY, async (org) => {
 
           const health = await computeTenantHealth(env, org.id);
@@ -11433,20 +11447,24 @@ async scheduled(event, env, ctx) {
 
         });
 
+        // ==========================================
+        // 🌍 GLOBAL SNAPSHOT
+        // ==========================================
         try {
+
           const globalPayload = await computeGlobalSummary(env);
           await putGlobalSummarySnapshot(env, globalPayload);
-          console.log("Global summary snapshot rebuilt via cron");
+
+          console.log("Global summary snapshot rebuilt");
+
         } catch (e) {
           console.error("Global summary rebuild failed:", e);
         }
 
-        console.log("Health + Quality + PSTN snapshots updated");
-
       }
 
       // --------------------------------------------------
-      // 🌙 02:00 CRON – AI MEDIA SUMMARIES
+      // 🌙 02:00 CRON – AI MEDIA
       // --------------------------------------------------
       if (event.cron === "0 2 * * *") {
 
@@ -11477,14 +11495,12 @@ async scheduled(event, env, ctx) {
       }
 
     } catch (err) {
-
       console.error("Scheduled task failed:", err);
-
     }
 
   })());
+
 }
- };  // ✅ ONLY ONE closing brace + semicolon
 async function ciBackgroundPollAll(env) {
 
   const orgRes = await webexFetchSafe(env, "/organizations", null);
