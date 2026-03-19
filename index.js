@@ -11502,6 +11502,7 @@ async scheduled(event, env, ctx) {
 
   })());
 }
+ };
 async function ciBackgroundPollAll(env) {
 
   const orgRes = await webexFetchSafe(env, "/organizations", null);
