@@ -11094,6 +11094,8 @@ async scheduled(event, env, ctx) {
       }
 
       const orgs = orgResult.data.items || [];
+     await createPartnerReport(env);
+     await pollPartnerReports(env);
 
       // --------------------------------------------------
       // 🔵 MAIN CRON (9AM LOCAL = 18 UTC)
