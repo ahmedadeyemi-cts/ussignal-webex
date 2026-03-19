@@ -2545,7 +2545,6 @@ async function computeTenantHealth(env, orgId) {
 
 }
 
-
 async function computeCallQuality(env, orgId) {
 
   const result = await webexFetch(
@@ -3486,6 +3485,30 @@ async function runDailyPartnerReports(env, ctx, { fanout = 6 } = {}) {
 
   await env.WEBEX.delete(lockKey);
   return { ok:true, snapshot };
+}
+   function parseAndFilterCSV(csvText, targetOrgId) {
+
+  const [header, ...rows] = csvText.split("\n").filter(Boolean);
+  const keys = header.split(",");
+
+  const orgIndex = keys.findIndex(k =>
+    k.toLowerCase().includes("org")
+  );
+
+  if (orgIndex === -1) {
+    console.log("No org column found in CSV");
+    return [];
+  }
+
+  return rows.map(row => {
+
+    const values = row.split(",");
+    const obj = Object.fromEntries(keys.map((k, i) => [k, values[i]]));
+
+    return obj;
+
+  }).filter(row => row[keys[orgIndex]] === targetOrgId);
+
 }
 export default {
   async fetch(request, env, ctx) {
