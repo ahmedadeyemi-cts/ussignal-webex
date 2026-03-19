@@ -1499,6 +1499,163 @@ async function createWebexReport(env, orgId, reportType, params = {}) {
 
   return { ok:true, data };
 }
+async function createPartnerReport(env) {
+  const token = await getAccessToken(env);
+
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 2);
+
+  const res = await fetch("https://webexapis.com/v1/partner/reports", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      templateId: 10010,
+      startDate: start.toISOString().slice(0,10),
+      endDate: end.toISOString().slice(0,10),
+      regionId: "US"
+    })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    console.error("Report creation failed", data);
+    return null;
+  }
+
+  // store reportId
+  await env.WEBEX.put(
+    `cdr:report:${data.reportId}`,
+    JSON.stringify({
+      reportId: data.reportId,
+      status: "created",
+      created: new Date().toISOString()
+    })
+  );
+
+  return data.reportId;
+}
+
+async function extractCSVFromZip(zipBuffer) {
+
+  const zip = await JSZip.loadAsync(zipBuffer);
+
+  const files = Object.keys(zip.files);
+
+  // Find first CSV file
+  const csvFile = files.find(f => f.endsWith(".csv"));
+
+  if (!csvFile) {
+    throw new Error("No CSV found in ZIP");
+  }
+
+  const content = await zip.files[csvFile].async("string");
+
+  return content;
+}
+
+async function pollPartnerReports(env, orgs) {
+
+  const list = await env.WEBEX.list({ prefix: "cdr:report:" });
+
+  const token = await getAccessToken(env);
+
+  for (const key of list.keys) {
+
+    const record = await env.WEBEX.get(key.name, "json");
+    if (!record) continue;
+
+    if (record.status === "completed") continue;
+
+    const res = await fetch(
+      `https://webexapis.com/v1/partner/reports/${record.reportId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.log("Poll failed", record.reportId);
+      continue;
+    }
+
+    // 🔥 UPDATE STATUS
+    await env.WEBEX.put(
+      key.name,
+      JSON.stringify({
+        ...record,
+        status: data.status,
+        downloadUrl: data.downloadUrl || null,
+        updated: new Date().toISOString()
+      })
+    );
+
+    // 🔥 IF READY → DOWNLOAD
+   if (data.status === "completed" && data.downloadUrl) {
+
+  console.log("Downloading report:", record.reportId);
+
+  const fileRes = await fetch(data.downloadUrl);
+  const contentType = fileRes.headers.get("content-type");
+
+  let csvText;
+
+  if (contentType && contentType.includes("zip")) {
+
+    const buffer = await fileRes.arrayBuffer();
+    csvText = await extractCSVFromZip(buffer);
+
+  } else {
+
+    csvText = await fileRes.text();
+
+  }
+
+  // 🔴 LOOP THROUGH ALL ORGS AND STORE INDIVIDUAL DATASETS
+  for (const org of orgs) {
+
+    const filtered = parseAndFilterCSV(csvText, org.id);
+
+    if (!filtered.length) continue;
+
+    // Store full dataset per org
+    await env.WEBEX.put(
+      `cdr:org:${org.id}`,
+      JSON.stringify(filtered),
+      { expirationTtl: 60 * 60 * 24 }
+    );
+
+    // 🔥 Build summary
+    const summary = {
+      totalCalls: filtered.length,
+      totalDuration: filtered.reduce(
+        (a, r) => a + Number(r.duration || 0),
+        0
+      ),
+      failedCalls: filtered.filter(
+        r => r.callResult !== "success"
+      ).length
+    };
+
+    await env.WEBEX.put(
+      `cdr:summary:${org.id}`,
+      JSON.stringify(summary),
+      { expirationTtl: 60 * 60 * 24 }
+    );
+
+  }
+
+  console.log("CDR processed and stored per org");
+
+}
 
 // Get report status
 async function getWebexReport(env, orgId, reportId) {
@@ -2387,6 +2544,31 @@ async function computeTenantHealth(env, orgId) {
   };
 
 }
+function parseAndFilterCSV(csvText, targetOrgId) {
+
+  const [header, ...rows] = csvText.split("\n").filter(Boolean);
+  const keys = header.split(",");
+
+  const orgIndex = keys.findIndex(k =>
+    k.toLowerCase().includes("org")
+  );
+
+  if (orgIndex === -1) {
+    console.log("No org column found in CSV");
+    return [];
+  }
+
+  return rows.map(row => {
+
+    const values = row.split(",");
+    const obj = Object.fromEntries(keys.map((k, i) => [k, values[i]]));
+
+    return obj;
+
+  }).filter(row => row[keys[orgIndex]] === targetOrgId);
+
+}
+
 async function computeCallQuality(env, orgId) {
 
   const result = await webexFetch(
@@ -11013,6 +11195,8 @@ async scheduled(event, env, ctx) {
     try {
 
       // Core automation (always runs)
+      await createPartnerReport(env);
+      await pollPartnerReports(env, orgs);
       await runTelemetryCycle(env);
       await prewarmAllTenants(env);
       await runDailyPartnerReports(env, ctx, { fanout: 6 });
