@@ -5974,7 +5974,7 @@ if (url.pathname === "/api/licenses/email" && request.method === "POST") {
   }
 
   return json({ status: "sent", to: toEmail });
-}
+
      async function ciGetReportState(env, orgId, reportType) {
   const key = `ci:state:${orgId}:${reportType}`;
   const raw = await env.WEBEX.get(key);
@@ -11499,7 +11499,6 @@ async scheduled(event, env, ctx) {
     }
 
   })());
-
 }
 async function ciBackgroundPollAll(env) {
 
