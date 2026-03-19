@@ -10953,18 +10953,26 @@ async scheduled(event, env, ctx) {
 
   console.log("Cron fired:", event.cron, new Date().toISOString());
 
+  await env.WEBEX.put(
+    "cron:lastRun",
+    JSON.stringify({
+      cron: event.cron,
+      timestamp: new Date().toISOString()
+    })
+  );
+
   ctx.waitUntil((async () => {
 
     console.log("Running scheduled automation cycle");
 
     try {
 
-      // Core automation that always runs
+      // Core automation (always runs)
       await runTelemetryCycle(env);
       await prewarmAllTenants(env);
       await runDailyPartnerReports(env, ctx, { fanout: 6 });
 
-      // Fetch org list once
+      // Fetch orgs
       const orgResult = await webexFetch(env, "/organizations");
       if (!orgResult.ok) {
         console.error("Failed to fetch organizations");
@@ -10974,41 +10982,133 @@ async scheduled(event, env, ctx) {
       const orgs = orgResult.data.items || [];
 
       // --------------------------------------------------
-      // 06:00 CRON – MAIN TELEMETRY PIPELINE
+      // 🔵 MAIN CRON (9AM LOCAL = 18 UTC)
       // --------------------------------------------------
-      if (event.cron === "0 6 * * *") {
+      if (event.cron === "0 18 * * *") {
 
-        // Email confirmation
-        await sendAdminNotification(
+        // --------------------------------------------
+        // 🔴 ORG HYDRATION WITH RETRY + TRACKING
+        // --------------------------------------------
+        await mapLimit(orgs, 5, async (org) => {
+
+          const MAX_RETRIES = 3;
+
+          for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+
+            try {
+
+              const res = await webexFetchSafe(env, `/organizations/${org.id}`, org.id);
+
+              if (res.ok) {
+
+                console.log(`Org hydrated (${attempt}):`, org.id);
+
+                await env.WEBEX.put(
+                  `org:hydration:${org.id}`,
+                  JSON.stringify({
+                    orgId: org.id,
+                    name: org.displayName || null,
+                    lastHydrated: new Date().toISOString(),
+                    status: "success",
+                    attempts: attempt
+                  })
+                );
+
+                return;
+              }
+
+            } catch (e) {
+              console.log(`Retry ${attempt} failed:`, org.id);
+            }
+
+            await new Promise(r => setTimeout(r, 500 * attempt));
+          }
+
+          // final failure
+          console.log("Org hydration FAILED:", org.id);
+
+          await env.WEBEX.put(
+            `org:hydration:${org.id}`,
+            JSON.stringify({
+              orgId: org.id,
+              name: org.displayName || null,
+              lastHydrated: new Date().toISOString(),
+              status: "failed",
+              attempts: MAX_RETRIES
+            })
+          );
+
+        });
+
+        // --------------------------------------------
+        // 🔍 STALE + MISSING DETECTION
+        // --------------------------------------------
+        const stale = [];
+
+        for (const org of orgs) {
+
+          const data = await env.WEBEX.get(`org:hydration:${org.id}`, "json");
+
+          if (!data?.lastHydrated) {
+            stale.push({ org, reason: "never hydrated" });
+            continue;
+          }
+
+          const age = Date.now() - new Date(data.lastHydrated).getTime();
+
+          if (age > 24 * 60 * 60 * 1000) {
+            stale.push({ org, reason: "stale >24h" });
+          }
+        }
+
+        // --------------------------------------------
+        // 📧 EMAIL SUCCESS + ALERT
+        // --------------------------------------------
+        const emailResult = await sendAdminNotification(
           env,
           "Webex Org Discovery Successful",
           `
           <h3>Webex Organization API Successful</h3>
-          <p>The Webex API call to <code>/organizations</code> completed successfully.</p>
-
-          <p><strong>Total Organizations Detected:</strong> ${orgs.length}</p>
-
-          <table border="1" cellpadding="6" cellspacing="0">
-            <tr>
-              <th>Org Name</th>
-              <th>Org ID</th>
-            </tr>
-            ${orgs.map(o => `
-              <tr>
-                <td>${o.displayName || "Unknown"}</td>
-                <td>${o.id}</td>
-              </tr>
-            `).join("")}
-          </table>
-
+          <p>Total Orgs: ${orgs.length}</p>
           <p>Timestamp: ${new Date().toISOString()}</p>
           `
         );
 
-        // Detect new tenants
+        await env.WEBEX.put(
+          "cron:lastEmailAttempt",
+          JSON.stringify({
+            cron: event.cron,
+            timestamp: new Date().toISOString(),
+            orgCount: orgs.length,
+            emailResult
+          })
+        );
+
+        // Alert only if issues found
+        if (stale.length) {
+
+          await sendAdminNotification(
+            env,
+            "⚠️ Webex Hydration Alert",
+            `
+            <h3>Hydration Issues Detected</h3>
+            <p>${stale.length} org(s) need attention</p>
+
+            <ul>
+              ${stale.map(s => `
+                <li>${s.org.displayName || s.org.id} — ${s.reason}</li>
+              `).join("")}
+            </ul>
+            `
+          );
+
+        }
+
+        // --------------------------------------------
+        // 🔄 EXISTING PIPELINE (UNCHANGED)
+        // --------------------------------------------
         await discoverNewTenants(env, orgs);
 
-        // Delegation warm
         await mapLimit(orgs, 5, async (org) => {
           try {
             await warmDelegation(env, org.id);
@@ -11025,7 +11125,7 @@ async scheduled(event, env, ctx) {
         const CONCURRENCY = 5;
         const FOUR_HOURS = 60 * 60 * 4;
 
-        // Media quality report
+        // Media reports
         await mapLimit(orgs, 3, async (org) => {
 
           try {
@@ -11074,7 +11174,7 @@ async scheduled(event, env, ctx) {
 
         });
 
-        // Tenant telemetry processing
+        // Tenant metrics
         await mapLimit(orgs, CONCURRENCY, async (org) => {
 
           const health = await computeTenantHealth(env, org.id);
@@ -11104,18 +11204,12 @@ async scheduled(event, env, ctx) {
 
         });
 
-        // Global summary snapshot
         try {
-
           const globalPayload = await computeGlobalSummary(env);
           await putGlobalSummarySnapshot(env, globalPayload);
-
           console.log("Global summary snapshot rebuilt via cron");
-
         } catch (e) {
-
           console.error("Global summary rebuild failed:", e);
-
         }
 
         console.log("Health + Quality + PSTN snapshots updated");
@@ -11123,7 +11217,7 @@ async scheduled(event, env, ctx) {
       }
 
       // --------------------------------------------------
-      // 02:00 CRON – AI MEDIA SUMMARIES
+      // 🌙 02:00 CRON – AI MEDIA SUMMARIES
       // --------------------------------------------------
       if (event.cron === "0 2 * * *") {
 
