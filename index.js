@@ -585,6 +585,25 @@ async function ciPollAndProcess(env, orgId, reportType) {
 
   return { status:"done", rows: parsed.rows.length };
 }
+
+async function extractCSVFromZip(zipBuffer) {
+
+  const zip = await JSZip.loadAsync(zipBuffer);
+
+  const files = Object.keys(zip.files);
+
+  // Find first CSV file
+  const csvFile = files.find(f => f.endsWith(".csv"));
+
+  if (!csvFile) {
+    throw new Error("No CSV found in ZIP");
+  }
+
+  const content = await zip.files[csvFile].async("string");
+
+  return content;
+}
+
 function ciProcessMediaQuality(rows) {
 
   let total = 0;
