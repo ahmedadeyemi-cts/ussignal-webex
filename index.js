@@ -514,6 +514,29 @@ async function runCachedCallReports(env) {
 
   });
 }
+function parseAndFilterCSV(csvText, targetOrgId) {
+
+  const [header, ...rows] = csvText.split("\n").filter(Boolean);
+  const keys = header.split(",");
+
+  const orgIndex = keys.findIndex(k =>
+    k.toLowerCase().includes("org")
+  );
+
+  return rows.map(row => {
+
+    const values = row.split(",");
+    const obj = Object.fromEntries(keys.map((k, i) => [k, values[i]]));
+
+    return obj;
+
+  }).filter(row => {
+
+    return row[keys[orgIndex]] === targetOrgId;
+
+  });
+
+}
 function parseCsv(text) {
 
   const lines = text.split("\n");
