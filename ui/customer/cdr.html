@@ -19,8 +19,8 @@
   --warn:#f59e0b;
   --bad:#dc2626;
 
-  --chip: rgba(15,98,254,.10);
-  --chipText: #0b4bd4;
+  --chip:rgba(15,98,254,.10);
+  --chipText:#0b4bd4;
 }
 
 *{ box-sizing:border-box; }
@@ -35,7 +35,7 @@ body{
 }
 
 /* =========================
-   SIDEBAR (LICENSES STYLE)
+   SIDEBAR
 ========================= */
 
 .sidebar{
@@ -55,9 +55,7 @@ body{
   padding-bottom:14px;
   border-bottom:1px solid var(--line);
 }
-
 .brand img{ height:34px; }
-
 .brand .title{
   display:flex;
   flex-direction:column;
@@ -73,7 +71,6 @@ body{
   flex-direction:column;
   gap:6px;
 }
-
 .nav a{
   padding:10px;
   border-radius:12px;
@@ -82,12 +79,10 @@ body{
   text-decoration:none;
   color:var(--text);
 }
-
 .nav a:hover{
   background:rgba(15,98,254,.08);
   color:#0b4bd4;
 }
-
 .nav a.active{
   background:rgba(15,98,254,.12);
   border:1px solid rgba(15,98,254,.20);
@@ -100,7 +95,6 @@ body{
   gap:10px;
 }
 
-/* RAG pill */
 .summary-pill{
   padding:12px;
   border-radius:12px;
@@ -120,7 +114,6 @@ button{
   font-weight:900;
   cursor:pointer;
 }
-
 button:disabled{ opacity:.6; cursor:not-allowed; }
 
 .btn-outline{
@@ -128,10 +121,6 @@ button:disabled{ opacity:.6; cursor:not-allowed; }
   border:1px solid rgba(15,23,42,.14);
   color:var(--text);
 }
-
-/* =========================
-   MAIN
-========================= */
 
 .main{
   flex:1;
@@ -180,7 +169,6 @@ button:disabled{ opacity:.6; cursor:not-allowed; }
   color:var(--muted);
 }
 
-.section{ margin-top:0; }
 .card{
   background:var(--card);
   border:1px solid var(--line);
@@ -209,15 +197,28 @@ h2{
 
 .grid{
   display:grid;
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  grid-template-columns: repeat(6, minmax(150px, 1fr));
   gap:12px;
 }
 
-@media (max-width:1100px){
-  .grid{ grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+.grid-2{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(300px, 1fr));
+  gap:12px;
 }
-@media (max-width:640px){
-  .grid{ grid-template-columns: 1fr; }
+
+.grid-3{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(220px, 1fr));
+  gap:12px;
+}
+
+@media (max-width:1200px){
+  .grid{ grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+  .grid-2,.grid-3{ grid-template-columns:1fr; }
+}
+@media (max-width:700px){
+  .grid{ grid-template-columns:1fr; }
 }
 
 .kpi{
@@ -225,10 +226,23 @@ h2{
   border:1px solid rgba(15,23,42,.08);
   border-radius:14px;
   padding:12px;
+  min-height:120px;
+  display:flex;
+  flex-direction:column;
 }
 .kpi .label{ font-size:12px; color:var(--muted); font-weight:900; }
-.kpi .value{ font-size:26px; font-weight:1100; margin-top:6px; }
+.kpi .value{ font-size:24px; font-weight:1100; margin-top:6px; }
 .kpi .hint{ font-size:11px; color:var(--muted); margin-top:6px; }
+.spark{
+  margin-top:auto;
+  border-top:1px solid rgba(15,23,42,.06);
+  padding-top:8px;
+}
+.spark canvas{
+  width:100%;
+  height:34px;
+  display:block;
+}
 
 .table-wrap{
   margin-top:10px;
@@ -259,7 +273,10 @@ tbody tr:hover{
 }
 
 .right{ text-align:right; }
-.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+.center{ text-align:center; }
+.mono{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+}
 
 .badge{
   display:inline-block;
@@ -272,7 +289,7 @@ tbody tr:hover{
 }
 .badge.good{ background:rgba(22,163,74,.12); color:var(--good); border-color:rgba(22,163,74,.25); }
 .badge.warn{ background:rgba(245,158,11,.12); color:var(--warn); border-color:rgba(245,158,11,.25); }
-.badge.bad{  background:rgba(220,38,38,.12); color:var(--bad);  border-color:rgba(220,38,38,.25); }
+.badge.bad{ background:rgba(220,38,38,.12); color:var(--bad); border-color:rgba(220,38,38,.25); }
 
 .chip{
   display:inline-block;
@@ -292,10 +309,9 @@ tbody tr:hover{
   outline:none;
   background:#fff;
 }
-
 .input:focus, select:focus{
-  border-color: rgba(15,98,254,.35);
-  box-shadow: 0 0 0 3px rgba(15,98,254,.10);
+  border-color:rgba(15,98,254,.35);
+  box-shadow:0 0 0 3px rgba(15,98,254,.10);
 }
 
 .small{
@@ -309,16 +325,55 @@ tbody tr:hover{
   padding:10px;
   overflow:hidden;
 }
-
 hr.sep{
   border:none;
   border-top:1px solid var(--line);
   margin:12px 0;
 }
 
-/* =========================
-   MODAL
-========================= */
+.live-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.live-dot{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:var(--good);
+  box-shadow:0 0 0 0 rgba(22,163,74,.55);
+  animation:pulse 2s infinite;
+}
+.live-dot.warn{ background:var(--warn); box-shadow:none; }
+.live-dot.bad{ background:var(--bad); box-shadow:none; }
+@keyframes pulse{
+  0%{ box-shadow:0 0 0 0 rgba(22,163,74,.55); }
+  70%{ box-shadow:0 0 0 10px rgba(22,163,74,0); }
+  100%{ box-shadow:0 0 0 0 rgba(22,163,74,0); }
+}
+
+.insight{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.insightBox{
+  border:1px solid rgba(15,23,42,.08);
+  background:rgba(15,98,254,.04);
+  border-radius:12px;
+  padding:12px;
+}
+.insightTitle{
+  font-size:12px;
+  font-weight:1000;
+  color:var(--muted);
+}
+.insightBody{
+  margin-top:4px;
+  font-size:13px;
+  line-height:1.45;
+}
 
 .modal{
   position:fixed;
@@ -353,13 +408,11 @@ hr.sep{
 }
 .kv{
   display:grid;
-  grid-template-columns: 180px 1fr;
+  grid-template-columns:180px 1fr;
   gap:8px 12px;
   margin-top:12px;
 }
-.kv div{
-  font-size:13px;
-}
+.kv div{ font-size:13px; }
 .kv .k{
   color:var(--muted);
   font-weight:900;
@@ -382,7 +435,7 @@ pre{
 
 <div class="sidebar">
   <div class="brand">
-    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" />
+    <img src="https://webex.onenecklab.com/assets/ussignal-logo.jpg" alt="US Signal" />
     <div class="title">
       <b>US Signal</b>
       <span>Customer Portal</span>
@@ -391,18 +444,18 @@ pre{
 
   <div class="nav">
     <a href="/customer">Dashboard</a>
-      <a href="/customer/observability">Observability</a>
-      <a href="/customer/licenses">Licenses</a>
-      <a href="/customer/devices">Devices</a>
-      <a href="/customer/analytics">Analytics</a>
-      <a class="active" href="/customer/cdr">CDR</a>
-      <a href="/customer/pstn">PSTN</a>
-      <a href="/customer/callinginsight">Calling Insight</a>
-      <a href="/customer/maintenance">Maintenance</a>
-      <a href="/customer/status">Status</a>
-      <a href="/customer/incidents">Incidents</a>
-      <a href="/customer/support">Support Contact</a>
-     <a href="/customer/user-guide">User Guide</a>
+    <a href="/customer/observability">Observability</a>
+    <a href="/customer/licenses">Licenses</a>
+    <a href="/customer/devices">Devices</a>
+    <a href="/customer/analytics">Analytics</a>
+    <a class="active" href="/customer/cdr">CDR</a>
+    <a href="/customer/pstn">PSTN</a>
+    <a href="/customer/callinginsight">Calling Insight</a>
+    <a href="/customer/maintenance">Maintenance</a>
+    <a href="/customer/status">Status</a>
+    <a href="/customer/incidents">Incidents</a>
+    <a href="/customer/support">Support Contact</a>
+    <a href="/customer/user-guide">User Guide</a>
   </div>
 
   <div class="sidebarBottom">
@@ -415,7 +468,7 @@ pre{
 
   <div class="header-card">
     <div class="header-left">
-      <div class="h">Webex Calling — Call Detail Records (Enterprise)</div>
+      <div class="h">Webex Calling — CDR Enterprise+ Observability</div>
       <div class="sub" id="whoLine">Loading…</div>
     </div>
     <div class="header-actions">
@@ -426,7 +479,20 @@ pre{
     </div>
   </div>
 
-  <!-- Tenant Context -->
+  <div class="card">
+    <div class="live-row">
+      <div id="liveDot" class="live-dot"></div>
+      <div class="muted"><b>Live stream status:</b> <span id="liveStatus">Initializing…</span></div>
+      <div class="chip" id="liveIntervalChip">Auto refresh: 30s</div>
+      <div class="chip" id="rangeChip">Window: —</div>
+      <div class="chip" id="countChip">Records: —</div>
+      <div class="chip" id="anomalyChip">Anomalies: —</div>
+      <div class="chip" id="predictChip">Prediction: —</div>
+      <div style="flex:1"></div>
+      <div class="small" id="lastRefresh">—</div>
+    </div>
+  </div>
+
   <div class="card">
     <h2>Tenant Context</h2>
     <div class="muted" id="orgContext">Loading…</div>
@@ -438,58 +504,6 @@ pre{
       </select>
       <button id="btnLoad">Load CDR</button>
 
-      <span class="chip" id="rangeChip">Window: —</span>
-      <span class="chip" id="countChip">Records: —</span>
-      <span class="chip" id="anomalyChip">Anomalies: —</span>
-    </div>
-
-    <div class="muted hidden" id="errBox" style="margin-top:10px;"></div>
-  </div>
-
-  <!-- KPI Grid -->
-  <div class="grid" style="grid-template-columns: repeat(6,minmax(160px,1fr));">
-
-<div class="kpi">
-  <div class="label">Total Calls</div>
-  <div class="value" id="kpiTotal">—</div>
-  <div class="hint">Loaded from /api/cdr</div>
-</div>
-
-<div class="kpi">
-  <div class="label">Failure Rate</div>
-  <div class="value" id="kpiFailRate">—</div>
-  <div class="hint">Based on callResult categorization</div>
-</div>
-
-<div class="kpi">
-  <div class="label">P95 Duration</div>
-  <div class="value" id="kpiP95">—</div>
-  <div class="hint">Seconds</div>
-</div>
-
-<div class="kpi">
-  <div class="label">Avg MOS</div>
-  <div class="value" id="kpiMos">—</div>
-  <div class="hint">Mean opinion score</div>
-</div>
-
-<div class="kpi">
-  <div class="label">Packet Loss</div>
-  <div class="value" id="kpiPacket">—</div>
-  <div class="hint">Average network loss</div>
-</div>
-
-<div class="kpi">
-  <div class="label">SLA Status</div>
-  <div class="value" id="kpiSla">—</div>
-  <div class="hint" id="kpiSlaHint">—</div>
-    </div>
-  </div>
-
-  <!-- Controls -->
-  <div class="card">
-    <h2>Filters & Troubleshooting Controls</h2>
-    <div class="row">
       <select id="timeWindow">
         <option value="24h">Last 24 hours</option>
         <option value="7d" selected>Last 7 days</option>
@@ -510,44 +524,144 @@ pre{
       </select>
 
       <input class="input" id="searchBox" placeholder="Search caller/callee/result/ID..." style="min-width:320px;" />
-
       <button class="btn-outline" id="btnClear">Clear</button>
     </div>
 
-    <hr class="sep">
+    <div class="muted hidden" id="errBox" style="margin-top:10px;"></div>
+  </div>
 
-    <div class="row">
-      <div class="muted">
-        <b>Operational SLA</b>: Failure rate ≥ <span class="mono" id="slaFailThresh">5%</span> OR
-        Unknown rate ≥ <span class="mono" id="slaUnknownThresh">2%</span> triggers amber/red.
-      </div>
-      <div style="flex:1"></div>
-      <div class="muted small" id="lastRefresh">—</div>
+  <div class="grid">
+    <div class="kpi">
+      <div class="label">Total Calls</div>
+      <div class="value" id="kpiTotal">—</div>
+      <div class="hint" id="kpiTotalHint">Loaded from summary or detailed records</div>
+      <div class="spark"><canvas id="sparkTotal"></canvas></div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">Failure Rate</div>
+      <div class="value" id="kpiFailRate">—</div>
+      <div class="hint" id="kpiFailHint">Operational call completion posture</div>
+      <div class="spark"><canvas id="sparkFail"></canvas></div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">P95 Duration</div>
+      <div class="value" id="kpiP95">—</div>
+      <div class="hint" id="kpiP95Hint">Long-tail duration behavior</div>
+      <div class="spark"><canvas id="sparkP95"></canvas></div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">Avg MOS</div>
+      <div class="value" id="kpiMos">—</div>
+      <div class="hint" id="kpiMosHint">Media quality from summary if available</div>
+      <div class="spark"><canvas id="sparkMos"></canvas></div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">Packet Loss</div>
+      <div class="value" id="kpiPacket">—</div>
+      <div class="hint" id="kpiPacketHint">Average impairment indicator</div>
+      <div class="spark"><canvas id="sparkPacket"></canvas></div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">SLA Status</div>
+      <div class="value" id="kpiSla">—</div>
+      <div class="hint" id="kpiSlaHint">—</div>
+      <div class="spark"><canvas id="sparkSla"></canvas></div>
     </div>
   </div>
 
-  <!-- Distributions + Trend -->
-  <div class="row">
-    <div class="card" style="flex:1; min-width:340px;">
+  <div class="grid-3">
+    <div class="card">
+      <h2>AI Insights</h2>
+      <div class="insight">
+        <div class="insightBox">
+          <div class="insightTitle">Operational Summary</div>
+          <div class="insightBody" id="aiSummary">Analyzing call patterns…</div>
+        </div>
+        <div class="insightBox">
+          <div class="insightTitle">Anomaly Detection</div>
+          <div class="insightBody" id="aiAnomalies">Building anomaly model…</div>
+        </div>
+        <div class="insightBox">
+          <div class="insightTitle">Predictive Alerting</div>
+          <div class="insightBody" id="aiPredict">Computing forecast…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Benchmarking</h2>
+      <div class="muted">Customer-safe benchmarking. If peer baseline is not available, page falls back to self-trend baseline only.</div>
+      <div style="height:10px"></div>
+      <div id="benchmarkBox">
+        <div class="badge warn">Benchmark pending</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Report Status</h2>
+      <div class="row">
+        <span class="chip" id="reportStatus">Checking…</span>
+        <span class="chip" id="reportLastRun">Last Run: —</span>
+        <span class="chip" id="reportSource">Source: —</span>
+      </div>
+      <hr class="sep">
+      <div class="small" id="reportDetails">Waiting for report metadata…</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
       <h2>Call Result Breakdown</h2>
       <div class="muted">Success vs Failed vs Unknown</div>
       <div class="canvasWrap" style="margin-top:10px;">
-        <canvas id="resultChart" height="120"></canvas>
+        <canvas id="resultChart" height="130"></canvas>
       </div>
     </div>
 
-    <div class="card" style="flex:1; min-width:340px;">
+    <div class="card">
       <h2>30-Day Volume Trend</h2>
-      <div class="muted">Calls per day (from loaded sample window, extrapolated if needed)</div>
+      <div class="muted">Calls per day and self-baseline trend</div>
       <div class="canvasWrap" style="margin-top:10px;">
-        <canvas id="trendChart" height="120"></canvas>
+        <canvas id="trendChart" height="130"></canvas>
       </div>
     </div>
   </div>
 
-  <!-- Top Talkers -->
-  <div class="row">
-    <div class="card" style="flex:1; min-width:340px;">
+  <div class="grid-2">
+    <div class="card">
+      <h2>Failure Density Heatmap</h2>
+      <div class="muted">Hourly concentration of failed calls in the loaded sample</div>
+      <div class="canvasWrap" style="margin-top:10px;">
+        <canvas id="failureHeat" height="130"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Failure Cause Distribution</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Cause</th>
+              <th class="right">Count</th>
+              <th class="right">Rate</th>
+            </tr>
+          </thead>
+          <tbody id="failureCauses">
+            <tr><td colspan="3" class="muted">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
       <h2>Top Callers</h2>
       <div class="table-wrap">
         <table>
@@ -556,7 +670,8 @@ pre{
         </table>
       </div>
     </div>
-    <div class="card" style="flex:1; min-width:340px;">
+
+    <div class="card">
       <h2>Top Called Numbers</h2>
       <div class="table-wrap">
         <table>
@@ -567,12 +682,11 @@ pre{
     </div>
   </div>
 
-  <!-- Main Table -->
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
       <div>
         <h2 style="margin:0;">CDR Records</h2>
-        <div class="muted">Click a record to drill down (debug view includes raw payload snapshot)</div>
+        <div class="muted">Customer-scoped only. Click a row for drill-down or open Calling Insight.</div>
       </div>
       <div class="row" style="gap:8px;">
         <select id="pageSize">
@@ -611,9 +725,6 @@ pre{
 
 </div>
 
-<!-- =========================
-     MODAL (DRILL DOWN)
-========================= -->
 <div id="cdrModal" class="modal">
   <div class="modalCard">
     <div class="modalTitle">
@@ -622,6 +733,7 @@ pre{
         <div class="muted" id="modalSub">—</div>
       </div>
       <div class="row">
+        <button class="btn-outline" id="btnOpenInsight">Open Calling Insight</button>
         <button class="btn-outline" id="btnModalCopy">Copy JSON</button>
         <button id="btnModalClose">Close</button>
       </div>
@@ -630,7 +742,7 @@ pre{
     <div class="kv" id="modalKv"></div>
 
     <hr class="sep">
-    <div class="muted"><b>Raw Record</b> (best-effort based on /api/cdr response)</div>
+    <div class="muted"><b>Raw Record</b></div>
     <pre id="modalRaw">{}</pre>
   </div>
 </div>
@@ -639,7 +751,7 @@ pre{
 const $ = (id) => document.getElementById(id);
 
 /* =========================
-   THEME (PERSISTED)
+   THEME
 ========================= */
 function loadTheme(){
   const saved = localStorage.getItem("uiTheme");
@@ -654,7 +766,6 @@ function toggleTheme(){
   localStorage.setItem("uiTheme", next);
   loadTheme();
 }
-/* Minimal dark vars without touching worker */
 function applyDarkVars(isDark){
   if(!isDark){
     document.documentElement.style.removeProperty("--bg");
@@ -663,8 +774,6 @@ function applyDarkVars(isDark){
     document.documentElement.style.removeProperty("--muted");
     document.documentElement.style.removeProperty("--line");
     document.documentElement.style.removeProperty("--shadow");
-    document.documentElement.style.removeProperty("--chip");
-    document.documentElement.style.removeProperty("--chipText");
     return;
   }
   document.documentElement.style.setProperty("--bg", "#0b1220");
@@ -673,10 +782,7 @@ function applyDarkVars(isDark){
   document.documentElement.style.setProperty("--muted", "#94a3b8");
   document.documentElement.style.setProperty("--line", "rgba(226,232,240,.12)");
   document.documentElement.style.setProperty("--shadow", "0 10px 28px rgba(0,0,0,.35)");
-  document.documentElement.style.setProperty("--chip", "rgba(15,98,254,.22)");
-  document.documentElement.style.setProperty("--chipText", "#9bb8ff");
 }
-
 $("btnTheme").addEventListener("click", toggleTheme);
 loadTheme();
 
@@ -693,7 +799,6 @@ function setError(msg){
   box.classList.remove("hidden");
   box.textContent = msg;
 }
-
 async function api(path, opts){
   const res = await fetch(path, opts);
   const txt = await res.text();
@@ -702,88 +807,171 @@ async function api(path, opts){
   catch { data = { raw: txt }; }
   return { ok: res.ok, status: res.status, data };
 }
-
 function escapeHtml(str){
-  return String(str)
+  return String(str ?? "")
     .replaceAll("&","&amp;")
     .replaceAll("<","&lt;")
     .replaceAll(">","&gt;")
     .replaceAll('"',"&quot;")
     .replaceAll("'","&#039;");
 }
-
 function fmtInt(n){
   if(!Number.isFinite(n)) return "0";
-  const abs = Math.abs(Math.trunc(n));
-  return (n<0?"-":"") + abs.toLocaleString();
+  return Math.trunc(n).toLocaleString();
 }
-
 function fmtPct(x){
   if(!Number.isFinite(x)) return "0%";
-  return Math.round(x*1000)/10 + "%";
+  return (Math.round(x*1000)/10) + "%";
 }
-
+function fmtNum(x, d=2){
+  return Number.isFinite(x) ? Number(x).toFixed(d) : "—";
+}
 function toLocal(ts){
   if(!ts) return "—";
   const d = new Date(ts);
   if(Number.isNaN(d.getTime())) return "—";
   return d.toLocaleString();
 }
-
 function normalizeE164(n){
   if(!n) return "—";
-  const s = String(n).trim();
-  return s;
+  return String(n).trim();
+}
+function percentile(sortedAsc, p){
+  if(!sortedAsc.length) return 0;
+  const idx = (sortedAsc.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if(lo === hi) return sortedAsc[lo];
+  const w = idx - lo;
+  return sortedAsc[lo] * (1 - w) + sortedAsc[hi] * w;
+}
+function mean(arr){
+  const a = (arr || []).filter(Number.isFinite);
+  return a.length ? a.reduce((x,y)=>x+y,0) / a.length : null;
+}
+function stddev(arr){
+  const m = mean(arr);
+  const a = (arr || []).filter(Number.isFinite);
+  if(m == null || a.length < 2) return null;
+  const v = a.reduce((s,x)=>s + Math.pow(x-m,2), 0) / a.length;
+  return Math.sqrt(v);
+}
+function linearForecast(values, steps=3){
+  const a = (values || []).filter(Number.isFinite);
+  if(a.length < 3) return null;
+  const n = a.length;
+  const xs = Array.from({length:n}, (_,i)=>i+1);
+  const xMean = mean(xs);
+  const yMean = mean(a);
+  let num=0, den=0;
+  for(let i=0;i<n;i++){
+    num += (xs[i]-xMean) * (a[i]-yMean);
+    den += Math.pow(xs[i]-xMean,2);
+  }
+  const slope = den ? num/den : 0;
+  const intercept = yMean - slope*xMean;
+  const out = [];
+  for(let i=1;i<=steps;i++){
+    out.push(intercept + slope*(n+i));
+  }
+  return { slope, values: out };
+}
+function sparklineDataFromTrend(points, pick){
+  return (points || []).map(p => Number(pick(p))).filter(Number.isFinite);
+}
+function csvCell(v){
+  const s = String(v ?? "");
+  const esc = s.replaceAll('"','""');
+  return (esc.includes(",") || esc.includes("\n") || esc.includes("\r")) ? `"${esc}"` : esc;
 }
 
 /* =========================
-   SLA THRESHOLDS
-   (tunable without worker)
+   SLA
 ========================= */
 const SLA = {
   failRateAmber: 0.05,
   failRateRed: 0.10,
   unknownRateAmber: 0.02,
   unknownRateRed: 0.05,
-  p95DurAmber: 900,   // 15 min unusual
-  p95DurRed: 1800     // 30 min
+  p95DurAmber: 900,
+  p95DurRed: 1800
 };
-
-$("slaFailThresh").textContent = Math.round(SLA.failRateAmber*100) + "%";
-$("slaUnknownThresh").textContent = Math.round(SLA.unknownRateAmber*100) + "%";
 
 /* =========================
    STATE
 ========================= */
-let ME=null;
-let ORGS=[];
-let SELECTED_ORG_ID=null;
+let ME = null;
+let ORGS = [];
+let SELECTED_ORG_ID = null;
 
-let CDR_RAW=[];         // All loaded
-let CDR_VIEW=[];        // Filtered
-let PAGE=0;
+let CDR_RAW = [];
+let CDR_VIEW = [];
+let PAGE = 0;
 
-let AUTO_REFRESH=null;
+let SUMMARY = null;
+let BENCHMARK = null;
+let SERVER_TRENDS = [];
+let AUTO_REFRESH = null;
+let CURRENT_MODAL_RECORD = null;
 
 /* =========================
-   DATA SHAPE NORMALIZER
-   Supports multiple worker variants
+   CDR NORMALIZATION
 ========================= */
+function inferDirection(local, remote){
+  const l = String(local||"");
+  const r = String(remote||"");
+  if(l.length <= 6 && r.length >= 10) return "outbound";
+  if(r.length <= 6 && l.length >= 10) return "inbound";
+  return "";
+}
+function classifyResult(result, cause){
+  const s = String(result||"").toLowerCase();
+  const c = String(cause||"").toLowerCase();
+  if(s.includes("success") || s.includes("answered") || s.includes("connected") || s === "ok") return "success";
+  if(s.includes("fail") || s.includes("busy") || s.includes("no answer") || s.includes("blocked") || s.includes("rejected")) return "failed";
+  if(c.includes("486") || c.includes("busy")) return "failed";
+  if(c.includes("404") || c.includes("not found")) return "failed";
+  if(c.includes("403") || c.includes("forbidden")) return "failed";
+  if(c.includes("408") || c.includes("timeout")) return "failed";
+  if(c.includes("480") || c.includes("temporarily unavailable")) return "failed";
+  return "unknown";
+}
+function estimateQuality(bucket, duration, r){
+  const mos = Number(r.averageMos ?? r.mos);
+  if(Number.isFinite(mos)){
+    if(mos >= 4.1) return 94;
+    if(mos >= 3.8) return 85;
+    if(mos >= 3.5) return 72;
+    return 45;
+  }
+  if(bucket === "failed") return 20;
+  if(bucket === "unknown") return 55;
+  if(duration <= 5) return 60;
+  if(duration <= 30) return 75;
+  if(duration <= 300) return 88;
+  return 92;
+}
+function buildFlags(bucket, duration, r){
+  const flags = [];
+  if(bucket === "unknown") flags.push("UNKNOWN_RESULT");
+  if(bucket === "failed") flags.push("FAILED_CALL");
+  if(duration === 0) flags.push("ZERO_DURATION");
+  if(duration > 3600) flags.push("VERY_LONG");
+  if(Number(r.packetLossRate || 0) > 0.03 || Number(r.packetLoss || 0) > 3) flags.push("LOSS_ALERT");
+  return flags;
+}
 function normalizeCdrRecord(r){
   const start = r.startTime || r.start || r.startedAt || r.time || r.timestamp || null;
   const local = r.localNumber || r.callingNumber || r.caller || r.from || r.ani || r.source || "";
   const remote = r.remoteNumber || r.calledNumber || r.callee || r.to || r.dnis || r.destination || "";
   const duration = Number(r.duration ?? r.durationSeconds ?? r.billableDuration ?? r.talkDuration ?? 0) || 0;
-  const result = (r.callResult || r.result || r.status || r.outcome || "UNKNOWN") + "";
-  const direction = (r.direction || inferDirection(local, remote, r) || "unknown") + "";
-
-  // Optional fields if present
+  const result = String(r.callResult || r.result || r.status || r.outcome || "UNKNOWN");
+  const direction = String(r.direction || inferDirection(local, remote) || "unknown");
   const callId = r.id || r.callId || r.correlationId || r.uuid || "";
   const trunk = r.trunk || r.trunkName || r.route || r.routeName || r.gateway || "";
   const cause = r.cause || r.sipCause || r.releaseCause || r.disconnectReason || "";
   const codec = r.codec || r.audioCodec || "";
   const region = r.region || r.site || r.location || "";
-
   const bucket = classifyResult(result, cause);
   const quality = estimateQuality(bucket, duration, r);
   const flags = buildFlags(bucket, duration, r);
@@ -807,61 +995,15 @@ function normalizeCdrRecord(r){
   };
 }
 
-function inferDirection(local, remote, r){
-  // Best-effort heuristics. If worker provides direction, we use it.
-  // If local looks like internal extension and remote is E.164, assume outbound.
-  const l = String(local||"");
-  const m = String(remote||"");
-  if(l.length<=6 && m.length>=10) return "outbound";
-  if(m.length<=6 && l.length>=10) return "inbound";
-  return "";
-}
-
-function classifyResult(result, cause){
-  const s = String(result||"").toLowerCase();
-  const c = String(cause||"").toLowerCase();
-
-  if(s.includes("success") || s.includes("answered") || s.includes("connected") || s === "ok") return "success";
-  if(s.includes("fail") || s.includes("busy") || s.includes("no answer") || s.includes("blocked") || s.includes("rejected")) return "failed";
-  if(c.includes("486") || c.includes("busy")) return "failed";
-  if(c.includes("404") || c.includes("not found")) return "failed";
-  if(c.includes("403") || c.includes("forbidden")) return "failed";
-  if(c.includes("408") || c.includes("timeout")) return "failed";
-  if(c.includes("480") || c.includes("temporarily unavailable")) return "failed";
-  return "unknown";
-}
-
-function estimateQuality(bucket, duration, r){
-  // No MOS in CDR usually. Provide ops-grade signal.
-  // success + reasonable duration => better, short/failed => worse
-  if(bucket === "failed") return 20;
-  if(bucket === "unknown") return 55;
-
-  // success
-  if(duration <= 5) return 60;       // likely mis-dial or drop
-  if(duration <= 30) return 75;
-  if(duration <= 300) return 88;
-  return 92;
-}
-
-function buildFlags(bucket, duration, r){
-  const flags = [];
-  if(bucket === "unknown") flags.push("UNKNOWN_RESULT");
-  if(bucket === "failed") flags.push("FAILED_CALL");
-  if(duration === 0) flags.push("ZERO_DURATION");
-  if(duration > 3600) flags.push("VERY_LONG");
-  return flags;
-}
-
 /* =========================
-   LOAD /api/me
+   LOAD USER + ORGS
 ========================= */
 async function loadMe(){
   const r = await api("/api/me");
   if(!r.ok) throw new Error("Failed to load /api/me");
 
   ME = r.data;
-  if (ME.role !== "admin" && !ME.orgId){
+  if(ME.role !== "admin" && !ME.orgId){
     window.location.href = "/pin";
     return false;
   }
@@ -869,26 +1011,21 @@ async function loadMe(){
   $("whoLine").textContent = `${ME.email} (${ME.role})`;
   $("tenantPill").textContent = `Tenant: ${ME.orgName || "—"}`;
   $("orgContext").textContent = ME.orgName
-    ? `${ME.orgName} (${ME.resolution} resolution)`
-    : "No tenant resolved";
+    ? `${ME.orgName} (${ME.resolution || "session"} resolution). This page is tenant-scoped only.`
+    : "No tenant resolved.";
 
   return true;
 }
-
-/* =========================
-   ORGS
-========================= */
 function safeOrgLabel(o){
   const name = o.displayName || o.name || o.orgName || "Unknown";
   const id = o.id || o.orgId || "";
   return `${name}${id ? " — " + id.slice(0,10) + "…" : ""}`;
 }
-
 async function loadOrgs(){
   const r = await api("/api/org");
   if(!r.ok){
     if(r.status === 401){
-      setError("Tenant not resolved. Please verify your PIN or contact US Signal.");
+      setError("Tenant not resolved. Please verify your PIN.");
       return;
     }
     setError("Failed to load org list.");
@@ -920,10 +1057,8 @@ async function loadOrgs(){
   if(defaultOrgId) sel.value = defaultOrgId;
   SELECTED_ORG_ID = sel.value;
 }
-
 $("tenantSelect").addEventListener("change", ()=>{
   SELECTED_ORG_ID = $("tenantSelect").value;
-  setError(null);
   PAGE = 0;
   CDR_RAW = [];
   CDR_VIEW = [];
@@ -931,15 +1066,71 @@ $("tenantSelect").addEventListener("change", ()=>{
 });
 
 /* =========================
-   TIME WINDOW (UI only)
-   - If worker supports query params, we pass them.
-   - If not, we still compute based on what comes back.
+   TIME WINDOW
 ========================= */
 function timeWindowToRange(win){
   const now = Date.now();
   if(win === "24h") return { from: now - 24*3600*1000, to: now };
   if(win === "30d") return { from: now - 30*24*3600*1000, to: now };
   return { from: now - 7*24*3600*1000, to: now };
+}
+
+/* =========================
+   OPTIONAL ENDPOINTS
+========================= */
+async function loadSummary(orgId, win){
+  const qs = new URLSearchParams();
+  if(orgId) qs.set("orgId", orgId);
+  qs.set("window", win);
+
+  const candidates = [
+    `/api/cdr/summary?${qs.toString()}`,
+    `/api/customer/${encodeURIComponent(orgId)}/cdr-summary?window=${encodeURIComponent(win)}`
+  ];
+
+  for(const path of candidates){
+    const r = await api(path);
+    if(r.ok && r.data){
+      return r.data;
+    }
+  }
+  return null;
+}
+async function loadBenchmark(orgId, win){
+  const qs = new URLSearchParams();
+  if(orgId) qs.set("orgId", orgId);
+  qs.set("window", win);
+
+  const candidates = [
+    `/api/cdr/benchmark?${qs.toString()}`,
+    `/api/customer/${encodeURIComponent(orgId)}/cdr-benchmark?window=${encodeURIComponent(win)}`
+  ];
+
+  for(const path of candidates){
+    const r = await api(path);
+    if(r.ok && r.data){
+      return r.data;
+    }
+  }
+  return null;
+}
+async function loadReportStatus(orgId, win){
+  const qs = new URLSearchParams();
+  if(orgId) qs.set("orgId", orgId);
+  qs.set("window", win);
+
+  const candidates = [
+    `/api/cdr/status?${qs.toString()}`,
+    `/api/reports/status?${qs.toString()}`
+  ];
+
+  for(const path of candidates){
+    const r = await api(path);
+    if(r.ok && r.data){
+      return r.data;
+    }
+  }
+  return null;
 }
 
 /* =========================
@@ -950,84 +1141,95 @@ async function loadCDR(){
   $("cdrLoading").textContent = "Loading CDR…";
   $("cdrLoading").classList.remove("hidden");
   $("cdrTable").classList.add("hidden");
+  $("btnLoad").disabled = true;
+  $("btnLoad").textContent = "Loading…";
+  updateLive("syncing");
 
   const orgId = SELECTED_ORG_ID || "";
   const win = $("timeWindow").value;
   const range = timeWindowToRange(win);
 
-  // Best-effort: pass params if your worker chooses to use them
-  const q = new URLSearchParams();
-  if(orgId) q.set("orgId", orgId);
-  q.set("from", new Date(range.from).toISOString());
-  q.set("to", new Date(range.to).toISOString());
-  q.set("window", win);
+  try {
+    SUMMARY = await loadSummary(orgId, win);
+    BENCHMARK = await loadBenchmark(orgId, win);
+    const reportStatus = await loadReportStatus(orgId, win);
+    renderReportStatus(reportStatus);
 
-  const r = await api(`/api/cdr?${q.toString()}`);
+    const q = new URLSearchParams();
+    if(orgId) q.set("orgId", orgId);
+    q.set("from", new Date(range.from).toISOString());
+    q.set("to", new Date(range.to).toISOString());
+    q.set("window", win);
 
-if (Array.isArray(r.data?.trends)) {
-
-  window.SERVER_TRENDS = r.data.trends.map(x => ({
-    key: x.day,
-    calls: x.calls || 0
-  }));
-
-}
-
-  if(!r.ok){
-    if(r.status === 401){
-      setError("Tenant not resolved. Please verify your PIN.");
-      $("cdrLoading").textContent = "Unauthorized.";
+    const r = await api(`/api/cdr?${q.toString()}`);
+    if(!r.ok){
+      if(r.status === 401){
+        setError("Tenant not resolved. Please verify your PIN.");
+        $("cdrLoading").textContent = "Unauthorized.";
+        updateLive("error");
+        return;
+      }
+      const msg = (r.data && (r.data.message || r.data.error)) || `Failed to load CDR (HTTP ${r.status}).`;
+      setError(msg);
+      $("cdrLoading").textContent = "Failed to load CDR.";
+      updateLive("error");
       return;
     }
-    const msg = (r.data && (r.data.message || r.data.error)) || `Failed to load CDR (HTTP ${r.status}).`;
-    setError(msg);
-    $("cdrLoading").textContent = "Failed to load CDR.";
-    return;
+
+    if (Array.isArray(r.data?.trends)) {
+      SERVER_TRENDS = r.data.trends.map(x => ({
+        key: x.day,
+        calls: x.calls || 0,
+        avgMos: x.avgMos,
+        avgPacketLoss: x.avgPacketLoss
+      }));
+    } else {
+      SERVER_TRENDS = [];
+    }
+
+    const items = Array.isArray(r.data?.records)
+      ? r.data.records
+      : (Array.isArray(r.data?.items) ? r.data.items : []);
+
+    const normalized = items.map(normalizeCdrRecord);
+
+    const filteredByTime = normalized.filter(x=>{
+      if(!x.startTime) return true;
+      const t = new Date(x.startTime).getTime();
+      if(Number.isNaN(t)) return true;
+      return t >= range.from && t <= range.to;
+    });
+
+    CDR_RAW = filteredByTime.sort((a,b)=>{
+      const ta = new Date(a.startTime || 0).getTime();
+      const tb = new Date(b.startTime || 0).getTime();
+      return tb - ta;
+    });
+
+    if (r.data?.summary && !SUMMARY) {
+      SUMMARY = r.data.summary;
+    }
+
+    $("rangeChip").textContent = `Window: ${win}`;
+    $("countChip").textContent = `Records: ${CDR_RAW.length.toLocaleString()}`;
+
+    PAGE = 0;
+    applyFilters();
+    computeKPIsAndHealth();
+    renderAll();
+
+    $("cdrLoading").classList.add("hidden");
+    $("cdrTable").classList.remove("hidden");
+    $("lastRefresh").textContent = `Last refresh: ${new Date().toLocaleString()}`;
+    updateLive("healthy");
+
+  } catch(e){
+    setError(e?.message || String(e));
+    updateLive("error");
+  } finally {
+    $("btnLoad").disabled = false;
+    $("btnLoad").textContent = "Load CDR";
   }
-
-  const items = Array.isArray(r.data?.records)
-  ? r.data.records
-  : (Array.isArray(r.data?.items) ? r.data.items : []);
-  const normalized = items.map(normalizeCdrRecord);
-
-  // Optional: filter by time window locally (in case worker ignores from/to)
-  const filteredByTime = normalized.filter(x=>{
-    if(!x.startTime) return true;
-    const t = new Date(x.startTime).getTime();
-    if(Number.isNaN(t)) return true;
-    return t >= range.from && t <= range.to;
-  });
-if (r.data?.summary) {
-
-  const mos = r.data.summary.mosAverage;
-  const loss = r.data.summary.packetLossAverage;
-
-  $("kpiMos").textContent =
-    Number.isFinite(mos) ? mos.toFixed(2) : "—";
-
-  $("kpiPacket").textContent =
-    Number.isFinite(loss) ? (loss*100).toFixed(2) + "%" : "—";
-
-}
-  CDR_RAW = filteredByTime.sort((a,b)=>{
-    
-    const ta = new Date(a.startTime || 0).getTime();
-    const tb = new Date(b.startTime || 0).getTime();
-    return tb - ta;
-  });
-
-  $("rangeChip").textContent = `Window: ${win}`;
-  $("countChip").textContent = `Records: ${CDR_RAW.length.toLocaleString()}`;
-
-  PAGE = 0;
-  applyFilters();
-  computeKPIsAndHealth();
-  renderAll();
-
-  $("cdrLoading").classList.add("hidden");
-  $("cdrTable").classList.remove("hidden");
-
-  $("lastRefresh").textContent = `Last refresh: ${new Date().toLocaleString()}`;
 }
 
 /* =========================
@@ -1065,7 +1267,7 @@ function applyFilters(){
 }
 
 /* =========================
-   KPI + HEALTH + SLA
+   KPI + RISK + AI
 ========================= */
 function computeKPIsAndHealth(){
   const total = CDR_RAW.length;
@@ -1075,36 +1277,53 @@ function computeKPIsAndHealth(){
   const failRate = total ? failed/total : 0;
   const unknownRate = total ? unknown/total : 0;
 
-  $("kpiTotal").textContent = total.toLocaleString();
-  $("kpiFailRate").textContent = fmtPct(failRate);
-
-  const durations = CDR_RAW.map(x=>Number(x.duration||0)).filter(n=>Number.isFinite(n)).sort((a,b)=>a-b);
+  const durations = CDR_RAW.map(x=>Number(x.duration||0)).filter(Number.isFinite).sort((a,b)=>a-b);
   const p95 = durations.length ? percentile(durations, 0.95) : 0;
-  $("kpiP95").textContent = fmtInt(p95);
+  const avgDuration = durations.length ? mean(durations) : 0;
+
+  const mos = Number(SUMMARY?.mosAverage ?? SUMMARY?.avgMos ?? SUMMARY?.summary?.mosAverage);
+  const lossRaw = Number(SUMMARY?.packetLossAverage ?? SUMMARY?.avgPacketLoss ?? SUMMARY?.summary?.packetLossAverage);
+
+  $("kpiTotal").textContent = fmtInt(total);
+  $("kpiFailRate").textContent = fmtPct(failRate);
+  $("kpiP95").textContent = `${fmtInt(p95)}s`;
+  $("kpiMos").textContent = Number.isFinite(mos) ? mos.toFixed(2) : "—";
+  $("kpiPacket").textContent = Number.isFinite(lossRaw)
+    ? (lossRaw > 1 ? lossRaw.toFixed(2) : (lossRaw*100).toFixed(2)) + "%"
+    : "—";
 
   const sla = computeSlaState(failRate, unknownRate, p95);
   $("kpiSla").innerHTML = sla.label;
-  $("kpiSlaHint").textContent = sla.hint;
-
+  $("kpiSlaHint").innerHTML = `${sla.state === "red" ? "🚨" : sla.state === "amber" ? "⚠️" : "✅"} ${escapeHtml(sla.hint)}`;
   setSidebarRag(sla.state);
 
-  // Anomaly detection (simple + useful)
+  $("kpiTotalHint").textContent = `${fmtInt(total)} total records in active sample`;
+  $("kpiFailHint").textContent = `${fmtInt(failed)} failed / ${fmtInt(unknown)} unknown`;
+  $("kpiP95Hint").textContent = `Average duration ${fmtInt(avgDuration || 0)}s`;
+  $("kpiMosHint").textContent = Number.isFinite(mos) ? "Summary-backed quality metric" : "No MOS returned in current summary";
+  $("kpiPacketHint").textContent = Number.isFinite(lossRaw) ? "Summary-backed impairment metric" : "No packet loss returned in current summary";
+
   const anomalies = detectAnomalies(CDR_RAW);
   $("anomalyChip").textContent = `Anomalies: ${anomalies.length}`;
-}
 
+  const prediction = buildPredictiveAlert();
+  $("predictChip").textContent = prediction.chip;
+  renderAiPanels({ total, failed, unknown, failRate, unknownRate, p95, avgDuration, mos, lossRaw, anomalies, prediction, sla });
+  renderBenchmark({ failRate, p95, total });
+  renderSparklines({ failRate, p95, mos, lossRaw, slaState: sla.state });
+}
 function computeSlaState(failRate, unknownRate, p95){
   let state = "green";
   const breaches = [];
 
-  if(failRate >= SLA.failRateRed) { state = "red"; breaches.push("Failure rate breach"); }
-  else if(failRate >= SLA.failRateAmber && state !== "red") { state = "amber"; breaches.push("Failure rate at risk"); }
+  if(failRate >= SLA.failRateRed){ state = "red"; breaches.push("Failure rate breach"); }
+  else if(failRate >= SLA.failRateAmber && state !== "red"){ state = "amber"; breaches.push("Failure rate at risk"); }
 
-  if(unknownRate >= SLA.unknownRateRed) { state = "red"; breaches.push("Unknown result breach"); }
-  else if(unknownRate >= SLA.unknownRateAmber && state !== "red") { state = "amber"; breaches.push("Unknown result at risk"); }
+  if(unknownRate >= SLA.unknownRateRed){ state = "red"; breaches.push("Unknown result breach"); }
+  else if(unknownRate >= SLA.unknownRateAmber && state !== "red"){ state = "amber"; breaches.push("Unknown result at risk"); }
 
-  if(p95 >= SLA.p95DurRed) { state = "red"; breaches.push("P95 duration breach"); }
-  else if(p95 >= SLA.p95DurAmber && state !== "red") { state = "amber"; breaches.push("P95 duration at risk"); }
+  if(p95 >= SLA.p95DurRed){ state = "red"; breaches.push("P95 duration breach"); }
+  else if(p95 >= SLA.p95DurAmber && state !== "red"){ state = "amber"; breaches.push("P95 duration at risk"); }
 
   const label =
     state === "green" ? `<span class="badge good">MEETING SLA</span>` :
@@ -1114,11 +1333,9 @@ function computeSlaState(failRate, unknownRate, p95){
   const hint = breaches.length ? breaches.join(" • ") : "Healthy operational signals";
   return { state, label, hint };
 }
-
 function setSidebarRag(state){
   const pill = $("ragPill");
   pill.classList.remove("summary-green","summary-amber","summary-red");
-
   if(state === "green"){
     pill.classList.add("summary-green");
     pill.textContent = "GREEN";
@@ -1130,148 +1347,418 @@ function setSidebarRag(state){
     pill.textContent = "RED";
   }
 }
+function renderAiPanels(ctx){
+  const failRatePct = (ctx.failRate * 100).toFixed(1);
+  const unknownRatePct = (ctx.unknownRate * 100).toFixed(1);
 
-function percentile(sortedAsc, p){
-  if(!sortedAsc.length) return 0;
-  const idx = (sortedAsc.length - 1) * p;
-  const lo = Math.floor(idx);
-  const hi = Math.ceil(idx);
-  if(lo === hi) return sortedAsc[lo];
-  const w = idx - lo;
-  return Math.round(sortedAsc[lo] * (1 - w) + sortedAsc[hi] * w);
-}
+  let summary = `Loaded ${fmtInt(ctx.total)} calls. Failure rate is ${failRatePct}% and unknown-result rate is ${unknownRatePct}%. `;
+  if(ctx.sla.state === "green") summary += `Current operational posture is healthy.`;
+  else if(ctx.sla.state === "amber") summary += `Current posture is at risk and should be reviewed.`;
+  else summary += `Current posture indicates an SLA breach condition.`;
 
-function detectAnomalies(records){
-  // Useful ops anomalies:
-  // - high duration outliers
-  // - too many unknowns for a caller/callee
-  const out = [];
+  if(Number.isFinite(ctx.mos)) summary += ` Average MOS is ${ctx.mos.toFixed(2)}.`;
+  if(Number.isFinite(ctx.lossRaw)) summary += ` Average packet loss is ${ctx.lossRaw > 1 ? ctx.lossRaw.toFixed(2) : (ctx.lossRaw*100).toFixed(2)}%.`;
 
-  const durations = records.map(x=>x.duration||0).filter(Number.isFinite).sort((a,b)=>a-b);
-  const p99 = durations.length ? percentile(durations, 0.99) : 0;
+  $("aiSummary").textContent = summary;
 
-  for(const r of records){
-    if(r.duration > Math.max(1800, p99)) out.push({ type:"LONG_CALL", r });
-    if(r.bucket === "unknown") out.push({ type:"UNKNOWN_RESULT", r });
+  if(!ctx.anomalies.length){
+    $("aiAnomalies").textContent = `No high-confidence Z-score anomalies were detected in the current sample window.`;
+  } else {
+    const top = ctx.anomalies.slice(0,3).map(a => a.label).join(" • ");
+    $("aiAnomalies").textContent = `${ctx.anomalies.length} anomaly signal(s) detected. Top signals: ${top}.`;
   }
 
-  // de-dup lightly
-  return out.slice(0, 200);
+  $("aiPredict").textContent = ctx.prediction.detail;
+}
+function renderBenchmark(current){
+  // Customer-safe model:
+  // 1) Try anonymized peer benchmark endpoint if present
+  // 2) Else compare current window to self historical baseline from trend
+  const box = $("benchmarkBox");
+
+  if(BENCHMARK && typeof BENCHMARK === "object"){
+    const peerFail = Number(BENCHMARK.peerFailureRate ?? BENCHMARK.failRate ?? BENCHMARK.avgFailureRate);
+    const peerP95 = Number(BENCHMARK.peerP95 ?? BENCHMARK.p95);
+    const percentileRank = Number(BENCHMARK.percentileRank);
+
+    const lines = [];
+    if(Number.isFinite(peerFail)){
+      const delta = (current.failRate - peerFail) * 100;
+      lines.push(`<div>${delta <= 0 ? "✅" : "⚠️"} Failure rate vs peer baseline: <b>${delta.toFixed(1)} pts</b></div>`);
+    }
+    if(Number.isFinite(peerP95)){
+      lines.push(`<div>${current.p95 <= peerP95 ? "✅" : "⚠️"} P95 duration vs peer baseline: <b>${fmtInt(current.p95 - peerP95)}s</b></div>`);
+    }
+    if(Number.isFinite(percentileRank)){
+      lines.push(`<div>Peer percentile rank: <b>${percentileRank.toFixed(0)}th percentile</b></div>`);
+    }
+    box.innerHTML = lines.length ? lines.join("") : `<div class="badge warn">Peer benchmark returned no usable values</div>`;
+    return;
+  }
+
+  const trend = getTrendPoints();
+  const baseCalls = trend.map(x=>x.calls).filter(Number.isFinite);
+  const selfAvg = mean(baseCalls);
+  const today = trend.length ? trend[trend.length-1]?.calls : null;
+
+  if(Number.isFinite(selfAvg) && Number.isFinite(today)){
+    const delta = today - selfAvg;
+    box.innerHTML = `
+      <div>Self-baseline only mode.</div>
+      <div>${delta >= 0 ? "📈" : "📉"} Latest daily volume vs self average: <b>${fmtInt(delta)}</b> calls</div>
+      <div class="small">No cross-tenant customer data is exposed on this page.</div>
+    `;
+  } else {
+    box.innerHTML = `<div class="badge warn">Benchmark unavailable</div><div class="small">No baseline could be established yet.</div>`;
+  }
 }
 
 /* =========================
-   CHARTS (CANVAS)
+   ANOMALY DETECTION
 ========================= */
-function drawResultChart(){
-  const canvas = $("resultChart");
+function getTrendPoints(){
+  if(Array.isArray(SERVER_TRENDS) && SERVER_TRENDS.length){
+    return SERVER_TRENDS;
+  }
+  return buildDailyTrend(CDR_RAW, 30);
+}
+function detectAnomalies(records){
+  const anomalies = [];
+  const trend = getTrendPoints();
+  const callSeries = trend.map(x => Number(x.calls)).filter(Number.isFinite);
+  const m = mean(callSeries);
+  const s = stddev(callSeries);
+
+  if(m != null && s != null && s > 0){
+    for(const p of trend){
+      const z = (p.calls - m) / s;
+      if(Math.abs(z) >= 2.2){
+        anomalies.push({
+          type:"VOLUME_ZSCORE",
+          z,
+          label:`${p.key || p.day}: volume Z-score ${z.toFixed(2)}`
+        });
+      }
+    }
+  }
+
+  const failedByHour = Array(24).fill(0);
+  for(const r of records){
+    if(r.bucket !== "failed") continue;
+    const d = new Date(r.startTime);
+    if(Number.isNaN(d.getTime())) continue;
+    failedByHour[d.getHours()]++;
+  }
+  const hm = mean(failedByHour);
+  const hs = stddev(failedByHour);
+  if(hm != null && hs != null && hs > 0){
+    failedByHour.forEach((v,h)=>{
+      const z = (v - hm)/hs;
+      if(z >= 2.0){
+        anomalies.push({
+          type:"FAILED_HOUR_ZSCORE",
+          z,
+          label:`Hour ${String(h).padStart(2,"0")}:00 failure spike Z-score ${z.toFixed(2)}`
+        });
+      }
+    });
+  }
+
+  return anomalies.sort((a,b)=>Math.abs(b.z)-Math.abs(a.z));
+}
+function buildPredictiveAlert(){
+  const trend = getTrendPoints();
+  const values = trend.map(x => Number(x.calls)).filter(Number.isFinite);
+  const pred = linearForecast(values, 3);
+
+  if(!pred){
+    return {
+      chip: "Prediction: Insufficient data",
+      detail: "Not enough daily trend points are available to compute a short-horizon forecast."
+    };
+  }
+
+  const slope = pred.slope || 0;
+  const next = pred.values[0] || 0;
+  const avgBase = mean(values) || 0;
+
+  if(slope > 1.5 && next > avgBase * 1.2){
+    return {
+      chip: "Prediction: Volume pressure ↑",
+      detail: `Projected call demand is rising. The next modeled interval is ${fmtInt(next)} calls, above the recent baseline of ${fmtInt(avgBase)}. Watch failure rate and routing capacity closely.`
+    };
+  }
+
+  if(slope < -1.5){
+    return {
+      chip: "Prediction: Volume softening",
+      detail: `Recent call volume trend is softening. This is not a fault condition by itself, but should be validated against business activity expectations.`
+    };
+  }
+
+  return {
+    chip: "Prediction: Stable",
+    detail: `Short-horizon forecast suggests stable call demand. No immediate predictive risk signal is present from the current trend model.`
+  };
+}
+
+/* =========================
+   LIVE STATUS
+========================= */
+function updateLive(state){
+  const dot = $("liveDot");
+  const text = $("liveStatus");
+  dot.className = "live-dot";
+  if(state === "healthy"){
+    text.textContent = "Streaming via periodic refresh. Data is current.";
+  } else if(state === "syncing"){
+    dot.classList.add("warn");
+    text.textContent = "Sync in progress…";
+  } else {
+    dot.classList.add("bad");
+    text.textContent = "Refresh issue detected. Last successful data remains displayed.";
+  }
+}
+function renderReportStatus(status){
+  if(!status){
+    $("reportStatus").textContent = "Status: Not Available";
+    $("reportLastRun").textContent = "Last Run: —";
+    $("reportSource").textContent = "Source: Summary + Raw";
+    $("reportDetails").textContent = "Report metadata endpoint not present. Page is operating from tenant-scoped summary and raw CDR endpoints.";
+    return;
+  }
+
+  const st = status.status || status.state || "unknown";
+  const created = status.createdTime || status.createdAt || status.timestamp || null;
+  const source = status.source || status.mode || "summary/raw";
+
+  $("reportStatus").textContent = `Status: ${st}`;
+  $("reportLastRun").textContent = `Last Run: ${toLocal(created)}`;
+  $("reportSource").textContent = `Source: ${source}`;
+  $("reportDetails").textContent = status.message || "Report metadata loaded successfully.";
+}
+
+/* =========================
+   CHARTS
+========================= */
+function setupCanvas(id){
+  const c = $(id);
+  const parent = c.parentElement;
+  const w = Math.max(220, parent.clientWidth - 20);
+  c.width = w;
+  return c;
+}
+function drawBars(canvasId, data, labels, colors){
+  const canvas = setupCanvas(canvasId);
   const ctx = canvas.getContext("2d");
-
-  const total = CDR_RAW.length || 1;
-  const success = CDR_RAW.filter(x=>x.bucket==="success").length;
-  const failed = CDR_RAW.filter(x=>x.bucket==="failed").length;
-  const unknown = CDR_RAW.filter(x=>x.bucket==="unknown").length;
-
-  const data = [
-    { label:"Success", v: success },
-    { label:"Failed", v: failed },
-    { label:"Unknown", v: unknown }
-  ];
-
-  // Clear
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  // Simple bar chart without external libs
   const w = canvas.width;
   const h = canvas.height;
-  const pad = 14;
-  const max = Math.max(...data.map(d=>d.v), 1);
-  const barW = (w - pad*2) / data.length - 18;
+  ctx.clearRect(0,0,w,h);
 
-  data.forEach((d,i)=>{
-    const x = pad + i * ((w - pad*2)/data.length) + 9;
-    const barH = (d.v / max) * (h - 44);
-    const y = h - 26 - barH;
+  const pad = 16;
+  const max = Math.max(...data, 1);
+  const slot = (w - pad*2) / data.length;
 
-    ctx.fillStyle = i===0 ? "rgba(22,163,74,.55)" : i===1 ? "rgba(220,38,38,.55)" : "rgba(245,158,11,.55)";
+  data.forEach((v,i)=>{
+    const barW = Math.max(16, slot - 14);
+    const x = pad + i*slot + (slot-barW)/2;
+    const barH = (v/max) * (h - 40);
+    const y = h - 22 - barH;
+
+    ctx.fillStyle = colors[i] || "rgba(15,98,254,.55)";
     ctx.fillRect(x, y, barW, barH);
 
     ctx.fillStyle = "rgba(100,116,139,.95)";
     ctx.font = "11px system-ui";
-    ctx.fillText(d.label, x, h - 10);
-    ctx.fillText(String(d.v), x, y - 6);
+    ctx.fillText(labels[i], x, h - 6);
+    ctx.fillText(String(v), x, Math.max(10, y - 4));
   });
-
-  // Chips update (count already shown)
 }
-
-function drawTrendChart(){
-  const canvas = $("trendChart");
+function drawLine(canvasId, points, color="rgba(15,98,254,.95)"){
+  const canvas = setupCanvas(canvasId);
   const ctx = canvas.getContext("2d");
-
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
- const points = window.SERVER_TRENDS || buildDailyTrend(CDR_RAW, 30);
-
-  // line
   const w = canvas.width;
   const h = canvas.height;
-  const padX = 10;
-  const padY = 12;
-  const max = Math.max(...points.map(p=>p.calls), 1);
+  ctx.clearRect(0,0,w,h);
 
-  ctx.strokeStyle = "rgba(15,98,254,.95)";
+  if(!points.length){
+    ctx.fillStyle = "rgba(100,116,139,.95)";
+    ctx.font = "12px system-ui";
+    ctx.fillText("No data", 12, 24);
+    return;
+  }
+
+  const vals = points.map(p => Number(p.calls ?? p.value ?? 0));
+  const max = Math.max(...vals, 1);
+  const min = Math.min(...vals, 0);
+  const span = Math.max(1, max - min);
+
+  const padX = 10;
+  const padY = 14;
+
+  ctx.strokeStyle = color;
   ctx.lineWidth = 2;
   ctx.beginPath();
 
   points.forEach((p,i)=>{
-    const x = padX + (i * (w - padX*2) / (points.length - 1));
-    const y = h - padY - (p.calls / max) * (h - padY*2 - 12);
+    const v = Number(p.calls ?? p.value ?? 0);
+    const x = padX + (i * (w - padX*2) / Math.max(1, points.length - 1));
+    const y = h - padY - ((v - min) / span) * (h - padY*2 - 12);
     if(i===0) ctx.moveTo(x,y);
     else ctx.lineTo(x,y);
   });
-
   ctx.stroke();
 
-  // baseline labels
   ctx.fillStyle = "rgba(100,116,139,.95)";
   ctx.font = "11px system-ui";
-  ctx.fillText("0", 4, h - 6);
   ctx.fillText(String(max), 4, 12);
+  ctx.fillText(String(min), 4, h - 4);
 }
+function drawSpark(canvasId, values, state="normal"){
+  const canvas = $(canvasId);
+  const parent = canvas.parentElement;
+  canvas.width = Math.max(120, parent.clientWidth - 4);
+  canvas.height = 34;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-function buildDailyTrend(records, days){
-  const now = new Date();
-  const buckets = [];
-  for(let i=days-1; i>=0; i--){
-    const d = new Date(now.getTime() - i*86400000);
-    const key = d.toISOString().slice(0,10);
-    buckets.push({ key, calls: 0 });
+  const data = (values || []).filter(Number.isFinite);
+  if(data.length < 2){
+    ctx.fillStyle = "rgba(100,116,139,.65)";
+    ctx.font = "11px system-ui";
+    ctx.fillText("—", 8, 20);
+    return;
   }
 
-  const idx = new Map(buckets.map((b,i)=>[b.key, i]));
+  const color =
+    state === "bad" ? "rgba(220,38,38,.95)" :
+    state === "warn" ? "rgba(245,158,11,.95)" :
+    "rgba(15,98,254,.95)";
 
-  for(const r of records){
-    if(!r.startTime) continue;
-    const t = new Date(r.startTime);
-    if(Number.isNaN(t.getTime())) continue;
-    const key = t.toISOString().slice(0,10);
-    const i = idx.get(key);
-    if(i !== undefined) buckets[i].calls += 1;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const span = Math.max(1, max - min);
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  data.forEach((v,i)=>{
+    const x = 4 + i * ((canvas.width - 8) / Math.max(1, data.length - 1));
+    const y = canvas.height - 4 - ((v - min) / span) * (canvas.height - 8);
+    if(i===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+}
+function drawResultChart(){
+  const total = CDR_RAW.length || 1;
+  const success = CDR_RAW.filter(x=>x.bucket==="success").length;
+  const failed = CDR_RAW.filter(x=>x.bucket==="failed").length;
+  const unknown = CDR_RAW.filter(x=>x.bucket==="unknown").length;
+  drawBars("resultChart", [success, failed, unknown], ["Success","Failed","Unknown"], [
+    "rgba(22,163,74,.55)",
+    "rgba(220,38,38,.55)",
+    "rgba(245,158,11,.55)"
+  ]);
+}
+function drawTrendChart(){
+  const points = getTrendPoints().map(p => ({
+    key: p.key || p.day,
+    calls: p.calls || 0
+  }));
+  drawLine("trendChart", points);
+}
+function drawFailureHeatmap(){
+  const canvas = setupCanvas("failureHeat");
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const hours = Array(24).fill(0);
+  for(const r of CDR_RAW){
+    if(r.bucket !== "failed") continue;
+    const d = new Date(r.startTime);
+    if(Number.isNaN(d.getTime())) continue;
+    hours[d.getHours()]++;
   }
-  return buckets;
+
+  const max = Math.max(...hours, 1);
+  const slot = canvas.width / 24;
+
+  hours.forEach((v,i)=>{
+    const intensity = v / max;
+    const x = i * slot;
+    const barW = slot - 2;
+    const barH = intensity * (canvas.height - 20);
+
+    ctx.fillStyle = `rgba(220,38,38,${0.18 + intensity * 0.75})`;
+    ctx.fillRect(x + 1, canvas.height - barH - 14, barW, barH);
+
+    ctx.fillStyle = "rgba(100,116,139,.95)";
+    ctx.font = "10px system-ui";
+    ctx.fillText(String(i).padStart(2,"0"), x + 3, canvas.height - 2);
+  });
+}
+function renderSparklines(ctx){
+  const trend = getTrendPoints();
+  const totalSeries = sparklineDataFromTrend(trend, x => x.calls);
+  const failSeries = buildFailureTrendSeries();
+  const p95Series = buildDurationTrendSeries();
+  const mosSeries = Array.isArray(SERVER_TRENDS) && SERVER_TRENDS.length
+    ? SERVER_TRENDS.map(x => Number(x.avgMos)).filter(Number.isFinite)
+    : [];
+  const packetSeries = Array.isArray(SERVER_TRENDS) && SERVER_TRENDS.length
+    ? SERVER_TRENDS.map(x => Number(x.avgPacketLoss)).filter(Number.isFinite)
+    : [];
+  const slaSeries = failSeries.map(v => {
+    if(v >= SLA.failRateRed * 100) return 30;
+    if(v >= SLA.failRateAmber * 100) return 65;
+    return 95;
+  });
+
+  drawSpark("sparkTotal", totalSeries, "normal");
+  drawSpark("sparkFail", failSeries, ctx.slaState === "red" ? "bad" : ctx.slaState === "amber" ? "warn" : "normal");
+  drawSpark("sparkP95", p95Series, ctx.slaState === "red" ? "bad" : ctx.slaState === "amber" ? "warn" : "normal");
+  drawSpark("sparkMos", mosSeries, Number.isFinite(ctx.mos) && ctx.mos < 3.6 ? "bad" : "normal");
+  drawSpark("sparkPacket", packetSeries, Number.isFinite(ctx.lossRaw) && ctx.lossRaw > 2 ? "bad" : "normal");
+  drawSpark("sparkSla", slaSeries, ctx.slaState === "red" ? "bad" : ctx.slaState === "amber" ? "warn" : "normal");
+}
+function buildFailureTrendSeries(){
+  const points = getTrendPoints();
+  if(Array.isArray(points) && points.length){
+    // If server trends do not include failures, derive from raw grouped by day
+    const grouped = {};
+    for(const r of CDR_RAW){
+      const d = String(r.startTime || "").slice(0,10);
+      if(!d) continue;
+      if(!grouped[d]) grouped[d] = { total:0, failed:0 };
+      grouped[d].total++;
+      if(r.bucket === "failed") grouped[d].failed++;
+    }
+    return points.map(p => {
+      const d = grouped[p.key || p.day] || { total:0, failed:0 };
+      return d.total ? (d.failed / d.total) * 100 : 0;
+    });
+  }
+  return [];
+}
+function buildDurationTrendSeries(){
+  const grouped = {};
+  for(const r of CDR_RAW){
+    const d = String(r.startTime || "").slice(0,10);
+    if(!d) continue;
+    if(!grouped[d]) grouped[d] = [];
+    grouped[d].push(Number(r.duration || 0));
+  }
+  return Object.keys(grouped).sort().slice(-30).map(day => {
+    const vals = grouped[day].filter(Number.isFinite).sort((a,b)=>a-b);
+    return vals.length ? percentile(vals, 0.95) : 0;
+  });
 }
 
 /* =========================
-   TOP TALKERS
+   TOP TALKERS + FAILURE CAUSES
 ========================= */
-function renderTopTalkers(){
-  const callers = aggregateBy(CDR_RAW, r=>normalizeE164(r.caller));
-  const callees = aggregateBy(CDR_RAW, r=>normalizeE164(r.callee));
-
-  $("topCallers").innerHTML = renderAggRows(callers, "caller");
-  $("topCallees").innerHTML = renderAggRows(callees, "callee");
-}
-
 function aggregateBy(records, keyFn){
   const map = new Map();
   for(const r of records){
@@ -1283,8 +1770,7 @@ function aggregateBy(records, keyFn){
   }
   return Array.from(map.values()).sort((a,b)=>b.calls-a.calls).slice(0,10);
 }
-
-function renderAggRows(list, kind){
+function renderAggRows(list){
   if(!list.length) return `<tr><td colspan="3" class="muted">No data</td></tr>`;
   return list.map(x=>`
     <tr>
@@ -1294,9 +1780,33 @@ function renderAggRows(list, kind){
     </tr>
   `).join("");
 }
+function renderTopTalkers(){
+  const callers = aggregateBy(CDR_RAW, r=>normalizeE164(r.caller));
+  const callees = aggregateBy(CDR_RAW, r=>normalizeE164(r.callee));
+  $("topCallers").innerHTML = renderAggRows(callers);
+  $("topCallees").innerHTML = renderAggRows(callees);
+}
+function renderFailureCauses(){
+  const map = new Map();
+  for(const r of CDR_RAW){
+    if(r.bucket !== "failed") continue;
+    const cause = r.cause || r.result || "Unknown";
+    map.set(cause, (map.get(cause) || 0) + 1);
+  }
+  const totalFailed = CDR_RAW.filter(x => x.bucket === "failed").length || 1;
+  const sorted = [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+  $("failureCauses").innerHTML = sorted.length ? sorted.map(([c,v])=>`
+    <tr>
+      <td>${escapeHtml(c)}</td>
+      <td class="right">${fmtInt(v)}</td>
+      <td class="right">${fmtPct(v/totalFailed)}</td>
+    </tr>
+  `).join("") : `<tr><td colspan="3" class="muted">No failure causes present in current sample.</td></tr>`;
+}
 
 /* =========================
-   TABLE RENDERING + PAGING
+   TABLE
 ========================= */
 function renderTable(){
   applyFilters();
@@ -1309,7 +1819,7 @@ function renderTable(){
   $("btnNext").disabled = (start + size) >= CDR_VIEW.length;
 
   if(CDR_RAW.length === 0){
-    $("cdrRows").innerHTML = `<tr><td colspan="8" class="muted">No CDR records found for this window.</td></tr>`;
+    $("cdrRows").innerHTML = `<tr><td colspan="8" class="muted">No CDR data available. Report may still be generating or no calls occurred in this window.</td></tr>`;
     return;
   }
 
@@ -1318,7 +1828,7 @@ function renderTable(){
     return;
   }
 
-  $("cdrRows").innerHTML = pageItems.map(r=>{
+  $("cdrRows").innerHTML = pageItems.map((r, idx)=>{
     const dir = String(r.direction||"unknown").toLowerCase();
     const dirLabel = dir === "inbound" ? "IN" : dir === "outbound" ? "OUT" : "—";
 
@@ -1334,13 +1844,13 @@ function renderTable(){
 
     const flagText = r.flags?.length ? r.flags.join(", ") : "—";
     const flagBadge = r.flags?.length
-      ? (r.flags.some(f=>f.includes("FAILED") || f.includes("UNKNOWN")) ? `<span class="badge warn">${escapeHtml(flagText)}</span>` : `<span class="badge">${escapeHtml(flagText)}</span>`)
+      ? (r.flags.some(f=>f.includes("FAILED") || f.includes("UNKNOWN") || f.includes("LOSS")) ? `<span class="badge warn">${escapeHtml(flagText)}</span>` : `<span class="badge">${escapeHtml(flagText)}</span>`)
       : `<span class="badge">—</span>`;
 
     const idShort = r.callId ? r.callId.slice(0,10)+"…" : "";
 
     return `
-      <tr style="cursor:pointer;" data-callid="${escapeHtml(r.callId||"")}" onclick="openModal('${escapeHtml(r.callId||"")}')">
+      <tr style="cursor:pointer;" onclick="openModalByIndex(${start + idx})">
         <td>
           ${escapeHtml(toLocal(r.startTime))}
           ${r.callId ? `<div class="small mono">ID: ${escapeHtml(idShort)}</div>` : ``}
@@ -1356,38 +1866,25 @@ function renderTable(){
     `;
   }).join("");
 }
-
 function renderAll(){
   renderTable();
   renderTopTalkers();
+  renderFailureCauses();
   drawResultChart();
   drawTrendChart();
+  drawFailureHeatmap();
 }
 
 /* =========================
-   MODAL DRILL-DOWN
+   MODAL
 ========================= */
-function openModal(callId){
-  // Find by callId if available; if missing, fallback by index not possible from UI
-  const rec = CDR_RAW.find(x=>String(x.callId||"") === String(callId||"")) || null;
+function openModalByIndex(i){
+  const rec = CDR_VIEW[i - (PAGE * (Number($("pageSize").value)||50))] || CDR_RAW[i] || CDR_VIEW[0] || null;
+  if(!rec) return;
+  CURRENT_MODAL_RECORD = rec;
 
-  // If callId missing in dataset, still allow drill by picking first match from visible row text is hard.
-  // We will locate by row click using callId; if callId is empty, we pick by startTime+caller+callee
-  if(!rec){
-    // try fallback: if callId empty, choose first record (best effort)
-    const fallback = CDR_VIEW[0] || null;
-    if(!fallback) return;
-    return openModalWithRecord(fallback);
-  }
-
-  openModalWithRecord(rec);
-}
-
-function openModalWithRecord(rec){
   $("cdrModal").style.display = "flex";
-
-  const title = `CDR Drill-Down — ${normalizeE164(rec.caller)} → ${normalizeE164(rec.callee)}`;
-  $("modalTitle").textContent = title;
+  $("modalTitle").textContent = `CDR Drill-Down — ${normalizeE164(rec.caller)} → ${normalizeE164(rec.callee)}`;
   $("modalSub").textContent = `${toLocal(rec.startTime)} • ${rec.duration}s • ${rec.bucket.toUpperCase()}`;
 
   const kv = [
@@ -1412,23 +1909,11 @@ function openModalWithRecord(rec){
   `).join("");
 
   $("modalRaw").textContent = JSON.stringify(rec._raw || rec, null, 2);
-
-  $("btnModalCopy").onclick = async ()=>{
-    try{
-      await navigator.clipboard.writeText($("modalRaw").textContent);
-      $("btnModalCopy").textContent = "Copied";
-      setTimeout(()=> $("btnModalCopy").textContent = "Copy JSON", 1200);
-    }catch{
-      $("btnModalCopy").textContent = "Copy failed";
-      setTimeout(()=> $("btnModalCopy").textContent = "Copy JSON", 1200);
-    }
-  };
 }
-
 function closeModal(){
   $("cdrModal").style.display = "none";
+  CURRENT_MODAL_RECORD = null;
 }
-
 $("btnModalClose").addEventListener("click", closeModal);
 $("cdrModal").addEventListener("click", (e)=>{
   if(e.target.id === "cdrModal") closeModal();
@@ -1436,12 +1921,51 @@ $("cdrModal").addEventListener("click", (e)=>{
 document.addEventListener("keydown", (e)=>{
   if(e.key === "Escape") closeModal();
 });
+$("btnModalCopy").addEventListener("click", async ()=>{
+  try{
+    await navigator.clipboard.writeText($("modalRaw").textContent);
+    $("btnModalCopy").textContent = "Copied";
+    setTimeout(()=> $("btnModalCopy").textContent = "Copy JSON", 1200);
+  }catch{
+    $("btnModalCopy").textContent = "Copy failed";
+    setTimeout(()=> $("btnModalCopy").textContent = "Copy JSON", 1200);
+  }
+});
+$("btnOpenInsight").addEventListener("click", ()=>{
+  if(!CURRENT_MODAL_RECORD) return;
+  const orgId = SELECTED_ORG_ID || "";
+  const callId = CURRENT_MODAL_RECORD.callId || "";
+  const url = `/customer/callinginsight?orgId=${encodeURIComponent(orgId)}${callId ? `&callId=${encodeURIComponent(callId)}` : ""}`;
+  window.open(url, "_blank");
+});
 
 /* =========================
-   CSV EXPORT
+   DAILY TREND
+========================= */
+function buildDailyTrend(records, days){
+  const now = new Date();
+  const buckets = [];
+  for(let i=days-1; i>=0; i--){
+    const d = new Date(now.getTime() - i*86400000);
+    const key = d.toISOString().slice(0,10);
+    buckets.push({ key, calls: 0 });
+  }
+  const idx = new Map(buckets.map((b,i)=>[b.key, i]));
+  for(const r of records){
+    if(!r.startTime) continue;
+    const t = new Date(r.startTime);
+    if(Number.isNaN(t.getTime())) continue;
+    const key = t.toISOString().slice(0,10);
+    const i = idx.get(key);
+    if(i !== undefined) buckets[i].calls += 1;
+  }
+  return buckets;
+}
+
+/* =========================
+   EXPORT
 ========================= */
 function exportCsv(){
-  // Export what user is viewing (filtered set)
   const rows = CDR_VIEW.map(r=>({
     startTime: r.startTime || "",
     direction: r.direction || "",
@@ -1477,15 +2001,6 @@ function exportCsv(){
   URL.revokeObjectURL(url);
 }
 
-function csvCell(v){
-  const s = String(v ?? "");
-  // Escape quotes
-  const esc = s.replaceAll('"','""');
-  // Quote if contains comma/newline
-  if(esc.includes(",") || esc.includes("\n") || esc.includes("\r")) return `"${esc}"`;
-  return esc;
-}
-
 /* =========================
    LOGOUT
 ========================= */
@@ -1508,7 +2023,6 @@ $("timeWindow").addEventListener("change", ()=>{
   PAGE = 0;
   loadCDR();
 });
-
 $("resultFilter").addEventListener("change", ()=>{
   PAGE = 0;
   renderAll();
@@ -1525,7 +2039,6 @@ $("pageSize").addEventListener("change", ()=>{
   PAGE = 0;
   renderTable();
 });
-
 $("btnPrev").addEventListener("click", ()=>{
   PAGE = Math.max(0, PAGE - 1);
   renderTable();
@@ -1534,7 +2047,6 @@ $("btnNext").addEventListener("click", ()=>{
   PAGE = PAGE + 1;
   renderTable();
 });
-
 $("btnClear").addEventListener("click", ()=>{
   $("searchBox").value = "";
   $("resultFilter").value = "all";
@@ -1556,29 +2068,30 @@ async function init(){
     await loadOrgs();
     SELECTED_ORG_ID = $("tenantSelect").value || SELECTED_ORG_ID;
 
-    // Prime canvases (ensure width based on rendered size)
-    // Canvas width defaults to CSS size; set explicit for crispness
     setTimeout(()=>{
-      const rc = $("resultChart");
-      const tc = $("trendChart");
-      rc.width = rc.parentElement.clientWidth - 20;
-      tc.width = tc.parentElement.clientWidth - 20;
-      rc.height = 120;
-      tc.height = 120;
+      [
+        "resultChart","trendChart","failureHeat",
+        "sparkTotal","sparkFail","sparkP95","sparkMos","sparkPacket","sparkSla"
+      ].forEach(id=>{
+        const c = $(id);
+        if(!c) return;
+        if(id.startsWith("spark")) return;
+        c.width = Math.max(220, c.parentElement.clientWidth - 20);
+      });
     }, 50);
 
     await loadCDR();
 
     if(AUTO_REFRESH) clearInterval(AUTO_REFRESH);
     AUTO_REFRESH = setInterval(()=>{
-      // Only refresh if the user is on this page (always true) and not in modal
       if($("cdrModal").style.display !== "flex"){
         loadCDR();
       }
-    }, 120000); // every 2 min
+    }, 30000);
 
   }catch(e){
     setError(e?.message || String(e));
+    updateLive("error");
   }
 }
 
