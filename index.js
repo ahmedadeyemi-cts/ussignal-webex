@@ -557,27 +557,58 @@ async function runCachedCallReports(env) {
 }
 function parseAndFilterCSV(csvText, targetOrgId) {
 
-  const [header, ...rows] = csvText.split("\n").filter(Boolean);
-  const keys = header.split(",");
+  const parsed = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true
+  });
 
-  const orgIndex = keys.findIndex(k =>
+  const rows = parsed.data;
+
+  // 🔍 Find org column dynamically
+  const keys = Object.keys(rows[0] || {});
+  const orgKey = keys.find(k =>
     k.toLowerCase().includes("org")
   );
 
-  if (orgIndex === -1) {
+  if (!orgKey) {
     console.log("No org column found in CSV");
     return [];
   }
 
-  return rows.map(row => {
+  // 🔥 Filter only this tenant
+  return rows.filter(r => r[orgKey] === targetOrgId);
+}
+function parseCSVByOrg(csvText) {
 
-    const values = row.split(",");
-    const obj = Object.fromEntries(keys.map((k, i) => [k, values[i]]));
+  const parsed = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true
+  });
 
-    return obj;
+  const rows = parsed.data;
 
-  }).filter(row => row[keys[orgIndex]] === targetOrgId);
+  const keys = Object.keys(rows[0] || {});
+  const orgKey = keys.find(k =>
+    k.toLowerCase().includes("org")
+  );
 
+  if (!orgKey) {
+    console.log("No org column found in CSV");
+    return {};
+  }
+
+  const orgMap = {};
+
+  for (const row of rows) {
+
+    const orgId = row[orgKey];
+    if (!orgId) continue;
+
+    if (!orgMap[orgId]) orgMap[orgId] = [];
+    orgMap[orgId].push(row);
+  }
+
+  return orgMap;
 }
 function parseCsv(text) {
 
@@ -11192,7 +11223,7 @@ async scheduled(event, env, ctx) {
 
       const orgs = orgResult.data.items || [];
      await createPartnerReport(env);
-     await pollPartnerReports(env);
+     await pollPartnerReports(env, org);
 
       // --------------------------------------------------
       // 🔵 MAIN CRON (9AM LOCAL = 18 UTC)
