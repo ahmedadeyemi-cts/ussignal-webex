@@ -8929,6 +8929,89 @@ if (url.pathname === "/api/cdr" && request.method === "GET") {
   });
 
 }
+     // ======================================================
+// 📊 CDR SUMMARY (FAST - FROM KV)
+// ======================================================
+if (url.pathname === "/api/cdr/summary" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok: false, error: "access_required" }, 401);
+
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+  if (!orgId) return json({ ok: false, error: "missing_org" }, 400);
+
+  const summary = await env.WEBEX.get(`cdr:summary:${orgId}`, "json");
+
+  if (!summary) {
+    return json({
+      ok: true,
+      empty: true,
+      message: "No CDR summary yet (report may still be processing)"
+    });
+  }
+
+  return json({
+    ok: true,
+    orgId,
+    summary
+  });
+}
+     // ======================================================
+// 📈 CDR BENCHMARK (CROSS TENANT)
+// ======================================================
+if (url.pathname === "/api/cdr/benchmark" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok: false }, 401);
+
+  const list = await env.WEBEX.list({ prefix: "cdr:summary:" });
+
+  const summaries = [];
+
+  for (const key of list.keys) {
+    const data = await env.WEBEX.get(key.name, "json");
+    if (data) summaries.push(data);
+  }
+
+  if (!summaries.length) {
+    return json({ ok: true, empty: true });
+  }
+
+  const avgFailureRate =
+    summaries.reduce((a, s) => a + (s.failureRate || 0), 0) /
+    summaries.length;
+
+  const avgDuration =
+    summaries.reduce((a, s) => a + (s.avgDuration || 0), 0) /
+    summaries.length;
+
+  return json({
+    ok: true,
+    benchmark: {
+      avgFailureRate,
+      avgDuration,
+      tenants: summaries.length
+    }
+  });
+}
+     // ======================================================
+// 📡 CDR STATUS (FOR UI STATE)
+// ======================================================
+if (url.pathname === "/api/cdr/status" && request.method === "GET") {
+
+  const user = getCurrentUser(request);
+  if (!user) return json({ ok: false }, 401);
+
+  const orgId = normalizeOrgIdParam(url.searchParams.get("orgId"));
+
+  const summary = await env.WEBEX.get(`cdr:summary:${orgId}`, "json");
+
+  return json({
+    ok: true,
+    ready: !!summary,
+    lastUpdated: summary?.updated || null
+  });
+}
      // =====================================================
 // POST /api/reports
 // =====================================================
