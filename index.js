@@ -202,7 +202,7 @@ async function createPartnerReport(env) {
 
   return data.reportId;
 }
-async function pollPartnerReports(env)
+async function pollPartnerReports(env) {
 
   const list = await env.WEBEX.list({ prefix: "cdr:report:" });
 
@@ -258,6 +258,7 @@ async function pollPartnerReports(env)
 
     }
   }
+}
 async function storeHealth(env, health) {
   await env.WEBEX.put(
     `health:${health.orgId}`,
