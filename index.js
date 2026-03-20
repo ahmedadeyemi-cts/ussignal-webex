@@ -656,36 +656,6 @@ function parseAndFilterCSV(csvText, targetOrgId) {
 }
 
 function parseCSVByOrg(csvText) {
-  const parsed = Papa.parse(csvText, {
-    header: true,
-    skipEmptyLines: true
-  });
-
-  const rows = parsed.data || [];
-  const keys = Object.keys(rows[0] || {});
-
-  const orgKey = keys.find(k =>
-    String(k).toLowerCase().includes("org")
-  );
-
-  if (!orgKey) {
-    console.log("No org column found in CSV");
-    return {};
-  }
-
-  const orgMap = {};
-
-  for (const row of rows) {
-    const orgId = String(row[orgKey] || "").trim();
-    if (!orgId) continue;
-
-    if (!orgMap[orgId]) orgMap[orgId] = [];
-    orgMap[orgId].push(row);
-  }
-
-  return orgMap;
-}
-function parseCSVByOrg(csvText) {
 
   const parsed = Papa.parse(csvText, {
     header: true,
