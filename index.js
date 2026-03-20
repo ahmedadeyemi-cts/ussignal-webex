@@ -247,6 +247,8 @@ async function createCallingReport(env) {
     })
   );
 }
+import JSZip from "jszip";
+
 async function pollPartnerReports(env, orgs) {
 
   const list = await env.WEBEX.list({ prefix: "cdr:report:" });
@@ -257,12 +259,12 @@ async function pollPartnerReports(env, orgs) {
     const record = await env.WEBEX.get(key.name, "json");
     if (!record) continue;
 
-    // ✅ Skip ONLY if already fully processed
+    // ✅ Skip already processed
     if (record.status === "completed" && record.downloadUrl && record.processed) {
       continue;
     }
 
-    // 🔍 POLL REPORT STATUS
+    // 🔍 POLL STATUS
     const res = await fetch(
       `https://webexapis.com/v1/partner/reports/${record.reportId}`,
       {
@@ -283,9 +285,9 @@ async function pollPartnerReports(env, orgs) {
       continue;
     }
 
-    console.log("Report status:", record.reportId, data.status, data.downloadUrl);
+    console.log("Report status:", record.reportId, data.status);
 
-    // 🔄 UPDATE STATUS
+    // 🔄 Update record
     await env.WEBEX.put(
       key.name,
       JSON.stringify({
@@ -296,42 +298,74 @@ async function pollPartnerReports(env, orgs) {
       })
     );
 
-    // 🔴 WAIT UNTIL READY
-    if (data.status !== "completed" || !data.downloadUrl) {
-      console.log("Still generating:", record.reportId, data.status);
+    // ⏳ Wait until ready
+    if (data.status !== "done" && data.status !== "completed") {
+      console.log("Still generating:", record.reportId);
       continue;
     }
 
-    // 🔥 DOWNLOAD FILE
+    if (!data.downloadUrl) {
+      console.log("No download URL yet");
+      continue;
+    }
+
     console.log("Downloading report:", record.reportId);
 
-    let csvText;
+    let csvText = "";
 
     try {
 
-      const fileRes = await fetch(data.downloadUrl);
+      const fileRes = await fetch(data.downloadUrl, {
+        headers: {
+          Authorization: `Bearer ${token}` // 🔥 IMPORTANT fallback
+        }
+      });
+
       const contentType = fileRes.headers.get("content-type") || "";
 
-      // ✅ FIXED ZIP DETECTION (CRITICAL)
+      // 🔥 ZIP HANDLING (ROBUST)
       if (
         contentType.includes("zip") ||
         data.downloadUrl.toLowerCase().includes(".zip")
       ) {
+
+        console.log("ZIP detected");
+
         const buffer = await fileRes.arrayBuffer();
-        csvText = await extractCSVFromZip(buffer);
+
+        const zip = await JSZip.loadAsync(buffer);
+
+        const fileNames = Object.keys(zip.files);
+
+        if (!fileNames.length) {
+          console.error("ZIP empty");
+          continue;
+        }
+
+        const file = zip.files[fileNames[0]];
+
+        csvText = await file.async("string");
+
       } else {
+
+        console.log("CSV detected");
+
         csvText = await fileRes.text();
       }
 
     } catch (e) {
-      console.error("Download/parse failed:", record.reportId, e);
+      console.error("Download failed:", e);
       continue;
     }
 
-    // 🔍 DEBUG (remove later)
-    console.log("CSV preview:", csvText?.slice(0, 200));
+    if (!csvText || csvText.length < 50) {
+      console.log("Invalid CSV content");
+      continue;
+    }
 
-    // 🧠 PARSE CSV
+    console.log("CSV HEADER:", csvText.split("\n")[0]);
+
+    // 🔥 PARSE CSV
     let parsed;
     try {
       parsed = Papa.parse(csvText, {
@@ -346,23 +380,28 @@ async function pollPartnerReports(env, orgs) {
 
     const rows = parsed.data || [];
     if (!rows.length) {
-      console.log("Empty CSV:", record.reportId);
+      console.log("Empty CSV");
       continue;
     }
 
-    // 🔍 DETECT COLUMNS
     const keys = Object.keys(rows[0]);
-
     console.log("CSV Keys:", keys);
 
-    const orgKey = keys.find(k => k.toLowerCase().includes("org"));
+    // 🔥 BETTER COLUMN DETECTION
+    const orgKey =
+      keys.find(k => k.toLowerCase().includes("organization")) ||
+      keys.find(k => k.toLowerCase().includes("org id")) ||
+      keys.find(k => k.toLowerCase().includes("customer"));
+
+    if (!orgKey) {
+      console.log("No org column found");
+      continue;
+    }
+
     const durationKey = keys.find(k => k.toLowerCase().includes("duration"));
     const resultKey = keys.find(k => k.toLowerCase().includes("result"));
 
-    if (!orgKey) {
-      console.log("No org column found — skipping");
-      continue;
-    }
+    console.log("Using orgKey:", orgKey);
 
     // 🔥 GROUP BY ORG
     const orgMap = {};
@@ -376,20 +415,20 @@ async function pollPartnerReports(env, orgs) {
       orgMap[orgId].push(row);
     }
 
+    console.log("Detected orgs in report:", Object.keys(orgMap).length);
+
     // 🔥 STORE PER ORG
     for (const orgId of Object.keys(orgMap)) {
 
       const filtered = orgMap[orgId];
       if (!filtered.length) continue;
 
-      // 🔹 RAW DATA
       await env.WEBEX.put(
         `cdr:org:${orgId}`,
         JSON.stringify(filtered),
-        { expirationTtl: 60 * 60 * 24 }
+        { expirationTtl: 86400 }
       );
 
-      // 🔹 METRICS
       const durations = filtered
         .map(r => Number(r[durationKey] || 0))
         .filter(n => Number.isFinite(n));
@@ -440,11 +479,11 @@ async function pollPartnerReports(env, orgs) {
       await env.WEBEX.put(
         `cdr:summary:${orgId}`,
         JSON.stringify(summary),
-        { expirationTtl: 60 * 60 * 24 }
+        { expirationTtl: 86400 }
       );
     }
 
-    // ✅ MARK AS PROCESSED (prevents re-processing loop)
+    // ✅ MARK PROCESSED
     await env.WEBEX.put(
       key.name,
       JSON.stringify({
@@ -456,7 +495,7 @@ async function pollPartnerReports(env, orgs) {
       })
     );
 
-    console.log("CDR processed per org (enterprise mode)");
+    console.log("CDR fully processed:", record.reportId);
   }
 }
 async function storeHealth(env, health) {
