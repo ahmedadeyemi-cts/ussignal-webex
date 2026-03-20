@@ -202,25 +202,21 @@ async function createPartnerReport(env) {
 
   return data.reportId;
 }
-async function pollPartnerReports(env)
+async function pollPartnerReports(env, orgs) {
 
   const list = await env.WEBEX.list({ prefix: "cdr:report:" });
-
   const token = await getAccessToken(env);
 
   for (const key of list.keys) {
 
     const record = await env.WEBEX.get(key.name, "json");
     if (!record) continue;
-
     if (record.status === "completed") continue;
 
     const res = await fetch(
       `https://webexapis.com/v1/partner/reports/${record.reportId}`,
       {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       }
     );
 
@@ -231,7 +227,6 @@ async function pollPartnerReports(env)
       continue;
     }
 
-    // 🔥 UPDATE STATUS
     await env.WEBEX.put(
       key.name,
       JSON.stringify({
@@ -242,63 +237,80 @@ async function pollPartnerReports(env)
       })
     );
 
-    // 🔥 IF READY → DOWNLOAD
-  if (data.status === "completed" && data.downloadUrl) {
+    // 🔥 PROCESS FILE
+    if (data.status === "completed" && data.downloadUrl) {
 
-  console.log("Downloading report:", record.reportId);
+      console.log("Downloading report:", record.reportId);
 
-  const fileRes = await fetch(data.downloadUrl);
-  const contentType = fileRes.headers.get("content-type");
+      const fileRes = await fetch(data.downloadUrl);
+      const contentType = fileRes.headers.get("content-type");
 
-  let csvText;
+      let csvText;
 
-  if (contentType && contentType.includes("zip")) {
+      try {
+        if (contentType && contentType.includes("zip")) {
+          const buffer = await fileRes.arrayBuffer();
+          csvText = await extractCSVFromZip(buffer);
+        } else {
+          csvText = await fileRes.text();
+        }
+      } catch (e) {
+        console.error("File parsing failed", e);
+        continue;
+      }
 
-    const buffer = await fileRes.arrayBuffer();
-    csvText = await extractCSVFromZip(buffer);
+      // 🔥 SMART ORG SPLIT
+      const lines = csvText.split("\n").filter(Boolean);
+      const keys = lines[0].split(",");
 
-  } else {
+      const orgIndex = keys.findIndex(k =>
+        k.toLowerCase().includes("org")
+      );
 
-    csvText = await fileRes.text();
+      const orgMap = {};
 
-  }
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(",");
+        const row = Object.fromEntries(keys.map((k, j) => [k, values[j]]));
 
-  // 🔴 LOOP THROUGH ALL ORGS AND STORE INDIVIDUAL DATASETS
-  for (const org of orgs) {
+        const orgId = values[orgIndex];
+        if (!orgId) continue;
 
-    const filtered = parseAndFilterCSV(csvText, org.id);
+        if (!orgMap[orgId]) orgMap[orgId] = [];
+        orgMap[orgId].push(row);
+      }
 
-    if (!filtered.length) continue;
+      // 🔥 STORE PER ORG
+      for (const orgId in orgMap) {
 
-    // Store full dataset per org
-    await env.WEBEX.put(
-      `cdr:org:${org.id}`,
-      JSON.stringify(filtered),
-      { expirationTtl: 60 * 60 * 24 }
-    );
+        const filtered = orgMap[orgId];
 
-    // 🔥 Build summary
-    const summary = {
-      totalCalls: filtered.length,
-      totalDuration: filtered.reduce(
-        (a, r) => a + Number(r.duration || 0),
-        0
-      ),
-      failedCalls: filtered.filter(
-        r => r.callResult !== "success"
-      ).length
-    };
+        await env.WEBEX.put(
+          `cdr:org:${orgId}`,
+          JSON.stringify(filtered),
+          { expirationTtl: 60 * 60 * 24 }
+        );
 
-    await env.WEBEX.put(
-      `cdr:summary:${org.id}`,
-      JSON.stringify(summary),
-      { expirationTtl: 60 * 60 * 24 }
-    );
+        const summary = {
+          totalCalls: filtered.length,
+          totalDuration: filtered.reduce(
+            (a, r) => a + Number(r.duration || 0),
+            0
+          ),
+          failedCalls: filtered.filter(
+            r => r.callResult !== "success"
+          ).length
+        };
 
-  }
+        await env.WEBEX.put(
+          `cdr:summary:${orgId}`,
+          JSON.stringify(summary),
+          { expirationTtl: 60 * 60 * 24 }
+        );
+      }
 
-  console.log("CDR processed and stored per org");
-  }
+      console.log("CDR processed per org");
+    }
   }
 }
 async function storeHealth(env, health) {
