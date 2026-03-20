@@ -298,7 +298,8 @@ async function pollPartnerReports(env) {
   }
 
   console.log("CDR processed and stored per org");
-
+  }
+  }
 }
 async function storeHealth(env, health) {
   await env.WEBEX.put(
