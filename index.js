@@ -247,8 +247,6 @@ async function createCallingReport(env) {
     })
   );
 }
-import JSZip from "jszip";
-
 async function pollPartnerReports(env, orgs) {
 
   const list = await env.WEBEX.list({ prefix: "cdr:report:" });
