@@ -211,7 +211,11 @@ async function pollPartnerReports(env, orgs) {
 
     const record = await env.WEBEX.get(key.name, "json");
     if (!record) continue;
-    if (record.status === "completed") continue;
+
+    // ✅ Skip ONLY if already fully processed
+    if (record.status === "completed" && record.downloadUrl && record.processed) {
+      continue;
+    }
 
     // 🔍 POLL REPORT STATUS
     const res = await fetch(
@@ -234,7 +238,9 @@ async function pollPartnerReports(env, orgs) {
       continue;
     }
 
-    // 🔄 UPDATE REPORT STATUS
+    console.log("Report status:", record.reportId, data.status, data.downloadUrl);
+
+    // 🔄 UPDATE STATUS
     await env.WEBEX.put(
       key.name,
       JSON.stringify({
@@ -245,151 +251,167 @@ async function pollPartnerReports(env, orgs) {
       })
     );
 
-    // 🔥 PROCESS FILE WHEN READY
-    if (data.status === "completed" && data.downloadUrl) {
-
-      console.log("Downloading report:", record.reportId);
-
-      let csvText;
-
-      try {
-
-        const fileRes = await fetch(data.downloadUrl);
-        const contentType = fileRes.headers.get("content-type") || "";
-
-        if (contentType.includes("zip")) {
-          const buffer = await fileRes.arrayBuffer();
-          csvText = await extractCSVFromZip(buffer);
-        } else {
-          csvText = await fileRes.text();
-        }
-
-      } catch (e) {
-        console.error("Download/parse failed:", record.reportId, e);
-        continue;
-      }
-
-      // 🧠 PARSE CSV (ENTERPRISE SAFE)
-      let parsed;
-      try {
-        parsed = Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          dynamicTyping: true
-        });
-      } catch (e) {
-        console.error("PapaParse failed:", e);
-        continue;
-      }
-
-      const rows = parsed.data || [];
-      if (!rows.length) {
-        console.log("Empty CSV:", record.reportId);
-        continue;
-      }
-
-      // 🔍 AUTO-DETECT COLUMNS
-      const keys = Object.keys(rows[0]);
-
-      const orgKey = keys.find(k => k.toLowerCase().includes("org"));
-      const durationKey = keys.find(k => k.toLowerCase().includes("duration"));
-      const resultKey = keys.find(k => k.toLowerCase().includes("result"));
-
-      if (!orgKey) {
-        console.log("No org column found — skipping report");
-        continue;
-      }
-
-      // 🔥 GROUP BY ORG
-      const orgMap = {};
-
-      for (const row of rows) {
-
-        try {
-
-          const orgId = String(row[orgKey] || "").trim();
-          if (!orgId) continue;
-
-          if (!orgMap[orgId]) orgMap[orgId] = [];
-          orgMap[orgId].push(row);
-
-        } catch (e) {
-          console.log("Row parse error, skipping");
-        }
-      }
-
-      // 🔥 STORE PER ORG + METRICS
-      for (const orgId of Object.keys(orgMap)) {
-
-        const filtered = orgMap[orgId];
-        if (!filtered.length) continue;
-
-        // 🔹 STORE RAW DATA
-        await env.WEBEX.put(
-          `cdr:org:${orgId}`,
-          JSON.stringify(filtered),
-          { expirationTtl: 60 * 60 * 24 }
-        );
-
-        // 🔹 METRICS ENGINE
-        const durations = filtered
-          .map(r => Number(r[durationKey] || 0))
-          .filter(n => Number.isFinite(n));
-
-        const totalDuration = durations.reduce((a, b) => a + b, 0);
-
-        const failedCalls = filtered.filter(r => {
-          const val = String(r[resultKey] || "").toLowerCase();
-          return val && val !== "success";
-        }).length;
-
-        const avgDuration = durations.length
-          ? totalDuration / durations.length
-          : 0;
-
-        const sorted = durations.slice().sort((a, b) => a - b);
-
-        const p95 = sorted.length
-          ? sorted[Math.floor(sorted.length * 0.95)] || 0
-          : 0;
-
-        // 🔥 Z-SCORE ANOMALY DETECTION
-        const stdDev = durations.length
-          ? Math.sqrt(
-              durations.reduce(
-                (a, v) => a + Math.pow(v - avgDuration, 2),
-                0
-              ) / durations.length
-            )
-          : 0;
-
-        const anomalies = durations.filter(v =>
-          stdDev ? Math.abs((v - avgDuration) / stdDev) > 3 : false
-        ).length;
-
-        const summary = {
-          totalCalls: filtered.length,
-          totalDuration,
-          failedCalls,
-          avgDuration: Math.round(avgDuration),
-          p95Duration: Math.round(p95),
-          anomalyCount: anomalies,
-          failureRate: filtered.length
-            ? (failedCalls / filtered.length)
-            : 0,
-          updated: new Date().toISOString()
-        };
-
-        // 🔹 STORE SUMMARY
-        await env.WEBEX.put(
-          `cdr:summary:${orgId}`,
-          JSON.stringify(summary),
-          { expirationTtl: 60 * 60 * 24 }
-        );
-      }
-
-      console.log("CDR processed per org (enterprise mode)");
+    // 🔴 WAIT UNTIL READY
+    if (data.status !== "completed" || !data.downloadUrl) {
+      console.log("Still generating:", record.reportId, data.status);
+      continue;
     }
+
+    // 🔥 DOWNLOAD FILE
+    console.log("Downloading report:", record.reportId);
+
+    let csvText;
+
+    try {
+
+      const fileRes = await fetch(data.downloadUrl);
+      const contentType = fileRes.headers.get("content-type") || "";
+
+      // ✅ FIXED ZIP DETECTION (CRITICAL)
+      if (
+        contentType.includes("zip") ||
+        data.downloadUrl.toLowerCase().includes(".zip")
+      ) {
+        const buffer = await fileRes.arrayBuffer();
+        csvText = await extractCSVFromZip(buffer);
+      } else {
+        csvText = await fileRes.text();
+      }
+
+    } catch (e) {
+      console.error("Download/parse failed:", record.reportId, e);
+      continue;
+    }
+
+    // 🔍 DEBUG (remove later)
+    console.log("CSV preview:", csvText?.slice(0, 200));
+
+    // 🧠 PARSE CSV
+    let parsed;
+    try {
+      parsed = Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: true
+      });
+    } catch (e) {
+      console.error("PapaParse failed:", e);
+      continue;
+    }
+
+    const rows = parsed.data || [];
+    if (!rows.length) {
+      console.log("Empty CSV:", record.reportId);
+      continue;
+    }
+
+    // 🔍 DETECT COLUMNS
+    const keys = Object.keys(rows[0]);
+
+    console.log("CSV Keys:", keys);
+
+    const orgKey = keys.find(k => k.toLowerCase().includes("org"));
+    const durationKey = keys.find(k => k.toLowerCase().includes("duration"));
+    const resultKey = keys.find(k => k.toLowerCase().includes("result"));
+
+    if (!orgKey) {
+      console.log("No org column found — skipping");
+      continue;
+    }
+
+    // 🔥 GROUP BY ORG
+    const orgMap = {};
+
+    for (const row of rows) {
+
+      const orgId = String(row[orgKey] || "").trim();
+      if (!orgId) continue;
+
+      if (!orgMap[orgId]) orgMap[orgId] = [];
+      orgMap[orgId].push(row);
+    }
+
+    // 🔥 STORE PER ORG
+    for (const orgId of Object.keys(orgMap)) {
+
+      const filtered = orgMap[orgId];
+      if (!filtered.length) continue;
+
+      // 🔹 RAW DATA
+      await env.WEBEX.put(
+        `cdr:org:${orgId}`,
+        JSON.stringify(filtered),
+        { expirationTtl: 60 * 60 * 24 }
+      );
+
+      // 🔹 METRICS
+      const durations = filtered
+        .map(r => Number(r[durationKey] || 0))
+        .filter(n => Number.isFinite(n));
+
+      const totalDuration = durations.reduce((a, b) => a + b, 0);
+
+      const failedCalls = filtered.filter(r => {
+        const val = String(r[resultKey] || "").toLowerCase();
+        return val && val !== "success";
+      }).length;
+
+      const avgDuration = durations.length
+        ? totalDuration / durations.length
+        : 0;
+
+      const sorted = durations.slice().sort((a, b) => a - b);
+
+      const p95 = sorted.length
+        ? sorted[Math.floor(sorted.length * 0.95)] || 0
+        : 0;
+
+      const stdDev = durations.length
+        ? Math.sqrt(
+            durations.reduce(
+              (a, v) => a + Math.pow(v - avgDuration, 2),
+              0
+            ) / durations.length
+          )
+        : 0;
+
+      const anomalies = durations.filter(v =>
+        stdDev ? Math.abs((v - avgDuration) / stdDev) > 3 : false
+      ).length;
+
+      const summary = {
+        totalCalls: filtered.length,
+        totalDuration,
+        failedCalls,
+        avgDuration: Math.round(avgDuration),
+        p95Duration: Math.round(p95),
+        anomalyCount: anomalies,
+        failureRate: filtered.length
+          ? (failedCalls / filtered.length)
+          : 0,
+        updated: new Date().toISOString()
+      };
+
+      await env.WEBEX.put(
+        `cdr:summary:${orgId}`,
+        JSON.stringify(summary),
+        { expirationTtl: 60 * 60 * 24 }
+      );
+    }
+
+    // ✅ MARK AS PROCESSED (prevents re-processing loop)
+    await env.WEBEX.put(
+      key.name,
+      JSON.stringify({
+        ...record,
+        status: "completed",
+        downloadUrl: data.downloadUrl,
+        processed: true,
+        processedAt: new Date().toISOString()
+      })
+    );
+
+    console.log("CDR processed per org (enterprise mode)");
   }
 }
 async function storeHealth(env, health) {
