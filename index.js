@@ -202,6 +202,51 @@ async function createPartnerReport(env) {
 
   return data.reportId;
 }
+async function createCallingReport(env) {
+
+  const token = await getAccessToken(env);
+
+  // 🔥 last 7 days (safe window)
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - 7);
+
+  const formatDate = d => d.toISOString().split("T")[0];
+
+  const res = await fetch("https://webexapis.com/v1/partner/reports", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify({
+      templateId: 10010, // ✅ Calling Usage
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate),
+      regionId: "US"
+    })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    console.error("Report creation failed", data);
+    return;
+  }
+
+  console.log("Report created:", data.reportId);
+
+  // 🔥 STORE for polling
+  await env.WEBEX.put(
+    `cdr:report:${data.reportId}`,
+    JSON.stringify({
+      reportId: data.reportId,
+      status: "pending",
+      created: new Date().toISOString()
+    })
+  );
+}
 async function pollPartnerReports(env, orgs) {
 
   const list = await env.WEBEX.list({ prefix: "cdr:report:" });
@@ -8931,6 +8976,12 @@ if (url.pathname === "/api/cdr" && request.method === "GET") {
     records
 
   },200);
+}
+     if (url.pathname === "/api/cdr/run") {
+  await createCallingReport(env);
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: { "Content-Type": "application/json" }
+  });
 }
      if (url.pathname === "/api/cdr/detail") {
 
