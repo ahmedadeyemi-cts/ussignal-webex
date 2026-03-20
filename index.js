@@ -213,6 +213,7 @@ async function pollPartnerReports(env, orgs) {
     if (!record) continue;
     if (record.status === "completed") continue;
 
+    // 🔍 POLL REPORT STATUS
     const res = await fetch(
       `https://webexapis.com/v1/partner/reports/${record.reportId}`,
       {
@@ -220,13 +221,20 @@ async function pollPartnerReports(env, orgs) {
       }
     );
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      console.log("Invalid JSON response for report", record.reportId);
+      continue;
+    }
 
     if (!res.ok) {
       console.log("Poll failed", record.reportId);
       continue;
     }
 
+    // 🔄 UPDATE REPORT STATUS
     await env.WEBEX.put(
       key.name,
       JSON.stringify({
@@ -237,71 +245,142 @@ async function pollPartnerReports(env, orgs) {
       })
     );
 
-    // 🔥 PROCESS FILE
+    // 🔥 PROCESS FILE WHEN READY
     if (data.status === "completed" && data.downloadUrl) {
 
       console.log("Downloading report:", record.reportId);
 
-      const fileRes = await fetch(data.downloadUrl);
-      const contentType = fileRes.headers.get("content-type");
-
       let csvText;
 
       try {
-        if (contentType && contentType.includes("zip")) {
+
+        const fileRes = await fetch(data.downloadUrl);
+        const contentType = fileRes.headers.get("content-type") || "";
+
+        if (contentType.includes("zip")) {
           const buffer = await fileRes.arrayBuffer();
           csvText = await extractCSVFromZip(buffer);
         } else {
           csvText = await fileRes.text();
         }
+
       } catch (e) {
-        console.error("File parsing failed", e);
+        console.error("Download/parse failed:", record.reportId, e);
         continue;
       }
 
-      // 🔥 SMART ORG SPLIT
-      const lines = csvText.split("\n").filter(Boolean);
-      const keys = lines[0].split(",");
-
-      const orgIndex = keys.findIndex(k =>
-        k.toLowerCase().includes("org")
-      );
-
-      const orgMap = {};
-
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(",");
-        const row = Object.fromEntries(keys.map((k, j) => [k, values[j]]));
-
-        const orgId = values[orgIndex];
-        if (!orgId) continue;
-
-        if (!orgMap[orgId]) orgMap[orgId] = [];
-        orgMap[orgId].push(row);
+      // 🧠 PARSE CSV (ENTERPRISE SAFE)
+      let parsed;
+      try {
+        parsed = Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          dynamicTyping: true
+        });
+      } catch (e) {
+        console.error("PapaParse failed:", e);
+        continue;
       }
 
-      // 🔥 STORE PER ORG
-      for (const orgId in orgMap) {
+      const rows = parsed.data || [];
+      if (!rows.length) {
+        console.log("Empty CSV:", record.reportId);
+        continue;
+      }
+
+      // 🔍 AUTO-DETECT COLUMNS
+      const keys = Object.keys(rows[0]);
+
+      const orgKey = keys.find(k => k.toLowerCase().includes("org"));
+      const durationKey = keys.find(k => k.toLowerCase().includes("duration"));
+      const resultKey = keys.find(k => k.toLowerCase().includes("result"));
+
+      if (!orgKey) {
+        console.log("No org column found — skipping report");
+        continue;
+      }
+
+      // 🔥 GROUP BY ORG
+      const orgMap = {};
+
+      for (const row of rows) {
+
+        try {
+
+          const orgId = String(row[orgKey] || "").trim();
+          if (!orgId) continue;
+
+          if (!orgMap[orgId]) orgMap[orgId] = [];
+          orgMap[orgId].push(row);
+
+        } catch (e) {
+          console.log("Row parse error, skipping");
+        }
+      }
+
+      // 🔥 STORE PER ORG + METRICS
+      for (const orgId of Object.keys(orgMap)) {
 
         const filtered = orgMap[orgId];
+        if (!filtered.length) continue;
 
+        // 🔹 STORE RAW DATA
         await env.WEBEX.put(
           `cdr:org:${orgId}`,
           JSON.stringify(filtered),
           { expirationTtl: 60 * 60 * 24 }
         );
 
+        // 🔹 METRICS ENGINE
+        const durations = filtered
+          .map(r => Number(r[durationKey] || 0))
+          .filter(n => Number.isFinite(n));
+
+        const totalDuration = durations.reduce((a, b) => a + b, 0);
+
+        const failedCalls = filtered.filter(r => {
+          const val = String(r[resultKey] || "").toLowerCase();
+          return val && val !== "success";
+        }).length;
+
+        const avgDuration = durations.length
+          ? totalDuration / durations.length
+          : 0;
+
+        const sorted = durations.slice().sort((a, b) => a - b);
+
+        const p95 = sorted.length
+          ? sorted[Math.floor(sorted.length * 0.95)] || 0
+          : 0;
+
+        // 🔥 Z-SCORE ANOMALY DETECTION
+        const stdDev = durations.length
+          ? Math.sqrt(
+              durations.reduce(
+                (a, v) => a + Math.pow(v - avgDuration, 2),
+                0
+              ) / durations.length
+            )
+          : 0;
+
+        const anomalies = durations.filter(v =>
+          stdDev ? Math.abs((v - avgDuration) / stdDev) > 3 : false
+        ).length;
+
         const summary = {
           totalCalls: filtered.length,
-          totalDuration: filtered.reduce(
-            (a, r) => a + Number(r.duration || 0),
-            0
-          ),
-          failedCalls: filtered.filter(
-            r => r.callResult !== "success"
-          ).length
+          totalDuration,
+          failedCalls,
+          avgDuration: Math.round(avgDuration),
+          p95Duration: Math.round(p95),
+          anomalyCount: anomalies,
+          failureRate: filtered.length
+            ? (failedCalls / filtered.length)
+            : 0,
+          updated: new Date().toISOString()
         };
 
+        // 🔹 STORE SUMMARY
         await env.WEBEX.put(
           `cdr:summary:${orgId}`,
           JSON.stringify(summary),
@@ -309,7 +388,7 @@ async function pollPartnerReports(env, orgs) {
         );
       }
 
-      console.log("CDR processed per org");
+      console.log("CDR processed per org (enterprise mode)");
     }
   }
 }
@@ -556,18 +635,16 @@ async function runCachedCallReports(env) {
   });
 }
 function parseAndFilterCSV(csvText, targetOrgId) {
-
   const parsed = Papa.parse(csvText, {
     header: true,
     skipEmptyLines: true
   });
 
-  const rows = parsed.data;
-
-  // 🔍 Find org column dynamically
+  const rows = parsed.data || [];
   const keys = Object.keys(rows[0] || {});
+
   const orgKey = keys.find(k =>
-    k.toLowerCase().includes("org")
+    String(k).toLowerCase().includes("org")
   );
 
   if (!orgKey) {
@@ -575,8 +652,38 @@ function parseAndFilterCSV(csvText, targetOrgId) {
     return [];
   }
 
-  // 🔥 Filter only this tenant
-  return rows.filter(r => r[orgKey] === targetOrgId);
+  return rows.filter(r => String(r[orgKey] || "").trim() === String(targetOrgId).trim());
+}
+
+function parseCSVByOrg(csvText) {
+  const parsed = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true
+  });
+
+  const rows = parsed.data || [];
+  const keys = Object.keys(rows[0] || {});
+
+  const orgKey = keys.find(k =>
+    String(k).toLowerCase().includes("org")
+  );
+
+  if (!orgKey) {
+    console.log("No org column found in CSV");
+    return {};
+  }
+
+  const orgMap = {};
+
+  for (const row of rows) {
+    const orgId = String(row[orgKey] || "").trim();
+    if (!orgId) continue;
+
+    if (!orgMap[orgId]) orgMap[orgId] = [];
+    orgMap[orgId].push(row);
+  }
+
+  return orgMap;
 }
 function parseCSVByOrg(csvText) {
 
