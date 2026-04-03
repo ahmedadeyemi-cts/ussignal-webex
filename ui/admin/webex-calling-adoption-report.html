@@ -1,291 +1,1501 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>US Signal | Webex Calling Adoption</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>US Signal | Webex Calling Adoption</title>
 
-  <style>
-    body {
-      margin:0;
-      font-family: Inter, Arial;
-      background:#0f172a;
-      color:#e2e8f0;
-    }
+<style>
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(15,23,42,.10);
+  --shadow:0 8px 24px rgba(15,23,42,.08);
 
-    .container {
-      padding:20px 30px;
-    }
+  --accent:#0f62fe;
+  --accent2:#0b4bd4;
 
-    /* HEADER */
-    .header {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:20px;
-    }
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#dc2626;
 
-    .logo {
-      display:flex;
-      align-items:center;
-      gap:12px;
-    }
+  --pill-good-bg:rgba(22,163,74,.10);
+  --pill-good-bd:rgba(22,163,74,.20);
 
-    .logo img {
-      height:45px;
-    }
+  --pill-warn-bg:rgba(245,158,11,.10);
+  --pill-warn-bd:rgba(245,158,11,.20);
 
-    /* KPI GRID */
-    .kpi-grid {
-      display:grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap:15px;
-      margin-bottom:20px;
-    }
+  --pill-bad-bg:rgba(220,38,38,.10);
+  --pill-bad-bd:rgba(220,38,38,.20);
+}
 
-    .kpi {
-      background:#1e293b;
-      padding:15px;
-      border-radius:10px;
-    }
+*{ box-sizing:border-box; }
 
-    .kpi-title {
-      font-size:12px;
-      color:#94a3b8;
-    }
+html, body{
+  margin:0;
+  padding:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
 
-    .kpi-value {
-      font-size:22px;
-      font-weight:bold;
-      margin-top:5px;
-    }
+body{
+  min-height:100vh;
+}
 
-    /* CARDS */
-    .card {
-      background:#1e293b;
-      border-radius:10px;
-      padding:20px;
-      margin-bottom:20px;
-    }
+a{
+  color:inherit;
+  text-decoration:none;
+}
 
-    /* BUTTON */
-    .btn {
-      background:#2563eb;
-      border:none;
-      padding:10px 15px;
-      color:white;
-      border-radius:6px;
-      cursor:pointer;
-    }
+/* Layout */
+.app{
+  display:grid;
+  grid-template-columns:270px 1fr;
+  min-height:100vh;
+}
 
-    /* TABLE */
-    table {
-      width:100%;
-      border-collapse:collapse;
-    }
+/* Sidebar */
+.sidebar{
+  background:var(--card);
+  border-right:1px solid var(--line);
+  padding:18px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
 
-    th, td {
-      padding:10px;
-      border-bottom:1px solid #334155;
-    }
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
 
-    /* SIDEBAR RAG */
-    .rag {
-      position:fixed;
-      right:20px;
-      top:100px;
-      padding:12px 16px;
-      border-radius:20px;
-      font-weight:bold;
-    }
+.brand img{
+  height:34px;
+}
 
-    .rag.green { background:#22c55e; }
-    .rag.red { background:#ef4444; }
+.brand .title{
+  display:flex;
+  flex-direction:column;
+}
 
-    /* SPARKLINE */
-    canvas {
-      width:100%;
-      height:60px;
-    }
+.brand .title b{
+  font-size:14px;
+}
 
-    /* DRILL DOWN */
-    .clickable {
-      cursor:pointer;
-      color:#60a5fa;
-    }
+.brand .title span{
+  font-size:12px;
+  color:var(--muted);
+}
 
-    /* PRINT */
-    @media print {
-      body { background:white; color:black; }
-      .btn, input { display:none; }
-      .rag { display:none; }
-      .card { box-shadow:none; border:1px solid #ddd; }
-    }
-  </style>
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.nav a{
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+  font-size:13px;
+}
+
+.nav a:hover{
+  background:rgba(15,98,254,.08);
+  color:var(--accent2);
+}
+
+.nav a.active{
+  background:rgba(15,98,254,.12);
+  border:1px solid rgba(15,98,254,.20);
+}
+
+.sidebar-bottom{
+  margin-top:auto;
+  padding-top:10px;
+  border-top:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.userline{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.userline b{
+  color:var(--text);
+}
+
+/* Main */
+.main{
+  padding:22px;
+}
+
+/* Generic controls */
+.btn{
+  padding:10px 12px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:13px;
+  cursor:pointer;
+  border:none;
+  transition:.18s ease;
+}
+
+.btn-primary{
+  background:var(--accent);
+  color:#fff;
+}
+.btn-primary:hover{ background:var(--accent2); }
+
+.btn-secondary{
+  background:#fff;
+  color:var(--text);
+  border:1px solid rgba(15,23,42,.14);
+}
+.btn-secondary:hover{
+  background:#f8fafc;
+}
+
+input[type="number"],
+input[type="text"],
+input[type="file"],
+select{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(15,23,42,.18);
+  font-weight:700;
+  background:#fff;
+  color:var(--text);
+}
+
+input[type="file"]{
+  padding:8px 10px;
+  min-width:300px;
+}
+
+.label{
+  font-size:12px;
+  font-weight:800;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  margin-bottom:6px;
+}
+
+/* Cards */
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+}
+
+.header-card{
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:14px;
+}
+
+.header-left{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.header-left .h{
+  font-size:16px;
+  font-weight:1000;
+}
+
+.header-left .sub{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.header-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.status-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+  border:1px solid transparent;
+}
+
+.status-pill.good{
+  color:var(--good);
+  background:var(--pill-good-bg);
+  border-color:var(--pill-good-bd);
+}
+
+.status-pill.warn{
+  color:var(--warn);
+  background:var(--pill-warn-bg);
+  border-color:var(--pill-warn-bd);
+}
+
+.status-pill.bad{
+  color:var(--bad);
+  background:var(--pill-bad-bg);
+  border-color:var(--pill-bad-bd);
+}
+
+.dot{
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:currentColor;
+}
+
+/* Upload block */
+.control-card{
+  margin-top:18px;
+  padding:16px;
+}
+
+.control-grid{
+  display:grid;
+  grid-template-columns:180px minmax(260px, 1fr) auto auto;
+  gap:14px;
+  align-items:end;
+}
+
+.help-text{
+  margin-top:10px;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.45;
+}
+
+/* KPI */
+.kpi-grid{
+  margin-top:18px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:16px;
+}
+
+.kpi{
+  padding:16px;
+}
+
+.kpi-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
+
+.kpi .k-label{
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  font-weight:800;
+  letter-spacing:.04em;
+}
+
+.kpi .value{
+  font-size:30px;
+  font-weight:1000;
+  margin-top:10px;
+  line-height:1;
+}
+
+.kpi .subvalue{
+  margin-top:8px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+/* Two-column sections */
+.two-col{
+  display:grid;
+  grid-template-columns:1.15fr .85fr;
+  gap:18px;
+  margin-top:18px;
+}
+
+.section-card{
+  padding:18px;
+}
+
+.section-title{
+  font-size:18px;
+  font-weight:1000;
+  margin:0 0 6px 0;
+}
+
+.section-sub{
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:14px;
+}
+
+.summary-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(140px,1fr));
+  gap:12px;
+  margin-top:14px;
+}
+
+.summary-stat{
+  background:#f8fafc;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:12px;
+}
+
+.summary-stat .name{
+  font-size:11px;
+  text-transform:uppercase;
+  color:var(--muted);
+  font-weight:900;
+  letter-spacing:.04em;
+}
+
+.summary-stat .num{
+  margin-top:6px;
+  font-size:24px;
+  font-weight:1000;
+}
+
+.exec-copy{
+  font-size:14px;
+  line-height:1.6;
+}
+
+.pass-copy{
+  color:var(--good);
+  font-weight:900;
+}
+.fail-copy{
+  color:var(--bad);
+  font-weight:900;
+}
+.warn-copy{
+  color:var(--warn);
+  font-weight:900;
+}
+
+.mini-callout{
+  margin-top:14px;
+  padding:12px 14px;
+  border-radius:14px;
+  font-size:13px;
+  font-weight:700;
+}
+
+.mini-callout.good{
+  color:var(--good);
+  background:var(--pill-good-bg);
+  border:1px solid var(--pill-good-bd);
+}
+
+.mini-callout.bad{
+  color:var(--bad);
+  background:var(--pill-bad-bg);
+  border:1px solid var(--pill-bad-bd);
+}
+
+.mini-callout.warn{
+  color:var(--warn);
+  background:var(--pill-warn-bg);
+  border:1px solid var(--pill-warn-bd);
+}
+
+/* Charts */
+.chart-wrap{
+  position:relative;
+  min-height:280px;
+}
+
+.spark-wrap{
+  margin-top:14px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.spark-card{
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:12px;
+  background:#f8fafc;
+}
+
+.spark-label{
+  font-size:12px;
+  color:var(--muted);
+  font-weight:800;
+  margin-bottom:8px;
+}
+
+.spark-canvas{
+  width:100%;
+  height:58px !important;
+  max-height:58px;
+}
+
+/* Tables */
+.table-card{
+  margin-top:18px;
+  padding:18px;
+}
+
+.table-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:12px;
+  flex-wrap:wrap;
+}
+
+.table-tools{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.table-wrap{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:14px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  background:#fff;
+}
+
+th, td{
+  padding:12px 14px;
+  border-bottom:1px solid var(--line);
+  text-align:left;
+  font-size:13px;
+  vertical-align:top;
+}
+
+th{
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  color:var(--muted);
+  background:#f8fafc;
+  position:sticky;
+  top:0;
+  z-index:1;
+}
+
+tbody tr:hover{
+  background:#fafcff;
+}
+
+.metric-up{
+  color:var(--good);
+  font-weight:900;
+}
+
+.metric-down{
+  color:var(--bad);
+  font-weight:900;
+}
+
+.clickable-user{
+  color:var(--accent2);
+  font-weight:800;
+  cursor:pointer;
+}
+
+.clickable-user:hover{
+  text-decoration:underline;
+}
+
+/* Drawer */
+.drawer-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.35);
+  display:none;
+  align-items:stretch;
+  justify-content:flex-end;
+  z-index:1000;
+}
+
+.drawer{
+  width:min(560px, 96vw);
+  background:#fff;
+  height:100%;
+  box-shadow:-12px 0 32px rgba(15,23,42,.18);
+  display:flex;
+  flex-direction:column;
+}
+
+.drawer-head{
+  padding:18px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.drawer-title{
+  font-size:18px;
+  font-weight:1000;
+  margin:0;
+}
+
+.drawer-sub{
+  margin-top:4px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.drawer-body{
+  padding:18px;
+  overflow:auto;
+}
+
+.drawer-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(120px, 1fr));
+  gap:12px;
+}
+
+.drawer-stat{
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#f8fafc;
+}
+
+.drawer-stat .name{
+  font-size:11px;
+  color:var(--muted);
+  text-transform:uppercase;
+  font-weight:900;
+}
+
+.drawer-stat .num{
+  margin-top:6px;
+  font-size:22px;
+  font-weight:1000;
+}
+
+.empty{
+  padding:18px;
+  border:1px dashed var(--line);
+  border-radius:14px;
+  color:var(--muted);
+  text-align:center;
+  background:#f8fafc;
+}
+
+.footer-meta{
+  margin-top:18px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+/* Print */
+@media print{
+  :root{
+    --bg:#ffffff;
+    --card:#ffffff;
+    --text:#000000;
+    --muted:#555555;
+    --line:rgba(0,0,0,.12);
+    --shadow:none;
+  }
+
+  .app{
+    display:block;
+  }
+
+  .sidebar,
+  .header-actions .btn,
+  .table-tools,
+  .drawer-backdrop{
+    display:none !important;
+  }
+
+  .main{
+    padding:0;
+  }
+
+  .card{
+    box-shadow:none !important;
+    break-inside:avoid;
+  }
+
+  .two-col{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .table-wrap{
+    overflow:visible;
+  }
+
+  th{
+    position:static;
+  }
+}
+
+@media (max-width: 1180px){
+  .two-col{
+    grid-template-columns:1fr;
+  }
+
+  .control-grid{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+@media (max-width: 900px){
+  .app{
+    grid-template-columns:1fr;
+  }
+
+  .sidebar{
+    display:none;
+  }
+
+  .control-grid{
+    grid-template-columns:1fr;
+  }
+
+  .spark-wrap{
+    grid-template-columns:1fr;
+  }
+
+  .summary-grid,
+  .drawer-grid{
+    grid-template-columns:1fr;
+  }
+}
+</style>
 </head>
 
 <body>
+<div class="app">
 
-<div class="container">
-
-  <!-- HEADER -->
-  <div class="header">
-    <div class="logo">
-      <img src="/assets/ussignal-logo.jpg">
-      <div>
-        <h2>US Signal</h2>
-        <div style="font-size:12px;color:#94a3b8;">Webex Calling Adoption Report</div>
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/assets/ussignal-logo.jpg"
+           onerror="this.src='https://webex.onenecklab.com/assets/ussignal-logo.jpg'">
+      <div class="title">
+        <b>Partner Portal</b>
+        <span>Managed Services</span>
       </div>
     </div>
 
-    <div>
-      <button class="btn" onclick="window.print()">Export PDF</button>
+    <nav class="nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/customers">Customers</a>
+      <a href="/admin/analytics">Analytics</a>
+      <a href="/admin/licenses">Licenses</a>
+      <a href="/admin/devices">Devices</a>
+      <a href="/admin/alerts">Alerts</a>
+      <a href="/admin/pins">PIN Management</a>
+      <a href="/admin/provisioning">Provisioning</a>
+      <a href="/admin/implementation">Implementation</a>
+      <a href="/admin/pstn">PSTN Deployment Model</a>
+      <a href="/admin/support">Support Strategy</a>
+      <a href="/admin/operations">Operations</a>
+      <a href="/admin/tenant-resolution">Resolution</a>
+      <a class="active" href="/admin/webex-calling-adoption-report">Calling Adoption</a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="userline">
+        <b id="whoami">—</b>
+        <div id="sessionLine">Session: —</div>
+      </div>
+      <button class="btn btn-primary" id="btnLogout">Logout</button>
     </div>
-  </div>
+  </aside>
 
-  <!-- INPUT -->
-  <div class="card">
-    <label>Total Licenses:</label>
-    <input type="number" id="licenseCount" value="5700">
-    <input type="file" id="csvFile">
-    <button class="btn" onclick="processCSV()">Generate Report</button>
-  </div>
+  <main class="main">
 
-  <!-- KPI -->
-  <div id="kpis" class="kpi-grid"></div>
+    <section class="card header-card">
+      <div class="header-left">
+        <div class="h">Webex Calling Adoption Report</div>
+        <div class="sub">Evidence-ready analysis for Cisco monthly calling adoption requirement</div>
+      </div>
 
-  <!-- EXEC SUMMARY -->
-  <div id="summary" class="card"></div>
+      <div class="header-actions">
+        <div id="statusPill" class="status-pill bad">
+          <span class="dot"></span>
+          <span>Not Evaluated</span>
+        </div>
+        <button class="btn btn-secondary" id="btnPrint">Export PDF</button>
+      </div>
+    </section>
 
-  <!-- SPARKLINE -->
-  <div class="card">
-    <h3>Adoption Trend (30 Days)</h3>
-    <canvas id="trendChart"></canvas>
-  </div>
+    <section class="card control-card">
+      <div class="control-grid">
+        <div>
+          <div class="label">Total Licenses</div>
+          <input type="number" id="licenseCount" value="5700" min="1" step="1">
+        </div>
 
-  <!-- DAILY TABLE -->
-  <div class="card">
-    <h3>Daily Breakdown</h3>
-    <table id="dailyTable"></table>
-  </div>
+        <div>
+          <div class="label">Calling Engagement CSV</div>
+          <input type="file" id="csvFile" accept=".csv,text/csv">
+        </div>
 
-  <!-- USER DRILLDOWN -->
-  <div class="card">
-    <h3>User Drill Down</h3>
-    <table id="userTable"></table>
-  </div>
+        <div>
+          <div class="label">Report Window</div>
+          <input type="text" id="windowLabel" value="30 Day Evidence Window" readonly>
+        </div>
 
+        <div>
+          <button class="btn btn-primary" id="btnGenerate">Generate Report</button>
+        </div>
+      </div>
+
+      <div class="help-text">
+        Upload the Cisco or Webex calling engagement export. The report will calculate the 80% threshold from the total license count,
+        identify unique monthly calling users, summarize per-day calling activity, and present evidence suitable for Cisco adoption review.
+      </div>
+    </section>
+
+    <section id="kpiGrid" class="kpi-grid">
+      <div class="card kpi">
+        <div class="kpi-top">
+          <div class="k-label">Unique Calling Users</div>
+        </div>
+        <div class="value" id="kpiUniqueUsers">0</div>
+        <div class="subvalue">Distinct users across uploaded report</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="kpi-top">
+          <div class="k-label">Required (80%)</div>
+        </div>
+        <div class="value" id="kpiRequired">4560</div>
+        <div class="subvalue">Derived from total license count</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="kpi-top">
+          <div class="k-label">Total Calls</div>
+        </div>
+        <div class="value" id="kpiCalls">0</div>
+        <div class="subvalue">All call records in uploaded file</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="kpi-top">
+          <div class="k-label">Total Duration</div>
+        </div>
+        <div class="value" id="kpiDuration">0 min</div>
+        <div class="subvalue">Summed across all detected call durations</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="kpi-top">
+          <div class="k-label">Adoption %</div>
+        </div>
+        <div class="value" id="kpiAdoptionPct">0%</div>
+        <div class="subvalue">Unique users divided by total licenses</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="kpi-top">
+          <div class="k-label">Threshold Gap</div>
+        </div>
+        <div class="value" id="kpiGap">-4560</div>
+        <div class="subvalue">Positive means above Cisco target</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="kpi-top">
+          <div class="k-label">Peak Daily Unique Users</div>
+        </div>
+        <div class="value" id="kpiPeakUsers">0</div>
+        <div class="subvalue">Highest single-day unique user count</div>
+      </div>
+
+      <div class="card kpi">
+        <div class="kpi-top">
+          <div class="k-label">Average Daily Users</div>
+        </div>
+        <div class="value" id="kpiAvgUsers">0</div>
+        <div class="subvalue">Average unique calling users per active day</div>
+      </div>
+    </section>
+
+    <section class="two-col">
+      <div class="card section-card">
+        <h2 class="section-title">Executive Summary</h2>
+        <div class="section-sub">Cisco evidence narrative and compliance posture</div>
+
+        <div id="execCopy" class="exec-copy">
+          Load a CSV to generate a validated calling adoption summary.
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-stat">
+            <div class="name">License Count</div>
+            <div class="num" id="sumLicenses">5700</div>
+          </div>
+          <div class="summary-stat">
+            <div class="name">80% Threshold</div>
+            <div class="num" id="sumThreshold">4560</div>
+          </div>
+          <div class="summary-stat">
+            <div class="name">Observed Users</div>
+            <div class="num" id="sumObserved">0</div>
+          </div>
+          <div class="summary-stat">
+            <div class="name">Result</div>
+            <div class="num" id="sumResult">FAIL</div>
+          </div>
+        </div>
+
+        <div id="summaryCallout" class="mini-callout bad">
+          No report has been generated yet.
+        </div>
+
+        <div class="footer-meta" id="reportMeta">
+          Generated after CSV upload. Data source: customer-provided calling engagement CSV.
+        </div>
+      </div>
+
+      <div class="card section-card">
+        <h2 class="section-title">Trend Overview</h2>
+        <div class="section-sub">Daily unique users and daily call volume over the report window</div>
+
+        <div class="chart-wrap">
+          <canvas id="trendChart"></canvas>
+        </div>
+
+        <div class="spark-wrap">
+          <div class="spark-card">
+            <div class="spark-label">Unique Users Sparkline</div>
+            <canvas id="sparkUsers" class="spark-canvas"></canvas>
+          </div>
+          <div class="spark-card">
+            <div class="spark-label">Calls Sparkline</div>
+            <canvas id="sparkCalls" class="spark-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card table-card">
+      <div class="table-header">
+        <div>
+          <h2 class="section-title" style="margin:0;">Daily Breakdown</h2>
+          <div class="section-sub" style="margin:4px 0 0 0;">Per-day user activity, duration, and evidence indicators</div>
+        </div>
+
+        <div class="table-tools">
+          <input type="text" id="dailyFilter" placeholder="Filter by date or top user">
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Unique Users</th>
+              <th>Total Calls</th>
+              <th>Total Duration</th>
+              <th>Avg Duration</th>
+              <th>Top User</th>
+              <th>Top User Calls</th>
+            </tr>
+          </thead>
+          <tbody id="dailyTableBody">
+            <tr><td colspan="7" class="empty">Upload a CSV to generate daily evidence.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card table-card">
+      <div class="table-header">
+        <div>
+          <h2 class="section-title" style="margin:0;">User Drill Down</h2>
+          <div class="section-sub" style="margin:4px 0 0 0;">Unique users ranked by activity, ready for proof and validation</div>
+        </div>
+
+        <div class="table-tools">
+          <input type="text" id="userFilter" placeholder="Search user">
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Total Calls</th>
+              <th>Total Duration</th>
+              <th>Active Days</th>
+              <th>First Seen</th>
+              <th>Last Seen</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody">
+            <tr><td colspan="6" class="empty">Upload a CSV to populate user-level drill down.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
 </div>
 
-<div id="ragStatus" class="rag"></div>
+<div class="drawer-backdrop" id="drawerBackdrop">
+  <aside class="drawer">
+    <div class="drawer-head">
+      <div>
+        <h3 class="drawer-title" id="drawerTitle">User Detail</h3>
+        <div class="drawer-sub" id="drawerSub">Detailed evidence for selected user</div>
+      </div>
+      <button class="btn btn-secondary" id="btnCloseDrawer">Close</button>
+    </div>
 
+    <div class="drawer-body">
+      <div class="drawer-grid">
+        <div class="drawer-stat">
+          <div class="name">Total Calls</div>
+          <div class="num" id="drawerCalls">0</div>
+        </div>
+        <div class="drawer-stat">
+          <div class="name">Total Duration</div>
+          <div class="num" id="drawerDuration">0 min</div>
+        </div>
+        <div class="drawer-stat">
+          <div class="name">Active Days</div>
+          <div class="num" id="drawerDays">0</div>
+        </div>
+        <div class="drawer-stat">
+          <div class="name">Average Calls / Day</div>
+          <div class="num" id="drawerAvgPerDay">0</div>
+        </div>
+      </div>
+
+      <div style="margin-top:18px;">
+        <div class="section-title" style="font-size:16px;">Daily Activity</div>
+        <div class="table-wrap" style="margin-top:10px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Calls</th>
+                <th>Duration</th>
+              </tr>
+            </thead>
+            <tbody id="drawerTableBody">
+              <tr><td colspan="3" class="empty">No user selected.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+const $ = id => document.getElementById(id);
+
+let trendChart = null;
+let sparkUsersChart = null;
+let sparkCallsChart = null;
+
+let fullDailyRows = [];
+let fullUserRows = [];
+let userDetailMap = {};
+
+function escapeHtml(s){
+  return String(s ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#39;");
+}
+
+async function api(path){
+  const r = await fetch(path);
+  if(!r.ok){
+    if(r.status === 401) window.location = "/pin";
+    throw new Error("API failed");
+  }
+  return await r.json();
+}
+
+async function logout(){
+  await fetch("/api/pin/logout", { method:"POST" });
+  window.location = "/pin";
+}
+
+function setStatusPill(kind, text){
+  const pill = $("statusPill");
+  pill.className = "status-pill " + kind;
+  pill.innerHTML = `<span class="dot"></span><span>${escapeHtml(text)}</span>`;
+}
+
+function formatMinutes(secondsOrMinutes){
+  const n = Number(secondsOrMinutes || 0);
+  if (!Number.isFinite(n)) return "0 min";
+  if (n > 10000) {
+    return Math.round(n / 60) + " min";
+  }
+  return Math.round(n) + " min";
+}
+
+function normalizeDateString(raw){
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  if (s.includes("T")) return s.split("T")[0];
+  if (s.includes(" ")) return s.split(" ")[0];
+  return s;
+}
+
+function safeNum(v){
+  const n = parseFloat(String(v ?? "").replace(/,/g,"").trim());
+  return Number.isFinite(n) ? n : 0;
+}
+
+function detectColumn(headers, patterns){
+  return headers.findIndex(h => patterns.some(rx => rx.test(h)));
+}
+
+function destroyChart(instance){
+  if (instance && typeof instance.destroy === "function") {
+    instance.destroy();
+  }
+}
+
+function buildLineChart(canvasId, labels, datasets){
+  const ctx = $(canvasId).getContext("2d");
+  return new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: true }
+      },
+      scales: {
+        x: {
+          grid: { display:false },
+          ticks: { maxRotation:0, autoSkip:true }
+        },
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+function buildSparkChart(canvasId, labels, data){
+  const ctx = $(canvasId).getContext("2d");
+  return new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        data,
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: .35
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display:false }, tooltip: { enabled:true } },
+      scales: {
+        x: { display:false },
+        y: { display:false, beginAtZero:true }
+      }
+    }
+  });
+}
+
+function renderDailyTable(rows){
+  const q = $("dailyFilter").value.trim().toLowerCase();
+  const filtered = !q ? rows : rows.filter(r =>
+    String(r.date).toLowerCase().includes(q) ||
+    String(r.topUser || "").toLowerCase().includes(q)
+  );
+
+  const tbody = $("dailyTableBody");
+
+  if (!filtered.length){
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">No daily records match the current filter.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(r => `
+    <tr>
+      <td>${escapeHtml(r.date)}</td>
+      <td>${r.uniqueUsers}</td>
+      <td>${r.totalCalls}</td>
+      <td>${formatMinutes(r.totalDuration)}</td>
+      <td>${formatMinutes(r.avgDuration)}</td>
+      <td>${escapeHtml(r.topUser || "-")}</td>
+      <td>${r.topUserCalls || 0}</td>
+    </tr>
+  `).join("");
+}
+
+function renderUserTable(rows){
+  const q = $("userFilter").value.trim().toLowerCase();
+  const filtered = !q ? rows : rows.filter(r =>
+    String(r.user).toLowerCase().includes(q)
+  );
+
+  const tbody = $("userTableBody");
+
+  if (!filtered.length){
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">No users match the current filter.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(r => `
+    <tr>
+      <td><span class="clickable-user" data-user="${escapeHtml(r.user)}">${escapeHtml(r.user)}</span></td>
+      <td>${r.totalCalls}</td>
+      <td>${formatMinutes(r.totalDuration)}</td>
+      <td>${r.activeDays}</td>
+      <td>${escapeHtml(r.firstSeen)}</td>
+      <td>${escapeHtml(r.lastSeen)}</td>
+    </tr>
+  `).join("");
+
+  tbody.querySelectorAll(".clickable-user").forEach(el => {
+    el.addEventListener("click", () => openUserDrawer(el.getAttribute("data-user")));
+  });
+}
+
+function openUserDrawer(user){
+  const detail = userDetailMap[user];
+  if (!detail) return;
+
+  $("drawerTitle").textContent = user;
+  $("drawerSub").textContent = "User-level activity evidence across the uploaded reporting window";
+  $("drawerCalls").textContent = detail.totalCalls;
+  $("drawerDuration").textContent = formatMinutes(detail.totalDuration);
+  $("drawerDays").textContent = detail.activeDays;
+  $("drawerAvgPerDay").textContent = detail.activeDays ? (detail.totalCalls / detail.activeDays).toFixed(1) : "0";
+
+  const dayKeys = Object.keys(detail.days).sort();
+  $("drawerTableBody").innerHTML = dayKeys.length
+    ? dayKeys.map(d => `
+        <tr>
+          <td>${escapeHtml(d)}</td>
+          <td>${detail.days[d].calls}</td>
+          <td>${formatMinutes(detail.days[d].duration)}</td>
+        </tr>
+      `).join("")
+    : `<tr><td colspan="3" class="empty">No activity found for this user.</td></tr>`;
+
+  $("drawerBackdrop").style.display = "flex";
+}
+
+function closeUserDrawer(){
+  $("drawerBackdrop").style.display = "none";
+}
+
 function processCSV() {
-  const file = document.getElementById("csvFile").files[0];
-  const licenseCount = parseInt(document.getElementById("licenseCount").value);
+  const file = $("csvFile").files[0];
+  const licenseCount = parseInt($("licenseCount").value || "0", 10);
+
+  if (!file) {
+    alert("Please upload a CSV file.");
+    return;
+  }
 
   const reader = new FileReader();
+
   reader.onload = function(e) {
-    const rows = e.target.result.split("\n").map(r => r.split(","));
-    const headers = rows[0];
+    const raw = e.target.result || "";
+    const rows = raw.split(/\r?\n/).map(r => r.split(","));
+    const headers = (rows[0] || []).map(h => String(h || "").trim());
 
-    const userIdx = headers.findIndex(h => h.toLowerCase().includes("user"));
-    const dateIdx = headers.findIndex(h => h.toLowerCase().includes("date"));
-    const durationIdx = headers.findIndex(h => h.toLowerCase().includes("duration"));
+    const userIdx = detectColumn(headers, [
+      /user/i, /email/i, /person/i, /owner/i, /participant/i, /username/i
+    ]);
 
-    let uniqueUsers = new Set();
-    let daily = {};
-    let userStats = {};
+    const dateIdx = detectColumn(headers, [
+      /date/i, /time/i, /start/i
+    ]);
+
+    const durationIdx = detectColumn(headers, [
+      /duration/i, /minutes/i, /seconds/i, /talk time/i, /call duration/i
+    ]);
+
+    console.log("CSV headers:", headers);
+    console.log("Detected indexes:", { userIdx, dateIdx, durationIdx });
+
+    if (userIdx === -1 || dateIdx === -1) {
+      alert("Could not detect required CSV columns. Check browser console for header names.");
+      return;
+    }
+
+    const uniqueUsers = new Set();
+    const daily = {};
+    const users = {};
 
     rows.slice(1).forEach(r => {
-      const user = r[userIdx];
-      const date = r[dateIdx]?.split(" ")[0];
-      const dur = parseInt(r[durationIdx]) || 0;
+      if (!Array.isArray(r) || !r.length) return;
 
-      if (!user || !date) return;
+      const user = String(r[userIdx] || "").trim();
+      const rawDate = String(r[dateIdx] || "").trim();
+      const dur = safeNum(r[durationIdx]);
+
+      if (!user || !rawDate) return;
+
+      const day = normalizeDateString(rawDate);
+      if (!day) return;
 
       uniqueUsers.add(user);
 
-      if (!daily[date]) {
-        daily[date] = { users:new Set(), calls:0, duration:0 };
+      if (!daily[day]) {
+        daily[day] = {
+          users: new Set(),
+          calls: 0,
+          duration: 0,
+          userCallCount: {}
+        };
       }
 
-      daily[date].users.add(user);
-      daily[date].calls++;
-      daily[date].duration += dur;
+      daily[day].users.add(user);
+      daily[day].calls += 1;
+      daily[day].duration += dur;
+      daily[day].userCallCount[user] = (daily[day].userCallCount[user] || 0) + 1;
 
-      if (!userStats[user]) {
-        userStats[user] = { calls:0, duration:0 };
+      if (!users[user]) {
+        users[user] = {
+          totalCalls: 0,
+          totalDuration: 0,
+          days: {},
+          firstSeen: day,
+          lastSeen: day
+        };
       }
 
-      userStats[user].calls++;
-      userStats[user].duration += dur;
+      users[user].totalCalls += 1;
+      users[user].totalDuration += dur;
+
+      if (!users[user].days[day]) {
+        users[user].days[day] = { calls: 0, duration: 0 };
+      }
+
+      users[user].days[day].calls += 1;
+      users[user].days[day].duration += dur;
+
+      if (day < users[user].firstSeen) users[user].firstSeen = day;
+      if (day > users[user].lastSeen) users[user].lastSeen = day;
     });
 
     const threshold = Math.ceil(licenseCount * 0.8);
-    const pass = uniqueUsers.size >= threshold;
+    const uniqueUserCount = uniqueUsers.size;
+    const totalCalls = Object.values(users).reduce((a,b)=>a+b.totalCalls,0);
+    const totalDuration = Object.values(users).reduce((a,b)=>a+b.totalDuration,0);
+    const adoptionPct = licenseCount > 0 ? ((uniqueUserCount / licenseCount) * 100) : 0;
+    const gap = uniqueUserCount - threshold;
+    const pass = uniqueUserCount >= threshold;
 
-    /* KPI */
-    document.getElementById("kpis").innerHTML = `
-      <div class="kpi"><div class="kpi-title">Unique Users</div><div class="kpi-value">${uniqueUsers.size}</div></div>
-      <div class="kpi"><div class="kpi-title">Required (80%)</div><div class="kpi-value">${threshold}</div></div>
-      <div class="kpi"><div class="kpi-title">Total Calls</div><div class="kpi-value">${Object.values(userStats).reduce((a,b)=>a+b.calls,0)}</div></div>
-      <div class="kpi"><div class="kpi-title">Total Duration</div><div class="kpi-value">${Math.round(Object.values(userStats).reduce((a,b)=>a+b.duration,0)/60)} min</div></div>
+    const dayKeys = Object.keys(daily).sort();
+
+    fullDailyRows = dayKeys.map(day => {
+      const topUserEntry = Object.entries(daily[day].userCallCount).sort((a,b)=>b[1]-a[1])[0] || null;
+      return {
+        date: day,
+        uniqueUsers: daily[day].users.size,
+        totalCalls: daily[day].calls,
+        totalDuration: daily[day].duration,
+        avgDuration: daily[day].calls ? (daily[day].duration / daily[day].calls) : 0,
+        topUser: topUserEntry ? topUserEntry[0] : "-",
+        topUserCalls: topUserEntry ? topUserEntry[1] : 0
+      };
+    });
+
+    fullUserRows = Object.entries(users)
+      .map(([user, info]) => ({
+        user,
+        totalCalls: info.totalCalls,
+        totalDuration: info.totalDuration,
+        activeDays: Object.keys(info.days).length,
+        firstSeen: info.firstSeen,
+        lastSeen: info.lastSeen
+      }))
+      .sort((a,b)=>b.totalCalls - a.totalCalls);
+
+    userDetailMap = {};
+    Object.entries(users).forEach(([user, info]) => {
+      userDetailMap[user] = {
+        ...info,
+        activeDays: Object.keys(info.days).length
+      };
+    });
+
+    const peakUsers = fullDailyRows.length ? Math.max(...fullDailyRows.map(r => r.uniqueUsers)) : 0;
+    const avgUsers = fullDailyRows.length
+      ? (fullDailyRows.reduce((a,b)=>a+b.uniqueUsers,0) / fullDailyRows.length)
+      : 0;
+
+    $("kpiUniqueUsers").textContent = uniqueUserCount.toLocaleString();
+    $("kpiRequired").textContent = threshold.toLocaleString();
+    $("kpiCalls").textContent = totalCalls.toLocaleString();
+    $("kpiDuration").textContent = formatMinutes(totalDuration);
+    $("kpiAdoptionPct").textContent = adoptionPct.toFixed(1) + "%";
+    $("kpiGap").textContent = (gap >= 0 ? "+" : "") + gap.toLocaleString();
+    $("kpiGap").className = "value " + (gap >= 0 ? "good" : "bad");
+    $("kpiPeakUsers").textContent = peakUsers.toLocaleString();
+    $("kpiAvgUsers").textContent = avgUsers.toFixed(1);
+
+    $("sumLicenses").textContent = licenseCount.toLocaleString();
+    $("sumThreshold").textContent = threshold.toLocaleString();
+    $("sumObserved").textContent = uniqueUserCount.toLocaleString();
+    $("sumResult").textContent = pass ? "PASS" : "FAIL";
+    $("sumResult").className = "num " + (pass ? "good" : "bad");
+
+    $("execCopy").innerHTML = `
+      Based on a total license count of <b>${licenseCount.toLocaleString()}</b>, the Cisco calling adoption threshold is
+      <b>${threshold.toLocaleString()}</b> monthly active calling users. The uploaded report produced
+      <b>${uniqueUserCount.toLocaleString()}</b> unique users who generated Webex Calling activity within the reporting window,
+      resulting in an observed calling adoption rate of <b>${adoptionPct.toFixed(1)}%</b>.
+      <br><br>
+      <span class="${pass ? "pass-copy" : "fail-copy"}">
+        ${pass
+          ? "The customer meets Cisco’s 80% calling adoption target based on the uploaded evidence."
+          : "The customer does not currently meet Cisco’s 80% calling adoption target based on the uploaded evidence."}
+      </span>
     `;
 
-    /* SUMMARY */
-    document.getElementById("summary").innerHTML = `
-      <h3>Executive Summary</h3>
-      <p>80% threshold: ${threshold} users</p>
-      <p>Actual adoption: ${uniqueUsers.size}</p>
-      <p><b style="color:${pass?'#22c55e':'#ef4444'}">
-      ${pass?'PASS':'FAIL'}
-      </b></p>
-    `;
+    const calloutClass = pass ? "good" : (adoptionPct >= 70 ? "warn" : "bad");
+    $("summaryCallout").className = "mini-callout " + calloutClass;
+    $("summaryCallout").textContent = pass
+      ? `Compliance achieved. Unique calling users exceed the required threshold by ${gap.toLocaleString()}.`
+      : `Compliance not achieved. Additional ${(Math.abs(gap)).toLocaleString()} unique calling users are required to meet Cisco’s threshold.`;
 
-    /* RAG */
-    const rag = document.getElementById("ragStatus");
-    rag.className = "rag " + (pass ? "green":"red");
-    rag.innerText = pass ? "PASS" : "FAIL";
+    $("reportMeta").textContent =
+      `Generated from uploaded CSV on ${new Date().toLocaleString()}. Total active days detected: ${dayKeys.length}. Source file: ${file.name}`;
 
-    /* DAILY TABLE */
-    let dailyHTML = `<tr><th>Date</th><th>Users</th><th>Calls</th><th>Duration</th></tr>`;
-    Object.keys(daily).sort().forEach(d=>{
-      dailyHTML += `<tr>
-        <td>${d}</td>
-        <td>${daily[d].users.size}</td>
-        <td>${daily[d].calls}</td>
-        <td>${Math.round(daily[d].duration/60)} min</td>
-      </tr>`;
-    });
-    document.getElementById("dailyTable").innerHTML = dailyHTML;
+    if (pass) {
+      setStatusPill("good", "PASS");
+    } else if (adoptionPct >= 70) {
+      setStatusPill("warn", "At Risk");
+    } else {
+      setStatusPill("bad", "FAIL");
+    }
 
-    /* USER TABLE */
-    let userHTML = `<tr><th>User</th><th>Calls</th><th>Duration</th></tr>`;
-    Object.entries(userStats).sort((a,b)=>b[1].calls-a[1].calls).forEach(([u,v])=>{
-      userHTML += `<tr><td>${u}</td><td>${v.calls}</td><td>${Math.round(v.duration/60)} min</td></tr>`;
-    });
-    document.getElementById("userTable").innerHTML = userHTML;
-
-    /* SPARKLINE */
-    drawChart(daily);
-
+    renderDailyTable(fullDailyRows);
+    renderUserTable(fullUserRows);
+    renderCharts(fullDailyRows);
   };
 
   reader.readAsText(file);
 }
 
-function drawChart(daily) {
-  const ctx = document.getElementById("trendChart").getContext("2d");
-  const data = Object.keys(daily).sort().map(d=>daily[d].users.size);
+function renderCharts(dailyRows){
+  const labels = dailyRows.map(r => r.date);
+  const uniqueUsersSeries = dailyRows.map(r => r.uniqueUsers);
+  const callsSeries = dailyRows.map(r => r.totalCalls);
 
-  new Chart(ctx, {
-    type:'line',
-    data:{ labels:Object.keys(daily), datasets:[{ data:data }] },
-    options:{ plugins:{legend:{display:false}}, scales:{x:{display:false},y:{display:false}} }
+  destroyChart(trendChart);
+  destroyChart(sparkUsersChart);
+  destroyChart(sparkCallsChart);
+
+  trendChart = buildLineChart("trendChart", labels, [
+    {
+      label: "Unique Users",
+      data: uniqueUsersSeries,
+      borderWidth: 3,
+      tension: .35,
+      pointRadius: 2
+    },
+    {
+      label: "Total Calls",
+      data: callsSeries,
+      borderWidth: 3,
+      tension: .35,
+      pointRadius: 2
+    }
+  ]);
+
+  sparkUsersChart = buildSparkChart("sparkUsers", labels, uniqueUsersSeries);
+  sparkCallsChart = buildSparkChart("sparkCalls", labels, callsSeries);
+}
+
+async function init(){
+  try{
+    const me = await api("/api/me");
+    if (me.role !== "admin") {
+      window.location = "/pin";
+      return;
+    }
+    $("whoami").textContent = me.email || "Admin";
+    $("sessionLine").textContent = "Session: " + (me.sessionExpiresInSeconds || 0) + "s";
+  } catch {
+    window.location = "/pin";
+    return;
+  }
+
+  $("btnLogout").addEventListener("click", logout);
+  $("btnPrint").addEventListener("click", () => window.print());
+  $("btnGenerate").addEventListener("click", processCSV);
+  $("btnCloseDrawer").addEventListener("click", closeUserDrawer);
+  $("drawerBackdrop").addEventListener("click", (e) => {
+    if (e.target === $("drawerBackdrop")) closeUserDrawer();
+  });
+
+  $("dailyFilter").addEventListener("input", () => renderDailyTable(fullDailyRows));
+  $("userFilter").addEventListener("input", () => renderUserTable(fullUserRows));
+
+  const initialLicenses = parseInt($("licenseCount").value || "0", 10);
+  const initialThreshold = Math.ceil(initialLicenses * 0.8);
+  $("kpiRequired").textContent = initialThreshold.toLocaleString();
+  $("sumLicenses").textContent = initialLicenses.toLocaleString();
+  $("sumThreshold").textContent = initialThreshold.toLocaleString();
+
+  $("licenseCount").addEventListener("input", () => {
+    const lc = parseInt($("licenseCount").value || "0", 10);
+    const th = Math.ceil(lc * 0.8);
+    $("kpiRequired").textContent = th.toLocaleString();
+    $("sumLicenses").textContent = lc.toLocaleString();
+    $("sumThreshold").textContent = th.toLocaleString();
   });
 }
-</script>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+init();
+</script>
 
 </body>
 </html>
