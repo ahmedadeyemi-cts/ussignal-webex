@@ -14,7 +14,7 @@
  * Required env vars:
  * - CLIENT_ID
  * - CLIENT_SECRETS
- * - REFRESH_TOKENS
+ * - REFRESH_TOKEN
  * Optional env vars:
  * - SESSION_TTL_SECONDS (default 3600)
  * - PIN_THROTTLE_WINDOW_SECONDS (default 900)   // 15 min
