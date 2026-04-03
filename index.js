@@ -4143,6 +4143,13 @@ if (url.pathname === "/api/routes" && request.method === "GET") {
       category: "Core",
       description: "High-level tenant health and service posture."
     },
+   {
+  name: "Webex Calling Adoption",
+  path: "/customer/webex-calling-adoption-report",
+  keywords: ["adoption","calling adoption","webex calling","csv","license utilization"],
+  category: "Calling",
+  description: "Upload calling usage CSV and generate Cisco adoption evidence reporting."
+}
     {
       name: "Licenses",
       path: "/customer/licenses",
