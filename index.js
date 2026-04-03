@@ -7,7 +7,7 @@
  * - Admin-only PIN rotation (rotate org PIN, updates KV atomically-ish)
  * - UI PIN modal logic (simple HTML app at "/")
  * - Admin-only seed-pins from GitHub raw JSON
- * 
+ *
  * Required bindings:
  * - KV: WEBEX
  * - KV: ORG_MAP_KV.
