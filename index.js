@@ -2474,6 +2474,28 @@ async function renderCustomerLicensesHTML() {
 
   return await res.text();
 }
+async function renderCustomerWebexAdoptionHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/customer/webex-calling-adoption-report.html"
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to load customer Webex adoption UI");
+  }
+
+  return await res.text();
+}
+async function renderAdminWebexAdoptionHTML() {
+  const res = await fetch(
+    "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/webex-calling-adoption-report.html"
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to load admin Webex adoption UI");
+  }
+
+  return await res.text();
+}
 async function renderTenantResolutionHTML() {
   const res = await fetch(
     "https://raw.githubusercontent.com/ahmedadeyemi-cts/ussignal-webex/main/ui/admin/tenant-resolution.html"
@@ -4213,7 +4235,11 @@ if (
     "content-type": "text/html; charset=utf-8",
   });
 }
-
+if (url.pathname === "/customer/webex-calling-adoption-report" && request.method === "GET") {
+  return text(await renderCustomerWebexAdoptionHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
 /* -----------------------------
    Customer UI: Licenses
 ----------------------------- */
@@ -4398,7 +4424,11 @@ if (url.pathname === "/admin/tenant-resolution" && request.method === "GET") {
   });
 }
 
-
+if (url.pathname === "/admin/webex-calling-adoption-report" && request.method === "GET") {
+  return text(await renderAdminWebexAdoptionHTML(), 200, {
+    "content-type": "text/html; charset=utf-8",
+  });
+}
       // Root sanity JSON
       if (url.pathname === "/health") {
         return json({ status: "ok", service: "ussignal-webex", time: new Date().toISOString() });
