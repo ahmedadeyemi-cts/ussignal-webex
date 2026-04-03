@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>US Signal | Webex Calling Adoption</title>
+
+  <style>
+    body {
+      margin:0;
+      font-family: Inter, Arial;
+      background:#0f172a;
+      color:#e2e8f0;
+    }
+
+    .container {
+      padding:20px 30px;
+    }
+
+    /* HEADER */
+    .header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:20px;
+    }
+
+    .logo {
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .logo img {
+      height:45px;
+    }
+
+    /* KPI GRID */
+    .kpi-grid {
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:15px;
+      margin-bottom:20px;
+    }
+
+    .kpi {
+      background:#1e293b;
+      padding:15px;
+      border-radius:10px;
+    }
+
+    .kpi-title {
+      font-size:12px;
+      color:#94a3b8;
+    }
+
+    .kpi-value {
+      font-size:22px;
+      font-weight:bold;
+      margin-top:5px;
+    }
+
+    /* CARDS */
+    .card {
+      background:#1e293b;
+      border-radius:10px;
+      padding:20px;
+      margin-bottom:20px;
+    }
+
+    /* BUTTON */
+    .btn {
+      background:#2563eb;
+      border:none;
+      padding:10px 15px;
+      color:white;
+      border-radius:6px;
+      cursor:pointer;
+    }
+
+    /* TABLE */
+    table {
+      width:100%;
+      border-collapse:collapse;
+    }
+
+    th, td {
+      padding:10px;
+      border-bottom:1px solid #334155;
+    }
+
+    /* SIDEBAR RAG */
+    .rag {
+      position:fixed;
+      right:20px;
+      top:100px;
+      padding:12px 16px;
+      border-radius:20px;
+      font-weight:bold;
+    }
+
+    .rag.green { background:#22c55e; }
+    .rag.red { background:#ef4444; }
+
+    /* SPARKLINE */
+    canvas {
+      width:100%;
+      height:60px;
+    }
+
+    /* DRILL DOWN */
+    .clickable {
+      cursor:pointer;
+      color:#60a5fa;
+    }
+
+    /* PRINT */
+    @media print {
+      body { background:white; color:black; }
+      .btn, input { display:none; }
+      .rag { display:none; }
+      .card { box-shadow:none; border:1px solid #ddd; }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <img src="/assets/ussignal-logo.jpg">
+      <div>
+        <h2>US Signal</h2>
+        <div style="font-size:12px;color:#94a3b8;">Webex Calling Adoption Report</div>
+      </div>
+    </div>
+
+    <div>
+      <button class="btn" onclick="window.print()">Export PDF</button>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="card">
+    <label>Total Licenses:</label>
+    <input type="number" id="licenseCount" value="5700">
+    <input type="file" id="csvFile">
+    <button class="btn" onclick="processCSV()">Generate Report</button>
+  </div>
+
+  <!-- KPI -->
+  <div id="kpis" class="kpi-grid"></div>
+
+  <!-- EXEC SUMMARY -->
+  <div id="summary" class="card"></div>
+
+  <!-- SPARKLINE -->
+  <div class="card">
+    <h3>Adoption Trend (30 Days)</h3>
+    <canvas id="trendChart"></canvas>
+  </div>
+
+  <!-- DAILY TABLE -->
+  <div class="card">
+    <h3>Daily Breakdown</h3>
+    <table id="dailyTable"></table>
+  </div>
+
+  <!-- USER DRILLDOWN -->
+  <div class="card">
+    <h3>User Drill Down</h3>
+    <table id="userTable"></table>
+  </div>
+
+</div>
+
+<div id="ragStatus" class="rag"></div>
+
+<script>
+function processCSV() {
+  const file = document.getElementById("csvFile").files[0];
+  const licenseCount = parseInt(document.getElementById("licenseCount").value);
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const rows = e.target.result.split("\n").map(r => r.split(","));
+    const headers = rows[0];
+
+    const userIdx = headers.findIndex(h => h.toLowerCase().includes("user"));
+    const dateIdx = headers.findIndex(h => h.toLowerCase().includes("date"));
+    const durationIdx = headers.findIndex(h => h.toLowerCase().includes("duration"));
+
+    let uniqueUsers = new Set();
+    let daily = {};
+    let userStats = {};
+
+    rows.slice(1).forEach(r => {
+      const user = r[userIdx];
+      const date = r[dateIdx]?.split(" ")[0];
+      const dur = parseInt(r[durationIdx]) || 0;
+
+      if (!user || !date) return;
+
+      uniqueUsers.add(user);
+
+      if (!daily[date]) {
+        daily[date] = { users:new Set(), calls:0, duration:0 };
+      }
+
+      daily[date].users.add(user);
+      daily[date].calls++;
+      daily[date].duration += dur;
+
+      if (!userStats[user]) {
+        userStats[user] = { calls:0, duration:0 };
+      }
+
+      userStats[user].calls++;
+      userStats[user].duration += dur;
+    });
+
+    const threshold = Math.ceil(licenseCount * 0.8);
+    const pass = uniqueUsers.size >= threshold;
+
+    /* KPI */
+    document.getElementById("kpis").innerHTML = `
+      <div class="kpi"><div class="kpi-title">Unique Users</div><div class="kpi-value">${uniqueUsers.size}</div></div>
+      <div class="kpi"><div class="kpi-title">Required (80%)</div><div class="kpi-value">${threshold}</div></div>
+      <div class="kpi"><div class="kpi-title">Total Calls</div><div class="kpi-value">${Object.values(userStats).reduce((a,b)=>a+b.calls,0)}</div></div>
+      <div class="kpi"><div class="kpi-title">Total Duration</div><div class="kpi-value">${Math.round(Object.values(userStats).reduce((a,b)=>a+b.duration,0)/60)} min</div></div>
+    `;
+
+    /* SUMMARY */
+    document.getElementById("summary").innerHTML = `
+      <h3>Executive Summary</h3>
+      <p>80% threshold: ${threshold} users</p>
+      <p>Actual adoption: ${uniqueUsers.size}</p>
+      <p><b style="color:${pass?'#22c55e':'#ef4444'}">
+      ${pass?'PASS':'FAIL'}
+      </b></p>
+    `;
+
+    /* RAG */
+    const rag = document.getElementById("ragStatus");
+    rag.className = "rag " + (pass ? "green":"red");
+    rag.innerText = pass ? "PASS" : "FAIL";
+
+    /* DAILY TABLE */
+    let dailyHTML = `<tr><th>Date</th><th>Users</th><th>Calls</th><th>Duration</th></tr>`;
+    Object.keys(daily).sort().forEach(d=>{
+      dailyHTML += `<tr>
+        <td>${d}</td>
+        <td>${daily[d].users.size}</td>
+        <td>${daily[d].calls}</td>
+        <td>${Math.round(daily[d].duration/60)} min</td>
+      </tr>`;
+    });
+    document.getElementById("dailyTable").innerHTML = dailyHTML;
+
+    /* USER TABLE */
+    let userHTML = `<tr><th>User</th><th>Calls</th><th>Duration</th></tr>`;
+    Object.entries(userStats).sort((a,b)=>b[1].calls-a[1].calls).forEach(([u,v])=>{
+      userHTML += `<tr><td>${u}</td><td>${v.calls}</td><td>${Math.round(v.duration/60)} min</td></tr>`;
+    });
+    document.getElementById("userTable").innerHTML = userHTML;
+
+    /* SPARKLINE */
+    drawChart(daily);
+
+  };
+
+  reader.readAsText(file);
+}
+
+function drawChart(daily) {
+  const ctx = document.getElementById("trendChart").getContext("2d");
+  const data = Object.keys(daily).sort().map(d=>daily[d].users.size);
+
+  new Chart(ctx, {
+    type:'line',
+    data:{ labels:Object.keys(daily), datasets:[{ data:data }] },
+    options:{ plugins:{legend:{display:false}}, scales:{x:{display:false},y:{display:false}} }
+  });
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</body>
+</html>
