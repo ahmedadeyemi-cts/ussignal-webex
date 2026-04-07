@@ -838,7 +838,16 @@ tbody tr:hover{
         <div class="value" id="kpiPeakUsers">0</div>
         <div class="subvalue">Highest single-day unique user count</div>
       </div>
+      
+       <div class="card kpi">
+            <div class="kpi-top">
+              <div class="k-label">Lifecycle Stage</div>
+            </div>
+            <div class="value" id="kpiLifecycleStage">—</div>
+            <div class="subvalue" id="kpiLifecycleSub">Monthly active user maturity stage</div>
+          </div>
 
+      
       <div class="card kpi">
         <div class="kpi-top">
           <div class="k-label">Average Daily Users</div>
@@ -865,6 +874,10 @@ tbody tr:hover{
           <div class="summary-stat">
             <div class="name">80% Threshold</div>
             <div class="num" id="sumThreshold">4560</div>
+          </div>
+          <div class="summary-stat">
+          <div class="name">Lifecycle Stage</div>
+          <div class="num" id="sumLifecycle">—</div>
           </div>
           <div class="summary-stat">
             <div class="name">Observed Users</div>
@@ -1230,7 +1243,41 @@ function openUserDrawer(user){
 function closeUserDrawer(){
   $("drawerBackdrop").style.display = "none";
 }
+function getLifecycleStage(adoptionPct){
+  if (adoptionPct >= 80) {
+    return {
+      stage: "Adopt",
+      threshold: 80,
+      status: "good",
+      message: "Customer has reached the Adopt lifecycle stage based on monthly active calling users."
+    };
+  }
 
+  if (adoptionPct >= 50) {
+    return {
+      stage: "Engage",
+      threshold: 50,
+      status: "warn",
+      message: "Customer has reached the Engage lifecycle stage but has not yet met the Adopt threshold."
+    };
+  }
+
+  if (adoptionPct >= 20) {
+    return {
+      stage: "Use",
+      threshold: 20,
+      status: "warn",
+      message: "Customer has reached the Use lifecycle stage but still needs broader calling adoption."
+    };
+  }
+
+  return {
+    stage: "Below Use",
+    threshold: 20,
+    status: "bad",
+    message: "Customer is below the Use lifecycle threshold based on monthly active calling users."
+  };
+}
 function processCSV() {
   const file = $("csvFile").files[0];
   const licenseCount = parseInt($("licenseCount").value || "0", 10);
@@ -1329,7 +1376,7 @@ function processCSV() {
     const totalDuration = Object.values(users).reduce((a,b)=>a+b.totalDuration,0);
     const adoptionPct = licenseCount > 0 ? ((uniqueUserCount / licenseCount) * 100) : 0;
     const gap = uniqueUserCount - threshold;
-    const pass = uniqueUserCount >= threshold;
+    const lifecycle = getLifecycleStage(adoptionPct);
 
     const dayKeys = Object.keys(daily).sort();
 
