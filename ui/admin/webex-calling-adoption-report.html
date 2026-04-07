@@ -1376,6 +1376,7 @@ function processCSV() {
     const totalDuration = Object.values(users).reduce((a,b)=>a+b.totalDuration,0);
     const adoptionPct = licenseCount > 0 ? ((uniqueUserCount / licenseCount) * 100) : 0;
     const gap = uniqueUserCount - threshold;
+    const pass = uniqueUserCount >= threshold;
     const lifecycle = getLifecycleStage(adoptionPct);
 
     const dayKeys = Object.keys(daily).sort();
@@ -1426,42 +1427,67 @@ function processCSV() {
     $("kpiGap").className = "value " + (gap >= 0 ? "good" : "bad");
     $("kpiPeakUsers").textContent = peakUsers.toLocaleString();
     $("kpiAvgUsers").textContent = avgUsers.toFixed(1);
+    $("kpiLifecycleStage").textContent = lifecycle.stage;
+    $("kpiLifecycleStage").className = "value " + lifecycle.status;
+    $("kpiLifecycleSub").textContent = lifecycle.message;
 
     $("sumLicenses").textContent = licenseCount.toLocaleString();
     $("sumThreshold").textContent = threshold.toLocaleString();
+    $("sumLifecycle").textContent = lifecycle.stage;
+    $("sumLifecycle").className = "num " + lifecycle.status;
     $("sumObserved").textContent = uniqueUserCount.toLocaleString();
     $("sumResult").textContent = pass ? "PASS" : "FAIL";
     $("sumResult").className = "num " + (pass ? "good" : "bad");
 
     $("execCopy").innerHTML = `
-      Based on a total license count of <b>${licenseCount.toLocaleString()}</b>, the Cisco calling adoption threshold is
-      <b>${threshold.toLocaleString()}</b> monthly active calling users. The uploaded report produced
-      <b>${uniqueUserCount.toLocaleString()}</b> unique users who generated Webex Calling activity within the reporting window,
-      resulting in an observed calling adoption rate of <b>${adoptionPct.toFixed(1)}%</b>.
-      <br><br>
-      <span class="${pass ? "pass-copy" : "fail-copy"}">
-        ${pass
-          ? "The customer meets Cisco’s 80% calling adoption target based on the uploaded evidence."
-          : "The customer does not currently meet Cisco’s 80% calling adoption target based on the uploaded evidence."}
-      </span>
-    `;
+  Based on a total license count of <b>${licenseCount.toLocaleString()}</b>, the Cisco calling adoption threshold is
+  <b>${threshold.toLocaleString()}</b> monthly active calling users. The uploaded report produced
+  <b>${uniqueUserCount.toLocaleString()}</b> unique users who generated Webex Calling activity within the reporting window,
+  resulting in an observed calling adoption rate of <b>${adoptionPct.toFixed(1)}%</b>.
+  <br><br>
+  <b>Lifecycle Stage:</b>
+  <span class="${
+    lifecycle.status === "good" ? "pass-copy" :
+    lifecycle.status === "warn" ? "warn-copy" :
+    "fail-copy"
+  }">${lifecycle.stage}</span>
+  <br><br>
+  <span class="${pass ? "pass-copy" : "fail-copy"}">
+    ${pass
+      ? "The customer meets Cisco’s 80% calling adoption target based on the uploaded evidence."
+      : "The customer does not currently meet Cisco’s 80% calling adoption target based on the uploaded evidence."}
+  </span>
+`;
 
-    const calloutClass = pass ? "good" : (adoptionPct >= 70 ? "warn" : "bad");
-    $("summaryCallout").className = "mini-callout " + calloutClass;
-    $("summaryCallout").textContent = pass
-      ? `Compliance achieved. Unique calling users exceed the required threshold by ${gap.toLocaleString()}.`
-      : `Compliance not achieved. Additional ${(Math.abs(gap)).toLocaleString()} unique calling users are required to meet Cisco’s threshold.`;
+   const calloutClass = pass ? "good" : lifecycle.status;
+$("summaryCallout").className = "mini-callout " + calloutClass;
+
+if (pass) {
+  $("summaryCallout").textContent =
+    `Compliance achieved. Customer is in the ${lifecycle.stage} lifecycle stage and exceeds Cisco’s 80% threshold by ${gap.toLocaleString()} unique users.`;
+} else if (lifecycle.stage === "Engage") {
+  $("summaryCallout").textContent =
+    `Customer is currently in the Engage lifecycle stage. Additional ${Math.abs(gap).toLocaleString()} unique calling users are required to reach Adopt.`;
+} else if (lifecycle.stage === "Use") {
+  $("summaryCallout").textContent =
+    `Customer is currently in the Use lifecycle stage. Adoption is growing, but ${Math.abs(gap).toLocaleString()} additional unique calling users are required to reach Adopt.`;
+} else {
+  $("summaryCallout").textContent =
+    `Customer is currently below the Use lifecycle stage. Additional ${Math.abs(gap).toLocaleString()} unique calling users are required to reach Adopt.`;
+}
 
     $("reportMeta").textContent =
       `Generated from uploaded CSV on ${new Date().toLocaleString()}. Total active days detected: ${dayKeys.length}. Source file: ${file.name}`;
 
     if (pass) {
-      setStatusPill("good", "PASS");
-    } else if (adoptionPct >= 70) {
-      setStatusPill("warn", "At Risk");
-    } else {
-      setStatusPill("bad", "FAIL");
-    }
+  setStatusPill("good", "Adopt");
+} else if (lifecycle.stage === "Engage") {
+  setStatusPill("warn", "Engage");
+} else if (lifecycle.stage === "Use") {
+  setStatusPill("warn", "Use");
+} else {
+  setStatusPill("bad", "Below Use");
+}
 
     renderDailyTable(fullDailyRows);
     renderUserTable(fullUserRows);
