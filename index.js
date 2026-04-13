@@ -11,6 +11,7 @@
  * - KV: WEBEX
  * - KV: ORG_MAP_KV.
  * - KV: USER_SESSION_KV
+ * - API_KEY xkeysib-2dae5b2ad19cb7cf4584dc958d5e3a6d27cdef8c0678646d27229eeae02900d5
  * Required env vars:
  * - CLIENT_ID
  * - CLIENT_SECRETS
