@@ -648,7 +648,29 @@ async function runCachedCallReports(env) {
   if (!orgResult.ok) return;
 
   const orgs = orgResult.data.items || [];
+  await discoverNewTenants(env, orgs);
 
+await env.WEBEX.put(
+  "cron:lastOrganizationsRun",
+  JSON.stringify({
+    cron: event.cron,
+    timestamp: new Date().toISOString(),
+    orgCount: orgs.length,
+    status: "success"
+  })
+);
+
+await sendAdminNotification(
+  env,
+  "Webex Organizations Sync Completed",
+  `
+  <h3>Webex /organizations Sync Completed</h3>
+  <p><strong>Cron:</strong> ${event.cron}</p>
+  <p><strong>Total Organizations:</strong> ${orgs.length}</p>
+  <p><strong>Completed:</strong> ${new Date().toISOString()}</p>
+  <p>The tenant discovery and hydration process completed successfully.</p>
+  `
+);
   await mapLimit(orgs, 3, async (org) => {
 
     try {
